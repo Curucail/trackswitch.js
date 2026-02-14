@@ -33,11 +33,21 @@ jobs:
       - name: Build project
         run: npm run build
       
+      - name: Verify build
+        run: |
+          if [ ! -d "dist" ]; then
+            echo "ERROR: dist directory was not created!"
+            exit 1
+          fi
+          echo "Build successful, dist contents:"
+          find dist -type f
+      
       - name: Prepare deployment
         run: |
           cp examples/index.html dist/index.html
           cp -r examples/data dist/data
           sed -i 's|../dist/||g' dist/index.html
+          ls -la dist/
       
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -46,6 +56,7 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: 'dist'
+          retention-days: 1
       
       - name: Deploy to GitHub Pages
         id: deployment
