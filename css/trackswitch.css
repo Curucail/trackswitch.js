@@ -196,6 +196,52 @@
     left: 0;
 }
 
+.jquery-trackswitch .main-control .volume-control {
+    float: left;
+    margin: 7px 10px 0 2px; /* Bring volume control to vertical center with 7px */
+    display: flex;
+    align-items: center;
+}
+
+.jquery-trackswitch .main-control .volume-icon {
+    font-family: FontAwesome;
+    font-size: 16px;
+    color: #DDDDDD;
+    margin-right: 8px;
+    width: 16px;
+    display: inline-block;
+    text-align: left;
+}
+
+.jquery-trackswitch .main-control .volume-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 80px;
+    height: 4px;
+    background: #555;
+    outline: none;
+    cursor: pointer;
+}
+
+.jquery-trackswitch .main-control .volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    background: #ED8C01;
+    cursor: pointer;
+    border-radius: 50%;
+}
+
+.jquery-trackswitch .main-control .volume-slider::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    background: #ED8C01;
+    cursor: pointer;
+    border-radius: 50%;
+    border: none;
+}
+
 
 /* PLAYER TITLE STYLES ------------------------------------------------------ */
 
@@ -382,6 +428,15 @@
         margin: 4px 22px 0 0;
     }
 
+    .jquery-trackswitch .main-control .volume-control {
+        margin: 6px 5px 0 0;
+    }
+
+    .jquery-trackswitch .main-control .volume-control .volume-icon {
+        font-size: 20px;
+        width: 20px;
+    }
+
     .jquery-trackswitch .main-control .seekwrap {
         width: 100%;
         margin-top: 30px;
@@ -426,10 +481,21 @@
         margin: 0 14px; /* Share the spacing margin each side to center align */
     }
 
+    .jquery-trackswitch .main-control .volume-control {
+        float: none;
+        display: inline-flex;
+        margin: 32px 0 0 0;
+    }
+
+    .jquery-trackswitch .main-control .volume-control .volume-icon {
+        font-size: 20px;
+        width: 20px;
+    }
+
     .jquery-trackswitch .main-control .timing {
         width: 100%;
         float: none;
-        margin: 32px 0 8px 0;
+        margin: 16px 0 8px 0;
     }
 
     .jquery-trackswitch .main-control .seekwrap {

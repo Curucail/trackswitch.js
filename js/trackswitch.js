@@ -60,6 +60,7 @@ function Plugin(element, options) {
     this.timerUpdateUI;
     this.currentlySeeking = false;
     this.seekingElement;
+    this.masterVolume = 1.0;
 
     // Properties and data for each track in coherent arrays
     this.trackProperties = Array();
@@ -70,10 +71,15 @@ function Plugin(element, options) {
 
     // Skip gain node creation if WebAudioAPI could not load.
     if (audioContext) {
-        // Master output gain node setup
+        // Volume gain node (user-controlled, between master and destination)
+        this.gainNodeVolume = audioContext.createGain();
+        this.gainNodeVolume.gain.value = this.masterVolume;
+        this.gainNodeVolume.connect(audioContext.destination);
+
+        // Master output gain node setup (used for fade ramps)
         this.gainNodeMaster = audioContext.createGain();
         this.gainNodeMaster.gain.value = 0.0 // Start at 0.0 to allow fade in
-        this.gainNodeMaster.connect(audioContext.destination);
+        this.gainNodeMaster.connect(this.gainNodeVolume);
     }
 
     this.init();
@@ -107,6 +113,12 @@ Plugin.prototype.init = function() {
                     '<li class="playpause button">Play</li>' +
                     '<li class="stop button">Stop</li>' +
                     '<li class="repeat button">Repeat</li>' +
+                    '<li class="volume">' +
+                        '<div class="volume-control">' +
+                            '<i class="fa-volume-up volume-icon"></i>' +
+                            '<input type="range" class="volume-slider" min="0" max="100" value="100">' +
+                        '</div>' +
+                    '</li>' +
                     '<li class="timing">' +
                         '<span class="time">' +
                             '--:--:--:---' +
@@ -474,6 +486,9 @@ Plugin.prototype.unbindEvents = function() {
     this.element.off('touchstart mousedown', '.mute');
     this.element.off('touchstart mousedown', '.solo');
 
+    this.element.off('input', '.volume-slider');
+    this.element.off('mousedown touchstart mousemove touchmove mouseup touchend', '.volume-control');
+
     if (this.options.spacebar) {
         $(window).unbind("keypress");
     }
@@ -494,6 +509,10 @@ Plugin.prototype.bindEvents = function() {
 
     this.element.on('touchstart mousedown', '.mute', $.proxy(this.event_mute, this));
     this.element.on('touchstart mousedown', '.solo', $.proxy(this.event_solo, this));
+
+    this.element.on('input', '.volume-slider', $.proxy(this.event_volume, this));
+    // Prevent volume slider interactions from triggering seek or other player events
+    this.element.on('mousedown touchstart mousemove touchmove mouseup touchend', '.volume-control', function(e) { e.stopPropagation(); });
 
     if (this.options.spacebar) {
         var that = this;
@@ -1000,6 +1019,28 @@ Plugin.prototype.apply_track_properties = function() {
     this.switch_image(); // Now handle the switching of the poster image
 
     this.deselect();
+};
+
+
+// Handle volume slider input — update the volume gain node
+Plugin.prototype.event_volume = function(event) {
+    var val = parseFloat($(event.target).val()) / 100;
+    this.masterVolume = val;
+    if (this.gainNodeVolume) {
+        this.gainNodeVolume.gain.value = val;
+    }
+    
+    // Update volume icon based on slider value
+    var volumeIcon = $(event.target).closest('.volume-control').find('.volume-icon');
+    volumeIcon.removeClass('fa-volume-off fa-volume-down fa-volume-up');
+    
+    if (val === 0) {
+        volumeIcon.addClass('fa-volume-off');
+    } else if (val < 0.5) {
+        volumeIcon.addClass('fa-volume-down');
+    } else {
+        volumeIcon.addClass('fa-volume-up');
+    }
 };
 
 
