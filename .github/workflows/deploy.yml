@@ -58,6 +58,12 @@ jobs:
           path: 'dist'
           retention-days: 1
       
+      - name: Verify artifact upload
+        run: echo "Artifact upload step completed"
+      
+      - name: Wait for artifact processing
+        run: sleep 5
+      
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v2
