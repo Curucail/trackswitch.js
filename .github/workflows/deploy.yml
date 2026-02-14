@@ -34,20 +34,23 @@ jobs:
       - name: Build project
         run: npm run build
       
-      - name: Prepare deployment
+      - name: Prepare Jekyll site
         run: |
-          cp examples/index.html dist/index.html
-          cp -r examples/data dist/data
-          sed -i 's|../dist/||g' dist/index.html
-          ls -la dist/
+          mkdir -p docs/css docs/js
+          cp dist/css/trackswitch.min.css docs/css/
+          cp dist/js/trackswitch.min.js docs/js/
       
       - name: Setup Pages
         uses: actions/configure-pages@v5
       
+      - name: Build with Jekyll
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./docs
+          destination: ./_site
+      
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
-        with:
-          path: 'dist'
 
   # Deployment job
   deploy:
