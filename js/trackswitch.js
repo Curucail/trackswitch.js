@@ -28,6 +28,7 @@ var pluginName = 'trackSwitch',
         onlyradiosolo: false,
         spacebar: false,
         tabview: false,
+        iosunmute: true,
     };
 
 
@@ -61,6 +62,7 @@ function Plugin(element, options) {
     this.currentlySeeking = false;
     this.seekingElement;
     this.masterVolume = 1.0;
+    this.iOSPlaybackUnlocked = false;
 
     // Properties and data for each track in coherent arrays
     this.trackProperties = Array();
@@ -328,6 +330,8 @@ Plugin.prototype.load = function(event) {
 
     event.preventDefault();
 
+    this.unlockIOSPlayback();
+
     var that = this;
 
     this.element.find(".overlay span.activate").addClass("fa-spin loading");
@@ -542,6 +546,59 @@ Plugin.prototype.valid_click = function(event) {
     } else {
         return false;
     }
+
+}
+
+
+// Detect iOS/iPadOS Safari devices where WebAudio can be muted by hardware silent mode
+Plugin.prototype.isIOSDevice = function() {
+
+    var nav = window.navigator || {};
+    var userAgent = nav.userAgent || "";
+    var platform = nav.platform || "";
+    var maxTouchPoints = nav.maxTouchPoints || 0;
+
+    return /iPad|iPhone|iPod/.test(userAgent) || (platform === "MacIntel" && maxTouchPoints > 1);
+
+}
+
+
+// On iOS, play a short silent HTML5 audio element once to force media playback category
+Plugin.prototype.unlockIOSPlayback = function() {
+
+    if (!this.options.iosunmute || this.iOSPlaybackUnlocked || !this.isIOSDevice()) {
+        return;
+    }
+
+    this.iOSPlaybackUnlocked = true;
+
+    if (audioContext && typeof audioContext.resume === "function") {
+        try {
+            audioContext.resume();
+        } catch (e) {}
+    }
+
+    try {
+        var unlockAudio = document.createElement("audio");
+        unlockAudio.setAttribute("playsinline", "playsinline");
+        unlockAudio.preload = "auto";
+        unlockAudio.volume = 0.0001;
+        unlockAudio.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQAAAAA=";
+
+        var playPromise = unlockAudio.play();
+
+        var cleanup = function() {
+            unlockAudio.pause();
+            unlockAudio.removeAttribute("src");
+            unlockAudio.load();
+        };
+
+        if (playPromise && typeof playPromise.then === "function") {
+            playPromise.then(cleanup).catch(function() {});
+        } else {
+            cleanup();
+        }
+    } catch (e) {}
 
 }
 
@@ -801,6 +858,8 @@ Plugin.prototype.event_playpause = function(event) {
     if (!(this.valid_click(event) || event.which === 32)) { return true; } // If not valid click, break out of func
 
     event.preventDefault();
+
+    this.unlockIOSPlayback();
 
     if(!this.playing) {
         this.startAudio();

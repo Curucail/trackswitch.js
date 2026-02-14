@@ -275,6 +275,7 @@ Any combination of the following boolean flags is possible, where the indicated 
  - `onlyradiosolo`: If `true` sets both `mute: false` and `radiosolo: true` in one argument. Useful for one track at a time comparison. Also makes the whole track row clickable. Defaults to `false`.
  - `spacebar`: If `true` bind the <kbd>spacebar</kbd> key to play/pause. Can be turned on for more than one player, but only affect the most recently activated. Defaults to `false`.
  - `tabview`: If `true` change the layout so tracks are arranged in a 'tab view'. This saves vertical space, for example on a presentation. Defaults to `false`.
+ - `iosunmute`: If `true` run a one-time iOS/iPadOS unlock using a silent HTML5 audio element on first user interaction, so WebAudio playback is less likely to be muted by the hardware silent switch. Defaults to `true`.
 
 
 ## Additional Player Elements
