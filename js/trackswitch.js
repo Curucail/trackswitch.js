@@ -60,6 +60,9 @@ function Plugin(element, options) {
     this.timerUpdateUI;
     this.currentlySeeking = false;
     this.seekingElement;
+    this.totalFileSize = 0;
+    this.fileSizesRetrieved = 0;
+    this.downloadProgress = {};
 
     // Properties and data for each track in coherent arrays
     this.trackProperties = Array();
@@ -207,6 +210,9 @@ Plugin.prototype.init = function() {
             return false;
         }
 
+        // Calculate and display estimated file size before activation
+        this.calculateEstimatedFileSize();
+
     } else {
 
         this.element.trigger("errored");
@@ -277,6 +283,26 @@ Plugin.prototype.makeRequest = function(currentTrack, currentSource) {
     request.open('GET', audioURL, true);
     request.responseType = 'arraybuffer';
 
+    var lastProgressUpdate = 0;
+
+    request.onprogress = function(event) {
+        if (event.lengthComputable) {
+            that.downloadProgress[currentTrack] = {
+                loaded: event.loaded,
+                total: event.total
+            };
+
+            var now = Date.now();
+            if (lastProgressUpdate === 0 ||
+                now - lastProgressUpdate >= 100 ||
+                event.loaded === event.total) {
+
+                lastProgressUpdate = now;
+                that.updateDownloadProgress(currentTrack);
+            }
+        }
+    };
+
     request.onreadystatechange = function() {
 
         if (request.readyState === 4) { // If request complete...
@@ -294,6 +320,39 @@ Plugin.prototype.makeRequest = function(currentTrack, currentSource) {
 }
 
 
+// Update the overlay with current download progress
+Plugin.prototype.updateDownloadProgress = function(currentTrack) {
+
+    var that = this;
+    var totalLoaded = 0;
+    var totalSize = 0;
+    var tracksDownloading = 0;
+    var currentlyDownloadingTrack = -1;
+
+    // Calculate total progress across all tracks
+    for (var i = 0; i < this.numberOfTracks; i++) {
+        if (this.downloadProgress[i]) {
+            totalLoaded += this.downloadProgress[i].loaded;
+            totalSize += this.downloadProgress[i].total;
+            
+            // Check if this track is still downloading (not complete)
+            if (this.downloadProgress[i].loaded < this.downloadProgress[i].total) {
+                tracksDownloading++;
+                currentlyDownloadingTrack = i;
+            }
+        }
+    }
+
+    // Display progress message
+    if (tracksDownloading > 0 && totalSize > 0) {
+        var progressText = 'Downloading Track ' + (currentlyDownloadingTrack + 1) + '/' + this.numberOfTracks + ': ' +
+                          this.formatFileSize(totalLoaded) + ' / ' + this.formatFileSize(totalSize);
+        this.element.find('.overlay #overlaytext').html(progressText);
+    }
+
+}
+
+
 // Check if there is a source to request for the given track
 Plugin.prototype.prepareRequest = function(currentTrack, currentSource) {
 
@@ -302,6 +361,86 @@ Plugin.prototype.prepareRequest = function(currentTrack, currentSource) {
     } else {
         this.sourceFailed(currentTrack, currentSource, "No Source Found");
     }
+
+}
+
+
+// Get file size using HEAD request
+Plugin.prototype.getFileSize = function(url, callback) {
+
+    var request = new XMLHttpRequest();
+    request.open('HEAD', url, true);
+
+    request.onreadystatechange = function() {
+        if (request.readyState === 4) {
+            if (request.status === 200) {
+                var fileSize = parseInt(request.getResponseHeader('Content-Length'), 10);
+                callback(fileSize);
+            } else {
+                // If HEAD request fails, try GET with range
+                var rangeRequest = new XMLHttpRequest();
+                rangeRequest.open('GET', url, true);
+                rangeRequest.setRequestHeader('Range', 'bytes=0-0');
+                
+                rangeRequest.onreadystatechange = function() {
+                    if (rangeRequest.readyState === 4 && rangeRequest.status === 206) {
+                        var contentRange = rangeRequest.getResponseHeader('Content-Range');
+                        if (contentRange) {
+                            var fileSize = parseInt(contentRange.split('/')[1], 10);
+                            callback(fileSize);
+                        } else {
+                            callback(0);
+                        }
+                    } else if (rangeRequest.readyState === 4) {
+                        callback(0);
+                    }
+                };
+                
+                rangeRequest.send();
+            }
+        }
+    };
+
+    request.send();
+
+}
+
+
+// Calculate estimated file size before activation (from ts-source elements)
+Plugin.prototype.calculateEstimatedFileSize = function() {
+
+    var that = this;
+    var totalTracks = this.element.find('ts-track').length;
+    this.totalFileSize = 0;
+    this.fileSizesRetrieved = 0;
+
+    this.element.find('.overlay #overlaytext').html('Calculating download size...');
+
+    // Get file size for the first source of each track
+    this.element.find('ts-track').each(function(i) {
+        var firstSource = $(this).find('ts-source').first();
+        if (firstSource.length > 0) {
+            var audioURL = firstSource.attr('src');
+            
+            that.getFileSize(audioURL, function(size) {
+                that.totalFileSize += size;
+                that.fileSizesRetrieved++;
+                
+                // Update display as sizes come in
+                if (that.fileSizesRetrieved === totalTracks) {
+                    that.element.find('.overlay #overlaytext').html(
+                        'Estimated download size: ' + that.formatFileSize(that.totalFileSize)
+                    );
+                } else {
+                    that.element.find('.overlay #overlaytext').html(
+                        'Calculating download size... (' + that.fileSizesRetrieved + '/' + totalTracks + ')'
+                    );
+                }
+            });
+        } else {
+            that.fileSizesRetrieved++;
+        }
+    });
 
 }
 
@@ -542,6 +681,20 @@ Plugin.prototype.secondsToHHMMSSmmm = function(seconds) {
     mil = mil < 10 ? '00'+mil : mil < 100 ? '0'+mil : mil;
 
     return (h + ':' + m + ':' + s + ':' + mil);
+
+}
+
+
+// Format file size for display (bytes to KB, MB, GB)
+Plugin.prototype.formatFileSize = function(bytes) {
+
+    if (bytes === 0) return '0 Bytes';
+
+    var k = 1024;
+    var sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    var i = Math.floor(Math.log(bytes) / Math.log(k));
+
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 
 }
 
