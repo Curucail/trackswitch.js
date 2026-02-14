@@ -2,19 +2,20 @@
 title: trackswitch.js
 ---
 
- - [Initialization](#initialization)
- - [Configuration](#configuration)
-   - [Tracks](#tracks)
-     - [Fallback Audio Files](#fallback-audio-files)
-     - [Track Styling](#track-styling)
-     - [Solo Tracks](#solo-tracks)
-     - [Mute Tracks](#mute-tracks)
-   - [Player Behaviour](#player-behaviour)
-   - [Additional Player Elements](#additional-player-elements)
-     - [Additional and Seekable Player Image](#additional-and-seekable-player-image)
-     - [Seekable Image Start/Stop Margin](#seekable-image-startstop-margin)
-     - [Seekable Image For Each Track](#seekable-image-for-each-track)
-     - [Seekable Image Styling](#seekable-image-styling)
+- [Initialization](#initialization)
+- [Configuration](#configuration)
+    - [Tracks](#tracks)
+        - [Fallback Audio Files](#fallback-audio-files)
+        - [Track Styling](#track-styling)
+        - [Solo Tracks](#solo-tracks)
+        - [Mute Tracks](#mute-tracks)
+        - [Track Timing Offsets](#track-timing-offsets)
+    - [Player Behaviour](#player-behaviour)
+    - [Additional Player Elements](#additional-player-elements)
+        - [Additional and Seekable Player Image](#additional-and-seekable-player-image)
+        - [Seekable Image Start/Stop Margin](#seekable-image-startstop-margin)
+        - [Seekable Image For Each Track](#seekable-image-for-each-track)
+        - [Seekable Image Styling](#seekable-image-styling)
 
 # Initialization
 
@@ -237,6 +238,26 @@ You can preselect **mute** for individual tracks by using the `mute` attribute w
         <ts-source src="data/multitracks/drums.mp3" type="audio/mpeg"></ts-source>
     </ts-track>
 </div>
+
+### Track Timing Offsets
+
+Each `ts-source` can optionally define millisecond offsets to trim or pad a track on the timeline using the `start-offset-ms` and `end-offset-ms` attributes.
+
+- Positive values **trim** from the start/end of the audio.
+- Negative values **pad** with silence before/after the audio.
+
+The offsets apply to the specific `ts-source` that is decoded. Use these to align and synchronize tracks that start late, end early, or include unwanted lead-in/lead-out.
+
+```html
+<div class="player">
+    <ts-track title="Violins">
+        <ts-source src="violins.mp3" start-offset-ms="-250" end-offset-ms="0"></ts-source>
+    </ts-track>
+    <ts-track title="Synth">
+        <ts-source src="synth.mp3" start-offset-ms="120" end-offset-ms="80"></ts-source>
+    </ts-track>
+</div>
+```
 
 ## Player Behaviour
 
