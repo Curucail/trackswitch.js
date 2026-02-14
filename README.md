@@ -65,7 +65,3 @@ This will compile Sass, concatenate files, and minify CSS/JS into the `dist/` fo
 - `npm run build:css` - Compile and minify CSS only
 - `npm run build:js` - Concatenate and minify JS only
 - `npm run clean` - Remove `dist/` folder
-
-### Deployment
-
-Push to the `main` or `master` branch to automatically deploy to GitHub Pages via the included GitHub Actions workflow.
