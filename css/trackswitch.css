@@ -99,6 +99,14 @@
     color: #FFFFFF;
 }
 
+.jquery-trackswitch .overlay #overlaytext {
+    width: 100%;
+    top: calc(50% + 40px);
+    color: #FFFFFF;
+    font-size: 12pt;
+    text-align: center;
+}
+
 .jquery-trackswitch .overlay #overlayinfo {
     height: 40px;
     width: 100%;
@@ -369,6 +377,11 @@
     .jquery-trackswitch.error .overlay p {
         top: calc(50% + 45px);
 
+    }
+
+    .jquery-trackswitch .overlay #overlaytext {
+        top: calc(50% + 50px);
+        font-size: 11pt;
     }
 
 
