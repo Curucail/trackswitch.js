@@ -33,6 +33,12 @@ jobs:
       - name: Build project
         run: npm run build
       
+      - name: Prepare deployment
+        run: |
+          cp examples/index.html dist/index.html
+          cp -r examples/data dist/data
+          sed -i 's|../dist/||g' dist/index.html
+      
       - name: Setup Pages
         uses: actions/configure-pages@v4
       
