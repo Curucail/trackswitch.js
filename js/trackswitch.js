@@ -67,6 +67,7 @@ function Plugin(element, options) {
     this.trackSources = Array();
     this.trackGainNode = Array();
     this.trackBuffer = Array();
+    this.trackTiming = Array();
     this.activeAudioSources = Array();
 
     // Skip gain node creation if WebAudioAPI could not load.
@@ -267,6 +268,7 @@ Plugin.prototype.decodeAudio = function(request, currentTrack, currentSource) {
         that.trackGainNode[currentTrack].connect(that.gainNodeMaster);
         that.trackBuffer[currentTrack] = audioContext.createBufferSource();
         that.trackBuffer[currentTrack].buffer = decodedData;
+        that.trackTiming[currentTrack] = that.calculateTrackTiming(that.trackSources[currentTrack][currentSource], decodedData.duration);
 
         // Fire a success if the decoding works and allow the player to proceed
         that.trackProperties[currentTrack].success = true;
@@ -398,7 +400,7 @@ Plugin.prototype.findLongest = function() {
 
     for (var i=0; i<this.numberOfTracks; i++) {
 
-        var currentDuration = this.trackBuffer[i].buffer.duration;
+        var currentDuration = this.trackTiming[i] ? this.trackTiming[i].effectiveDuration : this.trackBuffer[i].buffer.duration;
 
         if (currentDuration > this.longestDuration) {
             this.longestDuration = currentDuration
@@ -565,6 +567,34 @@ Plugin.prototype.secondsToHHMMSSmmm = function(seconds) {
 }
 
 
+// Parse optional ts-source offset attributes and derive effective timeline timing for a track
+Plugin.prototype.calculateTrackTiming = function(sourceElement, bufferDuration) {
+
+    var source = $(sourceElement);
+    var startOffsetMs = parseFloat(source.attr('start-offset-ms'));
+    var endOffsetMs = parseFloat(source.attr('end-offset-ms'));
+
+    var startOffset = isNaN(startOffsetMs) ? 0 : startOffsetMs / 1000;
+    var endOffset = isNaN(endOffsetMs) ? 0 : endOffsetMs / 1000;
+
+    var trimStart = startOffset > 0 ? startOffset : 0;
+    var padStart = startOffset < 0 ? -startOffset : 0;
+    var trimEnd = endOffset > 0 ? endOffset : 0;
+    var padEnd = endOffset < 0 ? -endOffset : 0;
+
+    var audioDuration = bufferDuration - trimStart - trimEnd;
+    audioDuration = audioDuration > 0 ? audioDuration : 0;
+
+    return {
+        trimStart: trimStart,
+        padStart: padStart,
+        audioDuration: audioDuration,
+        effectiveDuration: padStart + audioDuration + padEnd
+    };
+
+}
+
+
 // Update the UI elements for the position
 Plugin.prototype.updateMainControls = function() {
 
@@ -625,7 +655,11 @@ Plugin.prototype.stopAudio = function() {
     this.gainNodeMaster.gain.linearRampToValueAtTime(0.0, now + downwardRamp);
 
     for (var i=0; i<this.numberOfTracks; i++) {
-        this.activeAudioSources[i].stop(now + downwardRamp);
+        if (this.activeAudioSources[i]) {
+            try {
+                this.activeAudioSources[i].stop(now + downwardRamp);
+            } catch (e) {}
+        }
     }
 
     clearInterval(this.timerMonitorPosition);
@@ -640,41 +674,84 @@ Plugin.prototype.startAudio = function(newPos, duration) {
 
     // Ramping constants
     var now = audioContext.currentTime;
-    var upwardRamp = downwardRamp = 0.03;
+    var upwardRamp = 0.03;
+    var downwardRamp = 0.03;
 
     this.position = typeof newPos !== 'undefined' ? newPos : this.position || 0;
+
+    if (duration !== undefined) {
+
+        // If a duration of track to play is specified (used in seeking)
+        // Create upward master gain ramp to fade signal in (after the downwards ramp ends)
+        this.gainNodeMaster.gain.setValueAtTime(0.0, now + downwardRamp);
+        this.gainNodeMaster.gain.linearRampToValueAtTime(1.0, now + downwardRamp + upwardRamp);
+
+        // Then schedule a downward ramp to fade out after playing for 'duration' of block
+        this.gainNodeMaster.gain.setValueAtTime(1.0, now + downwardRamp + upwardRamp);
+        this.gainNodeMaster.gain.linearRampToValueAtTime(0.0, now + downwardRamp + upwardRamp + duration);
+
+    } else {
+
+        // Create upward master gain ramp to fade signal in (regardless of the downward ramp)
+        this.gainNodeMaster.gain.cancelScheduledValues(now);
+        this.gainNodeMaster.gain.setValueAtTime(0.0, now);
+        this.gainNodeMaster.gain.linearRampToValueAtTime(1.0, now + upwardRamp);
+
+    }
 
     for (var i=0; i<this.numberOfTracks; i++) {
 
         this.activeAudioSources[i] = null; // Destroy old sources before creating new ones...
 
+        var timing = this.trackTiming[i] || {
+            trimStart: 0,
+            padStart: 0,
+            audioDuration: this.trackBuffer[i].buffer.duration
+        };
+
+        if (timing.audioDuration <= 0) {
+            continue;
+        }
+
+        var positionInTrackTimeline = this.position - timing.padStart;
+        var scheduleDelay = 0;
+        var sourceOffset = timing.trimStart;
+        var remainingAudioDuration = timing.audioDuration;
+
+        if (positionInTrackTimeline < 0) {
+            scheduleDelay = -positionInTrackTimeline;
+        } else if (positionInTrackTimeline >= timing.audioDuration) {
+            continue;
+        } else {
+            sourceOffset = timing.trimStart + positionInTrackTimeline;
+            remainingAudioDuration = timing.audioDuration - positionInTrackTimeline;
+        }
+
+        var startAt = now + scheduleDelay;
+        var playDuration = remainingAudioDuration;
+
+        if (duration !== undefined) {
+            var snippetStart = now + downwardRamp;
+            var snippetEnd = snippetStart + upwardRamp + duration;
+
+            startAt = snippetStart + scheduleDelay;
+
+            if (startAt >= snippetEnd) {
+                continue;
+            }
+
+            playDuration = Math.min(remainingAudioDuration, snippetEnd - startAt);
+        }
+
+        if (playDuration <= 0) {
+            continue;
+        }
+
         this.activeAudioSources[i] = audioContext.createBufferSource();
         this.activeAudioSources[i].buffer = this.trackBuffer[i].buffer;
         this.activeAudioSources[i].connect(this.trackGainNode[i]);
 
-        if (duration !== undefined) {
-
-            // If a duration of track to play specificed (used in seeking)
-            // Create upward master gain ramp to fade signal in (after the downwards ramp ends)
-            this.gainNodeMaster.gain.setValueAtTime(0.0, now + downwardRamp);
-            this.gainNodeMaster.gain.linearRampToValueAtTime(1.0, now + downwardRamp + upwardRamp);
-
-            this.activeAudioSources[i].start(now + downwardRamp, this.position + downwardRamp, upwardRamp + duration);
-
-            // Then schedule a downward ramp to fade out after playing for 'duration' of block
-            this.gainNodeMaster.gain.setValueAtTime(1.0, now + downwardRamp + upwardRamp);
-            this.gainNodeMaster.gain.linearRampToValueAtTime(0.0, now + downwardRamp + upwardRamp + duration);
-
-        } else {
-
-            // Create upward master gain ramp to fade signal in (regardless of the downward ramp)
-            this.gainNodeMaster.gain.cancelScheduledValues(now);
-            this.gainNodeMaster.gain.setValueAtTime(0.0, now);
-            this.gainNodeMaster.gain.linearRampToValueAtTime(1.0, now + upwardRamp);
-
-            this.activeAudioSources[i].start(now, this.position);
-
-        }
+        this.activeAudioSources[i].start(startAt, sourceOffset, playDuration);
 
     }
 
