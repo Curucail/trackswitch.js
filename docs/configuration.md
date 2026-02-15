@@ -10,6 +10,7 @@ title: trackswitch.js
         - [Solo Tracks](#solo-tracks)
         - [Mute Tracks](#mute-tracks)
         - [Track Timing Offsets](#track-timing-offsets)
+        - [Track Presets](#track-presets)
     - [Player Behaviour](#player-behaviour)
         - [Keyboard Shortcuts](#keyboard-shortcuts)
         - [Loop/Section Repeat](#loopsection-repeat)
@@ -260,6 +261,90 @@ The offsets apply to the specific `ts-source` that is decoded. Use these to alig
     </ts-track>
 </div>
 ```
+
+### Track Presets
+
+Track presets allow you to define different solo configurations that can be quickly selected via a dropdown menu in the control bar. This is useful for comparing different instrumental combinations (e.g., "Vocals Only", "Drums + Bass", "Full Mix").
+
+**Defining Presets**
+
+To use presets, add a `data-preset-names` attribute to the player div with comma-separated preset names:
+
+```html
+<div class="player" data-preset-names="Full Mix,Vocals,Drums + Bass">
+    <ts-track title="Vocals" data-presets="0,1">
+        <ts-source src="vocals.mp3"></ts-source>
+    </ts-track>
+    <ts-track title="Drums" data-presets="0,2">
+        <ts-source src="drums.mp3"></ts-source>
+    </ts-track>
+    <ts-track title="Bass" data-presets="0,2">
+        <ts-source src="bass.mp3"></ts-source>
+    </ts-track>
+    <ts-track title="Guitar" data-presets="0">
+        <ts-source src="guitar.mp3"></ts-source>
+    </ts-track>
+</div>
+```
+
+Each `ts-track` element uses the `data-presets` attribute to define which presets it belongs to (as comma-separated preset indices, 0-indexed).
+
+In the example above:
+- **Preset 0** (Full Mix): All tracks are soloed (Vocals, Drums, Bass, Guitar)
+- **Preset 1** (Vocals): Only Vocals track is soloed
+- **Preset 2** (Drums + Bass): Drums and Bass tracks are soloed
+
+**Auto-Generated Preset Names**
+
+If you don't define `data-preset-names`, preset names will be auto-generated as "Preset 0", "Preset 1", etc.:
+
+```html
+<div class="player">
+    <ts-track title="Vocals" data-presets="0,1">
+        <ts-source src="vocals.mp3"></ts-source>
+    </ts-track>
+    <ts-track title="Drums" data-presets="0,2">
+        <ts-source src="drums.mp3"></ts-source>
+    </ts-track>
+    <ts-track title="Bass" data-presets="0,2">
+        <ts-source src="bass.mp3"></ts-source>
+    </ts-track>
+</div>
+```
+
+**Default Preset (Preset 0)**
+
+Preset 0 is automatically created from tracks that have the `solo` attribute. If no tracks explicitly define their preset membership, they won't appear in any preset except those they're assigned to:
+
+```html
+<div class="player" data-preset-names="With Drums,Without Drums">
+    <ts-track title="Drums" solo data-presets="0">
+        <ts-source src="drums.mp3"></ts-source>
+    </ts-track>
+    <ts-track title="Bass">
+        <ts-source src="bass.mp3"></ts-source>
+    </ts-track>
+</div>
+```
+
+**Preset Dropdown Visibility**
+
+The preset selector dropdown only appears in the control bar when **2 or more presets** are defined. With 0 or 1 presets, the dropdown is hidden.
+
+**Preset Behavior**
+
+When a preset is selected:
+- All tracks belonging to that preset are **soloed**
+- All tracks NOT belonging to that preset are **unsoloed**
+- All **mute states are reset to unmuted** (no tracks are muted)
+
+**Interacting with Presets**
+
+- **Click the dropdown** to open the preset selector menu
+- **Scroll the mouse wheel** while hovering over the dropdown to cycle through presets
+- **Use keyboard** to select from the dropdown (standard HTML select behavior)
+
+Presets can be combined with other player controls—solo, mute, and repeat buttons continue to work normally after a preset is selected.
 
 ## Player Behaviour
 
