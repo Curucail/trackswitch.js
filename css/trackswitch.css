@@ -445,6 +445,14 @@
     opacity: 1;
 }
 
+.jquery-trackswitch .main-control .control li.loop-a {
+    margin-left: 15px; /* Add space before loop group */
+}
+
+.jquery-trackswitch .main-control .control li.loop-clear {
+    margin-right: 15px; /* Add space after loop group */
+}
+
 .jquery-trackswitch .control li.loop-a:after {
     content: "A"; /* Letter A */
     font-family: Arial, sans-serif;
@@ -456,6 +464,9 @@
     border-radius: 3px;
     padding: 1px 4px;
     line-height: 1.2;
+    position: absolute;
+    top: 0%;
+    left: 0;
 }
 
 .jquery-trackswitch .control li.loop-a.checked:after {
@@ -477,6 +488,9 @@
     border-radius: 3px;
     padding: 1px 4px;
     line-height: 1.2;
+    position: absolute;
+    top: 0%;
+    left: 0;
 }
 
 .jquery-trackswitch .control li.loop-b.checked:after {
@@ -490,6 +504,8 @@
 .jquery-trackswitch .control li.loop-toggle:after {
     content: "\f021"; /* fa-refresh / loop icon */
     opacity: 0.5;
+    position: absolute;
+    left: 0;
 }
 
 .jquery-trackswitch .control li.loop-toggle.checked:after {
@@ -499,6 +515,8 @@
 .jquery-trackswitch .control li.loop-clear:after {
     content: "\f00d"; /* fa-times / X icon */
     opacity: 0.5;
+    position: absolute;
+    left: -5px;
 }
 
 .jquery-trackswitch .control li.loop-clear:hover:after {
@@ -569,6 +587,20 @@
         margin: 4px 22px 0 0;
     }
 
+    .jquery-trackswitch .main-control .control li.loop-a {
+        margin-left: 18px; /* Maintain loop group separation on mobile */
+    }
+
+    .jquery-trackswitch .main-control .control li.loop-clear {
+        margin-right: 18px; /* Maintain loop group separation on mobile */
+    }
+
+    .jquery-trackswitch .control li.loop-a:after,
+    .jquery-trackswitch .control li.loop-b:after {
+        font-size: 16px; /* Smaller text on mobile */
+        padding: 1px 3px; /* Reduced padding */
+    }
+
     .jquery-trackswitch .main-control .volume-control {
         margin: 6px 5px 0 0;
     }
@@ -606,7 +638,19 @@
 
 }
 
-@media (max-width: 400px) {
+@media (max-width: 650px) {
+    /* Style Adjustments for medium-small devices to prevent overlap */
+
+    .jquery-trackswitch .main-control .timing {
+        width: 100%;
+        float: none;
+        clear: both;
+        text-align: center;
+        margin: 24px 0 4px 0;
+    }
+}
+
+@media (max-width: 460px) {
     /* Style Adjustments for Responsive Design - extra breakpoint for smallest devices */
 
 
@@ -620,6 +664,20 @@
         float: none;
         display: inline-block;
         margin: 0 14px; /* Share the spacing margin each side to center align */
+    }
+
+    .jquery-trackswitch .main-control .control li.loop-a {
+        margin-left: 24px; /* Maintain loop group separation on smallest devices */
+    }
+
+    .jquery-trackswitch .main-control .control li.loop-clear {
+        margin-right: 24px; /* Maintain loop group separation on smallest devices */
+    }
+
+    .jquery-trackswitch .control li.loop-a:after,
+    .jquery-trackswitch .control li.loop-b:after {
+        font-size: 18px; /* Even smaller text on smallest devices */
+        padding: 1px 2px; /* Further reduced padding */
     }
 
     .jquery-trackswitch .main-control .volume-control {
@@ -636,7 +694,7 @@
     .jquery-trackswitch .main-control .timing {
         width: 100%;
         float: none;
-        margin: 16px 0 8px 0;
+        margin: 32px 0 8px 0;
     }
 
     .jquery-trackswitch .main-control .seekwrap {
