@@ -54,7 +54,7 @@ Trackswitch requires jQuery and Fontawesome to be included to work, e.g.
 <script src="trackswitch.min.js"></script>
 <script type="text/javascript">
     jQuery(document).ready(function() {
-        jQuery(".player").trackSwitch({spacebar: true});
+        jQuery(".player").trackSwitch();
     });
 </script>
 
@@ -294,9 +294,27 @@ Any combination of the following boolean flags is possible, where the indicated 
  - `repeat`: If `true` initialize player with repeat button enabled. Defaults to `false`.
  - `radiosolo`: If `true` allow only 1 track to be soloed at a time (makes the <kbd>shift</kbd>+<i class="fa fa-mouse-pointer" aria-hidden="true"></i>click behaviour the default). Useful for comparing rather than mixing tracks. Defaults to `false`.
  - `onlyradiosolo`: If `true` sets both `mute: false` and `radiosolo: true` in one argument. Useful for one track at a time comparison. Also makes the whole track row clickable. Defaults to `false`.
- - `spacebar`: If `true` bind the <kbd>spacebar</kbd> key to play/pause. Can be turned on for more than one player, but only affect the most recently activated. Defaults to `false`.
  - `tabview`: If `true` change the layout so tracks are arranged in a 'tab view'. This saves vertical space, for example on a presentation. Defaults to `false`.
  - `iosunmute`: If `true` run a one-time iOS/iPadOS unlock using a silent HTML5 audio element on first user interaction, so WebAudio playback is less likely to be muted by the hardware silent switch. Defaults to `true`.
+
+### Keyboard Shortcuts
+
+trackswitch.js includes keyboard shortcuts for all playback controls:
+
+**Playback Controls**
+- <kbd>Space</kbd> - Play / Pause
+- <kbd>Escape</kbd> - Stop playback and reset to beginning
+- <kbd>R</kbd> - Toggle repeat mode
+
+**Seeking**
+- <kbd>←</kbd> / <kbd>→</kbd> - Seek backward/forward 2 seconds
+- <kbd>Shift</kbd> + <kbd>←</kbd> / <kbd>→</kbd> - Seek backward/forward 5 seconds
+- <kbd>Home</kbd> - Jump to start
+
+**Volume**
+- <kbd>↑</kbd> / <kbd>↓</kbd> - Increase/decrease volume by 10%
+
+When multiple players exist on a page, the last-clicked player receives keyboard input.
 
 
 ## Additional Player Elements

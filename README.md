@@ -51,6 +51,28 @@ See [configuration examples](https://audiolabs.github.io/trackswitch.js/configur
 
 See [examples](https://audiolabs.github.io/trackswitch.js/examples.html).
 
+
+Keyboard Shortcuts
+------------------
+
+trackswitch.js includes comprehensive keyboard shortcuts for controlling playback.
+
+### Playback Controls
+- **Space** - Play / Pause
+- **Escape** - Stop playback and reset to beginning
+- **R** - Toggle repeat mode
+
+### Seeking
+- **← / →** - Seek backward/forward 2 seconds
+- **Shift + ← / →** - Seek backward/forward 5 seconds
+- **Home** - Jump to start
+
+### Volume
+- **↑ / ↓** - Increase/decrease volume by 10%
+
+When multiple players exist on a page, the last-clicked player receives keyboard input.
+
+
 Development
 -----------
 
