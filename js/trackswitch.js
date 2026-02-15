@@ -26,7 +26,6 @@ var pluginName = 'trackSwitch',
         repeat: false,
         radiosolo: false,
         onlyradiosolo: false,
-        spacebar: false,
         tabview: false,
         iosunmute: true,
     };
@@ -495,9 +494,7 @@ Plugin.prototype.unbindEvents = function() {
     this.element.off('input', '.volume-slider');
     this.element.off('mousedown touchstart mousemove touchmove mouseup touchend', '.volume-control');
 
-    if (this.options.spacebar) {
-        $(window).unbind("keypress");
-    }
+    $(window).off("keydown.trackswitch");
 
 };
 
@@ -520,17 +517,13 @@ Plugin.prototype.bindEvents = function() {
     // Prevent volume slider interactions from triggering seek or other player events
     this.element.on('mousedown touchstart mousemove touchmove mouseup touchend', '.volume-control', function(e) { e.stopPropagation(); });
 
-    if (this.options.spacebar) {
-        var that = this;
+    var that = this;
 
-        $(window).unbind("keypress"); // Unbind other players before binding new
+    $(window).off("keydown.trackswitch"); // Unbind other players before binding new
 
-        $(window).keypress(function (event) {
-            if (event.which === 32) { // Spacebar
-                that.event_playpause(event); // Toggle playpause event
-            }
-        })
-    }
+    $(window).on("keydown.trackswitch", function (event) {
+        that.handleKeyboardEvent(event);
+    });
 
 };
 
@@ -850,6 +843,124 @@ Plugin.prototype.pause_others = function() {
     }
 
 }
+
+
+// Seek relative to current position by specified seconds (can be negative)
+Plugin.prototype.seekRelative = function(seconds) {
+
+    var newPosition = this.position + seconds;
+    
+    // Clamp to valid range [0, longestDuration]
+    newPosition = Math.max(0, Math.min(newPosition, this.longestDuration));
+    
+    if (this.playing) {
+        this.stopAudio();
+        this.startAudio(newPosition);
+    } else {
+        this.position = newPosition;
+    }
+    
+    this.updateMainControls();
+
+};
+
+
+// Adjust master volume by delta percentage (0-100 scale)
+Plugin.prototype.adjustVolume = function(delta) {
+
+    var volumeSlider = this.element.find('.volume-slider');
+    var currentVolume = parseFloat(volumeSlider.val());
+    var newVolume = currentVolume + delta;
+    
+    // Clamp to valid range [0, 100]
+    newVolume = Math.max(0, Math.min(newVolume, 100));
+    
+    volumeSlider.val(newVolume);
+    
+    // Trigger the volume change event
+    var event = $.Event('input');
+    volumeSlider.trigger(event);
+
+};
+
+
+// Handle keyboard shortcuts
+Plugin.prototype.handleKeyboardEvent = function(event) {
+
+    // Don't intercept keyboard shortcuts when user is typing in an input field
+    if ($(event.target).closest('input, textarea, select, [contenteditable="true"], [contenteditable=""], [role="textbox"]').length) {
+        return;
+    }
+    
+    var handled = false;
+    var keyCode = event.keyCode || event.which;
+    
+    switch (keyCode) {
+        case 32: // Space - Play/Pause
+            event.preventDefault();
+            this.event_playpause(event);
+            handled = true;
+            break;
+            
+        case 27: // Escape - Stop
+            event.preventDefault();
+            var stopEvent = $.Event('mousedown', { which: 1, type: 'mousedown' });
+            this.event_stop(stopEvent);
+            handled = true;
+            break;
+            
+        case 37: // Left Arrow - Seek backward
+            event.preventDefault();
+            var seekAmount = event.shiftKey ? -5 : -2;
+            this.seekRelative(seekAmount);
+            handled = true;
+            break;
+            
+        case 39: // Right Arrow - Seek forward
+            event.preventDefault();
+            var seekAmount = event.shiftKey ? 5 : 2;
+            this.seekRelative(seekAmount);
+            handled = true;
+            break;
+            
+        case 38: // Up Arrow - Volume up
+            event.preventDefault();
+            this.adjustVolume(10);
+            handled = true;
+            break;
+            
+        case 40: // Down Arrow - Volume down
+            event.preventDefault();
+            this.adjustVolume(-10);
+            handled = true;
+            break;
+            
+        case 36: // Home - Jump to start
+            event.preventDefault();
+            if (this.playing) {
+                this.stopAudio();
+                this.startAudio(0);
+            } else {
+                this.position = 0;
+            }
+            this.updateMainControls();
+            handled = true;
+            break;
+            
+        case 82: // R - Toggle repeat
+            event.preventDefault();
+            var repeatEvent = $.Event('mousedown', { which: 1, type: 'mousedown' });
+            this.event_repeat(repeatEvent);
+            handled = true;
+            break;
+    }
+    
+    if (handled) {
+        event.stopPropagation();
+        return false;
+    }
+
+};
 
 
 // Toggle start stop of audio, saving the position to mock pausing
