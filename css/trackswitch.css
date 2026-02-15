@@ -391,6 +391,79 @@
 }
 
 
+/* WAVEFORM VISUALIZATION STYLES -------------------------------------------- */
+
+.jquery-trackswitch .waveform-wrap {
+    display: block;
+    position: relative;
+    width: 100%;
+    margin: 10px 0;
+}
+
+.jquery-trackswitch canvas.waveform {
+    display: block;
+    width: 100%;
+    background-color: rgba(0, 0, 0, 0.05); /* Subtle background */
+    --waveform-color: #ED8C01; /* CSS custom property for waveform color (orange) */
+}
+
+.jquery-trackswitch .waveform-wrap .seekwrap {
+    position: absolute;
+    top: 0; right: 0; bottom: 0; left: 0;
+    cursor: pointer;
+    pointer-events: auto; /* Ensure overlay captures click events */
+}
+
+.jquery-trackswitch .waveform-wrap .seekwrap .seekhead {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 2px;
+    background-color: rgba(0, 0, 0, 0.8);
+    box-shadow: 1px 0 2px rgba(0, 0, 0, 0.3);
+    z-index: 3;
+}
+
+.jquery-trackswitch .waveform-wrap .seekwrap .loop-marker {
+    position: absolute;
+    width: 10px; /* Wider for click target */
+    top: 0; bottom: 0;
+    display: none; /* Hidden by default, shown via JS */
+    z-index: 2;
+    cursor: ew-resize; /* Show draggable cursor */
+    margin-left: -5px; /* Center the click target */
+    background: transparent;
+}
+
+.jquery-trackswitch .waveform-wrap .seekwrap .loop-marker:after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background-color: #333;
+    box-shadow: 0 0 1px rgba(51, 51, 51, 0.8);
+    transform: translateX(-50%);
+}
+
+.jquery-trackswitch .waveform-wrap .seekwrap .loop-marker.marker-a:after,
+.jquery-trackswitch .waveform-wrap .seekwrap .loop-marker.marker-b:after {
+    background-color: #333;
+}
+
+.jquery-trackswitch .waveform-wrap .seekwrap .loop-region {
+    position: absolute;
+    top: 0; bottom: 0;
+    display: none; /* Hidden by default, shown via JS */
+    background-color: rgba(237, 140, 1, 0.15); /* Semi-transparent orange */
+    z-index: 1;
+}
+
+.jquery-trackswitch .waveform-wrap .seekwrap .loop-region.active {
+    background-color: rgba(237, 140, 1, 0.3); /* Brighter orange when looping is active */
+}
+
+
 /* TRACK STYLES ------------------------------------------------------------- */
 
 .jquery-trackswitch ul.track_list {

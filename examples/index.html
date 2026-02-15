@@ -15,9 +15,9 @@
 </head>
 <body>
 
-<div class="player" preset-names="All Tracks,Violins & Synths,Rhythm Section,Drums Only">
+<div class="player" preset-names="All Tracks,Violins & Synths,Drums & Bass,Drums Only">
     <img style="margin: 20px auto;" src="data/cover.png">
-    <img data-style="margin: auto;" class="seekable" data-seek-margin-left="4" data-seek-margin-right="4" src="data/mix.png">
+    <canvas class="waveform" width="1200" height="150"></canvas>
     <ts-track title="Violins" data-img="data/violins.png" presets="0,1">
         <ts-source src="data/violins.mp3"></ts-source>
     </ts-track>
@@ -38,7 +38,7 @@
 
 <script type="text/javascript">
     jQuery(document).ready(function() {
-        jQuery(".player").trackSwitch({}); // All other players are default
+        jQuery(".player").trackSwitch({waveformBarWidth: 1}); // All other players are default
     });
 </script>
 </body>

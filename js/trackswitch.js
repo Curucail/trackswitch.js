@@ -30,6 +30,8 @@ var pluginName = 'trackSwitch',
         iosunmute: true,
         keyboard: true,
         looping: true,
+        waveform: true,
+        waveformBarWidth: 1,
     };
 
 
@@ -87,6 +89,13 @@ function Plugin(element, options) {
     this.trackBuffer = [];
     this.trackTiming = [];
     this.activeAudioSources = [];
+
+    // Waveform visualization properties
+    this.waveformCanvas = [];
+    this.waveformData = [];
+    this.waveformContext = [];
+    this.waveformOriginalHeight = [];
+    this.resizeDebounceTimer = null;
 
     // Skip gain node creation if WebAudioAPI could not load.
     if (audioContext) {
@@ -241,6 +250,35 @@ Plugin.prototype.init = function() {
         );
 
     });
+
+    // Wrap any waveform canvases in seekable markup (similar to seekable images)
+    if (this.options.waveform) {
+        this.element.find('canvas.waveform:not(.waveform-wrap > canvas.waveform)').each(function(index) {
+
+            // Store canvas reference and original height
+            that.waveformCanvas.push(this);
+            that.waveformContext.push(this.getContext('2d'));
+            that.waveformOriginalHeight.push(this.height); // Store the original height attribute
+
+            // Apply custom styling from data attribute
+            $(this).wrap( '<div class="waveform-wrap" style="' + ($(this).data("waveformStyle") || '') + '; display: block;"></div>' );
+
+            $(this).after(
+                '<div class="seekwrap" style=" ' +
+                'left: ' + ($(this).data("seekMarginLeft") || 0) + '%; ' +
+                'right: ' + ($(this).data("seekMarginRight") || 0) + '%;">' +
+                    '<div class="loop-region"></div>' +
+                    '<div class="loop-marker marker-a"></div>' +
+                    '<div class="loop-marker marker-b"></div>' +
+                    '<div class="seekhead"></div>' +
+                '</div>'
+            );
+
+        });
+
+        // Draw dummy waveforms on all canvases before audio loads
+        this.drawDummyWaveforms();
+    }
 
     // Prevent context menu on seekbar for right-click loop selection (only if looping is enabled)
     if (this.options.looping) {
@@ -513,6 +551,11 @@ Plugin.prototype.findLongest = function() {
 
     this.element.trigger("loaded");
 
+    // Generate waveforms if canvas elements are present
+    if (this.options.waveform && this.waveformCanvas.length > 0) {
+        this.generateWaveforms();
+    }
+
 }
 
 
@@ -612,6 +655,14 @@ Plugin.prototype.unbindEvents = function() {
         $(window).off("keydown.trackswitch");
     }
 
+    // Unbind window resize handler for waveforms
+    if (this.options.waveform && this.waveformCanvas.length > 0) {
+        var elementId = this.element.attr('id');
+        if (elementId) {
+            $(window).off('resize.trackswitch.waveform.' + elementId);
+        }
+    }
+
 };
 
 
@@ -634,8 +685,15 @@ Plugin.prototype.bindEvents = function() {
     this.element.on('mousedown touchstart mousemove touchmove mouseup touchend', '.volume-control', function(e) { e.stopPropagation(); });
 
     if (this.presetCount >= 2) {
-        this.element.on('change', '.preset-selector', $.proxy(this.event_preset, this));
+        // Handle both normal changes and explicit reapply requests
+        this.element.on('change preset:reapply', '.preset-selector', $.proxy(this.event_preset, this));
         this.element.on('wheel', '.preset-selector', $.proxy(this.event_preset_scroll, this));
+
+        // Track last applied preset value so we can detect "reapply same preset" clicks
+        this.element.on('change preset:reapply', '.preset-selector', function() {
+            var $select = $(this);
+            $select.data('lastValue', $select.val());
+        });
     }
 
     if (this.options.looping) {
@@ -654,6 +712,15 @@ Plugin.prototype.bindEvents = function() {
 
         $(window).on("keydown.trackswitch", function (event) {
             that.handleKeyboardEvent(event);
+        });
+    }
+
+    // Bind window resize handler for responsive waveform regeneration
+    if (this.options.waveform && this.waveformCanvas.length > 0) {
+        // Use a unique namespace to avoid conflicts between multiple players
+        var resizeEvent = 'resize.trackswitch.waveform.' + this.element.attr('id');
+        $(window).on(resizeEvent, function() {
+            that.handleWaveformResize();
         });
     }
 
@@ -1810,6 +1877,335 @@ Plugin.prototype.switch_image = function() {
 }
 
 
+// Calculate waveform peak data from an audio buffer
+// Returns an array of peak values (one per pixel column)
+Plugin.prototype.calculateWaveformPeaks = function(buffer, width) {
+
+    if (!buffer || width <= 0) {
+        return [];
+    }
+
+    var channelData = buffer.getChannelData(0); // Use first channel (mono or left channel)
+    var samplesPerPixel = Math.floor(channelData.length / width);
+    var peaks = new Float32Array(width);
+
+    for (var x = 0; x < width; x++) {
+        var start = x * samplesPerPixel;
+        var end = start + samplesPerPixel;
+        var max = 0;
+
+        // Find peak absolute amplitude in this pixel range
+        for (var i = start; i < end && i < channelData.length; i++) {
+            var sample = Math.abs(channelData[i]);
+            if (sample > max) {
+                max = sample;
+            }
+        }
+
+        peaks[x] = max;
+    }
+
+    return peaks;
+
+}
+
+
+// Draw waveform to canvas using pre-calculated peak data
+Plugin.prototype.drawWaveform = function(canvasIndex, peaks) {
+
+    if (!this.waveformCanvas[canvasIndex] || !this.waveformContext[canvasIndex]) {
+        return;
+    }
+
+    var canvas = this.waveformCanvas[canvasIndex];
+    var ctx = this.waveformContext[canvasIndex];
+    var width = canvas.width;
+    var height = canvas.height;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, width, height);
+
+    // Check if we have peak data
+    if (!peaks || peaks.length === 0) {
+        return; // No data to draw
+    }
+
+    // Find the maximum peak value for normalization
+    var maxPeak = 0;
+    for (var i = 0; i < peaks.length; i++) {
+        if (peaks[i] > maxPeak) {
+            maxPeak = peaks[i];
+        }
+    }
+
+    // Avoid division by zero
+    if (maxPeak === 0) {
+        maxPeak = 1;
+    }
+
+    // Get waveform color from CSS custom property or use default orange
+    var waveformColor = getComputedStyle(canvas).getPropertyValue('--waveform-color').trim() || '#ED8C01';
+    ctx.fillStyle = waveformColor;
+
+    // Draw centered waveform bars (mirrored from center) with normalization
+    // Bar width is configurable via waveformBarWidth option
+    var barWidth = this.options.waveformBarWidth;
+    for (var x = 0; x < peaks.length && x < width; x++) {
+        var normalizedAmplitude = peaks[x] / maxPeak; // Normalize to 0-1 range
+        var barHeight = normalizedAmplitude * height * 0.95; // Use 95% of canvas height
+        var y = (height - barHeight) / 2;
+        var xPos = x * barWidth;
+
+        ctx.fillRect(xPos, y, barWidth, barHeight);
+    }
+
+}
+
+
+// Draw a dummy/placeholder waveform before audio is loaded
+Plugin.prototype.drawDummyWaveform = function(canvasIndex) {
+
+    if (!this.waveformCanvas[canvasIndex] || !this.waveformContext[canvasIndex]) {
+        return;
+    }
+
+    var canvas = this.waveformCanvas[canvasIndex];
+    var ctx = this.waveformContext[canvasIndex];
+    
+    // Ensure canvas dimensions are set based on display size
+    var displayWidth = canvas.clientWidth || canvas.width;
+    var originalHeight = this.waveformOriginalHeight[canvasIndex] || canvas.height;
+    
+    if (canvas.width !== displayWidth) {
+        canvas.width = displayWidth;
+    }
+    if (canvas.height !== originalHeight) {
+        canvas.height = originalHeight;
+    }
+    
+    var width = canvas.width;
+    var height = canvas.height;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, width, height);
+
+    // Get waveform color from CSS custom property or use default orange
+    var waveformColor = getComputedStyle(canvas).getPropertyValue('--waveform-color').trim() || '#ED8C01';
+    // Make it semi-transparent to indicate it's a placeholder
+    ctx.fillStyle = waveformColor;
+    ctx.globalAlpha = 0.3;
+
+    var barWidth = this.options.waveformBarWidth;
+    var numBars = Math.floor(width / barWidth);
+
+    // Generate a random waveform pattern for a realistic audio-like appearance
+    for (var x = 0; x < numBars; x++) {
+        // Use random values for amplitude with some smoothing to avoid too much noise
+        var amplitude = Math.random() * 0.7 + 0.3; // Random between 0.3 and 1.0
+        
+        var barHeight = amplitude * height * 0.7; // Use up to 70% of canvas height
+        var y = (height - barHeight) / 2;
+        var xPos = x * barWidth;
+
+        ctx.fillRect(xPos, y, barWidth, barHeight);
+    }
+
+    // Reset alpha
+    ctx.globalAlpha = 1.0;
+
+};
+
+
+// Draw dummy waveforms on all canvases
+Plugin.prototype.drawDummyWaveforms = function() {
+
+    if (!this.options.waveform || this.waveformCanvas.length === 0) {
+        return;
+    }
+
+    for (var i = 0; i < this.waveformCanvas.length; i++) {
+        this.drawDummyWaveform(i);
+    }
+
+};
+
+
+// Generate waveform data for all tracks
+Plugin.prototype.generateWaveforms = function() {
+
+    if (!this.options.waveform || this.waveformCanvas.length === 0) {
+        return;
+    }
+
+    var that = this;
+
+    // For each canvas, we'll generate waveform data for all tracks
+    this.waveformCanvas.forEach(function(canvas, canvasIndex) {
+
+        // Set canvas width to match its display size for responsive scaling
+        // Keep height consistent using the original height attribute
+        var displayWidth = canvas.clientWidth || canvas.width;
+        var originalHeight = that.waveformOriginalHeight[canvasIndex] || canvas.height;
+
+        // Update canvas resolution if needed (only width, height stays consistent)
+        if (canvas.width !== displayWidth) {
+            canvas.width = displayWidth;
+        }
+        if (canvas.height !== originalHeight) {
+            canvas.height = originalHeight;
+        }
+
+        // Calculate waveform peaks for each track
+        // Peak count adjusted based on bar width to avoid overlapping bars
+        var barWidth = that.options.waveformBarWidth;
+        var peakCount = Math.floor(canvas.width / barWidth);
+        for (var i = 0; i < that.numberOfTracks; i++) {
+            if (that.trackBuffer[i] && that.trackBuffer[i].buffer) {
+                // Calculate peaks based on adjusted width for configurable bar width
+                that.waveformData[i] = that.calculateWaveformPeaks(that.trackBuffer[i].buffer, peakCount);
+            }
+        }
+
+        // Draw initial waveform (show first track or mixed view)
+        that.switchWaveform();
+
+    });
+
+}
+
+
+// Calculate mixed waveform from multiple tracks based on current audible state
+Plugin.prototype.calculateMixedWaveform = function() {
+
+    if (!this.waveformData || this.waveformData.length === 0) {
+        return null;
+    }
+
+    var that = this;
+    var anySolos = false;
+    
+    // Check if any tracks are soloed
+    $.each(this.trackProperties, function(i, value) {
+        anySolos = anySolos || that.trackProperties[i].solo;
+    });
+
+    // Determine which tracks are audible
+    var audibleTracks = [];
+    $.each(this.trackProperties, function(i, value) {
+        if (that.waveformData[i]) {
+            var isAudible = false;
+            
+            if (anySolos) {
+                // If there are solos, only soloed tracks are audible
+                isAudible = that.trackProperties[i].solo;
+            } else {
+                // If no solos, all non-muted tracks are audible
+                isAudible = !that.trackProperties[i].mute;
+            }
+            
+            if (isAudible) {
+                audibleTracks.push(i);
+            }
+        }
+    });
+
+    // If only one audible track, return its waveform directly
+    if (audibleTracks.length === 1) {
+        return this.waveformData[audibleTracks[0]];
+    }
+
+    // If no audible tracks, return null
+    if (audibleTracks.length === 0) {
+        return null;
+    }
+
+    // Mix multiple tracks by summing their peaks
+    var width = this.waveformData[audibleTracks[0]].length;
+    var mixedPeaks = new Float32Array(width);
+
+    for (var x = 0; x < width; x++) {
+        var sum = 0;
+        for (var t = 0; t < audibleTracks.length; t++) {
+            var trackIndex = audibleTracks[t];
+            if (this.waveformData[trackIndex] && x < this.waveformData[trackIndex].length) {
+                sum += this.waveformData[trackIndex][x];
+            }
+        }
+        // Average the sum to prevent clipping
+        mixedPeaks[x] = sum / Math.sqrt(audibleTracks.length);
+    }
+
+    return mixedPeaks;
+
+};
+
+
+// Switch the displayed waveform based on solo state (similar to switch_image)
+Plugin.prototype.switchWaveform = function() {
+
+    if (!this.options.waveform || this.waveformCanvas.length === 0) {
+        return;
+    }
+
+    // Calculate the mixed waveform based on current track states
+    var peaksToDisplay = this.calculateMixedWaveform();
+
+    // Draw the waveform on all canvases
+    for (var canvasIndex = 0; canvasIndex < this.waveformCanvas.length; canvasIndex++) {
+        if (peaksToDisplay) {
+            this.drawWaveform(canvasIndex, peaksToDisplay);
+        }
+    }
+
+}
+
+
+// Handle window resize for responsive waveform regeneration (debounced)
+Plugin.prototype.handleWaveformResize = function() {
+
+    var that = this;
+
+    // Clear existing debounce timer
+    if (this.resizeDebounceTimer) {
+        clearTimeout(this.resizeDebounceTimer);
+    }
+
+    // Debounce resize events to avoid excessive recalculation
+    this.resizeDebounceTimer = setTimeout(function() {
+
+        that.waveformCanvas.forEach(function(canvas, canvasIndex) {
+
+            // Update canvas width to match its display size
+            // Keep height consistent using the original height attribute
+            var displayWidth = canvas.clientWidth;
+            var originalHeight = that.waveformOriginalHeight[canvasIndex] || canvas.height;
+
+            // Only regenerate if width changed (height stays consistent)
+            if (canvas.width !== displayWidth) {
+                canvas.width = displayWidth;
+                canvas.height = originalHeight; // Ensure height remains consistent
+
+                // Recalculate waveform peaks for all tracks at new width
+                // Peak count adjusted based on bar width to avoid overlapping bars
+                var barWidth = that.options.waveformBarWidth;
+                var peakCount = Math.floor(canvas.width / barWidth);
+                for (var i = 0; i < that.numberOfTracks; i++) {
+                    if (that.trackBuffer[i] && that.trackBuffer[i].buffer) {
+                        that.waveformData[i] = that.calculateWaveformPeaks(that.trackBuffer[i].buffer, peakCount);
+                    }
+                }
+
+                // Redraw current waveform
+                that.switchWaveform();
+            }
+
+        });
+
+    }, 300); // 300ms debounce delay
+
+}
+
+
 // When mute or solo properties changed, apply them to the gain of each track and update UI
 Plugin.prototype.apply_track_properties = function() {
     var that = this;
@@ -1871,6 +2267,7 @@ Plugin.prototype.apply_track_properties = function() {
     });
 
     this.switch_image(); // Now handle the switching of the poster image
+    this.switchWaveform(); // Now handle the switching of the waveform
 
     this.deselect();
 };
