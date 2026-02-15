@@ -173,6 +173,9 @@
   overflow: hidden;
   height: 28px;
   cursor: pointer;
+  min-width: 200px;
+  width: 100%;
+  clear: left;
 }
 
 .jquery-trackswitch .main-control .seekwrap .seekbar {
@@ -751,7 +754,7 @@
 
 }
 
-@media (max-width: 650px) {
+@media (max-width: 600px) {
     /* Style Adjustments for medium-small devices to prevent overlap */
 
     .jquery-trackswitch .main-control .preset-selector-wrap {
@@ -767,11 +770,15 @@
         float: none;
         clear: both;
         text-align: center;
-        margin: 24px 0 4px 0;
+        margin: 6px 0 4px 0;
+    }
+
+    .jquery-trackswitch .main-control .seekwrap {
+        margin-top: 4px;
     }
 }
 
-@media (max-width: 460px) {
+@media (max-width: 450px) {
     /* Style Adjustments for Responsive Design - extra breakpoint for smallest devices */
 
 
@@ -826,7 +833,7 @@
     .jquery-trackswitch .main-control .timing {
         width: 100%;
         float: none;
-        margin: 32px 0 8px 0;
+        margin: 16px 0 8px 0;
     }
 
     .jquery-trackswitch .main-control .seekwrap {
