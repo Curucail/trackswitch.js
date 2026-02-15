@@ -189,19 +189,27 @@ Plugin.prototype.init = function() {
             '</div>' +
             '<div class="main-control">' +
                 '<ul class="control">' +
-                    '<li class="playpause button" title="Play/Pause (Spacebar)">Play</li>' +
-                    '<li class="stop button" title="Stop (Esc)">Stop</li>' +
-                    '<li class="repeat button" title="Repeat (R)">Repeat</li>' +
+                    '<li class="playback-group">' +
+                        '<ul class="playback-controls">' +
+                            '<li class="playpause button" title="Play/Pause (Spacebar)">Play</li>' +
+                            '<li class="stop button" title="Stop (Esc)">Stop</li>' +
+                            '<li class="repeat button" title="Repeat (R)">Repeat</li>' +
+                        '</ul>' +
+                    '</li>' +
                     '<li class="volume">' +
                         '<div class="volume-control">' +
                             '<i class="fa-volume-up volume-icon"></i>' +
                             '<input type="range" class="volume-slider" min="0" max="100" value="100">' +
                         '</div>' +
                     '</li>' +
-                    (that.options.looping ? '<li class="loop-a button" title="Set Loop Point A (A)">Loop A</li>' +
-                    '<li class="loop-b button" title="Set Loop Point B (B)">Loop B</li>' +
-                    '<li class="loop-toggle button" title="Toggle Loop On/Off (L)">Loop</li>' +
-                    '<li class="loop-clear button" title="Clear Loop Points (C)">Clear</li>' : '') +
+                    (that.options.looping ? '<li class="loop-group">' +
+                        '<ul class="loop-controls">' +
+                            '<li class="loop-a button" title="Set Loop Point A (A)">Loop A</li>' +
+                            '<li class="loop-b button" title="Set Loop Point B (B)">Loop B</li>' +
+                            '<li class="loop-toggle button" title="Toggle Loop On/Off (L)">Loop</li>' +
+                            '<li class="loop-clear button" title="Clear Loop Points (C)">Clear</li>' +
+                        '</ul>' +
+                    '</li>' : '') +
                     presetDropdownHtml +
                     '<li class="timing">' +
                         '<span class="time">' +
