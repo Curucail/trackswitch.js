@@ -15,6 +15,7 @@ title: trackswitch.js
         - [Keyboard Shortcuts](#keyboard-shortcuts)
         - [Loop/Section Repeat](#loopsection-repeat)
     - [Additional Player Elements](#additional-player-elements)
+        - [Waveform Visualization](#waveform-visualization)
         - [Additional and Seekable Player Image](#additional-and-seekable-player-image)
         - [Seekable Image Start/Stop Margin](#seekable-image-startstop-margin)
         - [Seekable Image For Each Track](#seekable-image-for-each-track)
@@ -383,6 +384,8 @@ Any combination of the following boolean flags is possible, where the indicated 
  - `onlyradiosolo`: If `true` sets both `mute: false` and `radiosolo: true` in one argument. Useful for one track at a time comparison. Also makes the whole track row clickable. Defaults to `false`.
  - `tabview`: If `true` change the layout so tracks are arranged in a 'tab view'. This saves vertical space, for example on a presentation. Defaults to `false`.
  - `iosunmute`: If `true` run a one-time iOS/iPadOS unlock using a silent HTML5 audio element on first user interaction, so WebAudio playback is less likely to be muted by the hardware silent switch. Defaults to `true`.
+ - `waveform`: If `true` enable waveform visualization for any `<canvas class="waveform">` elements in the player. Defaults to `true`.
+ - `waveformBarWidth`: Width in pixels for each waveform bar (1-5 recommended). Lower values create denser, more detailed waveforms. Defaults to `2`.
 
 ### Keyboard Shortcuts
 
@@ -455,6 +458,127 @@ You can add aditional elements directly into the player, e.g. a paragraph `<p>` 
     </ts-track>
 </div>
 ```
+
+<div class="player">
+    <p style="text-align: center;">Example with padded and centered text.</p>
+    <ts-track title="Violins">
+        <ts-source src="data/multitracks/violins.mp3"></ts-source>
+    </ts-track>
+    <ts-track title="Synth">
+        <ts-source src="data/multitracks/synth.mp3"></ts-source>
+    </ts-track>
+    <ts-track title="Bass">
+        <ts-source src="data/multitracks/bass.mp3"></ts-source>
+    </ts-track>
+    <ts-track title="Drums">
+        <ts-source src="data/multitracks/drums.mp3"></ts-source>
+    </ts-track>
+</div>
+
+### Waveform Visualization
+
+TrackSwitch.js includes dynamic waveform visualization that displays audio waveforms directly in the player. The waveforms are automatically generated from decoded audio data, are fully interactive for seeking, and adapt to track solo/mute states in real-time.
+
+**Basic Usage**
+
+To add waveform visualization, simply include a `<canvas class="waveform">` element in your player:
+
+```html
+<div class="player">
+    <canvas class="waveform" width="1200" height="200"></canvas>
+    <ts-track title="Violins">
+        <ts-source src="violins.mp3"></ts-source>
+    </ts-track>
+    <ts-track title="Synth">
+        <ts-source src="synth.mp3"></ts-source>
+    </ts-track>
+    <ts-track title="Bass">
+        <ts-source src="bass.mp3"></ts-source>
+    </ts-track>
+    <ts-track title="Drums">
+        <ts-source src="drums.mp3"></ts-source>
+    </ts-track>
+</div>
+```
+
+The waveform will be automatically generated when the audio loads. Before loading, a placeholder waveform with random amplitudes is displayed at 30% opacity.
+
+**Canvas Attributes**
+
+- `width` - Resolution width in pixels (recommended: 1200). Higher values provide more detail.
+- `height` - Display height in pixels (recommended: 120-200). This height remains consistent across screen sizes.
+- `data-waveform-style` - Custom inline styles for the waveform wrapper (e.g., `"margin: 20px auto; max-width: 900px;"`)
+- `data-seek-margin-left` / `data-seek-margin-right` - Seekable area margins as percentage (optional)
+
+**Configuration Options**
+
+Control waveform behavior through the player initialization settings:
+
+```javascript
+jQuery(".player").trackSwitch({
+    waveform: true,         // Enable/disable waveform visualization (default: true)
+    waveformBarWidth: 2     // Width of each waveform bar in pixels (default: 2)
+});
+```
+
+- `waveform` (boolean) - Enable or disable waveform visualization. Default: `true`
+- `waveformBarWidth` (number) - Width of each waveform bar in pixels. Default: `1`
+  - `1` - High resolution, dense detail
+  - `2` - Balanced default appearance
+  - `3-4` - Chunky, bold style, easier to see on small displays
+  - `5+` - Sparse, artistic style
+
+**Waveform Behavior**
+
+The waveform dynamically represents what you're currently hearing:
+
+- **No tracks soloed, all unmuted**: Shows a mixed waveform of all playing tracks
+- **Some tracks muted**: Shows a mixed waveform of only unmuted tracks
+- **One track soloed**: Shows that track's individual waveform
+- **Multiple tracks soloed**: Shows a mixed waveform of the soloed tracks
+
+Waveforms automatically update when you change solo/mute states, providing real-time visual feedback of your audio mix.
+
+**Peak Normalization**
+
+All waveforms are automatically normalized so the highest peak fills approximately 95% of the canvas height.
+
+**Interactive Features**
+
+- **Seeking**: Click or drag anywhere on the waveform to seek through the audio
+- **Loop Markers**: When A/B loop is enabled, loop markers and regions display over the waveform
+- **Responsive**: Waveform width automatically adapts to container size while maintaining consistent height
+- **Playhead**: A vertical line indicates the current playback position
+
+**Customization**
+
+Customize waveform colors using CSS custom properties:
+
+```css
+.player canvas.waveform {
+    --waveform-color: #4ECDC4;  /* Change waveform color (default: #ED8C01) */
+    background-color: rgba(0, 0, 0, 0.05);  /* Change background */
+}
+```
+
+You can also style the waveform wrapper:
+
+```css
+.jquery-trackswitch .waveform-wrap {
+    margin: 15px 0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+```
+
+**Technical Details**
+
+- **Algorithm**: Peak amplitude detection with automatic normalization
+- **Rendering**: Canvas 2D `fillRect` operations for optimal performance
+- **Data Storage**: Float32Array of peak values per track
+- **Mixing**: Dynamic calculation by summing audible track peaks with RMS-like averaging
+- **Update Frequency**: On audio load, solo/mute changes, and window resize
+
 
 <div class="player">
     <p style="text-align: center;">Example with padded and centered text.</p>
