@@ -11,6 +11,8 @@ title: trackswitch.js
         - [Mute Tracks](#mute-tracks)
         - [Track Timing Offsets](#track-timing-offsets)
     - [Player Behaviour](#player-behaviour)
+        - [Keyboard Shortcuts](#keyboard-shortcuts)
+        - [Loop/Section Repeat](#loopsection-repeat)
     - [Additional Player Elements](#additional-player-elements)
         - [Additional and Seekable Player Image](#additional-and-seekable-player-image)
         - [Seekable Image Start/Stop Margin](#seekable-image-startstop-margin)
@@ -314,7 +316,37 @@ trackswitch.js includes keyboard shortcuts for all playback controls:
 **Volume**
 - <kbd>↑</kbd> / <kbd>↓</kbd> - Increase/decrease volume by 10%
 
+**Loop/Section Repeat**
+- <kbd>A</kbd> - Set loop point A at current position
+- <kbd>B</kbd> - Set loop point B at current position
+- <kbd>L</kbd> - Toggle loop on/off
+- <kbd>Shift</kbd> + <kbd>C</kbd> - Clear loop points
+
 When multiple players exist on a page, the last-clicked player receives keyboard input.
+
+### Loop/Section Repeat
+
+The player supports A/B loop functionality for repeating specific sections of audio. This is useful for practicing, analyzing, or focusing on particular parts of a track.
+
+**Setting Loop Points**
+
+There are multiple ways to define loop points:
+
+1. **Keyboard Shortcuts**: Press <kbd>A</kbd> to set the start point and <kbd>B</kbd> to set the end point at the current playback position. Use <kbd>L</kbd> to toggle the loop on/off, and <kbd>Shift</kbd> + <kbd>C</kbd> to clear both loop points.
+
+2. **UI Buttons**: Click the **A** and **B** buttons in the control bar to set loop points. The loop toggle button (⟲) enables or disables looping, and the clear button (✕) removes the loop points.
+
+3. **Right-Click Drag**: Right-click and drag across the seekbar to quickly select a loop region. The loop automatically enables when both points are set this way.
+
+4. **Draggable Markers**: Once loop points are set, orange markers appear on the seekbar. You can drag these markers to adjust the loop boundaries. A minimum distance of 50ms is enforced between points.
+
+**Loop Behavior**
+
+- When loop points are set, a semi-transparent orange overlay appears on the seekbar showing the loop region.
+- During playback, the audio will automatically jump back to point A when reaching point B.
+- The loop takes precedence over the track repeat function.
+- When seeking with keyboard shortcuts (<kbd>←</kbd>/<kbd>→</kbd>) while a loop is active, the playback position wraps around the loop boundaries with offset preservation, creating smooth circular navigation.
+- If playback is started outside the loop region while looping is enabled, it will automatically jump to the loop start point.
 
 
 ## Additional Player Elements
