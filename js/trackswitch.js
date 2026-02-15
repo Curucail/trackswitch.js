@@ -138,9 +138,17 @@ Plugin.prototype.init = function() {
 
     // Set preset names: either from attribute or auto-generate
     if (presetNamesAttr) {
-        this.presetNames = presetNamesAttr.split(',').map(function(name) { return name.trim(); });
+        var userNames = presetNamesAttr.split(',').map(function(name) { return name.trim(); });
+        // Fill in missing preset names with auto-generated ones
+        for (var p = 0; p < this.presetCount; p++) {
+            if (p < userNames.length && userNames[p]) {
+                this.presetNames.push(userNames[p]);
+            } else {
+                this.presetNames.push('Preset ' + p);
+            }
+        }
     } else {
-        // Auto-generate preset names
+        // Auto-generate all preset names
         for (var p = 0; p < this.presetCount; p++) {
             this.presetNames.push('Preset ' + p);
         }
