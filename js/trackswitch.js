@@ -142,8 +142,8 @@ Plugin.prototype.init = function() {
         }
     });
 
-    // Include preset 0 (default) even if not explicitly mentioned
-    this.presetCount = Math.max(1, maxPresetIndex + 1);
+    // Only include explicitly defined presets
+    this.presetCount = maxPresetIndex >= 0 ? maxPresetIndex + 1 : 0;
 
     // Set preset names: either from attribute or auto-generate
     if (presetNamesAttr) {
@@ -308,12 +308,9 @@ Plugin.prototype.init = function() {
             var presetsAttr = $(this).attr('presets');
             var presetsForTrack = [];
             
-            // If presets is not specified, check if track has solo attribute for Preset 0
+            // Only use explicitly defined presets
             if (presetsAttr) {
                 presetsForTrack = presetsAttr.split(',').map(function(p) { return parseInt(p.trim()); });
-            } else if (this.hasAttribute('solo')) {
-                // Auto-create preset 0 from initial solo attribute
-                presetsForTrack = [0];
             }
 
             that.trackProperties[i] = {
