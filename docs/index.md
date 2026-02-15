@@ -18,16 +18,16 @@ alternatively you can manually download and include [`trackswitch.min.css`](http
 <div class="player" style="margin-top: 30px; margin-bottom: 60px;" preset-names="All Tracks,Violins & Synths,Drums & Bass,Drums Only">
     <canvas class="waveform" width="1200" height="150"></canvas>
     <ts-track title="Violins" data-img="data/violins.png" presets="0,1">
-        <ts-source src="data/violins.mp3"></ts-source>
+        <ts-source src="data/multitracks/violins.mp3"></ts-source>
     </ts-track>
     <ts-track title="Synths" data-img="data/synth.png" presets="0,1">
-        <ts-source src="data/synth.mp3"></ts-source>
+        <ts-source src="data/multitracks/synth.mp3"></ts-source>
     </ts-track>
     <ts-track title="Bass" data-img="data/bass.png" presets="0,2">
-        <ts-source src="data/bass.mp3"></ts-source>
+        <ts-source src="data/multitracks/bass.mp3"></ts-source>
     </ts-track>
     <ts-track title="Drums" data-img="data/drums.png" presets="0,2,3">
-        <ts-source src="data/drums.mp3"></ts-source>
+        <ts-source src="data/multitracks/drums.mp3"></ts-source>
     </ts-track>
 </div>
 
@@ -39,16 +39,16 @@ alternatively you can manually download and include [`trackswitch.min.css`](http
     -->
     <canvas class="waveform" width="1200" height="150"></canvas>
     <ts-track title="Violins" data-img="data/violins.png" presets="0,1">
-        <ts-source src="data/violins.mp3"></ts-source>
+        <ts-source src="violins.mp3"></ts-source>
     </ts-track>
     <ts-track title="Synths" data-img="data/synth.png" presets="0,1">
-        <ts-source src="data/synth.mp3"></ts-source>
+        <ts-source src="synth.mp3"></ts-source>
     </ts-track>
     <ts-track title="Bass" data-img="data/bass.png" presets="0,2">
-        <ts-source src="data/bass.mp3"></ts-source>
+        <ts-source src="bass.mp3"></ts-source>
     </ts-track>
     <ts-track title="Drums" data-img="data/drums.png" presets="0,2,3">
-        <ts-source src="data/drums.mp3"></ts-source>
+        <ts-source src="drums.mp3"></ts-source>
     </ts-track>
 </div>
 ```

@@ -16,7 +16,7 @@ title: trackswitch.js
         - [Loop/Section Repeat](#loopsection-repeat)
     - [Additional Player Elements](#additional-player-elements)
         - [Waveform Visualization](#waveform-visualization)
-        - [Seekable Image](#additional-and-seekable-player-image)
+        - [Seekable Image](#seekable-image)
 
 # Initialization
 
@@ -286,16 +286,16 @@ To use presets, add a `preset-names` attribute to the player div with comma-sepa
 
 <div class="player" style="margin-top: 30px; margin-bottom: 60px;" preset-names="All Tracks,Violins & Synths,Drums & Bass,Drums Only">
     <ts-track title="Violins" presets="0,1">
-        <ts-source src="data/violins.mp3"></ts-source>
+        <ts-source src="data/multitracks/violins.mp3"></ts-source>
     </ts-track>
     <ts-track title="Synths" presets="0,1">
-        <ts-source src="data/synth.mp3"></ts-source>
+        <ts-source src="data/multitracks/synth.mp3"></ts-source>
     </ts-track>
     <ts-track title="Bass" presets="0,2">
-        <ts-source src="data/bass.mp3"></ts-source>
+        <ts-source src="data/multitracks/bass.mp3"></ts-source>
     </ts-track>
     <ts-track title="Drums" presets="0,2,3">
-        <ts-source src="data/drums.mp3"></ts-source>
+        <ts-source src="data/multitracks/drums.mp3"></ts-source>
     </ts-track>
 </div>
 
@@ -322,10 +322,10 @@ Preset 0 is automatically created from tracks that have the `solo` attribute. If
 
 <div class="player" preset-names="With Drums,Without Drums">
     <ts-track title="Drums" presets="0">
-        <ts-source src="data/drums.mp3"></ts-source>
+        <ts-source src="data/multitracks/drums.mp3"></ts-source>
     </ts-track>
     <ts-track title="Bass" solo>
-        <ts-source src="data/bass.mp3"></ts-source>
+        <ts-source src="data/multitracks/bass.mp3"></ts-source>
     </ts-track>
 </div>
 
@@ -502,16 +502,16 @@ To add waveform visualization, simply include a `<canvas class="waveform">` elem
 <div class="player">
     <canvas class="waveform" width="1200" height="200"></canvas>
     <ts-track title="Violins">
-        <ts-source src="data/violins.mp3"></ts-source>
+        <ts-source src="data/multitracks/violins.mp3"></ts-source>
     </ts-track>
     <ts-track title="Synth">
-        <ts-source src="data/synth.mp3"></ts-source>
+        <ts-source src="data/multitracks/synth.mp3"></ts-source>
     </ts-track>
     <ts-track title="Bass">
-        <ts-source src="data/bass.mp3"></ts-source>
+        <ts-source src="data/multitracks/bass.mp3"></ts-source>
     </ts-track>
     <ts-track title="Drums">
-        <ts-source src="data/drums.mp3"></ts-source>
+        <ts-source src="data/multitracks/drums.mp3"></ts-source>
     </ts-track>
 </div>
 
