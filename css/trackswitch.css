@@ -170,7 +170,7 @@
     grid-template-columns: auto auto auto auto 1fr;
     grid-template-rows: auto auto;
     align-items: center;
-    gap: 0 8px;
+    gap: 6px 24px;
 }
 
 .jquery-trackswitch .main-control .playback-group {
@@ -770,7 +770,7 @@
     .jquery-trackswitch .main-control ul.control {
         grid-template-columns: auto auto auto 1fr;
         grid-template-rows: auto auto auto auto;
-        gap: 4px 8px;
+        gap: 4px 16px;
     }
 
     .jquery-trackswitch .main-control .playback-group {
@@ -898,7 +898,7 @@
 
 }
 
-@media (max-width: 560px) {
+@media (max-width: 580px) {
     /* Phone layout:
        Row 1: playback | volume
        Row 2: loop-group | preset
@@ -908,12 +908,16 @@
     .jquery-trackswitch .main-control ul.control {
         grid-template-columns: 1fr 1fr;
         grid-template-rows: auto auto auto auto;
-        gap: 16px 8px;
+        gap: 8px 8px;
     }
 
     .jquery-trackswitch .main-control .playback-group {
         grid-column: 1;
         grid-row: 1;
+    }
+
+    .jquery-trackswitch .main-control .playback-group>.playback-controls {
+        gap: 20px;
     }
 
     .jquery-trackswitch .main-control .volume {
@@ -923,16 +927,16 @@
     }
 
     .jquery-trackswitch .main-control .loop-group {
-        grid-column: 1;
-        grid-row: 2;
-        justify-self: left;
-        margin: 0 0 0 0;
-    }
-
-    .jquery-trackswitch .main-control .preset-selector-wrap {
         grid-column: 2;
         grid-row: 2;
         justify-self: end;
+        margin: 5px 0 0 0;
+    }
+
+    .jquery-trackswitch .main-control .preset-selector-wrap {
+        grid-column: 1;
+        grid-row: 2;
+        justify-self: left;
     }
 
     .jquery-trackswitch .main-control .timing {
