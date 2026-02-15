@@ -637,6 +637,7 @@ Plugin.prototype.unbindEvents = function() {
     if (this.presetCount >= 2) {
         this.element.off('change', '.preset-selector');
         this.element.off('wheel', '.preset-selector');
+        this.element.off('mousedown touchstart mouseup touchend click', '.preset-selector, .preset-selector-wrap');
     }
 
     if (this.options.looping) {
@@ -685,6 +686,8 @@ Plugin.prototype.bindEvents = function() {
         // Handle both normal changes and explicit reapply requests
         this.element.on('change preset:reapply', '.preset-selector', $.proxy(this.event_preset, this));
         this.element.on('wheel', '.preset-selector', $.proxy(this.event_preset_scroll, this));
+        // Prevent preset interactions from being intercepted by other touch/mouse handlers on mobile
+        this.element.on('mousedown touchstart mouseup touchend click', '.preset-selector, .preset-selector-wrap', function(e) { e.stopPropagation(); });
 
         // Track last applied preset value so we can detect "reapply same preset" clicks
         this.element.on('change preset:reapply', '.preset-selector', function() {
