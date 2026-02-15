@@ -28,6 +28,8 @@ var pluginName = 'trackSwitch',
         onlyradiosolo: false,
         tabview: false,
         iosunmute: true,
+        keyboard: true,
+        looping: true,
     };
 
 
@@ -63,14 +65,16 @@ function Plugin(element, options) {
     this.masterVolume = 1.0;
     this.iOSPlaybackUnlocked = false;
 
-    // A/B Loop properties
-    this.loopPointA = null;  // Time in seconds, or null if not set
-    this.loopPointB = null;  // Time in seconds, or null if not set
-    this.loopEnabled = false; // Whether A/B loop is active
-    this.rightClickDragging = false; // Tracks right-click drag state for loop selection
-    this.loopDragStart = null; // Stores starting position during right-drag
-    this.draggingMarker = null; // Tracks which marker is being dragged ('A', 'B', or null)
-    this.loopMinDistance = 0.1; // Minimum distance between loop points (0.1 seconds)
+    // A/B Loop properties (only initialize if looping is enabled)
+    if (this.options.looping) {
+        this.loopPointA = null;  // Time in seconds, or null if not set
+        this.loopPointB = null;  // Time in seconds, or null if not set
+        this.loopEnabled = false; // Whether A/B loop is active
+        this.rightClickDragging = false; // Tracks right-click drag state for loop selection
+        this.loopDragStart = null; // Stores starting position during right-drag
+        this.draggingMarker = null; // Tracks which marker is being dragged ('A', 'B', or null)
+        this.loopMinDistance = 0.1; // Minimum distance between loop points (0.1 seconds)
+    }
 
     // Properties and data for each track in coherent arrays
     this.trackProperties = Array();
@@ -130,10 +134,10 @@ Plugin.prototype.init = function() {
                             '<input type="range" class="volume-slider" min="0" max="100" value="100">' +
                         '</div>' +
                     '</li>' +
-                    '<li class="loop-a button" title="Set Loop Point A (A)">Loop A</li>' +
+                    (that.options.looping ? '<li class="loop-a button" title="Set Loop Point A (A)">Loop A</li>' +
                     '<li class="loop-b button" title="Set Loop Point B (B)">Loop B</li>' +
                     '<li class="loop-toggle button" title="Toggle Loop On/Off (L)">Loop</li>' +
-                    '<li class="loop-clear button" title="Clear Loop Points (C)">Clear</li>' +
+                    '<li class="loop-clear button" title="Clear Loop Points (C)">Clear</li>' : '') +
                     '<li class="timing">' +
                         '<span class="time">' +
                             '--:--:--:---' +
@@ -182,11 +186,13 @@ Plugin.prototype.init = function() {
 
     });
 
-    // Prevent context menu on seekbar for right-click loop selection
-    this.element.on('contextmenu', '.seekwrap', function(e) {
-        e.preventDefault();
-        return false;
-    });
+    // Prevent context menu on seekbar for right-click loop selection (only if looping is enabled)
+    if (this.options.looping) {
+        this.element.on('contextmenu', '.seekwrap', function(e) {
+            e.preventDefault();
+            return false;
+        });
+    }
 
     this.element.on('touchstart mousedown', '.overlay .activate', $.proxy(this.load, this));
     this.element.on('touchstart mousedown', '.overlay #overlayinfo .info', $.proxy(function() {
@@ -519,14 +525,18 @@ Plugin.prototype.unbindEvents = function() {
     this.element.off('input', '.volume-slider');
     this.element.off('mousedown touchstart mousemove touchmove mouseup touchend', '.volume-control');
 
-    this.element.off('touchstart mousedown', '.loop-a');
-    this.element.off('touchstart mousedown', '.loop-b');
-    this.element.off('touchstart mousedown', '.loop-toggle');
-    this.element.off('touchstart mousedown', '.loop-clear');
-    this.element.off('mousedown touchstart', '.loop-marker');
-    this.element.off('contextmenu', '.seekwrap');
+    if (this.options.looping) {
+        this.element.off('touchstart mousedown', '.loop-a');
+        this.element.off('touchstart mousedown', '.loop-b');
+        this.element.off('touchstart mousedown', '.loop-toggle');
+        this.element.off('touchstart mousedown', '.loop-clear');
+        this.element.off('mousedown touchstart', '.loop-marker');
+        this.element.off('contextmenu', '.seekwrap');
+    }
 
-    $(window).off("keydown.trackswitch");
+    if (this.options.keyboard) {
+        $(window).off("keydown.trackswitch");
+    }
 
 };
 
@@ -549,20 +559,24 @@ Plugin.prototype.bindEvents = function() {
     // Prevent volume slider interactions from triggering seek or other player events
     this.element.on('mousedown touchstart mousemove touchmove mouseup touchend', '.volume-control', function(e) { e.stopPropagation(); });
 
-    this.element.on('touchstart mousedown', '.loop-a', $.proxy(this.event_setLoopA, this));
-    this.element.on('touchstart mousedown', '.loop-b', $.proxy(this.event_setLoopB, this));
-    this.element.on('touchstart mousedown', '.loop-toggle', $.proxy(this.event_toggleLoop, this));
-    this.element.on('touchstart mousedown', '.loop-clear', $.proxy(this.event_clearLoop, this));
+    if (this.options.looping) {
+        this.element.on('touchstart mousedown', '.loop-a', $.proxy(this.event_setLoopA, this));
+        this.element.on('touchstart mousedown', '.loop-b', $.proxy(this.event_setLoopB, this));
+        this.element.on('touchstart mousedown', '.loop-toggle', $.proxy(this.event_toggleLoop, this));
+        this.element.on('touchstart mousedown', '.loop-clear', $.proxy(this.event_clearLoop, this));
 
-    this.element.on('mousedown touchstart', '.loop-marker', $.proxy(this.event_markerDragStart, this));
+        this.element.on('mousedown touchstart', '.loop-marker', $.proxy(this.event_markerDragStart, this));
+    }
 
     var that = this;
 
-    $(window).off("keydown.trackswitch"); // Unbind other players before binding new
+    if (this.options.keyboard) {
+        $(window).off("keydown.trackswitch"); // Unbind other players before binding new
 
-    $(window).on("keydown.trackswitch", function (event) {
-        that.handleKeyboardEvent(event);
-    });
+        $(window).on("keydown.trackswitch", function (event) {
+            that.handleKeyboardEvent(event);
+        });
+    }
 
 };
 
@@ -700,39 +714,41 @@ Plugin.prototype.updateMainControls = function() {
         $(this.element).find('.timing .time').html(this.secondsToHHMMSSmmm(this.position));
     }
 
-    // Update loop UI elements
-    this.element.find(".loop-a").toggleClass('checked', this.loopPointA !== null);
-    this.element.find(".loop-b").toggleClass('checked', this.loopPointB !== null);
-    this.element.find(".loop-toggle").toggleClass('checked', this.loopEnabled);
-    this.element.find(".loop-a, .loop-b").toggleClass('active', this.loopEnabled);
+    // Update loop UI elements (only if looping is enabled)
+    if (this.options.looping) {
+        this.element.find(".loop-a").toggleClass('checked', this.loopPointA !== null);
+        this.element.find(".loop-b").toggleClass('checked', this.loopPointB !== null);
+        this.element.find(".loop-toggle").toggleClass('checked', this.loopEnabled);
+        this.element.find(".loop-a, .loop-b").toggleClass('active', this.loopEnabled);
 
-    // Position and show/hide loop markers
-    if (this.loopPointA !== null && this.longestDuration > 0) {
-        var pointAPerc = (this.loopPointA / this.longestDuration) * 100;
-        this.element.find('.loop-marker.marker-a').css({left: pointAPerc+'%', display: 'block'});
-    } else {
-        this.element.find('.loop-marker.marker-a').css({display: 'none'});
-    }
+        // Position and show/hide loop markers
+        if (this.loopPointA !== null && this.longestDuration > 0) {
+            var pointAPerc = (this.loopPointA / this.longestDuration) * 100;
+            this.element.find('.loop-marker.marker-a').css({left: pointAPerc+'%', display: 'block'});
+        } else {
+            this.element.find('.loop-marker.marker-a').css({display: 'none'});
+        }
 
-    if (this.loopPointB !== null && this.longestDuration > 0) {
-        var pointBPerc = (this.loopPointB / this.longestDuration) * 100;
-        this.element.find('.loop-marker.marker-b').css({left: pointBPerc+'%', display: 'block'});
-    } else {
-        this.element.find('.loop-marker.marker-b').css({display: 'none'});
-    }
+        if (this.loopPointB !== null && this.longestDuration > 0) {
+            var pointBPerc = (this.loopPointB / this.longestDuration) * 100;
+            this.element.find('.loop-marker.marker-b').css({left: pointBPerc+'%', display: 'block'});
+        } else {
+            this.element.find('.loop-marker.marker-b').css({display: 'none'});
+        }
 
-    // Position and show/hide loop region overlay
-    if (this.loopPointA !== null && this.loopPointB !== null && this.longestDuration > 0) {
-        var pointAPerc = (this.loopPointA / this.longestDuration) * 100;
-        var pointBPerc = (this.loopPointB / this.longestDuration) * 100;
-        var widthPerc = pointBPerc - pointAPerc;
-        this.element.find('.loop-region').css({
-            left: pointAPerc+'%',
-            width: widthPerc+'%',
-            display: 'block'
-        }).toggleClass('active', this.loopEnabled);
-    } else {
-        this.element.find('.loop-region').css({display: 'none'});
+        // Position and show/hide loop region overlay
+        if (this.loopPointA !== null && this.loopPointB !== null && this.longestDuration > 0) {
+            var pointAPerc = (this.loopPointA / this.longestDuration) * 100;
+            var pointBPerc = (this.loopPointB / this.longestDuration) * 100;
+            var widthPerc = pointBPerc - pointAPerc;
+            this.element.find('.loop-region').css({
+                left: pointAPerc+'%',
+                width: widthPerc+'%',
+                display: 'block'
+            }).toggleClass('active', this.loopEnabled);
+        } else {
+            this.element.find('.loop-region').css({display: 'none'});
+        }
     }
 
 }
@@ -746,8 +762,8 @@ Plugin.prototype.monitorPosition = function(context) {
 
     context.position = context.playing && !context.currentlySeeking ? audioContext.currentTime - context.startTime : context.position;
 
-    // Check for A/B loop (takes precedence over end-of-track repeat)
-    if (context.loopEnabled && context.loopPointB !== null && 
+    // Check for A/B loop (takes precedence over end-of-track repeat) - only if looping is enabled
+    if (context.options.looping && context.loopEnabled && context.loopPointB !== null && 
         context.position >= context.loopPointB && !context.currentlySeeking) {
         
         context.stopAudio();
@@ -937,7 +953,7 @@ Plugin.prototype.seekRelative = function(seconds) {
     newPosition = Math.max(0, Math.min(newPosition, this.longestDuration));
     
     // If looping is active, wrap around loop boundaries with offset preservation
-    if (this.loopEnabled && this.loopPointA !== null && this.loopPointB !== null) {
+    if (this.options.looping && this.loopEnabled && this.loopPointA !== null && this.loopPointB !== null) {
         var loopStart = this.loopPointA;
         var loopEnd = this.loopPointB;
         var loopLength = loopEnd - loopStart;
@@ -1052,32 +1068,40 @@ Plugin.prototype.handleKeyboardEvent = function(event) {
             handled = true;
             break;
             
-        case 65: // A - Set loop point A at current position
-            event.preventDefault();
-            var loopAEvent = $.Event('mousedown', { which: 1, type: 'mousedown' });
-            this.event_setLoopA(loopAEvent);
-            handled = true;
+        case 65: // A - Set loop point A at current position (only if looping enabled)
+            if (this.options.looping) {
+                event.preventDefault();
+                var loopAEvent = $.Event('mousedown', { which: 1, type: 'mousedown' });
+                this.event_setLoopA(loopAEvent);
+                handled = true;
+            }
             break;
             
-        case 66: // B - Set loop point B at current position
-            event.preventDefault();
-            var loopBEvent = $.Event('mousedown', { which: 1, type: 'mousedown' });
-            this.event_setLoopB(loopBEvent);
-            handled = true;
+        case 66: // B - Set loop point B at current position (only if looping enabled)
+            if (this.options.looping) {
+                event.preventDefault();
+                var loopBEvent = $.Event('mousedown', { which: 1, type: 'mousedown' });
+                this.event_setLoopB(loopBEvent);
+                handled = true;
+            }
             break;
             
-        case 76: // L - Toggle loop on/off
-            event.preventDefault();
-            var toggleLoopEvent = $.Event('mousedown', { which: 1, type: 'mousedown' });
-            this.event_toggleLoop(toggleLoopEvent);
-            handled = true;
+        case 76: // L - Toggle loop on/off (only if looping enabled)
+            if (this.options.looping) {
+                event.preventDefault();
+                var toggleLoopEvent = $.Event('mousedown', { which: 1, type: 'mousedown' });
+                this.event_toggleLoop(toggleLoopEvent);
+                handled = true;
+            }
             break;
             
-        case 67: // C - Clear loop points
-            event.preventDefault();
-            var clearLoopEvent = $.Event('mousedown', { which: 1, type: 'mousedown' });
-            this.event_clearLoop(clearLoopEvent);
-            handled = true;
+        case 67: // C - Clear loop points (only if looping enabled)
+            if (this.options.looping) {
+                event.preventDefault();
+                var clearLoopEvent = $.Event('mousedown', { which: 1, type: 'mousedown' });
+                this.event_clearLoop(clearLoopEvent);
+                handled = true;
+            }
             break;
     }
     
