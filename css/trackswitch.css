@@ -158,8 +158,12 @@
 /* MAIN CONTROL STYLES ------------------------------------------------------ */
 
 /* Desktop (default): CSS Grid layout
-   Row 1: playback | volume | loop | preset | timing (all left except timing right)
-   Row 2: seekbar (full width) */
+   Row 1: playback | volume | loop | preset | seekbar | timing
+   Seekbar moves to row 2 (full width) if container is too narrow */
+
+.jquery-trackswitch .main-control {
+    container-type: inline-size;
+}
 
 .jquery-trackswitch .main-control ul.control {
     background-color: #333;
@@ -167,8 +171,8 @@
     padding: 4px 12px;
     color: #DDDDDD;
     display: grid;
-    grid-template-columns: auto auto auto auto 1fr;
-    grid-template-rows: auto auto;
+    grid-template-columns: auto auto auto auto 1fr auto;
+    grid-template-rows: auto;
     align-items: center;
     gap: 6px 24px;
 }
@@ -194,14 +198,14 @@
 }
 
 .jquery-trackswitch .main-control .timing {
-    grid-column: 5;
+    grid-column: 6;
     grid-row: 1;
     justify-self: end;
 }
 
 .jquery-trackswitch .main-control .seekwrap {
-    grid-column: 1 / -1;
-    grid-row: 2;
+    grid-column: 5;
+    grid-row: 1;
 }
 
 /* Playback group (play/stop/repeat) */
@@ -734,6 +738,25 @@
 .jquery-trackswitch .control li.solo.radio.checked:after {
     content: "\f192";
     /* fa-dot-circle-o */
+}
+
+
+/* Narrow container fallback: seekbar moves to full-width row 2 */
+@container (max-width: 1000px) {
+    .jquery-trackswitch .main-control ul.control {
+        grid-template-columns: auto auto auto auto 1fr;
+        grid-template-rows: auto auto;
+    }
+
+    .jquery-trackswitch .main-control .seekwrap {
+        grid-column: 1 / -1;
+        grid-row: 2;
+    }
+
+    .jquery-trackswitch .main-control .timing {
+        grid-column: 5;
+        grid-row: 1;
+    }
 }
 
 
