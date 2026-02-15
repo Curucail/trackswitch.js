@@ -268,26 +268,26 @@ Track presets allow you to define different solo configurations that can be quic
 
 **Defining Presets**
 
-To use presets, add a `data-preset-names` attribute to the player div with comma-separated preset names:
+To use presets, add a `preset-names` attribute to the player div with comma-separated preset names:
 
 ```html
-<div class="player" data-preset-names="Full Mix,Vocals,Drums + Bass">
-    <ts-track title="Vocals" data-presets="0,1">
+<div class="player" preset-names="Full Mix,Vocals,Drums + Bass">
+    <ts-track title="Vocals" presets="0,1">
         <ts-source src="vocals.mp3"></ts-source>
     </ts-track>
-    <ts-track title="Drums" data-presets="0,2">
+    <ts-track title="Drums" presets="0,2">
         <ts-source src="drums.mp3"></ts-source>
     </ts-track>
-    <ts-track title="Bass" data-presets="0,2">
+    <ts-track title="Bass" presets="0,2">
         <ts-source src="bass.mp3"></ts-source>
     </ts-track>
-    <ts-track title="Guitar" data-presets="0">
+    <ts-track title="Guitar" presets="0">
         <ts-source src="guitar.mp3"></ts-source>
     </ts-track>
 </div>
 ```
 
-Each `ts-track` element uses the `data-presets` attribute to define which presets it belongs to (as comma-separated preset indices, 0-indexed).
+Each `ts-track` element uses the `presets` attribute to define which presets it belongs to (as comma-separated preset indices, 0-indexed).
 
 In the example above:
 - **Preset 0** (Full Mix): All tracks are soloed (Vocals, Drums, Bass, Guitar)
@@ -296,17 +296,17 @@ In the example above:
 
 **Auto-Generated Preset Names**
 
-If you don't define `data-preset-names`, preset names will be auto-generated as "Preset 0", "Preset 1", etc.:
+If you don't define `preset-names`, preset names will be auto-generated as "Preset 0", "Preset 1", etc.:
 
 ```html
 <div class="player">
-    <ts-track title="Vocals" data-presets="0,1">
+    <ts-track title="Vocals" presets="0,1">
         <ts-source src="vocals.mp3"></ts-source>
     </ts-track>
-    <ts-track title="Drums" data-presets="0,2">
+    <ts-track title="Drums" presets="0,2">
         <ts-source src="drums.mp3"></ts-source>
     </ts-track>
-    <ts-track title="Bass" data-presets="0,2">
+    <ts-track title="Bass" presets="0,2">
         <ts-source src="bass.mp3"></ts-source>
     </ts-track>
 </div>
@@ -317,8 +317,8 @@ If you don't define `data-preset-names`, preset names will be auto-generated as 
 Preset 0 is automatically created from tracks that have the `solo` attribute. If no tracks explicitly define their preset membership, they won't appear in any preset except those they're assigned to:
 
 ```html
-<div class="player" data-preset-names="With Drums,Without Drums">
-    <ts-track title="Drums" solo data-presets="0">
+<div class="player" preset-names="With Drums,Without Drums">
+    <ts-track title="Drums" solo presets="0">
         <ts-source src="drums.mp3"></ts-source>
     </ts-track>
     <ts-track title="Bass">

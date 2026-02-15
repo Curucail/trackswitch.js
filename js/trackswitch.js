@@ -116,13 +116,13 @@ Plugin.prototype.init = function() {
     this.element.addClass("jquery-trackswitch");
 
     // Parse preset configuration early so we can conditionally include preset dropdown
-    // Read preset names from data-preset-names attribute (comma-separated)
-    var presetNamesAttr = this.element.attr('data-preset-names');
+    // Read preset names from preset-names attribute (comma-separated)
+    var presetNamesAttr = this.element.attr('preset-names');
     var maxPresetIndex = -1;
     
     // First pass: scan all ts-track elements to find max preset index
     this.element.find('ts-track').each(function() {
-        var presetsAttr = $(this).attr('data-presets');
+        var presetsAttr = $(this).attr('presets');
         if (presetsAttr) {
             var presets = presetsAttr.split(',').map(function(p) { return parseInt(p.trim()); });
             presets.forEach(function(preset) {
@@ -266,11 +266,11 @@ Plugin.prototype.init = function() {
 
         this.element.find('ts-track').each(function(i) {
 
-            // Parse data-presets attribute (comma-separated list of preset indices)
-            var presetsAttr = $(this).attr('data-presets');
+            // Parse presets attribute (comma-separated list of preset indices)
+            var presetsAttr = $(this).attr('presets');
             var presetsForTrack = [];
             
-            // If data-presets is not specified, check if track has solo attribute for Preset 0
+            // If presets is not specified, check if track has solo attribute for Preset 0
             if (presetsAttr) {
                 presetsForTrack = presetsAttr.split(',').map(function(p) { return parseInt(p.trim()); });
             } else if (this.hasAttribute('solo')) {
