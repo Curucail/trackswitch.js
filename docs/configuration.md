@@ -11,15 +11,12 @@ title: trackswitch.js
         - [Mute Tracks](#mute-tracks)
         - [Track Timing Offsets](#track-timing-offsets)
         - [Track Presets](#track-presets)
-    - [Player Behaviour](#player-behaviour)
+    - [Player Behavior](#player-behavior)
         - [Keyboard Shortcuts](#keyboard-shortcuts)
         - [Loop/Section Repeat](#loopsection-repeat)
     - [Additional Player Elements](#additional-player-elements)
         - [Waveform Visualization](#waveform-visualization)
-        - [Additional and Seekable Player Image](#additional-and-seekable-player-image)
-        - [Seekable Image Start/Stop Margin](#seekable-image-startstop-margin)
-        - [Seekable Image For Each Track](#seekable-image-for-each-track)
-        - [Seekable Image Styling](#seekable-image-styling)
+        - [Seekable Image](#additional-and-seekable-player-image)
 
 # Initialization
 
@@ -66,7 +63,6 @@ Trackswitch requires jQuery and Fontawesome to be included to work, e.g.
 ```
 
 Alternatively you can of course use [Browserify](http://browserify.org/).
-
 
 # Configuration
 
@@ -272,46 +268,42 @@ Track presets allow you to define different solo configurations that can be quic
 To use presets, add a `preset-names` attribute to the player div with comma-separated preset names:
 
 ```html
-<div class="player" preset-names="Full Mix,Vocals,Drums + Bass">
-    <ts-track title="Vocals" presets="0,1">
-        <ts-source src="vocals.mp3"></ts-source>
+<div class="player" preset-names="All Tracks,Violins & Synths,Drums & Bass,Drums Only">
+    <ts-track title="Violins" presets="0,1">
+        <ts-source src="violins.mp3"></ts-source>
     </ts-track>
-    <ts-track title="Drums" presets="0,2">
-        <ts-source src="drums.mp3"></ts-source>
+    <ts-track title="Synths" presets="0,1">
+        <ts-source src="synth.mp3"></ts-source>
     </ts-track>
     <ts-track title="Bass" presets="0,2">
         <ts-source src="bass.mp3"></ts-source>
     </ts-track>
-    <ts-track title="Guitar" presets="0">
-        <ts-source src="guitar.mp3"></ts-source>
+    <ts-track title="Drums" presets="0,2,3">
+        <ts-source src="drums.mp3"></ts-source>
     </ts-track>
 </div>
 ```
 
-Each `ts-track` element uses the `presets` attribute to define which presets it belongs to (as comma-separated preset indices, 0-indexed).
+<div class="player" style="margin-top: 30px; margin-bottom: 60px;" preset-names="All Tracks,Violins & Synths,Drums & Bass,Drums Only">
+    <ts-track title="Violins" presets="0,1">
+        <ts-source src="data/violins.mp3"></ts-source>
+    </ts-track>
+    <ts-track title="Synths" presets="0,1">
+        <ts-source src="data/synth.mp3"></ts-source>
+    </ts-track>
+    <ts-track title="Bass" presets="0,2">
+        <ts-source src="data/bass.mp3"></ts-source>
+    </ts-track>
+    <ts-track title="Drums" presets="0,2,3">
+        <ts-source src="data/drums.mp3"></ts-source>
+    </ts-track>
+</div>
 
-In the example above:
-- **Preset 0** (Full Mix): All tracks are soloed (Vocals, Drums, Bass, Guitar)
-- **Preset 1** (Vocals): Only Vocals track is soloed
-- **Preset 2** (Drums + Bass): Drums and Bass tracks are soloed
+Each `ts-track` element uses the `presets` attribute to define which presets it belongs to (as comma-separated preset indices, 0-indexed).
 
 **Auto-Generated Preset Names**
 
 If you don't define `preset-names`, preset names will be auto-generated as "Preset 0", "Preset 1", etc.:
-
-```html
-<div class="player">
-    <ts-track title="Vocals" presets="0,1">
-        <ts-source src="vocals.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Drums" presets="0,2">
-        <ts-source src="drums.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Bass" presets="0,2">
-        <ts-source src="bass.mp3"></ts-source>
-    </ts-track>
-</div>
-```
 
 **Default Preset (Preset 0)**
 
@@ -319,14 +311,23 @@ Preset 0 is automatically created from tracks that have the `solo` attribute. If
 
 ```html
 <div class="player" preset-names="With Drums,Without Drums">
-    <ts-track title="Drums" solo presets="0">
+    <ts-track title="Drums" presets="0">
         <ts-source src="drums.mp3"></ts-source>
     </ts-track>
-    <ts-track title="Bass">
+    <ts-track title="Bass" solo>
         <ts-source src="bass.mp3"></ts-source>
     </ts-track>
 </div>
 ```
+
+<div class="player" preset-names="With Drums,Without Drums">
+    <ts-track title="Drums" presets="0">
+        <ts-source src="data/drums.mp3"></ts-source>
+    </ts-track>
+    <ts-track title="Bass" solo>
+        <ts-source src="data/bass.mp3"></ts-source>
+    </ts-track>
+</div>
 
 **Preset Dropdown Visibility**
 
@@ -343,11 +344,10 @@ When a preset is selected:
 
 - **Click the dropdown** to open the preset selector menu
 - **Scroll the mouse wheel** while hovering over the dropdown to cycle through presets
-- **Use keyboard** to select from the dropdown (standard HTML select behavior)
 
 Presets can be combined with other player controls—solo, mute, and repeat buttons continue to work normally after a preset is selected.
 
-## Player Behaviour
+## Player Behavior
 
 The player allows for several different settings to be enabled or disabled. This is done using a settings object, for example:
 
@@ -408,7 +408,7 @@ trackswitch.js includes keyboard shortcuts for all playback controls:
 - <kbd>A</kbd> - Set loop point A at current position
 - <kbd>B</kbd> - Set loop point B at current position
 - <kbd>L</kbd> - Toggle loop on/off
-- <kbd>Shift</kbd> + <kbd>C</kbd> - Clear loop points
+- <kbd>C</kbd> - Clear loop points
 
 When multiple players exist on a page, the last-clicked player receives keyboard input.
 
@@ -420,13 +420,12 @@ The player supports A/B loop functionality for repeating specific sections of au
 
 There are multiple ways to define loop points:
 
-1. **Keyboard Shortcuts**: Press <kbd>A</kbd> to set the start point and <kbd>B</kbd> to set the end point at the current playback position. Use <kbd>L</kbd> to toggle the loop on/off, and <kbd>Shift</kbd> + <kbd>C</kbd> to clear both loop points.
+1. **Keyboard Shortcuts**: Press <kbd>A</kbd> to set the start point and <kbd>B</kbd> to set the end point at the current playback position. Use <kbd>L</kbd> to toggle the loop on/off, and <kbd>C</kbd> to clear both loop points.
 
 2. **UI Buttons**: Click the **A** and **B** buttons in the control bar to set loop points. The loop toggle button (⟲) enables or disables looping, and the clear button (✕) removes the loop points.
 
 3. **Right-Click Drag**: Right-click and drag across the seekbar to quickly select a loop region. The loop automatically enables when both points are set this way.
-
-4. **Draggable Markers**: Once loop points are set, orange markers appear on the seekbar. You can drag these markers to adjust the loop boundaries. A minimum distance of 50ms is enforced between points.
+Once loop points are set, black markers appear on the seekbar. You can drag these markers to adjust the loop boundaries. A minimum distance of 50ms is enforced between points.
 
 **Loop Behavior**
 
@@ -435,7 +434,6 @@ There are multiple ways to define loop points:
 - The loop takes precedence over the track repeat function.
 - When seeking with keyboard shortcuts (<kbd>←</kbd>/<kbd>→</kbd>) while a loop is active, the playback position wraps around the loop boundaries with offset preservation, creating smooth circular navigation.
 - If playback is started outside the loop region while looping is enabled, it will automatically jump to the loop start point.
-
 
 ## Additional Player Elements
 
@@ -501,6 +499,22 @@ To add waveform visualization, simply include a `<canvas class="waveform">` elem
 </div>
 ```
 
+<div class="player">
+    <canvas class="waveform" width="1200" height="200"></canvas>
+    <ts-track title="Violins">
+        <ts-source src="data/violins.mp3"></ts-source>
+    </ts-track>
+    <ts-track title="Synth">
+        <ts-source src="data/synth.mp3"></ts-source>
+    </ts-track>
+    <ts-track title="Bass">
+        <ts-source src="data/bass.mp3"></ts-source>
+    </ts-track>
+    <ts-track title="Drums">
+        <ts-source src="data/drums.mp3"></ts-source>
+    </ts-track>
+</div>
+
 The waveform will be automatically generated when the audio loads. Before loading, a placeholder waveform with random amplitudes is displayed at 30% opacity.
 
 **Canvas Attributes**
@@ -546,9 +560,9 @@ All waveforms are automatically normalized so the highest peak fills approximate
 **Interactive Features**
 
 - **Seeking**: Click or drag anywhere on the waveform to seek through the audio
+- **Playhead**: A vertical line indicates the current playback position
 - **Loop Markers**: When A/B loop is enabled, loop markers and regions display over the waveform
 - **Responsive**: Waveform width automatically adapts to container size while maintaining consistent height
-- **Playhead**: A vertical line indicates the current playback position
 
 **Customization**
 
@@ -575,30 +589,12 @@ You can also style the waveform wrapper:
 
 - **Algorithm**: Peak amplitude detection with automatic normalization
 - **Rendering**: Canvas 2D `fillRect` operations for optimal performance
-- **Data Storage**: Float32Array of peak values per track
 - **Mixing**: Dynamic calculation by summing audible track peaks with RMS-like averaging
 - **Update Frequency**: On audio load, solo/mute changes, and window resize
 
+### Seekable Image
 
-<div class="player">
-    <p style="text-align: center;">Example with padded and centered text.</p>
-    <ts-track title="Violins">
-        <ts-source src="data/multitracks/violins.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Synth">
-        <ts-source src="data/multitracks/synth.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Bass">
-        <ts-source src="data/multitracks/bass.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Drums">
-        <ts-source src="data/multitracks/drums.mp3"></ts-source>
-    </ts-track>
-</div>
-
-### Additional and Seekable Player Image
-
-You can include images related to the audio content, which can optionally act as a seekable play-head area (similar to the SoundCloud player for example). In the example below, the player below will contain two images, the first of which will also act as a seekable player. **Any number of the images can be set, but only one seekable image is acceptable**.
+Instead of an auto-generated waveform, you can include other images related to the audio content, which can optionally act as a seekable play-head area. In the example below, the player below will contain two images, the first of which will also act as a seekable player. **Any number of the images can be set, but only one seekable image is acceptable**.
 
 ```html
 <div class="player">
@@ -635,7 +631,7 @@ You can include images related to the audio content, which can optionally act as
     </ts-track>
 </div>
 
-### Seekable Image Start/Stop Margin
+**Seekable Image Start/Stop Margin**
 
 As you can see, the start end end times of the plot don't exactly match with
 the seekhead. In this situation you can specify the seekable area margin for each seekable image.
@@ -677,7 +673,7 @@ This can be done by specifying the start and stop points as a percentage of the 
 </div>
 
 
-### Seekable Image For Each Track
+**Seekable Image For Each Track**
 
 You can optionally define a more specific image to replace the default when a particular track is played back in solo. This is done by adding an image link in the `data-img` attribute of the chosen `ts-track` element, as seen below.
 
@@ -719,7 +715,7 @@ In the example above, there is a default image as well as specific images define
 
 You do not need to define a specific image for every track. If there is no image defined for a track when it is soloed, the default image will be used.
 
-### Seekable Image Styling
+**Seekable Image Styling**
 
 The images can be positioned using normal CSS (eg, `width` and `margin` properties). For non-seekable images, this style can be applied using the `style` attribute.
 
