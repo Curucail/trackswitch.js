@@ -76,13 +76,17 @@ function Plugin(element, options) {
         this.loopMinDistance = 0.1; // Minimum distance between loop points (0.1 seconds)
     }
 
+    // Preset configuration properties
+    this.presetNames = [];
+    this.presetCount = 0;
+
     // Properties and data for each track in coherent arrays
-    this.trackProperties = Array();
-    this.trackSources = Array();
-    this.trackGainNode = Array();
-    this.trackBuffer = Array();
-    this.trackTiming = Array();
-    this.activeAudioSources = Array();
+    this.trackProperties = [];
+    this.trackSources = [];
+    this.trackGainNode = [];
+    this.trackBuffer = [];
+    this.trackTiming = [];
+    this.activeAudioSources = [];
 
     // Skip gain node creation if WebAudioAPI could not load.
     if (audioContext) {
@@ -111,7 +115,50 @@ Plugin.prototype.init = function() {
     // Add class for default CSS stylesheet
     this.element.addClass("jquery-trackswitch");
 
+    // Parse preset configuration early so we can conditionally include preset dropdown
+    // Read preset names from data-preset-names attribute (comma-separated)
+    var presetNamesAttr = this.element.attr('data-preset-names');
+    var maxPresetIndex = -1;
+    
+    // First pass: scan all ts-track elements to find max preset index
+    this.element.find('ts-track').each(function() {
+        var presetsAttr = $(this).attr('data-presets');
+        if (presetsAttr) {
+            var presets = presetsAttr.split(',').map(function(p) { return parseInt(p.trim()); });
+            presets.forEach(function(preset) {
+                if (preset > maxPresetIndex) {
+                    maxPresetIndex = preset;
+                }
+            });
+        }
+    });
+
+    // Include preset 0 (default) even if not explicitly mentioned
+    this.presetCount = Math.max(1, maxPresetIndex + 1);
+
+    // Set preset names: either from attribute or auto-generate
+    if (presetNamesAttr) {
+        this.presetNames = presetNamesAttr.split(',').map(function(name) { return name.trim(); });
+    } else {
+        // Auto-generate preset names
+        for (var p = 0; p < this.presetCount; p++) {
+            this.presetNames.push('Preset ' + p);
+        }
+    }
+
     if(this.element.find(".main-control").length === 0) {
+        // Build preset dropdown HTML (only if presetCount >= 2)
+        var presetDropdownHtml = '';
+        if (this.presetCount >= 2) {
+            presetDropdownHtml = '<li class="preset-selector-wrap">' +
+                '<select class="preset-selector" title="Select Preset">';
+            for (var p = 0; p < this.presetNames.length; p++) {
+                presetDropdownHtml += '<option value="' + p + '"' + (p === 0 ? ' selected' : '') + '>' + 
+                    this.presetNames[p] + '</option>';
+            }
+            presetDropdownHtml += '</select></li>';
+        }
+
         this.element.prepend(
             '<div class="overlay"><span class="activate">Activate</span>' +
                 '<p id="overlaytext"></p>' +
@@ -138,6 +185,7 @@ Plugin.prototype.init = function() {
                     '<li class="loop-b button" title="Set Loop Point B (B)">Loop B</li>' +
                     '<li class="loop-toggle button" title="Toggle Loop On/Off (L)">Loop</li>' +
                     '<li class="loop-clear button" title="Clear Loop Points (C)">Clear</li>' : '') +
+                    presetDropdownHtml +
                     '<li class="timing">' +
                         '<span class="time">' +
                             '--:--:--:---' +
@@ -160,7 +208,7 @@ Plugin.prototype.init = function() {
         );
     }
 
-    // Remove the playhead in `.main-control` when there is one or more seekble images
+    // Remove the playhead in `.main-control` when there is one or more seekable images
     if (this.element.find('.seekable:not(.seekable-img-wrap > .seekable)').length > 0) {
         this.element.find('.main-control .seekwrap').hide();
     }
@@ -168,7 +216,7 @@ Plugin.prototype.init = function() {
     // Wrap any seekable poster images in seekable markup
     this.element.find('.seekable:not(.seekable-img-wrap > .seekable)').each(function() {
 
-        // Save a copy of the origial image src to reset image to
+        // Save a copy of the original image src to reset image to
         that.originalImage = this.src;
 
         $(this).wrap( '<div class="seekable-img-wrap" style="' + $(this).data("style") + '; display: block;"></div>' );
@@ -210,11 +258,24 @@ Plugin.prototype.init = function() {
 
         this.element.find('ts-track').each(function(i) {
 
+            // Parse data-presets attribute (comma-separated list of preset indices)
+            var presetsAttr = $(this).attr('data-presets');
+            var presetsForTrack = [];
+            
+            // If data-presets is not specified, check if track has solo attribute for Preset 0
+            if (presetsAttr) {
+                presetsForTrack = presetsAttr.split(',').map(function(p) { return parseInt(p.trim()); });
+            } else if (this.hasAttribute('solo')) {
+                // Auto-create preset 0 from initial solo attribute
+                presetsForTrack = [0];
+            }
+
             that.trackProperties[i] = {
                 mute: this.hasAttribute('mute'),  // <ts-track title="Track" mute>
                 solo: this.hasAttribute('solo'),  // <ts-track title="Track" solo>
                 success: false,
-                error: false
+                error: false,
+                presetsForTrack: presetsForTrack  // Array of preset indices this track belongs to
             };
 
             // Append classes to '.track' depending on options (for styling and click binding)
@@ -525,6 +586,11 @@ Plugin.prototype.unbindEvents = function() {
     this.element.off('input', '.volume-slider');
     this.element.off('mousedown touchstart mousemove touchmove mouseup touchend', '.volume-control');
 
+    if (this.presetCount >= 2) {
+        this.element.off('change', '.preset-selector');
+        this.element.off('wheel', '.preset-selector');
+    }
+
     if (this.options.looping) {
         this.element.off('touchstart mousedown', '.loop-a');
         this.element.off('touchstart mousedown', '.loop-b');
@@ -558,6 +624,11 @@ Plugin.prototype.bindEvents = function() {
     this.element.on('input', '.volume-slider', $.proxy(this.event_volume, this));
     // Prevent volume slider interactions from triggering seek or other player events
     this.element.on('mousedown touchstart mousemove touchmove mouseup touchend', '.volume-control', function(e) { e.stopPropagation(); });
+
+    if (this.presetCount >= 2) {
+        this.element.on('change', '.preset-selector', $.proxy(this.event_preset, this));
+        this.element.on('wheel', '.preset-selector', $.proxy(this.event_preset_scroll, this));
+    }
 
     if (this.options.looping) {
         this.element.on('touchstart mousedown', '.loop-a', $.proxy(this.event_setLoopA, this));
@@ -1247,13 +1318,11 @@ Plugin.prototype.event_setLoopB = function(event) {
 
     event.preventDefault();
 
-    // Initialize loop point tolerance if not already set
-    if (typeof this.loopPointTolerance === 'undefined') {
-        this.loopPointTolerance = 0.1;
-    }
+    // Use the configured minimum loop distance as the tolerance for detecting a toggle click
+    var loopPointTolerance = this.loopMinDistance;
 
     // If point B is already set at this position, clear it
-    if (this.loopPointB !== null && Math.abs(this.loopPointB - this.position) < this.loopPointTolerance) {
+    if (this.loopPointB !== null && Math.abs(this.loopPointB - this.position) < loopPointTolerance) {
         this.loopPointB = null;
     } else {
         this.loopPointB = this.position;
@@ -1664,6 +1733,47 @@ Plugin.prototype.event_mute = function(event) {
     event.stopPropagation();
     return false;
 
+};
+
+
+// Handle preset selection from dropdown
+Plugin.prototype.event_preset = function(event) {
+
+    var presetIndex = parseInt($(event.target).val());
+    var that = this;
+
+    // Apply the selected preset: solo tracks that belong to it, reset mutes
+    $.each(this.trackProperties, function(i, value) {
+        // Track is soloed if it belongs to the selected preset
+        that.trackProperties[i].solo = that.trackProperties[i].presetsForTrack.indexOf(presetIndex) !== -1;
+        // Reset all mute states to unmuted
+        that.trackProperties[i].mute = false;
+    });
+
+    this.apply_track_properties();
+};
+
+
+// Handle mouse wheel scrolling on preset selector
+Plugin.prototype.event_preset_scroll = function(event) {
+
+    event.preventDefault();
+
+    var $selector = $(event.target).closest('.preset-selector');
+    var currentIndex = parseInt($selector.val());
+    var maxIndex = $selector.find('option').length - 1;
+    var newIndex = currentIndex;
+
+    // Scroll down (deltaY > 0) moves to next preset, scroll up (deltaY < 0) moves to previous
+    if (event.originalEvent.deltaY > 0) {
+        newIndex = Math.min(currentIndex + 1, maxIndex);
+    } else if (event.originalEvent.deltaY < 0) {
+        newIndex = Math.max(currentIndex - 1, 0);
+    }
+
+    // Update the dropdown value and trigger change event
+    $selector.val(newIndex);
+    $selector.trigger('change');
 };
 
 
