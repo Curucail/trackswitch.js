@@ -174,32 +174,32 @@ You can preselect **solo** for individual tracks by using the `solo` attribute w
 ```html
 <div class="player">
     <ts-track title="Violins" solo>
-        <ts-source src="violins.mp3" type="audio/mpeg"></ts-source>
+        <ts-source src="violins.mp3"></ts-source>
     </ts-track>
     <ts-track title="Synth" solo>
-        <ts-source src="synth.mp3" type="audio/mpeg"></ts-source>
+        <ts-source src="synth.mp3"></ts-source>
     </ts-track>
     <ts-track title="Bass">
-        <ts-source src="bass.mp3" type="audio/mpeg"></ts-source>
+        <ts-source src="bass.mp3"></ts-source>
     </ts-track>
     <ts-track title="Drums">
-        <ts-source src="drums.mp3" type="audio/mpeg"></ts-source>
+        <ts-source src="drums.mp3"></ts-source>
     </ts-track>
 </div>
 ```
 
 <div class="player">
     <ts-track title="Violins" solo>
-        <ts-source src="data/multitracks/violins.mp3" type="audio/mpeg"></ts-source>
+        <ts-source src="data/multitracks/violins.mp3"></ts-source>
     </ts-track>
     <ts-track title="Synth" solo>
-        <ts-source src="data/multitracks/synth.mp3" type="audio/mpeg"></ts-source>
+        <ts-source src="data/multitracks/synth.mp3"></ts-source>
     </ts-track>
     <ts-track title="Bass">
-        <ts-source src="data/multitracks/bass.mp3" type="audio/mpeg"></ts-source>
+        <ts-source src="data/multitracks/bass.mp3"></ts-source>
     </ts-track>
     <ts-track title="Drums">
-        <ts-source src="data/multitracks/drums.mp3" type="audio/mpeg"></ts-source>
+        <ts-source src="data/multitracks/drums.mp3"></ts-source>
     </ts-track>
 </div>
 
@@ -210,32 +210,32 @@ You can preselect **mute** for individual tracks by using the `mute` attribute w
 ```html
 <div class="player">
     <ts-track title="Violins">
-        <ts-source src="violins.mp3" type="audio/mpeg"></ts-source>
+        <ts-source src="violins.mp3"></ts-source>
     </ts-track>
     <ts-track title="Synth">
-        <ts-source src="synth.mp3" type="audio/mpeg"></ts-source>
+        <ts-source src="synth.mp3"></ts-source>
     </ts-track>
     <ts-track title="Bass" mute>
-        <ts-source src="bass.mp3" type="audio/mpeg"></ts-source>
+        <ts-source src="bass.mp3"></ts-source>
     </ts-track>
     <ts-track title="Drums" mute>
-        <ts-source src="drums.mp3" type="audio/mpeg"></ts-source>
+        <ts-source src="drums.mp3"></ts-source>
     </ts-track>
 </div>
 ```
 
 <div class="player">
     <ts-track title="Violins">
-        <ts-source src="data/multitracks/violins.mp3" type="audio/mpeg"></ts-source>
+        <ts-source src="data/multitracks/violins.mp3"></ts-source>
     </ts-track>
     <ts-track title="Synth">
-        <ts-source src="data/multitracks/synth.mp3" type="audio/mpeg"></ts-source>
+        <ts-source src="data/multitracks/synth.mp3"></ts-source>
     </ts-track>
     <ts-track title="Bass" mute>
-        <ts-source src="data/multitracks/bass.mp3" type="audio/mpeg"></ts-source>
+        <ts-source src="data/multitracks/bass.mp3"></ts-source>
     </ts-track>
     <ts-track title="Drums" mute>
-        <ts-source src="data/multitracks/drums.mp3" type="audio/mpeg"></ts-source>
+        <ts-source src="data/multitracks/drums.mp3"></ts-source>
     </ts-track>
 </div>
 
@@ -301,33 +301,9 @@ To use presets, add a `preset-names` attribute to the player div with comma-sepa
 
 Each `ts-track` element uses the `presets` attribute to define which presets it belongs to (as comma-separated preset indices, 0-indexed).
 
-**Auto-Generated Preset Names**
+If no tracks explicitly define their preset membership, they won't appear in any preset except those they're assigned to.
 
 If you don't define `preset-names`, preset names will be auto-generated as "Preset 0", "Preset 1", etc.:
-
-**Default Preset (Preset 0)**
-
-Preset 0 is automatically created from tracks that have the `solo` attribute. If no tracks explicitly define their preset membership, they won't appear in any preset except those they're assigned to:
-
-```html
-<div class="player" preset-names="With Drums,Without Drums">
-    <ts-track title="Drums" presets="0">
-        <ts-source src="drums.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Bass" solo>
-        <ts-source src="bass.mp3"></ts-source>
-    </ts-track>
-</div>
-```
-
-<div class="player" preset-names="With Drums,Without Drums">
-    <ts-track title="Drums" presets="0">
-        <ts-source src="data/multitracks/drums.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Bass" solo>
-        <ts-source src="data/multitracks/bass.mp3"></ts-source>
-    </ts-track>
-</div>
 
 **Preset Dropdown Visibility**
 
@@ -544,23 +520,14 @@ jQuery(".player").trackSwitch({
 
 **Waveform Behavior**
 
-The waveform dynamically represents what you're currently hearing:
-
-- **No tracks soloed, all unmuted**: Shows a mixed waveform of all playing tracks
-- **Some tracks muted**: Shows a mixed waveform of only unmuted tracks
-- **One track soloed**: Shows that track's individual waveform
-- **Multiple tracks soloed**: Shows a mixed waveform of the soloed tracks
-
+The waveform dynamically represents what you're currently hearing.
 Waveforms automatically update when you change solo/mute states, providing real-time visual feedback of your audio mix.
 
-**Peak Normalization**
-
-All waveforms are automatically normalized so the highest peak fills approximately 95% of the canvas height.
+All waveforms visualizations are automatically normalized so the highest peak fills approximately 95% of the canvas height.
 
 **Interactive Features**
 
 - **Seeking**: Click or drag anywhere on the waveform to seek through the audio
-- **Playhead**: A vertical line indicates the current playback position
 - **Loop Markers**: When A/B loop is enabled, loop markers and regions display over the waveform
 - **Responsive**: Waveform width automatically adapts to container size while maintaining consistent height
 
@@ -587,14 +554,11 @@ You can also style the waveform wrapper:
 
 **Technical Details**
 
-- **Algorithm**: Peak amplitude detection with automatic normalization
-- **Rendering**: Canvas 2D `fillRect` operations for optimal performance
-- **Mixing**: Dynamic calculation by summing audible track peaks with RMS-like averaging
-- **Update Frequency**: On audio load, solo/mute changes, and window resize
+- **Rendering**: Uses Canvas 2D `fillRect` operations under the hood for optimal performance
 
 ### Seekable Image
 
-Instead of an auto-generated waveform, you can include other images related to the audio content, which can optionally act as a seekable play-head area. In the example below, the player below will contain two images, the first of which will also act as a seekable player. **Any number of the images can be set, but only one seekable image is acceptable**.
+**Instead of auto-generated waveforms like above**, you can include other images related to the audio content, which can optionally act as a seekable play-head area. In the example below, the player below will contain two images, the first of which will also act as a seekable player. **Any number of the images can be set, but only one seekable image is acceptable**.
 
 ```html
 <div class="player">
