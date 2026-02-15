@@ -1,9 +1,7 @@
 .jquery-trackswitch *,
 .jquery-trackswitch *:before,
 .jquery-trackswitch *:after {
-    -webkit-box-sizing: border-box;
-       -moz-box-sizing: border-box;
-            box-sizing: border-box;
+    box-sizing: border-box;
 }
 
 .jquery-trackswitch {
@@ -104,15 +102,14 @@
     width: 100%;
     bottom: 5px;
     right: 10px;
-    color: #ED8C01;
     color: #000000;
     text-align: right;
     font-size: 14pt;
 }
 
 .jquery-trackswitch .overlay #overlayinfo span.info {
-    bottom: 0px;
-    right: 0px;
+    bottom: 0;
+    right: 0;
     width: 380px;
     cursor: pointer;
     text-indent: -9999px;
@@ -122,15 +119,15 @@
 .jquery-trackswitch .overlay #overlayinfo span.info:after {
     content: "\f05a"; /* fa-info-circle */
     position: absolute;
-    bottom: 0px;
-    right: 0px;
+    bottom: 0;
+    right: 0;
     font-size: 16pt;
 }
 
 .jquery-trackswitch .overlay #overlayinfo span.text {
     display: none;
     position: absolute;
-    right: 0px;
+    right: 0;
 }
 
 .jquery-trackswitch .overlay #overlayinfo span.text strong {
@@ -151,43 +148,38 @@
     padding: 4px 12px;  /* Top/Bottom Left/Right */
     overflow: hidden;
     color: #DDDDDD;
+    display: flex;
+    flex-wrap: wrap;
 }
 
 .jquery-trackswitch .main-control .button {
-  /*background: red;*/
-  float: left;
   width: 15px;
   margin: 7px 10px 0 0; /* Bring buttons to vertical center with 7px */
   cursor: pointer;
 }
 
 .jquery-trackswitch .main-control .timing {
-  /*background: green;*/
-  float: right;
-  font-family: monospace;
-  margin: 7px 0 0 10px; /* Bring time to vertical center with 7px */
+        font-family: monospace;
+        margin: 7px 0 0 auto;
 }
 
 .jquery-trackswitch .main-control .seekwrap {
-  /*background: blue;*/
-  overflow: hidden;
-  height: 28px;
-  cursor: pointer;
-  min-width: 200px;
-  width: 100%;
-  clear: left;
+        overflow: hidden;
+        height: 28px;
+        cursor: pointer;
+        min-width: 200px;
+        width: 100%;
+    flex: 1 0 100%;
 }
 
 .jquery-trackswitch .main-control .seekwrap .seekbar {
     background-color: #ED8C01;
     height: 6px;
-    margin: 11px 4px 0 0px;
+    margin: 11px 4px 0 0;
     position: relative;
 
     /* Hack to extend the seekhead to the seekwrap (4px shift)*/
-    -webkit-box-shadow: 4px 0px 0px 0px #ED8C01;
-       -moz-box-shadow: 4px 0px 0px 0px #ED8C01;
-            box-shadow: 4px 0px 0px 0px #ED8C01;
+    box-shadow: 4px 0 0 0 #ED8C01;
 }
 
 .jquery-trackswitch .main-control .seekwrap .seekbar .seekhead {
@@ -222,11 +214,6 @@
     transform: translateX(-50%);
 }
 
-.jquery-trackswitch .main-control .seekwrap .seekbar .loop-marker.marker-a:after,
-.jquery-trackswitch .main-control .seekwrap .seekbar .loop-marker.marker-b:after {
-    background-color: #333;
-}
-
 .jquery-trackswitch .main-control .seekwrap .seekbar .loop-region {
     position: absolute;
     height: 100%;
@@ -241,7 +228,6 @@
 }
 
 .jquery-trackswitch .main-control .volume-control {
-    float: left;
     margin: 7px 10px 0 2px; /* Bring volume control to vertical center with 7px */
     display: flex;
     align-items: center;
@@ -288,7 +274,6 @@
 
 
 .jquery-trackswitch .main-control .preset-selector-wrap {
-    float: left;
     margin: 2px 10px 0 2px; /* Bring preset selector to vertical center with 7px */
 }
 
@@ -372,13 +357,7 @@
     bottom: 0;
     width: 3px;
     background-color: #333;
-    /* box-shadow: 0 0 1px rgba(51, 51, 51, 0.8); */
     transform: translateX(-50%);
-}
-
-.jquery-trackswitch .seekable-img-wrap .seekwrap .loop-marker.marker-a:after,
-.jquery-trackswitch .seekable-img-wrap .seekwrap .loop-marker.marker-b:after {
-    background-color: #333;
 }
 
 .jquery-trackswitch .seekable-img-wrap .seekwrap .loop-region {
@@ -447,11 +426,6 @@
     background-color: #333;
     box-shadow: 0 0 1px rgba(51, 51, 51, 0.8);
     transform: translateX(-50%);
-}
-
-.jquery-trackswitch .waveform-wrap .seekwrap .loop-marker.marker-a:after,
-.jquery-trackswitch .waveform-wrap .seekwrap .loop-marker.marker-b:after {
-    background-color: #333;
 }
 
 .jquery-trackswitch .waveform-wrap .seekwrap .loop-region {
@@ -560,8 +534,8 @@
     margin-right: 15px; /* Add space after loop group */
 }
 
-.jquery-trackswitch .control li.loop-a:after {
-    content: "A"; /* Letter A */
+.jquery-trackswitch .control li.loop-a:after,
+.jquery-trackswitch .control li.loop-b:after {
     font-family: Arial, sans-serif;
     font-weight: bold;
     font-size: 12px;
@@ -572,38 +546,21 @@
     padding: 1px 4px;
     line-height: 1.2;
     position: absolute;
-    top: 0%;
+    top: 0;
     left: 0;
 }
 
-.jquery-trackswitch .control li.loop-a.checked:after {
-    opacity: 1;
-}
-
-.jquery-trackswitch .control li.loop-a.active:after {
-    opacity: 1;
+.jquery-trackswitch .control li.loop-a:after {
+    content: "A"; /* Letter A */
 }
 
 .jquery-trackswitch .control li.loop-b:after {
     content: "B"; /* Letter B */
-    font-family: Arial, sans-serif;
-    font-weight: bold;
-    font-size: 12px;
-    text-indent: 0;
-    opacity: 0.5;
-    border: 1.5px solid currentColor;
-    border-radius: 3px;
-    padding: 1px 4px;
-    line-height: 1.2;
-    position: absolute;
-    top: 0%;
-    left: 0;
 }
 
-.jquery-trackswitch .control li.loop-b.checked:after {
-    opacity: 1;
-}
-
+.jquery-trackswitch .control li.loop-a.checked:after,
+.jquery-trackswitch .control li.loop-a.active:after,
+.jquery-trackswitch .control li.loop-b.checked:after,
 .jquery-trackswitch .control li.loop-b.active:after {
     opacity: 1;
 }
@@ -686,7 +643,7 @@
 
     /* MAIN CONTROL STYLES -------------------------------------------------- */
 
-    .jquery-trackswitch .control li.button:after { /* is this main-control? */
+    .jquery-trackswitch .control li.button:after {
         font-size: 23px;
     }
 
@@ -728,7 +685,7 @@
 
     .jquery-trackswitch .main-control .seekwrap {
         width: 100%;
-        margin-top: 30px;
+        margin-top: 5px;
     }
 
 
@@ -757,20 +714,33 @@
 @media (max-width: 600px) {
     /* Style Adjustments for medium-small devices to prevent overlap */
 
+    .jquery-trackswitch .main-control .control li.volume {
+        flex: 1;
+        display: flex;
+        justify-content: center;
+    }
+
+    .jquery-trackswitch .main-control .volume-control {
+        margin: 6px 0 0 0;
+    }
+
+    .jquery-trackswitch .main-control .control li.loop-a {
+        margin-left: 0;
+    }
+
     .jquery-trackswitch .main-control .preset-selector-wrap {
         width: 100%;
-        float: none;
-        clear: both;
+        flex-basis: 100%;
         text-align: center;
-        margin: 32px 0 0 0;
+        margin: 16px 0 0 0;
     }
 
     .jquery-trackswitch .main-control .timing {
         width: 100%;
-        float: none;
-        clear: both;
+        flex-basis: 100%;
         text-align: center;
-        margin: 6px 0 4px 0;
+        margin-left: 0;
+        margin: 10px 0 0 0;
     }
 
     .jquery-trackswitch .main-control .seekwrap {
@@ -778,66 +748,25 @@
     }
 }
 
-@media (max-width: 450px) {
+@media (max-width: 460px) {
     /* Style Adjustments for Responsive Design - extra breakpoint for smallest devices */
 
 
     /* MAIN CONTROL STYLES -------------------------------------------------- */
 
-    .jquery-trackswitch .main-control {
-        text-align: center; /* Center the `inline-block` buttons */
-    }
-
-    .jquery-trackswitch .main-control .button {
-        float: none;
-        display: inline-block;
-        margin: 0 14px; /* Share the spacing margin each side to center align */
-    }
-
-    .jquery-trackswitch .main-control .control li.loop-a {
-        margin-left: 24px; /* Maintain loop group separation on smallest devices */
-    }
-
-    .jquery-trackswitch .main-control .control li.loop-clear {
-        margin-right: 24px; /* Maintain loop group separation on smallest devices */
-    }
-
-    .jquery-trackswitch .control li.loop-a:after,
-    .jquery-trackswitch .control li.loop-b:after {
-        font-size: 18px; /* Even smaller text on smallest devices */
-        padding: 1px 2px; /* Further reduced padding */
-    }
-
-    .jquery-trackswitch .main-control .volume-control {
-        float: none;
-        display: inline-flex;
-        margin: 32px 0 0 0;
-    }
-
-    .jquery-trackswitch .main-control .volume-control .volume-icon {
-        font-size: 20px;
-        width: 20px;
+    .jquery-trackswitch .main-control .control li.volume {
+        flex-basis: 100%;
+        justify-content: flex-end;
+        margin-bottom: 4px;
     }
 
     .jquery-trackswitch .main-control .preset-selector-wrap {
-        float: none;
-        display: inline-block;
-        margin: 32px 0 0 0;
-    }
-
-    .jquery-trackswitch .main-control .preset-selector {
-        font-size: 12px;
-        padding: 4px 8px;
-    }
-
-    .jquery-trackswitch .main-control .timing {
         width: 100%;
-        float: none;
-        margin: 16px 0 8px 0;
+        display: flex;
+        flex-basis: 100%;
+        justify-content: flex-end;
+        text-align: right;
+        margin: 4px 0 0 0;
     }
-
-    .jquery-trackswitch .main-control .seekwrap {
-        margin-top: 8px;
-    }
-
+    
 }
