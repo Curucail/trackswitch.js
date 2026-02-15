@@ -63,6 +63,15 @@ function Plugin(element, options) {
     this.masterVolume = 1.0;
     this.iOSPlaybackUnlocked = false;
 
+    // A/B Loop properties
+    this.loopPointA = null;  // Time in seconds, or null if not set
+    this.loopPointB = null;  // Time in seconds, or null if not set
+    this.loopEnabled = false; // Whether A/B loop is active
+    this.rightClickDragging = false; // Tracks right-click drag state for loop selection
+    this.loopDragStart = null; // Stores starting position during right-drag
+    this.draggingMarker = null; // Tracks which marker is being dragged ('A', 'B', or null)
+    this.loopMinDistance = 0.1; // Minimum distance between loop points (0.1 seconds)
+
     // Properties and data for each track in coherent arrays
     this.trackProperties = Array();
     this.trackSources = Array();
@@ -112,15 +121,19 @@ Plugin.prototype.init = function() {
             '</div>' +
             '<div class="main-control">' +
                 '<ul class="control">' +
-                    '<li class="playpause button">Play</li>' +
-                    '<li class="stop button">Stop</li>' +
-                    '<li class="repeat button">Repeat</li>' +
+                    '<li class="playpause button" title="Play/Pause (Spacebar)">Play</li>' +
+                    '<li class="stop button" title="Stop (Esc)">Stop</li>' +
+                    '<li class="repeat button" title="Repeat (R)">Repeat</li>' +
                     '<li class="volume">' +
                         '<div class="volume-control">' +
                             '<i class="fa-volume-up volume-icon"></i>' +
                             '<input type="range" class="volume-slider" min="0" max="100" value="100">' +
                         '</div>' +
                     '</li>' +
+                    '<li class="loop-a button" title="Set Loop Point A (A)">Loop A</li>' +
+                    '<li class="loop-b button" title="Set Loop Point B (B)">Loop B</li>' +
+                    '<li class="loop-toggle button" title="Toggle Loop On/Off (L)">Loop</li>' +
+                    '<li class="loop-clear button" title="Clear Loop Points (C)">Clear</li>' +
                     '<li class="timing">' +
                         '<span class="time">' +
                             '--:--:--:---' +
@@ -132,6 +145,9 @@ Plugin.prototype.init = function() {
                     '</li>' +
                     '<li class="seekwrap">' +
                         '<div class="seekbar">' +
+                            '<div class="loop-region"></div>' +
+                            '<div class="loop-marker marker-a"></div>' +
+                            '<div class="loop-marker marker-b"></div>' +
                             '<div class="seekhead"></div>' +
                         '</div>' +
                     '</li>' +
@@ -157,10 +173,19 @@ Plugin.prototype.init = function() {
             '<div class="seekwrap" style=" ' +
             'left: ' + ($(this).data("seekMarginLeft") || 0) + '%; ' +
             'right: ' + ($(this).data("seekMarginRight") || 0) + '%;">' +
+                '<div class="loop-region"></div>' +
+                '<div class="loop-marker marker-a"></div>' +
+                '<div class="loop-marker marker-b"></div>' +
                 '<div class="seekhead"></div>' +
             '</div>'
         );
 
+    });
+
+    // Prevent context menu on seekbar for right-click loop selection
+    this.element.on('contextmenu', '.seekwrap', function(e) {
+        e.preventDefault();
+        return false;
     });
 
     this.element.on('touchstart mousedown', '.overlay .activate', $.proxy(this.load, this));
@@ -494,6 +519,13 @@ Plugin.prototype.unbindEvents = function() {
     this.element.off('input', '.volume-slider');
     this.element.off('mousedown touchstart mousemove touchmove mouseup touchend', '.volume-control');
 
+    this.element.off('touchstart mousedown', '.loop-a');
+    this.element.off('touchstart mousedown', '.loop-b');
+    this.element.off('touchstart mousedown', '.loop-toggle');
+    this.element.off('touchstart mousedown', '.loop-clear');
+    this.element.off('mousedown touchstart', '.loop-marker');
+    this.element.off('contextmenu', '.seekwrap');
+
     $(window).off("keydown.trackswitch");
 
 };
@@ -516,6 +548,13 @@ Plugin.prototype.bindEvents = function() {
     this.element.on('input', '.volume-slider', $.proxy(this.event_volume, this));
     // Prevent volume slider interactions from triggering seek or other player events
     this.element.on('mousedown touchstart mousemove touchmove mouseup touchend', '.volume-control', function(e) { e.stopPropagation(); });
+
+    this.element.on('touchstart mousedown', '.loop-a', $.proxy(this.event_setLoopA, this));
+    this.element.on('touchstart mousedown', '.loop-b', $.proxy(this.event_setLoopB, this));
+    this.element.on('touchstart mousedown', '.loop-toggle', $.proxy(this.event_toggleLoop, this));
+    this.element.on('touchstart mousedown', '.loop-clear', $.proxy(this.event_clearLoop, this));
+
+    this.element.on('mousedown touchstart', '.loop-marker', $.proxy(this.event_markerDragStart, this));
 
     var that = this;
 
@@ -661,6 +700,41 @@ Plugin.prototype.updateMainControls = function() {
         $(this.element).find('.timing .time').html(this.secondsToHHMMSSmmm(this.position));
     }
 
+    // Update loop UI elements
+    this.element.find(".loop-a").toggleClass('checked', this.loopPointA !== null);
+    this.element.find(".loop-b").toggleClass('checked', this.loopPointB !== null);
+    this.element.find(".loop-toggle").toggleClass('checked', this.loopEnabled);
+    this.element.find(".loop-a, .loop-b").toggleClass('active', this.loopEnabled);
+
+    // Position and show/hide loop markers
+    if (this.loopPointA !== null && this.longestDuration > 0) {
+        var pointAPerc = (this.loopPointA / this.longestDuration) * 100;
+        this.element.find('.loop-marker.marker-a').css({left: pointAPerc+'%', display: 'block'});
+    } else {
+        this.element.find('.loop-marker.marker-a').css({display: 'none'});
+    }
+
+    if (this.loopPointB !== null && this.longestDuration > 0) {
+        var pointBPerc = (this.loopPointB / this.longestDuration) * 100;
+        this.element.find('.loop-marker.marker-b').css({left: pointBPerc+'%', display: 'block'});
+    } else {
+        this.element.find('.loop-marker.marker-b').css({display: 'none'});
+    }
+
+    // Position and show/hide loop region overlay
+    if (this.loopPointA !== null && this.loopPointB !== null && this.longestDuration > 0) {
+        var pointAPerc = (this.loopPointA / this.longestDuration) * 100;
+        var pointBPerc = (this.loopPointB / this.longestDuration) * 100;
+        var widthPerc = pointBPerc - pointAPerc;
+        this.element.find('.loop-region').css({
+            left: pointAPerc+'%',
+            width: widthPerc+'%',
+            display: 'block'
+        }).toggleClass('active', this.loopEnabled);
+    } else {
+        this.element.find('.loop-region').css({display: 'none'});
+    }
+
 }
 
 
@@ -671,6 +745,15 @@ Plugin.prototype.monitorPosition = function(context) {
     // context = this from outside the closure
 
     context.position = context.playing && !context.currentlySeeking ? audioContext.currentTime - context.startTime : context.position;
+
+    // Check for A/B loop (takes precedence over end-of-track repeat)
+    if (context.loopEnabled && context.loopPointB !== null && 
+        context.position >= context.loopPointB && !context.currentlySeeking) {
+        
+        context.stopAudio();
+        context.startAudio(context.loopPointA || 0);
+        return; // Exit early to prevent end-of-track handling
+    }
 
     // Can't use onEnded as context calls each time stopAudio is called...
     if (context.position >= context.longestDuration && !context.currentlySeeking) {
@@ -853,6 +936,21 @@ Plugin.prototype.seekRelative = function(seconds) {
     // Clamp to valid range [0, longestDuration]
     newPosition = Math.max(0, Math.min(newPosition, this.longestDuration));
     
+    // If looping is active, wrap around loop boundaries with offset preservation
+    if (this.loopEnabled && this.loopPointA !== null && this.loopPointB !== null) {
+        var loopStart = this.loopPointA;
+        var loopEnd = this.loopPointB;
+        var loopLength = loopEnd - loopStart;
+
+        if (loopLength > 0) {
+            // Normalize newPosition into [loopStart, loopEnd) using modulo arithmetic,
+            // correctly handling large positive/negative seeks.
+            var relative = newPosition - loopStart;
+            relative = ((relative % loopLength) + loopLength) % loopLength;
+            newPosition = loopStart + relative;
+        }
+    }
+    
     if (this.playing) {
         this.stopAudio();
         this.startAudio(newPosition);
@@ -953,6 +1051,34 @@ Plugin.prototype.handleKeyboardEvent = function(event) {
             this.event_repeat(repeatEvent);
             handled = true;
             break;
+            
+        case 65: // A - Set loop point A at current position
+            event.preventDefault();
+            var loopAEvent = $.Event('mousedown', { which: 1, type: 'mousedown' });
+            this.event_setLoopA(loopAEvent);
+            handled = true;
+            break;
+            
+        case 66: // B - Set loop point B at current position
+            event.preventDefault();
+            var loopBEvent = $.Event('mousedown', { which: 1, type: 'mousedown' });
+            this.event_setLoopB(loopBEvent);
+            handled = true;
+            break;
+            
+        case 76: // L - Toggle loop on/off
+            event.preventDefault();
+            var toggleLoopEvent = $.Event('mousedown', { which: 1, type: 'mousedown' });
+            this.event_toggleLoop(toggleLoopEvent);
+            handled = true;
+            break;
+            
+        case 67: // C - Clear loop points
+            event.preventDefault();
+            var clearLoopEvent = $.Event('mousedown', { which: 1, type: 'mousedown' });
+            this.event_clearLoop(clearLoopEvent);
+            handled = true;
+            break;
     }
     
     if (handled) {
@@ -973,7 +1099,17 @@ Plugin.prototype.event_playpause = function(event) {
     this.unlockIOSPlayback();
 
     if(!this.playing) {
-        this.startAudio();
+        // Determine starting position
+        var startPosition = this.position;
+        
+        // If looping is enabled and position is outside loop range, jump to loop start
+        if (this.loopEnabled && this.loopPointA !== null && this.loopPointB !== null) {
+            if (this.position < this.loopPointA || this.position > this.loopPointB) {
+                startPosition = this.loopPointA;
+            }
+        }
+        
+        this.startAudio(startPosition);
         this.pause_others();
         this.playing = true;
         this.updateMainControls();
@@ -1028,6 +1164,168 @@ Plugin.prototype.event_repeat = function(event) {
 };
 
 
+// Set loop point A at current position
+Plugin.prototype.event_setLoopA = function(event) {
+
+    if (!this.valid_click(event)) { return true; } // If not valid click, break out of func
+
+    event.preventDefault();
+
+    // If point A is already set at this position, clear it
+    if (this.loopPointA !== null && Math.abs(this.loopPointA - this.position) < this.loopMinDistance) {
+        this.loopPointA = null;
+        this.loopEnabled = false;
+    } else {
+        this.loopPointA = this.position;
+        
+        // Validate: A must be before B if B is set
+        if (this.loopPointB !== null && this.loopPointA > this.loopPointB) {
+            // Swap points automatically
+            var temp = this.loopPointA;
+            this.loopPointA = this.loopPointB;
+            this.loopPointB = temp;
+        }
+        
+        // Enforce minimum distance from B
+        if (this.loopPointB !== null && (this.loopPointB - this.loopPointA) < this.loopMinDistance) {
+            console.warn("trackSwitch: Loop point A must be at least " + (this.loopMinDistance * 1000) + "ms before point B");
+            // Don't set the point if it violates minimum distance
+            this.loopPointA = null;
+            return false;
+        }
+        
+        // Auto-enable looping if both points are now set
+        if (this.loopPointA !== null && this.loopPointB !== null) {
+            this.loopEnabled = true;
+            
+            // If playing and position is outside loop range, jump to loop start
+            if (this.playing) {
+                if (this.position < this.loopPointA || this.position > this.loopPointB) {
+                    this.stopAudio();
+                    this.startAudio(this.loopPointA);
+                }
+            }
+        }
+    }
+
+    this.updateMainControls();
+
+    event.stopPropagation();
+    return false;
+
+};
+
+
+// Set loop point B at current position
+Plugin.prototype.event_setLoopB = function(event) {
+
+    if (!this.valid_click(event)) { return true; } // If not valid click, break out of func
+
+    event.preventDefault();
+
+    // Initialize loop point tolerance if not already set
+    if (typeof this.loopPointTolerance === 'undefined') {
+        this.loopPointTolerance = 0.1;
+    }
+
+    // If point B is already set at this position, clear it
+    if (this.loopPointB !== null && Math.abs(this.loopPointB - this.position) < this.loopPointTolerance) {
+        this.loopPointB = null;
+    } else {
+        this.loopPointB = this.position;
+        
+        // Validate: B must be after A if A is set
+        if (this.loopPointA !== null && this.loopPointB < this.loopPointA) {
+            // Swap points automatically
+            var temp = this.loopPointB;
+            this.loopPointB = this.loopPointA;
+            this.loopPointA = temp;
+        }
+        
+        // Enforce minimum distance from A
+        if (this.loopPointA !== null && (this.loopPointB - this.loopPointA) < this.loopMinDistance) {
+            console.warn("trackSwitch: Loop point B must be at least " + (this.loopMinDistance * 1000) + "ms after point A");
+            // Don't set the point if it violates minimum distance
+            this.loopPointB = null;
+            return false;
+        }
+        
+        // Auto-enable looping if both points are now set
+        if (this.loopPointA !== null && this.loopPointB !== null) {
+            this.loopEnabled = true;
+            
+            // If playing and position is outside loop range, jump to loop start
+            if (this.playing) {
+                if (this.position < this.loopPointA || this.position > this.loopPointB) {
+                    this.stopAudio();
+                    this.startAudio(this.loopPointA);
+                }
+            }
+        }
+    }
+
+    this.updateMainControls();
+
+    event.stopPropagation();
+    return false;
+
+};
+
+
+// Toggle loop on/off (requires both points to be set)
+Plugin.prototype.event_toggleLoop = function(event) {
+
+    if (!this.valid_click(event)) { return true; } // If not valid click, break out of func
+
+    event.preventDefault();
+
+    // Only allow toggling if both points are set
+    if (this.loopPointA !== null && this.loopPointB !== null) {
+        this.loopEnabled = !this.loopEnabled;
+        
+        // If enabling loop and position is outside range, jump to start of loop
+        if (this.loopEnabled && (this.position < this.loopPointA || this.position > this.loopPointB)) {
+            if (this.playing) {
+                this.stopAudio();
+                this.startAudio(this.loopPointA);
+            } else {
+                this.position = this.loopPointA;
+            }
+        }
+    } else {
+        // If both points aren't set, show a console message
+        console.warn("trackSwitch: Both loop points A and B must be set before enabling loop");
+    }
+
+    this.updateMainControls();
+
+    event.stopPropagation();
+    return false;
+
+};
+
+
+// Clear both loop points and disable looping
+Plugin.prototype.event_clearLoop = function(event) {
+
+    if (!this.valid_click(event)) { return true; } // If not valid click, break out of func
+
+    event.preventDefault();
+
+    this.loopPointA = null;
+    this.loopPointB = null;
+    this.loopEnabled = false;
+    this.rightClickDragging = false;
+    this.loopDragStart = null;
+
+    this.updateMainControls();
+
+    event.stopPropagation();
+    return false;
+
+};
+
+
 // When seeking, calculate the desired position in the audio from the position on the slider
 Plugin.prototype.seek = function(event) {
 
@@ -1072,6 +1370,31 @@ Plugin.prototype.seek = function(event) {
 // When touchsstart or mousedown on a seeking area, turn 'seeking' on and seek to cursor
 Plugin.prototype.event_seekStart = function(event) {
 
+    // Check for right-click (button 3) for loop selection
+    if (event.type === "mousedown" && event.which === 3) {
+        event.preventDefault();
+        
+        this.rightClickDragging = true;
+        this.seekingElement = $(event.target).closest('.seekwrap');
+        
+        // Calculate the starting position
+        var posXRel = event.pageX - $(this.seekingElement).offset().left;
+        var seekWidth = $(this.seekingElement).width();
+        seekWidth = seekWidth < 1 ? 1 : seekWidth;
+        var posXRelLimited = posXRel < 0 ? 0 : posXRel > seekWidth ? seekWidth : posXRel;
+        var timePerc = (posXRelLimited / seekWidth) * 100;
+        var startTime = this.longestDuration * (timePerc / 100);
+        
+        this.loopDragStart = startTime;
+        this.loopPointA = startTime;
+        this.loopPointB = startTime;
+        
+        this.updateMainControls();
+        
+        event.stopPropagation();
+        return false;
+    }
+
     if (!this.valid_click(event)) { return true; } // If not valid click, break out of func
 
     event.preventDefault();
@@ -1081,6 +1404,14 @@ Plugin.prototype.event_seekStart = function(event) {
 
     this.seek(event);
     this.currentlySeeking = true;
+    
+    // If seeking outside loop region while looping, disable loop but keep points
+    if (this.loopEnabled && this.loopPointA !== null && this.loopPointB !== null) {
+        var seekTime = this.position;
+        if (seekTime < this.loopPointA || seekTime > this.loopPointB) {
+            this.loopEnabled = false;
+        }
+    }
 
     event.stopPropagation();
     return false;
@@ -1089,6 +1420,69 @@ Plugin.prototype.event_seekStart = function(event) {
 
 // When touchmove or mousemove over a seeking area, seek if seeking has been started
 Plugin.prototype.event_seekMove = function(event) {
+
+    // Handle marker dragging
+    if (this.draggingMarker !== null) {
+        event.preventDefault();
+        
+        // Calculate current position
+        var posXRel = event.type.indexOf("mouse") >= 0 
+            ? event.pageX - $(this.seekingElement).offset().left
+            : event.originalEvent.touches[0].pageX - $(this.seekingElement).offset().left;
+        
+        var seekWidth = $(this.seekingElement).width();
+        seekWidth = seekWidth < 1 ? 1 : seekWidth;
+        var posXRelLimited = posXRel < 0 ? 0 : posXRel > seekWidth ? seekWidth : posXRel;
+        var timePerc = (posXRelLimited / seekWidth) * 100;
+        var newTime = this.longestDuration * (timePerc / 100);
+        
+        // Update the appropriate marker with minimum distance constraint
+        if (this.draggingMarker === 'A') {
+            // Constrain A to be at least loopMinDistance before B
+            if (this.loopPointB !== null) {
+                newTime = Math.min(newTime, this.loopPointB - this.loopMinDistance);
+            }
+            newTime = Math.max(0, newTime); // Don't go below 0
+            this.loopPointA = newTime;
+        } else if (this.draggingMarker === 'B') {
+            // Constrain B to be at least loopMinDistance after A
+            if (this.loopPointA !== null) {
+                newTime = Math.max(newTime, this.loopPointA + this.loopMinDistance);
+            }
+            newTime = Math.min(this.longestDuration, newTime); // Don't exceed duration
+            this.loopPointB = newTime;
+        }
+        
+        this.updateMainControls();
+        return false;
+    }
+
+    // Handle right-click drag for loop selection
+    if (this.rightClickDragging) {
+        event.preventDefault();
+        
+        // Calculate current position
+        var posXRel = event.pageX - $(this.seekingElement).offset().left;
+        var seekWidth = $(this.seekingElement).width();
+        seekWidth = seekWidth < 1 ? 1 : seekWidth;
+        var posXRelLimited = posXRel < 0 ? 0 : posXRel > seekWidth ? seekWidth : posXRel;
+        var timePerc = (posXRelLimited / seekWidth) * 100;
+        var currentTime = this.longestDuration * (timePerc / 100);
+        
+        // Update loop points based on drag direction
+        if (currentTime >= this.loopDragStart) {
+            // Dragging right - ensure minimum distance
+            this.loopPointA = this.loopDragStart;
+            this.loopPointB = Math.max(currentTime, this.loopDragStart + this.loopMinDistance);
+        } else {
+            // Dragging left - ensure minimum distance
+            this.loopPointA = Math.min(currentTime, this.loopDragStart - this.loopMinDistance);
+            this.loopPointB = this.loopDragStart;
+        }
+        
+        this.updateMainControls();
+        return false;
+    }
 
     if (this.currentlySeeking) {
         event.preventDefault();
@@ -1106,14 +1500,85 @@ Plugin.prototype.event_seekEnd = function(event) {
 
     event.preventDefault();
 
+    // Finalize marker dragging
+    if (this.draggingMarker !== null) {
+        this.draggingMarker = null;
+        this.updateMainControls();
+        
+        event.stopPropagation();
+        return false;
+    }
+
+    // Finalize right-click loop selection
+    if (this.rightClickDragging) {
+        this.rightClickDragging = false;
+        this.loopDragStart = null;
+        
+        // Ensure points are ordered correctly (should already be, but double-check)
+        if (this.loopPointA !== null && this.loopPointB !== null) {
+            if (this.loopPointA > this.loopPointB) {
+                var temp = this.loopPointA;
+                this.loopPointA = this.loopPointB;
+                this.loopPointB = temp;
+            }
+            
+            // Auto-enable looping after selection
+            // Only enable if there's a meaningful range (at least loopMinDistance)
+            if (Math.abs(this.loopPointB - this.loopPointA) >= this.loopMinDistance) {
+                this.loopEnabled = true;
+                
+                // If playing and position is outside loop range, jump to loop start
+                if (this.playing) {
+                    if (this.position < this.loopPointA || this.position > this.loopPointB) {
+                        this.stopAudio();
+                        this.startAudio(this.loopPointA);
+                    }
+                }
+            } else {
+                // If range too small, clear the points
+                this.loopPointA = null;
+                this.loopPointB = null;
+            }
+        }
+        
+        this.updateMainControls();
+        
+        event.stopPropagation();
+        return false;
+    }
+
     // Since seeking plays only snippits of audio, restart playback if it was playing
     if (this.currentlySeeking && this.playing) {
+        this.stopAudio(); // Stop the seeking audio snippets first
         this.startAudio();
     }
 
     this.currentlySeeking = false;
 
     event.stopPropagation();
+    return false;
+
+};
+
+
+// Start dragging a loop marker
+Plugin.prototype.event_markerDragStart = function(event) {
+
+    if (!this.valid_click(event)) { return true; } // If not valid click, break out of func
+
+    event.preventDefault();
+    event.stopPropagation(); // Prevent seek from triggering
+
+    // Determine which marker is being dragged
+    if ($(event.target).hasClass('marker-a')) {
+        this.draggingMarker = 'A';
+    } else if ($(event.target).hasClass('marker-b')) {
+        this.draggingMarker = 'B';
+    }
+
+    // Store the seekwrap element for position calculations
+    this.seekingElement = $(event.target).closest('.seekwrap');
+
     return false;
 
 };
