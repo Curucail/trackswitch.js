@@ -87,7 +87,7 @@ Each track is contained in one `ts-track` element and must contain one or more `
 </div>
 ```
 
-<div class="player">
+<div class="player" style="margin-top: 30px; margin-bottom: 60px;">
     <ts-track title="Violins">
         <ts-source src="data/multitracks/violins.mp3"></ts-source>
     </ts-track>
@@ -152,7 +152,7 @@ You can use CSS to style each individual `ts-track` element:
 </div>
 ```
 
-<div class="player">
+<div class="player" style="margin-top: 30px; margin-bottom: 60px;">
     <ts-track title="Violins" style="background-color: #156090;">
         <ts-source src="data/multitracks/violins.mp3"></ts-source>
     </ts-track>
@@ -188,7 +188,7 @@ You can preselect **solo** for individual tracks by using the `solo` attribute w
 </div>
 ```
 
-<div class="player">
+<div class="player" style="margin-top: 30px; margin-bottom: 60px;">
     <ts-track title="Violins" solo>
         <ts-source src="data/multitracks/violins.mp3"></ts-source>
     </ts-track>
@@ -224,7 +224,7 @@ You can preselect **mute** for individual tracks by using the `mute` attribute w
 </div>
 ```
 
-<div class="player">
+<div class="player" style="margin-top: 30px; margin-bottom: 60px;">
     <ts-track title="Violins">
         <ts-source src="data/multitracks/violins.mp3"></ts-source>
     </ts-track>
@@ -335,7 +335,7 @@ var settings = {
 $(".player").trackSwitch(settings);
 ```
 
-<div class="customplayer">
+<div class="customplayer" style="margin-top: 30px; margin-bottom: 60px;">
     <ts-track title="Violins">
         <ts-source src="data/multitracks/violins.mp3"></ts-source>
     </ts-track>
@@ -433,7 +433,7 @@ You can add aditional elements directly into the player, e.g. a paragraph `<p>` 
 </div>
 ```
 
-<div class="player">
+<div class="player" style="margin-top: 30px; margin-bottom: 60px;">
     <p style="text-align: center;">Example with padded and centered text.</p>
     <ts-track title="Violins">
         <ts-source src="data/multitracks/violins.mp3"></ts-source>
@@ -475,7 +475,7 @@ To add waveform visualization, simply include a `<canvas class="waveform">` elem
 </div>
 ```
 
-<div class="player">
+<div class="player" style="margin-top: 30px; margin-bottom: 60px;">
     <canvas class="waveform" width="1200" height="200"></canvas>
     <ts-track title="Violins">
         <ts-source src="data/multitracks/violins.mp3"></ts-source>
@@ -579,7 +579,7 @@ You can also style the waveform wrapper:
 </div>
 ```
 
-<div class="player">
+<div class="player" style="margin-top: 30px; margin-bottom: 60px;">
     <img class="seekable" src="data/multitracks/mix.png" />
     <ts-track title="Violins">
         <ts-source src="data/multitracks/violins.mp3"></ts-source>
@@ -620,7 +620,7 @@ This can be done by specifying the start and stop points as a percentage of the 
 </div>
   ```
 
-<div class="player">
+<div class="player" style="margin-top: 30px; margin-bottom: 60px;">
     <img class="seekable" data-seek-margin-left="4" data-seek-margin-right="4" src="data/multitracks/mix.png">
     <ts-track title="Violins" data-img="data/multitracks/violins.png">
         <ts-source src="data/multitracks/violins.mp3"></ts-source>
@@ -659,7 +659,7 @@ You can optionally define a more specific image to replace the default when a pa
 </div>
 ```
 
-<div class="customplayer">
+<div class="customplayer" style="margin-top: 30px; margin-bottom: 60px;">
     <img class="seekable" data-seek-margin-left="4" data-seek-margin-right="4" src="data/multitracks/mix.png">
     <ts-track title="Violins" data-img="data/multitracks/violins.png">
         <ts-source src="data/multitracks/violins.mp3"></ts-source>
@@ -704,7 +704,7 @@ The images can be positioned using normal CSS (eg, `width` and `margin` properti
 </div>
 ```
 
-<div class="player">
+<div class="player" style="margin-top: 30px; margin-bottom: 60px;">
     <img style="margin: 20px auto;" src="data/multitracks/cover.jpg">
     <img data-style="width: 80%; margin: auto;" class="seekable" data-seek-margin-left="4" data-seek-margin-right="4" src="data/multitracks/mix.png">
     <ts-track title="Violins" data-img="data/multitracks/violins.png">
