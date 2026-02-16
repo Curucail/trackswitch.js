@@ -193,6 +193,7 @@
 }
 
 .jquery-trackswitch .main-control .preset-selector-wrap {
+    justify-self: left;
     grid-column: 4;
     grid-row: 1;
 }
@@ -360,10 +361,10 @@
     background-color: #555;
     color: #DDDDDD;
     border: 1px solid #333;
-    padding: 4px 8px;
+    padding: 4px 2px 4px 2px;
     font-size: 13px;
     cursor: pointer;
-    border-radius: 3px;
+    border-radius: 4px;
     pointer-events: auto;
     touch-action: manipulation;
 }
@@ -746,6 +747,9 @@
     .jquery-trackswitch .main-control ul.control {
         grid-template-columns: auto auto auto auto 1fr;
         grid-template-rows: auto auto;
+        gap: 6px 24px;
+        min-height: 36px;
+        padding: 8px 12px 4px 12px;
     }
 
     .jquery-trackswitch .main-control .seekwrap {
@@ -894,8 +898,10 @@
 
     /* Preset and timing adjustments */
     .jquery-trackswitch .main-control .preset-selector {
-        font-size: 12px;
-        padding: 3px 6px;
+        font-size: 16px;
+        margin-top: 4px;
+        margin-left: 0px;
+        padding: 4px 6px 4px 6px;
     }
 
 
@@ -921,7 +927,7 @@
 
 }
 
-@media (max-width: 580px) {
+@media (max-width: 600px) {
     /* Phone layout:
        Row 1: playback | volume
        Row 2: loop-group | preset
