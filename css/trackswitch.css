@@ -30,7 +30,7 @@
     list-style: none;
 }
 
-/* Should be able to find a better way to bind the font-awesome icons ------------------------------------------- TODO */
+/* Font Awesome icon hooks */
 .jquery-trackswitch .overlay span:after,
 .jquery-trackswitch li.track.error:before,
 .jquery-trackswitch .control li.button:after {
@@ -91,6 +91,7 @@
     content: "\f110";
     /* fa-spinner */
 }
+
 
 .jquery-trackswitch.error .overlay {
     background: rgba(0, 0, 0, 0.6);
@@ -226,6 +227,7 @@
     height: 16px;
     cursor: pointer;
 }
+
 
 /* Timing */
 .jquery-trackswitch .main-control .timing {

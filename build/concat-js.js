@@ -14,8 +14,8 @@ if (typeof jQuery === 'undefined') {
 }
 +function ($) {
   var version = $.fn.jquery.split(' ')[0].split('.').map(Number)
-  if ((version[0] < 1) || (version[0] === 1 && version[1] < 9) || (version[0] === 1 && version[1] === 9 && version[2] < 1) || (version[0] >= 4)) {
-    throw new Error('trackswitchjs\\'s JavaScript requires at least jQuery v1.9.1 but less than v4.0.0')
+  if (version[0] !== 3 || version[1] !== 7) {
+    throw new Error('trackswitchjs\\'s JavaScript currently requires jQuery v3.7.x;')
   }
 }(jQuery);
 +function () {

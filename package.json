@@ -27,7 +27,7 @@
   "main": "dist/js/trackswitch",
   "dependencies": {
     "font-awesome": "^4.2.0",
-    "jquery": ">=1.9.1"
+    "jquery": ">=3.7.0 <3.8.0"
   },
   "devDependencies": {
     "esbuild": "^0.27.3",

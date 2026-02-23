@@ -20,7 +20,7 @@ title: trackswitch.js
 
 # Initialization
 
-Trackswitch requires jQuery and Fontawesome to be included to work, e.g.
+Trackswitch requires jQuery (v3.7.x) and Fontawesome to be included to work, e.g.
 
 ```html
 <!-- ... -->
@@ -51,7 +51,7 @@ Trackswitch requires jQuery and Fontawesome to be included to work, e.g.
 
 <!-- ... -->
 
-<script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="crossorigin="anonymous"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="crossorigin="anonymous"></script>
 <script src="trackswitch.min.js"></script>
 <script type="text/javascript">
     jQuery(document).ready(function() {
@@ -356,7 +356,7 @@ Any combination of the following boolean flags is possible, where the indicated 
  - `solo`: If `true` show solo buttons. Defaults to `true`.
  - `globalsolo`: If `true` mute all other trackswitch instances when playback starts. Defaults to `true`.
  - `repeat`: If `true` initialize player with repeat button enabled. Defaults to `false`.
- - `radiosolo`: If `true` allow only 1 track to be soloed at a time (makes the <kbd>shift</kbd>+<i class="fa fa-mouse-pointer" aria-hidden="true"></i>click behaviour the default). Useful for comparing rather than mixing tracks. Defaults to `false`.
+ - `radiosolo`: If `true` allow only 1 track to be soloed at a time (makes the <kbd>shift</kbd>+click behaviour the default). Useful for comparing rather than mixing tracks. Defaults to `false`.
  - `onlyradiosolo`: If `true` sets both `mute: false` and `radiosolo: true` in one argument. Useful for one track at a time comparison. Also makes the whole track row clickable. Defaults to `false`.
  - `tabview`: If `true` change the layout so tracks are arranged in a 'tab view'. This saves vertical space, for example on a presentation. Defaults to `false`.
  - `iosunmute`: If `true` run a one-time iOS/iPadOS unlock using a silent HTML5 audio element on first user interaction, so WebAudio playback is less likely to be muted by the hardware silent switch. Defaults to `true`.
