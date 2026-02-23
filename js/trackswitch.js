@@ -1161,49 +1161,59 @@ Plugin.prototype.handleKeyboardEvent = function(event) {
     }
     
     var handled = false;
-    var keyCode = event.keyCode || event.which;
+    var key = event.key || event.code;
     
-    switch (keyCode) {
-        case 32: // Space - Play/Pause
+    switch (key) {
+        // Spacebar values: event.key === " " (or legacy "Spacebar"), event.code === "Space"
+        case ' ':
+        case 'Spacebar':
+        case 'Space': // Space - Play/Pause
             event.preventDefault();
             this.event_playpause(event);
             handled = true;
             break;
             
-        case 27: // Escape - Stop
+        // Escape values: event.key === "Escape" (or legacy "Esc"), event.code === "Escape"
+        case 'Escape':
+        case 'Esc': // Escape - Stop
             event.preventDefault();
             var stopEvent = $.Event('mousedown', { which: 1, type: 'mousedown' });
             this.event_stop(stopEvent);
             handled = true;
             break;
             
-        case 37: // Left Arrow - Seek backward
+        // Left arrow values: event.key === "ArrowLeft", event.code === "ArrowLeft"
+        case 'ArrowLeft': // Left Arrow - Seek backward
             event.preventDefault();
             var seekAmount = event.shiftKey ? -5 : -2;
             this.seekRelative(seekAmount);
             handled = true;
             break;
             
-        case 39: // Right Arrow - Seek forward
+        // Right arrow values: event.key === "ArrowRight", event.code === "ArrowRight"
+        case 'ArrowRight': // Right Arrow - Seek forward
             event.preventDefault();
             var seekAmount = event.shiftKey ? 5 : 2;
             this.seekRelative(seekAmount);
             handled = true;
             break;
             
-        case 38: // Up Arrow - Volume up
+        // Up arrow values: event.key === "ArrowUp", event.code === "ArrowUp"
+        case 'ArrowUp': // Up Arrow - Volume up
             event.preventDefault();
             this.adjustVolume(10);
             handled = true;
             break;
             
-        case 40: // Down Arrow - Volume down
+        // Down arrow values: event.key === "ArrowDown", event.code === "ArrowDown"
+        case 'ArrowDown': // Down Arrow - Volume down
             event.preventDefault();
             this.adjustVolume(-10);
             handled = true;
             break;
             
-        case 36: // Home - Jump to start
+        // Home values: event.key === "Home", event.code === "Home"
+        case 'Home': // Home - Jump to start
             event.preventDefault();
             if (this.playing) {
                 this.stopAudio();
@@ -1215,14 +1225,20 @@ Plugin.prototype.handleKeyboardEvent = function(event) {
             handled = true;
             break;
             
-        case 82: // R - Toggle repeat
+        // Repeat key values: event.key === "r"/"R", event.code === "KeyR"
+        case 'r':
+        case 'R':
+        case 'KeyR': // R - Toggle repeat
             event.preventDefault();
             var repeatEvent = $.Event('mousedown', { which: 1, type: 'mousedown' });
             this.event_repeat(repeatEvent);
             handled = true;
             break;
             
-        case 65: // A - Set loop point A at current position (only if looping enabled)
+        // Loop A key values: event.key === "a"/"A", event.code === "KeyA"
+        case 'a':
+        case 'A':
+        case 'KeyA': // A - Set loop point A at current position (only if looping enabled)
             if (this.options.looping) {
                 event.preventDefault();
                 var loopAEvent = $.Event('mousedown', { which: 1, type: 'mousedown' });
@@ -1231,7 +1247,10 @@ Plugin.prototype.handleKeyboardEvent = function(event) {
             }
             break;
             
-        case 66: // B - Set loop point B at current position (only if looping enabled)
+        // Loop B key values: event.key === "b"/"B", event.code === "KeyB"
+        case 'b':
+        case 'B':
+        case 'KeyB': // B - Set loop point B at current position (only if looping enabled)
             if (this.options.looping) {
                 event.preventDefault();
                 var loopBEvent = $.Event('mousedown', { which: 1, type: 'mousedown' });
@@ -1240,7 +1259,10 @@ Plugin.prototype.handleKeyboardEvent = function(event) {
             }
             break;
             
-        case 76: // L - Toggle loop on/off (only if looping enabled)
+        // Loop toggle key values: event.key === "l"/"L", event.code === "KeyL"
+        case 'l':
+        case 'L':
+        case 'KeyL': // L - Toggle loop on/off (only if looping enabled)
             if (this.options.looping) {
                 event.preventDefault();
                 var toggleLoopEvent = $.Event('mousedown', { which: 1, type: 'mousedown' });
@@ -1249,7 +1271,10 @@ Plugin.prototype.handleKeyboardEvent = function(event) {
             }
             break;
             
-        case 67: // C - Clear loop points (only if looping enabled)
+        // Loop clear key values: event.key === "c"/"C", event.code === "KeyC"
+        case 'c':
+        case 'C':
+        case 'KeyC': // C - Clear loop points (only if looping enabled)
             if (this.options.looping) {
                 event.preventDefault();
                 var clearLoopEvent = $.Event('mousedown', { which: 1, type: 'mousedown' });
