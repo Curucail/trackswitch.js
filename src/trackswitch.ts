@@ -1,4 +1,3 @@
-// @ts-nocheck
 declare const $: any;
 declare const jQuery: any;
 declare const webkitAudioContext: any;
@@ -79,9 +78,10 @@ function audioContextCheck() {
 }
 var audioContext = audioContextCheck();
 
-if (typeof document.registerElement !== "undefined") {
-    var TsTrack = document.registerElement('ts-track');
-    var TsSource = document.registerElement('ts-source');
+var legacyDocument = document as any;
+if (typeof legacyDocument.registerElement !== "undefined") {
+    var TsTrack = legacyDocument.registerElement('ts-track');
+    var TsSource = legacyDocument.registerElement('ts-source');
 }
 
 var pluginName = 'trackSwitch',
@@ -119,7 +119,7 @@ function parseSeekOffsets(element: any): DomTrackConfig {
     };
 }
 
-function Plugin(element, options) {
+function TrackSwitchPlugin(element: Element, options: Partial<TrackSwitchOptions>) {
 
     this.element = $(element);
 
@@ -201,7 +201,7 @@ function Plugin(element, options) {
 // Initialize Plugin
 // Add markup for play controls
 // Bind overlay click events
-Plugin.prototype.init = function() {
+TrackSwitchPlugin.prototype.init = function() {
 
     var that = this;
 
@@ -452,7 +452,7 @@ Plugin.prototype.init = function() {
 
 
 // Remove player elements etc
-Plugin.prototype.destroy = function() {
+TrackSwitchPlugin.prototype.destroy = function() {
 
     this.element.find(".main-control").remove();
     this.element.find(".tracks").remove();
@@ -461,7 +461,7 @@ Plugin.prototype.destroy = function() {
 
 
 // In case of source error, request next source if there is one, else fire a track error
-Plugin.prototype.sourceFailed = function(currentTrack, currentSource, errorType) {
+TrackSwitchPlugin.prototype.sourceFailed = function(currentTrack, currentSource, errorType) {
 
     // Request next source for this track if it exists, else throw error
     if (this.trackSources[currentTrack][currentSource+1] !== undefined) {
@@ -476,7 +476,7 @@ Plugin.prototype.sourceFailed = function(currentTrack, currentSource, errorType)
 
 // On sucessful audio file request, decode it into an audiobuffer
 // Create and connect gain nodes for this track
-Plugin.prototype.decodeAudio = function(request, currentTrack, currentSource) {
+TrackSwitchPlugin.prototype.decodeAudio = function(request, currentTrack, currentSource) {
 
     var that = this;
     var audioData = request.response;
@@ -503,7 +503,7 @@ Plugin.prototype.decodeAudio = function(request, currentTrack, currentSource) {
 
 
 // Make and listen to XMLHttpRequest for each source of a track as needed
-Plugin.prototype.makeRequest = function(currentTrack, currentSource) {
+TrackSwitchPlugin.prototype.makeRequest = function(currentTrack, currentSource) {
 
     var that = this;
 
@@ -530,7 +530,7 @@ Plugin.prototype.makeRequest = function(currentTrack, currentSource) {
 
 
 // Check if there is a source to request for the given track
-Plugin.prototype.prepareRequest = function(currentTrack, currentSource) {
+TrackSwitchPlugin.prototype.prepareRequest = function(currentTrack, currentSource) {
 
     if (this.trackSources[currentTrack][currentSource] !== undefined) {
         this.makeRequest(currentTrack, currentSource)
@@ -543,7 +543,7 @@ Plugin.prototype.prepareRequest = function(currentTrack, currentSource) {
 
 // On player load/activate, find the audio tracks and sources and filter out ones we can't play
 // Then being the process of making requests for the files, starting with the first source of the first track
-Plugin.prototype.load = function(event) {
+TrackSwitchPlugin.prototype.load = function(event) {
 
     if (!this.valid_click(event)) { return true; } // If not valid click, break out of func
 
@@ -619,7 +619,7 @@ Plugin.prototype.load = function(event) {
 
 // As the audio file requests come back, save the longest audio file
 // This lets us link all tracks time, timing calculations and onEnd to the longest
-Plugin.prototype.findLongest = function() {
+TrackSwitchPlugin.prototype.findLongest = function() {
 
     for (var i=0; i<this.numberOfTracks; i++) {
 
@@ -642,7 +642,7 @@ Plugin.prototype.findLongest = function() {
 
 
 // When all tracks have been requested, proceed if possible, or in the event of errors, fire and show error
-Plugin.prototype.trackStatusChanged = function() {
+TrackSwitchPlugin.prototype.trackStatusChanged = function() {
 
     var numOfRequests = 0, numOfErrors = 0;
 
@@ -666,7 +666,7 @@ Plugin.prototype.trackStatusChanged = function() {
 
 
 // When the audio files are completely (and sucessfully) loaded, unlock the player and set times
-Plugin.prototype.loaded = function() {
+TrackSwitchPlugin.prototype.loaded = function() {
 
     this.element.find(".overlay").removeClass("loading");
     this.element.find(".overlay").hide().remove();
@@ -683,7 +683,7 @@ Plugin.prototype.loaded = function() {
 
 
 // In the event of a player error, display error UI and unbind events
-Plugin.prototype.errored = function() {
+TrackSwitchPlugin.prototype.errored = function() {
 
     this.element.find(".overlay span").removeClass("fa-spin loading");
     this.element.addClass("error");
@@ -700,7 +700,7 @@ Plugin.prototype.errored = function() {
 
 
 // Unbind all events previously bound
-Plugin.prototype.unbindEvents = function() {
+TrackSwitchPlugin.prototype.unbindEvents = function() {
 
     this.element.off('touchstart mousedown', '.overlay span');
     this.element.off('loaded');
@@ -750,7 +750,7 @@ Plugin.prototype.unbindEvents = function() {
 
 
 // Bind events for player controls and seeking
-Plugin.prototype.bindEvents = function() {
+TrackSwitchPlugin.prototype.bindEvents = function() {
 
     this.element.on('touchstart mousedown', '.playpause', $.proxy(this.event_playpause, this));
     this.element.on('touchstart mousedown', '.stop', $.proxy(this.event_stop, this));
@@ -813,7 +813,7 @@ Plugin.prototype.bindEvents = function() {
 
 
 // Event filter function to filter the `click` > 'touchstart mousedown' to left mouse and touch only
-Plugin.prototype.valid_click = function(event) {
+TrackSwitchPlugin.prototype.valid_click = function(event) {
 
     if ( // Filter 'click' events for only touch or *left* click
         event.type === "touchstart" ||
@@ -828,9 +828,9 @@ Plugin.prototype.valid_click = function(event) {
 
 
 // Detect iOS/iPadOS Safari devices where WebAudio can be muted by hardware silent mode
-Plugin.prototype.isIOSDevice = function() {
+TrackSwitchPlugin.prototype.isIOSDevice = function() {
 
-    var nav = window.navigator || {};
+    var nav: any = window.navigator || {};
     var userAgent = nav.userAgent || "";
     var platform = nav.platform || "";
     var maxTouchPoints = nav.maxTouchPoints || 0;
@@ -841,7 +841,7 @@ Plugin.prototype.isIOSDevice = function() {
 
 
 // On iOS, play a short silent HTML5 audio element once to force media playback category
-Plugin.prototype.unlockIOSPlayback = function() {
+TrackSwitchPlugin.prototype.unlockIOSPlayback = function() {
 
     if (!this.options.iosunmute || this.iOSPlaybackUnlocked || !this.isIOSDevice()) {
         return;
@@ -881,28 +881,27 @@ Plugin.prototype.unlockIOSPlayback = function() {
 
 
 // Format time for the UI, from seconds to HH:MM:SS:mmm
-Plugin.prototype.secondsToHHMMSSmmm = function(seconds) {
+TrackSwitchPlugin.prototype.secondsToHHMMSSmmm = function(seconds) {
 
-    var h = parseInt( seconds / 3600 ) % 24;
-    h = h < 10 ? '0'+h : h;
+    var h = Math.floor(seconds / 3600) % 24;
+    var hh = h < 10 ? '0' + h : String(h);
 
-    var m = parseInt( seconds / 60 ) % 60;
-    m = m < 10 ? '0'+m : m;
+    var m = Math.floor(seconds / 60) % 60;
+    var mm = m < 10 ? '0' + m : String(m);
 
-    var s = seconds % 60;
-    s = s.toString().split(".")[0]; // Use only whole seconds (do not round)
-    s = s < 10 ? '0'+s : s;
+    var sec = Math.floor(seconds % 60); // Use only whole seconds (do not round)
+    var ss = sec < 10 ? '0' + sec : String(sec);
 
-    var mil = Math.round((seconds % 1)*1000); // Decimal places to milliseconds
-    mil = mil < 10 ? '00'+mil : mil < 100 ? '0'+mil : mil;
+    var mil = Math.round((seconds % 1) * 1000); // Decimal places to milliseconds
+    var mmm = mil < 10 ? '00' + mil : mil < 100 ? '0' + mil : String(mil);
 
-    return (h + ':' + m + ':' + s + ':' + mil);
+    return (hh + ':' + mm + ':' + ss + ':' + mmm);
 
 }
 
 
 // Parse optional ts-source offset attributes and derive effective timeline timing for a track
-Plugin.prototype.calculateTrackTiming = function(sourceElement, bufferDuration) {
+TrackSwitchPlugin.prototype.calculateTrackTiming = function(sourceElement, bufferDuration) {
 
     var source = $(sourceElement);
     var startOffsetMs = parseFloat(source.attr('start-offset-ms'));
@@ -930,7 +929,7 @@ Plugin.prototype.calculateTrackTiming = function(sourceElement, bufferDuration) 
 
 
 // Update the UI elements for the position
-Plugin.prototype.updateMainControls = function() {
+TrackSwitchPlugin.prototype.updateMainControls = function() {
 
     this.element.find(".playpause").toggleClass('checked', this.playing);
     this.element.find(".repeat").toggleClass('checked', this.repeat);
@@ -987,7 +986,7 @@ Plugin.prototype.updateMainControls = function() {
 
 // Timer fuction to update the UI periodically (with new time and seek position)
 // Also listens for the longest track to end and stops or repeats as needed
-Plugin.prototype.monitorPosition = function(context) {
+TrackSwitchPlugin.prototype.monitorPosition = function(context) {
 
     // context = this from outside the closure
 
@@ -1022,7 +1021,7 @@ Plugin.prototype.monitorPosition = function(context) {
 
 
 // Stop each track and destroy it's audio buffer and clear the timer
-Plugin.prototype.stopAudio = function() {
+TrackSwitchPlugin.prototype.stopAudio = function() {
 
     // Create downward master gain ramp to fade signal out
     var now = audioContext.currentTime;
@@ -1048,7 +1047,7 @@ Plugin.prototype.stopAudio = function() {
 
 
 // Create, connect and start a new audio buffer for each track and begin update timer
-Plugin.prototype.startAudio = function(newPos, duration) {
+TrackSwitchPlugin.prototype.startAudio = function(newPos, duration) {
 
     var that = this;
 
@@ -1145,7 +1144,7 @@ Plugin.prototype.startAudio = function(newPos, duration) {
 
 
 // Pause player (used by other players to enforce globalsolo)
-Plugin.prototype.pause = function() {
+TrackSwitchPlugin.prototype.pause = function() {
 
     if (this.playing === true) {
         this.stopAudio();
@@ -1158,13 +1157,13 @@ Plugin.prototype.pause = function() {
 
 
 // Returns the other players on the page (for globalsolo)
-Plugin.prototype.other_instances = function() {
+TrackSwitchPlugin.prototype.other_instances = function() {
     return $(".jquery-trackswitch").not(this.element);
 };
 
 
 // Iterate through the other players to pause them (for globalsolo)
-Plugin.prototype.pause_others = function() {
+TrackSwitchPlugin.prototype.pause_others = function() {
 
     if (this.options.globalsolo) {
         this.other_instances().each(function () {
@@ -1176,7 +1175,7 @@ Plugin.prototype.pause_others = function() {
 
 
 // Seek relative to current position by specified seconds (can be negative)
-Plugin.prototype.seekRelative = function(seconds) {
+TrackSwitchPlugin.prototype.seekRelative = function(seconds) {
 
     var newPosition = this.position + seconds;
     
@@ -1211,7 +1210,7 @@ Plugin.prototype.seekRelative = function(seconds) {
 
 
 // Adjust master volume by delta percentage (0-100 scale)
-Plugin.prototype.adjustVolume = function(delta) {
+TrackSwitchPlugin.prototype.adjustVolume = function(delta) {
 
     var volumeSlider = this.element.find('.volume-slider');
     var currentVolume = parseFloat(volumeSlider.val());
@@ -1230,7 +1229,7 @@ Plugin.prototype.adjustVolume = function(delta) {
 
 
 // Handle keyboard shortcuts
-Plugin.prototype.handleKeyboardEvent = function(event) {
+TrackSwitchPlugin.prototype.handleKeyboardEvent = function(event) {
 
     // Don't intercept keyboard shortcuts when user is typing in an input field
     if ($(event.target).closest('input, textarea, select, [contenteditable="true"], [contenteditable=""], [role="textbox"]').length) {
@@ -1370,7 +1369,7 @@ Plugin.prototype.handleKeyboardEvent = function(event) {
 
 
 // Toggle start stop of audio, saving the position to mock pausing
-Plugin.prototype.event_playpause = function(event) {
+TrackSwitchPlugin.prototype.event_playpause = function(event) {
 
     if (!(this.valid_click(event) || event.which === 32)) { return true; } // If not valid click, break out of func
 
@@ -1405,7 +1404,7 @@ Plugin.prototype.event_playpause = function(event) {
 
 
 // Stop all audio tracks and set the position, seekheads etc to the start
-Plugin.prototype.event_stop = function(event) {
+TrackSwitchPlugin.prototype.event_stop = function(event) {
 
     if (!this.valid_click(event)) { return true; } // If not valid click, break out of func
 
@@ -1429,7 +1428,7 @@ Plugin.prototype.event_stop = function(event) {
 
 
 // Toggle the repeat property and button UI
-Plugin.prototype.event_repeat = function(event) {
+TrackSwitchPlugin.prototype.event_repeat = function(event) {
 
     if (!this.valid_click(event)) { return true; } // If not valid click, break out of func
 
@@ -1445,7 +1444,7 @@ Plugin.prototype.event_repeat = function(event) {
 
 
 // Set loop point A at current position
-Plugin.prototype.event_setLoopA = function(event) {
+TrackSwitchPlugin.prototype.event_setLoopA = function(event) {
 
     if (!this.valid_click(event)) { return true; } // If not valid click, break out of func
 
@@ -1497,7 +1496,7 @@ Plugin.prototype.event_setLoopA = function(event) {
 
 
 // Set loop point B at current position
-Plugin.prototype.event_setLoopB = function(event) {
+TrackSwitchPlugin.prototype.event_setLoopB = function(event) {
 
     if (!this.valid_click(event)) { return true; } // If not valid click, break out of func
 
@@ -1551,7 +1550,7 @@ Plugin.prototype.event_setLoopB = function(event) {
 
 
 // Toggle loop on/off (requires both points to be set)
-Plugin.prototype.event_toggleLoop = function(event) {
+TrackSwitchPlugin.prototype.event_toggleLoop = function(event) {
 
     if (!this.valid_click(event)) { return true; } // If not valid click, break out of func
 
@@ -1584,7 +1583,7 @@ Plugin.prototype.event_toggleLoop = function(event) {
 
 
 // Clear both loop points and disable looping
-Plugin.prototype.event_clearLoop = function(event) {
+TrackSwitchPlugin.prototype.event_clearLoop = function(event) {
 
     if (!this.valid_click(event)) { return true; } // If not valid click, break out of func
 
@@ -1605,7 +1604,7 @@ Plugin.prototype.event_clearLoop = function(event) {
 
 
 // When seeking, calculate the desired position in the audio from the position on the slider
-Plugin.prototype.seek = function(event) {
+TrackSwitchPlugin.prototype.seek = function(event) {
 
     // Getting the position of the event is different for mouse and touch...
     if (event.type.indexOf("mouse") >= 0) {
@@ -1646,7 +1645,7 @@ Plugin.prototype.seek = function(event) {
 
 
 // When touchsstart or mousedown on a seeking area, turn 'seeking' on and seek to cursor
-Plugin.prototype.event_seekStart = function(event) {
+TrackSwitchPlugin.prototype.event_seekStart = function(event) {
 
     // Check for right-click (button 3) for loop selection
     if (event.type === "mousedown" && event.which === 3) {
@@ -1697,7 +1696,7 @@ Plugin.prototype.event_seekStart = function(event) {
 };
 
 // When touchmove or mousemove over a seeking area, seek if seeking has been started
-Plugin.prototype.event_seekMove = function(event) {
+TrackSwitchPlugin.prototype.event_seekMove = function(event) {
 
     // Handle marker dragging
     if (this.draggingMarker !== null) {
@@ -1774,7 +1773,7 @@ Plugin.prototype.event_seekMove = function(event) {
 
 
 // When touchend or mouseup on a seeking area, turn seeking off
-Plugin.prototype.event_seekEnd = function(event) {
+TrackSwitchPlugin.prototype.event_seekEnd = function(event) {
 
     event.preventDefault();
 
@@ -1840,7 +1839,7 @@ Plugin.prototype.event_seekEnd = function(event) {
 
 
 // Start dragging a loop marker
-Plugin.prototype.event_markerDragStart = function(event) {
+TrackSwitchPlugin.prototype.event_markerDragStart = function(event) {
 
     if (!this.valid_click(event)) { return true; } // If not valid click, break out of func
 
@@ -1863,13 +1862,13 @@ Plugin.prototype.event_markerDragStart = function(event) {
 
 
 // A shorthandle to resolve click target index number. Used for mute/solo buttons
-Plugin.prototype._index_from_target = function(target) {
+TrackSwitchPlugin.prototype._index_from_target = function(target) {
     return $(target).closest(".track").prevAll().length;
 };
 
 
 // Set or unset solo mode for each track, only change properties
-Plugin.prototype.event_solo = function(event) {
+TrackSwitchPlugin.prototype.event_solo = function(event) {
 
     if (!this.valid_click(event)) { return true; } // If not valid click, break out of func
 
@@ -1902,7 +1901,7 @@ Plugin.prototype.event_solo = function(event) {
 
 
 // Set or unset mute mode for each track, only change properties
-Plugin.prototype.event_mute = function(event) {
+TrackSwitchPlugin.prototype.event_mute = function(event) {
 
     if (!this.valid_click(event)) { return true; } // If not valid click, break out of func
 
@@ -1922,7 +1921,7 @@ Plugin.prototype.event_mute = function(event) {
 
 
 // Handle preset selection from dropdown
-Plugin.prototype.event_preset = function(event) {
+TrackSwitchPlugin.prototype.event_preset = function(event) {
 
     var presetIndex = parseInt($(event.target).val());
     var that = this;
@@ -1940,7 +1939,7 @@ Plugin.prototype.event_preset = function(event) {
 
 
 // Handle mouse wheel scrolling on preset selector
-Plugin.prototype.event_preset_scroll = function(event) {
+TrackSwitchPlugin.prototype.event_preset_scroll = function(event) {
 
     event.preventDefault();
 
@@ -1963,7 +1962,7 @@ Plugin.prototype.event_preset_scroll = function(event) {
 
 
 // Cycle through the available images, setting it based on the solo states
-Plugin.prototype.switch_image = function() {
+TrackSwitchPlugin.prototype.switch_image = function() {
 
     var that = this;
     var numSoloed = 0, imageSrc;
@@ -1989,7 +1988,7 @@ Plugin.prototype.switch_image = function() {
 
 // Calculate waveform peak data from an audio buffer
 // Returns an array of peak values (one per pixel column)
-Plugin.prototype.calculateWaveformPeaks = function(buffer, width) {
+TrackSwitchPlugin.prototype.calculateWaveformPeaks = function(buffer, width) {
 
     if (!buffer || width <= 0) {
         return [];
@@ -2021,7 +2020,7 @@ Plugin.prototype.calculateWaveformPeaks = function(buffer, width) {
 
 
 // Draw waveform to canvas using pre-calculated peak data
-Plugin.prototype.drawWaveform = function(canvasIndex, peaks) {
+TrackSwitchPlugin.prototype.drawWaveform = function(canvasIndex, peaks) {
 
     if (!this.waveformCanvas[canvasIndex] || !this.waveformContext[canvasIndex]) {
         return;
@@ -2073,7 +2072,7 @@ Plugin.prototype.drawWaveform = function(canvasIndex, peaks) {
 
 
 // Draw a dummy/placeholder waveform before audio is loaded
-Plugin.prototype.drawDummyWaveform = function(canvasIndex) {
+TrackSwitchPlugin.prototype.drawDummyWaveform = function(canvasIndex) {
 
     if (!this.waveformCanvas[canvasIndex] || !this.waveformContext[canvasIndex]) {
         return;
@@ -2127,7 +2126,7 @@ Plugin.prototype.drawDummyWaveform = function(canvasIndex) {
 
 
 // Draw dummy waveforms on all canvases
-Plugin.prototype.drawDummyWaveforms = function() {
+TrackSwitchPlugin.prototype.drawDummyWaveforms = function() {
 
     if (!this.options.waveform || this.waveformCanvas.length === 0) {
         return;
@@ -2141,7 +2140,7 @@ Plugin.prototype.drawDummyWaveforms = function() {
 
 
 // Generate waveform data for all tracks
-Plugin.prototype.generateWaveforms = function() {
+TrackSwitchPlugin.prototype.generateWaveforms = function() {
 
     if (!this.options.waveform || this.waveformCanvas.length === 0) {
         return;
@@ -2185,7 +2184,7 @@ Plugin.prototype.generateWaveforms = function() {
 
 
 // Calculate mixed waveform from multiple tracks based on current audible state
-Plugin.prototype.calculateMixedWaveform = function() {
+TrackSwitchPlugin.prototype.calculateMixedWaveform = function() {
 
     if (!this.waveformData || this.waveformData.length === 0) {
         return null;
@@ -2251,7 +2250,7 @@ Plugin.prototype.calculateMixedWaveform = function() {
 
 
 // Switch the displayed waveform based on solo state (similar to switch_image)
-Plugin.prototype.switchWaveform = function() {
+TrackSwitchPlugin.prototype.switchWaveform = function() {
 
     if (!this.options.waveform || this.waveformCanvas.length === 0) {
         return;
@@ -2271,7 +2270,7 @@ Plugin.prototype.switchWaveform = function() {
 
 
 // Handle window resize for responsive waveform regeneration (debounced)
-Plugin.prototype.handleWaveformResize = function() {
+TrackSwitchPlugin.prototype.handleWaveformResize = function() {
 
     var that = this;
 
@@ -2317,7 +2316,7 @@ Plugin.prototype.handleWaveformResize = function() {
 
 
 // When mute or solo properties changed, apply them to the gain of each track and update UI
-Plugin.prototype.apply_track_properties = function() {
+TrackSwitchPlugin.prototype.apply_track_properties = function() {
     var that = this;
 
     var anySolos = false;
@@ -2384,7 +2383,7 @@ Plugin.prototype.apply_track_properties = function() {
 
 
 // Handle volume slider input — update the volume gain node
-Plugin.prototype.event_volume = function(event) {
+TrackSwitchPlugin.prototype.event_volume = function(event) {
     var val = parseFloat($(event.target).val()) / 100;
     this.masterVolume = val;
     if (this.gainNodeVolume) {
@@ -2405,21 +2404,21 @@ Plugin.prototype.event_volume = function(event) {
 };
 
 
-Plugin.prototype.deselect = function(index) {
-    var selection = ('getSelection' in window)
+TrackSwitchPlugin.prototype.deselect = function(index) {
+    var selection: any = ('getSelection' in window)
         ? window.getSelection()
         : ('selection' in document)
-            ? document.selection
+            ? (document as any).selection
             : null;
-    if ('removeAllRanges' in selection) selection.removeAllRanges();
-    else if ('empty' in selection) selection.empty();
+    if (selection && 'removeAllRanges' in selection) selection.removeAllRanges();
+    else if (selection && 'empty' in selection) selection.empty();
 };
 
 
 $.fn[pluginName] = function(options) {
     return this.each(function () {
         if (!$(this).data('plugin_' + pluginName)) {
-            $(this).data('plugin_' + pluginName, new Plugin(this, options));
+            $(this).data('plugin_' + pluginName, new TrackSwitchPlugin(this, options));
         }
     });
 };
