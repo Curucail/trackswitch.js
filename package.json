@@ -8,13 +8,15 @@
   "scripts": {
     "build": "npm run build:css && npm run build:js",
     "build:css": "sass css/reset.sass dist/tmp/reset.css && npm run concat:css && npm run minify:css",
-    "build:js": "npm run concat:js && npm run minify:js",
+    "build:js": "npm run transpile:ts && npm run concat:js && npm run minify:js",
     "concat:css": "node build/concat-css.js",
     "concat:js": "node build/concat-js.js",
     "minify:css": "esbuild dist/tmp/concat.css --minify --outfile=dist/css/trackswitch.min.css",
     "minify:js": "esbuild dist/js/trackswitch.js --minify --outfile=dist/js/trackswitch.min.js",
     "clean": "rimraf dist",
-    "prebuild": "npm run clean"
+    "prebuild": "npm run clean",
+    "transpile:ts": "tsc --project tsconfig.build.json",
+    "typecheck": "tsc --project tsconfig.json"
   },
   "repository": {
     "type": "git",
@@ -32,6 +34,7 @@
   "devDependencies": {
     "esbuild": "^0.27.3",
     "rimraf": "^6.0.0",
-    "sass": "^1.83.0"
+    "sass": "^1.83.0",
+    "typescript": "^5.9.3"
   }
 }

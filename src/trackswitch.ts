@@ -1,38 +1,68 @@
-/**
- * @typedef {Object} TrackProperty
- * @property {boolean} mute
- * @property {boolean} solo
- * @property {boolean} success
- * @property {boolean} error
- * @property {number[]} presetsForTrack
- */
+// @ts-nocheck
+declare const $: any;
+declare const jQuery: any;
+declare const webkitAudioContext: any;
+declare const mozAudioContext: any;
 
-/**
- * @typedef {Object} TrackTiming
- * @property {number} startOffset
- * @property {number} endOffset
- * @property {number} effectiveDuration
- */
+type LoopMarker = 'A' | 'B' | null;
 
-/**
- * @typedef {Object} LoopState
- * @property {?number} loopPointA
- * @property {?number} loopPointB
- * @property {boolean} loopEnabled
- * @property {boolean} rightClickDragging
- * @property {?number} loopDragStart
- * @property {?('A'|'B')} draggingMarker
- * @property {number} loopMinDistance
- */
+interface TrackProperty {
+    mute: boolean;
+    solo: boolean;
+    success: boolean;
+    error: boolean;
+    presetsForTrack: number[];
+}
 
-/**
- * @typedef {Object} WaveformState
- * @property {HTMLCanvasElement[]} waveformCanvas
- * @property {number[][]} waveformData
- * @property {(CanvasRenderingContext2D|null)[]} waveformContext
- * @property {number[]} waveformOriginalHeight
- * @property {?number} resizeDebounceTimer
- */
+interface TrackTiming {
+    startOffset: number;
+    endOffset: number;
+    effectiveDuration: number;
+}
+
+interface LoopState {
+    loopPointA: number | null;
+    loopPointB: number | null;
+    loopEnabled: boolean;
+    rightClickDragging: boolean;
+    loopDragStart: number | null;
+    draggingMarker: LoopMarker;
+    loopMinDistance: number;
+}
+
+interface WaveformState {
+    waveformCanvas: HTMLCanvasElement[];
+    waveformData: number[][];
+    waveformContext: Array<CanvasRenderingContext2D | null>;
+    waveformOriginalHeight: number[];
+    resizeDebounceTimer: number | null;
+}
+
+interface PresetConfig {
+    presetNames: string[];
+    presetCount: number;
+}
+
+interface DomTrackConfig {
+    presetsForTrack: number[];
+    seekMarginLeft: number;
+    seekMarginRight: number;
+}
+
+interface TrackSwitchOptions {
+    mute: boolean;
+    solo: boolean;
+    globalsolo: boolean;
+    repeat: boolean;
+    radiosolo: boolean;
+    onlyradiosolo: boolean;
+    tabview: boolean;
+    iosunmute: boolean;
+    keyboard: boolean;
+    looping: boolean;
+    waveform: boolean;
+    waveformBarWidth: number;
+}
 
 // Put the audioContext in the global scope and pass it to each player instance.
 // WebAudioAPI fallback for IE: http://stackoverflow.com/a/27711181
@@ -70,6 +100,24 @@ var pluginName = 'trackSwitch',
         waveformBarWidth: 1,
     };
 
+function parsePresetIndices(presetsAttr: string | undefined): number[] {
+    if (!presetsAttr) {
+        return [];
+    }
+
+    return presetsAttr
+        .split(',')
+        .map(function(preset) { return parseInt(preset.trim(), 10); })
+        .filter(function(preset) { return !Number.isNaN(preset); });
+}
+
+function parseSeekOffsets(element: any): DomTrackConfig {
+    return {
+        presetsForTrack: parsePresetIndices(element.attr('presets')),
+        seekMarginLeft: Number(element.data('seekMarginLeft')) || 0,
+        seekMarginRight: Number(element.data('seekMarginRight')) || 0,
+    };
+}
 
 function Plugin(element, options) {
 
@@ -167,15 +215,12 @@ Plugin.prototype.init = function() {
     
     // First pass: scan all ts-track elements to find max preset index
     this.element.find('ts-track').each(function() {
-        var presetsAttr = $(this).attr('presets');
-        if (presetsAttr) {
-            var presets = presetsAttr.split(',').map(function(p) { return parseInt(p.trim()); });
-            presets.forEach(function(preset) {
-                if (preset > maxPresetIndex) {
-                    maxPresetIndex = preset;
-                }
-            });
-        }
+        var presets = parsePresetIndices($(this).attr('presets'));
+        presets.forEach(function(preset) {
+            if (preset > maxPresetIndex) {
+                maxPresetIndex = preset;
+            }
+        });
     });
 
     // Only include explicitly defined presets
@@ -282,10 +327,12 @@ Plugin.prototype.init = function() {
 
         $(this).wrap( '<div class="seekable-img-wrap" style="' + $(this).data("style") + '; display: block;"></div>' );
 
+        var domTrackConfig = parseSeekOffsets($(this));
+
         $(this).after(
             '<div class="seekwrap" style=" ' +
-            'left: ' + ($(this).data("seekMarginLeft") || 0) + '%; ' +
-            'right: ' + ($(this).data("seekMarginRight") || 0) + '%;">' +
+            'left: ' + domTrackConfig.seekMarginLeft + '%; ' +
+            'right: ' + domTrackConfig.seekMarginRight + '%;">' +
                 '<div class="loop-region"></div>' +
                 '<div class="loop-marker marker-a"></div>' +
                 '<div class="loop-marker marker-b"></div>' +
@@ -348,14 +395,8 @@ Plugin.prototype.init = function() {
 
         this.element.find('ts-track').each(function(i) {
 
-            // Parse presets attribute (comma-separated list of preset indices)
-            var presetsAttr = $(this).attr('presets');
-            var presetsForTrack = [];
-            
-            // Only use explicitly defined presets
-            if (presetsAttr) {
-                presetsForTrack = presetsAttr.split(',').map(function(p) { return parseInt(p.trim()); });
-            }
+            var domTrackConfig = parseSeekOffsets($(this));
+            var presetsForTrack = domTrackConfig.presetsForTrack;
 
             that.trackProperties[i] = {
                 mute: this.hasAttribute('mute'),  // <ts-track title="Track" mute>
