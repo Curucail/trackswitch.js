@@ -355,6 +355,7 @@ The player accepts the following options (defaults shown):
  - `mute` (`boolean`): Show mute buttons. Default: `true`.
  - `solo` (`boolean`): Show solo buttons. Default: `true`.
  - `globalsolo` (`boolean`): Pause other trackswitch instances when playback starts in the current player. Default: `true`.
+ - `globalvolume` (`boolean`): Enable the shared output volume slider. Default: `false`.
  - `repeat` (`boolean`): Initialize player with repeat enabled. Default: `false`.
  - `radiosolo` (`boolean`): Allow only one track to be soloed at a time (equivalent to making <kbd>shift</kbd>+click solo behavior the default). Default: `false`.
  - `onlyradiosolo` (`boolean`): Convenience mode for one-track-at-a-time comparison; forces `mute: false` and `radiosolo: true` and makes the whole track row clickable. Default: `false`.
@@ -362,6 +363,7 @@ The player accepts the following options (defaults shown):
  - `iosunmute` (`boolean`): Run a one-time iOS/iPadOS playback unlock on first user interaction to reduce silent-switch playback issues. Default: `true`.
  - `keyboard` (`boolean`): Enable keyboard shortcuts for the active player instance. Default: `true`.
  - `looping` (`boolean`): Enable A/B loop controls (buttons, markers, right-click drag, and loop-related keyboard shortcuts). Default: `true`.
+ - `seekbar` (`boolean`): Show or hide the main control-bar seekbar. Seekable images and waveforms remain interactive regardless of this setting. Default: `true`.
  - `waveform` (`boolean`): Enable waveform visualization for `<canvas class="waveform">` elements. Default: `true`.
  - `waveformBarWidth` (`number`): Width in pixels for each waveform bar. Default: `1`.
 
@@ -388,7 +390,7 @@ Keyboard input is scoped to the last player you interacted with (mouse or touch)
 - <kbd>Home</kbd> - Jump to start
 
 **Volume**
-- <kbd>↑</kbd> / <kbd>↓</kbd> - Increase/decrease volume by 10%
+- <kbd>↑</kbd> / <kbd>↓</kbd> - Increase/decrease volume by 10% (when `globalvolume` is enabled)
 
 **Loop/Section Repeat** (available when `looping` is enabled)
 - <kbd>A</kbd> - Set loop point A at current position
@@ -410,7 +412,7 @@ There are multiple ways to define loop points:
 
 2. **UI Buttons**: Click the **A** and **B** buttons in the control bar to set loop points. The loop toggle button (⟲) enables or disables looping, and the clear button (✕) removes the loop points.
 
-3. **Right-Click Drag**: Right-click and drag across the seekbar to quickly select a loop region. The loop automatically enables when both points are set this way.
+3. **Right-Click Drag**: Right-click and drag across any seek area (main seekbar, seekable image, or waveform) to quickly select a loop region. The loop automatically enables when both points are set this way.
 
 Once loop points are set, markers appear on the seekbar. You can drag these markers to adjust the loop boundaries. A minimum distance of 100ms (0.1s) is enforced between points.
 

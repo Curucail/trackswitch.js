@@ -110,7 +110,7 @@ class TrackSwitchPlugin {
         if (audioContext) {
             // Volume gain node (user-controlled, between master and destination)
             this.gainNodeVolume = audioContext.createGain();
-            this.gainNodeVolume.gain.value = this.masterVolume;
+            this.gainNodeVolume.gain.value = this.options.globalvolume ? this.masterVolume : 1.0;
             this.gainNodeVolume.connect(audioContext.destination);
 
             // Master output gain node setup (used for fade ramps)
@@ -233,12 +233,12 @@ TrackSwitchPlugin.prototype.init = function() {
                             '<li class="repeat button" title="Repeat (R)">Repeat</li>' +
                         '</ul>' +
                     '</li>' +
-                    '<li class="volume">' +
+                    (that.options.globalvolume ? '<li class="volume">' +
                         '<div class="volume-control">' +
                             '<i class="fa-volume-up volume-icon"></i>' +
                             '<input type="range" class="volume-slider" min="0" max="100" value="100">' +
                         '</div>' +
-                    '</li>' +
+                    '</li>' : '') +
                     (that.options.looping ? '<li class="loop-group">' +
                         '<ul class="loop-controls">' +
                             '<li class="loop-a button" title="Set Loop Point A (A)">Loop A</li>' +
@@ -257,14 +257,14 @@ TrackSwitchPlugin.prototype.init = function() {
                             '--:--:--:---' +
                         '</span>' +
                     '</li>' +
-                    '<li class="seekwrap">' +
+                    (that.options.seekbar ? '<li class="seekwrap">' +
                         '<div class="seekbar">' +
                             '<div class="loop-region"></div>' +
                             '<div class="loop-marker marker-a"></div>' +
                             '<div class="loop-marker marker-b"></div>' +
                             '<div class="seekhead"></div>' +
                         '</div>' +
-                    '</li>' +
+                    '</li>' : '') +
                 '</ul>' +
             '</div>'
         );
@@ -772,9 +772,11 @@ TrackSwitchPlugin.prototype.bindEvents = function() {
     this.element.on('touchstart' + ns + ' mousedown' + ns, '.mute', $.proxy(this.event_mute, this));
     this.element.on('touchstart' + ns + ' mousedown' + ns, '.solo', $.proxy(this.event_solo, this));
 
-    this.element.on('input' + ns, '.volume-slider', $.proxy(this.event_volume, this));
-    // Prevent volume slider interactions from triggering seek or other player events
-    this.element.on('mousedown' + ns + ' touchstart' + ns + ' mousemove' + ns + ' touchmove' + ns + ' mouseup' + ns + ' touchend' + ns, '.volume-control', function(e) { e.stopPropagation(); });
+    if (this.options.globalvolume) {
+        this.element.on('input' + ns, '.volume-slider', $.proxy(this.event_volume, this));
+        // Prevent volume slider interactions from triggering seek or other player events
+        this.element.on('mousedown' + ns + ' touchstart' + ns + ' mousemove' + ns + ' touchmove' + ns + ' mouseup' + ns + ' touchend' + ns, '.volume-control', function(e) { e.stopPropagation(); });
+    }
 
     if (this.presetCount >= 2) {
         // Handle both normal changes and explicit reapply requests

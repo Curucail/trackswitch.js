@@ -107,6 +107,40 @@ test('parsePresetIndices rejects malformed and negative values', () => {
     assert.deepEqual(internals.parsePresetIndices('1x,-2,3, 4 '), [3, 4]);
 });
 
+test('global volume control is disabled by default', () => {
+    const { player, plugin } = createPlayer(
+        '<div class="player"><ts-track><ts-source src="a.mp3"></ts-source></ts-track></div>',
+        { waveform: false, keyboard: false, looping: false }
+    );
+
+    assert.equal(player.find('.volume-control').length, 0);
+    assert.ok(plugin.gainNodeVolume, 'volume gain node should still exist');
+
+    plugin.masterVolume = 0.25;
+    plugin.gainNodeVolume.gain.value = 0.25;
+    plugin.adjustVolume(10);
+
+    assert.equal(plugin.masterVolume, 1);
+    assert.equal(plugin.gainNodeVolume.gain.value, 1);
+});
+
+test('global volume control can be enabled', () => {
+    const { player, plugin } = createPlayer(
+        '<div class="player"><ts-track><ts-source src="a.mp3"></ts-source></ts-track></div>',
+        { waveform: false, keyboard: false, looping: false, globalvolume: true }
+    );
+
+    assert.equal(player.find('.volume-control').length, 1);
+    assert.ok(plugin.gainNodeVolume, 'volume gain node should exist');
+
+    const slider = player.find('.volume-slider');
+    slider.val('40');
+    plugin.event_volume({ target: slider[0] });
+
+    assert.equal(plugin.masterVolume, 0.4);
+    assert.equal(plugin.gainNodeVolume.gain.value, 0.4);
+});
+
 test('keyboard shortcuts are scoped to the last interacted instance', () => {
     document.body.innerHTML = [
         '<div id="a" class="player"><ts-track><ts-source src="a.mp3"></ts-source></ts-track></div>',
@@ -319,6 +353,46 @@ test('seek ends when mouseup happens on window', () => {
 
     $(window).trigger($.Event('mouseup', { which: 1, pageX: 10 }));
     assert.equal(plugin.currentlySeeking, false, 'seek should end on window mouseup');
+});
+
+test('seekbar can be disabled while preserving seekable image loop interaction', () => {
+    const { player, plugin } = createPlayer(
+        '<div class="player"><img class="seekable" src="poster.jpg"><ts-track><ts-source src="a.mp3"></ts-source></ts-track></div>',
+        { waveform: false, keyboard: false, looping: true, seekbar: false }
+    );
+
+    plugin.loaded();
+    plugin.longestDuration = 10;
+
+    assert.equal(player.find('.main-control .seekwrap').length, 0);
+    const imageSeekwrap = player.find('.seekable-img-wrap .seekwrap').first();
+    assert.equal(imageSeekwrap.length, 1);
+
+    imageSeekwrap.trigger($.Event('mousedown', { which: 3, pageX: 0 }));
+    $(window).trigger($.Event('mousemove', { which: 3, pageX: 1 }));
+    $(window).trigger($.Event('mouseup', { which: 3, pageX: 1 }));
+
+    assert.equal(plugin.loopEnabled, true);
+});
+
+test('seekbar can be disabled while preserving waveform loop interaction', () => {
+    const { player, plugin } = createPlayer(
+        '<div class="player"><canvas class="waveform" width="300" height="60"></canvas><ts-track><ts-source src="a.mp3"></ts-source></ts-track></div>',
+        { waveform: true, keyboard: false, looping: true, seekbar: false }
+    );
+
+    plugin.loaded();
+    plugin.longestDuration = 10;
+
+    assert.equal(player.find('.main-control .seekwrap').length, 0);
+    const waveformSeekwrap = player.find('.waveform-wrap .seekwrap').first();
+    assert.equal(waveformSeekwrap.length, 1);
+
+    waveformSeekwrap.trigger($.Event('mousedown', { which: 3, pageX: 0 }));
+    $(window).trigger($.Event('mousemove', { which: 3, pageX: 1 }));
+    $(window).trigger($.Event('mouseup', { which: 3, pageX: 1 }));
+
+    assert.equal(plugin.loopEnabled, true);
 });
 
 test('mime inference handles query and hash suffixes', () => {

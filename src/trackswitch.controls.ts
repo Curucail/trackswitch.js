@@ -49,16 +49,20 @@ TrackSwitchPlugin.prototype.handleKeyboardEvent = function(event) {
             
         // Up arrow values: event.key === "ArrowUp", event.code === "ArrowUp"
         case 'ArrowUp': // Up Arrow - Volume up
-            event.preventDefault();
-            this.adjustVolume(10);
-            handled = true;
+            if (this.options.globalvolume) {
+                event.preventDefault();
+                this.adjustVolume(10);
+                handled = true;
+            }
             break;
             
         // Down arrow values: event.key === "ArrowDown", event.code === "ArrowDown"
         case 'ArrowDown': // Down Arrow - Volume down
-            event.preventDefault();
-            this.adjustVolume(-10);
-            handled = true;
+            if (this.options.globalvolume) {
+                event.preventDefault();
+                this.adjustVolume(-10);
+                handled = true;
+            }
             break;
             
         // Home values: event.key === "Home", event.code === "Home"
@@ -432,6 +436,14 @@ TrackSwitchPlugin.prototype.apply_track_properties = function() {
 
 // Handle volume slider input — update the volume gain node
 TrackSwitchPlugin.prototype.event_volume = function(event) {
+    if (!this.options.globalvolume) {
+        this.masterVolume = 1;
+        if (this.gainNodeVolume) {
+            this.gainNodeVolume.gain.value = 1;
+        }
+        return;
+    }
+
     if (!event.target) {
         return;
     }

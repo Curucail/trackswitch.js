@@ -13,6 +13,7 @@ interface TrackSwitchOptions {
     mute: boolean;
     solo: boolean;
     globalsolo: boolean;
+    globalvolume: boolean;
     repeat: boolean;
     radiosolo: boolean;
     onlyradiosolo: boolean;
@@ -20,6 +21,7 @@ interface TrackSwitchOptions {
     iosunmute: boolean;
     keyboard: boolean;
     looping: boolean;
+    seekbar: boolean;
     waveform: boolean;
     waveformBarWidth: number;
 }

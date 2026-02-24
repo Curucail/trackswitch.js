@@ -261,8 +261,18 @@ TrackSwitchPlugin.prototype.seekRelative = function(seconds) {
 
 // Adjust master volume by delta percentage (0-100 scale)
 TrackSwitchPlugin.prototype.adjustVolume = function(delta) {
+    if (!this.options.globalvolume) {
+        this.masterVolume = 1;
+        if (this.gainNodeVolume) {
+            this.gainNodeVolume.gain.value = 1;
+        }
+        return;
+    }
 
     var volumeSlider = this.element.find('.volume-slider');
+    if (volumeSlider.length === 0) {
+        return;
+    }
     var currentVolume = parseFloat(String(volumeSlider.val() ?? '0'));
     var newVolume = currentVolume + delta;
     

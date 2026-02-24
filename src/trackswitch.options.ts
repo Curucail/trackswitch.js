@@ -2,6 +2,7 @@ const defaults: Readonly<TrackSwitchOptions> = {
     mute: true,
     solo: true,
     globalsolo: true,
+    globalvolume: false,
     repeat: false,
     radiosolo: false,
     onlyradiosolo: false,
@@ -9,6 +10,7 @@ const defaults: Readonly<TrackSwitchOptions> = {
     iosunmute: true,
     keyboard: true,
     looping: true,
+    seekbar: true,
     waveform: true,
     waveformBarWidth: 1,
 };
