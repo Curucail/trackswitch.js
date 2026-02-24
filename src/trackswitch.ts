@@ -1,43 +1,5 @@
 declare const $: any;
 declare const jQuery: any;
-declare const webkitAudioContext: any;
-declare const mozAudioContext: any;
-
-type AudioContextConstructor = new () => AudioContext;
-
-type LoopMarker = 'A' | 'B' | null;
-
-interface TrackProperty {
-    mute: boolean;
-    solo: boolean;
-    success: boolean;
-    error: boolean;
-    presetsForTrack: number[];
-}
-
-interface TrackTiming {
-    startOffset: number;
-    endOffset: number;
-    effectiveDuration: number;
-}
-
-interface LoopState {
-    loopPointA: number | null;
-    loopPointB: number | null;
-    loopEnabled: boolean;
-    rightClickDragging: boolean;
-    loopDragStart: number | null;
-    draggingMarker: LoopMarker;
-    loopMinDistance: number;
-}
-
-interface WaveformState {
-    waveformCanvas: HTMLCanvasElement[];
-    waveformData: number[][];
-    waveformContext: Array<CanvasRenderingContext2D | null>;
-    waveformOriginalHeight: number[];
-    resizeDebounceTimer: number | null;
-}
 
 interface PresetConfig {
     presetNames: string[];
@@ -65,23 +27,10 @@ interface TrackSwitchOptions {
     waveformBarWidth: number;
 }
 
-// Put the audioContext in the global scope and pass it to each player instance.
-// WebAudioAPI fallback for IE: http://stackoverflow.com/a/27711181
 function audioContextCheck(): AudioContext | null {
-    const globalAudioContext = typeof AudioContext !== "undefined" ? (AudioContext as AudioContextConstructor) : undefined;
-    const webkitAudio = typeof webkitAudioContext !== "undefined" ? (webkitAudioContext as AudioContextConstructor) : undefined;
-    const mozAudio = typeof mozAudioContext !== "undefined" ? (mozAudioContext as AudioContextConstructor) : undefined;
-    const audioContextCtor = globalAudioContext ?? webkitAudio ?? mozAudio;
-
-    return audioContextCtor ? new audioContextCtor() : null;
+    return typeof AudioContext !== "undefined" ? new AudioContext() : null;
 }
 const audioContext = audioContextCheck();
-
-var legacyDocument = document as any;
-if (typeof legacyDocument.registerElement !== "undefined") {
-    var TsTrack = legacyDocument.registerElement('ts-track');
-    var TsSource = legacyDocument.registerElement('ts-source');
-}
 
 const pluginName = 'trackSwitch';
 const defaults: Readonly<TrackSwitchOptions> = {
@@ -126,23 +75,11 @@ function buildPresetConfig(element: any): PresetConfig {
         });
     });
 
-    const presetCount = maxPresetIndex >= 0 ? maxPresetIndex + 1 : 0;
-    const presetNames: string[] = [];
-
-    if (presetNamesAttr) {
-        const userNames = presetNamesAttr.split(',').map(function(name) { return name.trim(); });
-        for (let presetIndex = 0; presetIndex < presetCount; presetIndex++) {
-            if (presetIndex < userNames.length && userNames[presetIndex]) {
-                presetNames.push(userNames[presetIndex]);
-            } else {
-                presetNames.push('Preset ' + presetIndex);
-            }
-        }
-    } else {
-        for (let presetIndex = 0; presetIndex < presetCount; presetIndex++) {
-            presetNames.push('Preset ' + presetIndex);
-        }
-    }
+    const presetCount = Math.max(maxPresetIndex + 1, 0);
+    const userNames = presetNamesAttr?.split(',').map(function(name) { return name.trim(); }) ?? [];
+    const presetNames = Array.from({ length: presetCount }, function(_, presetIndex) {
+        return userNames[presetIndex] || 'Preset ' + presetIndex;
+    });
 
     return {
         presetNames: presetNames,
@@ -157,7 +94,8 @@ function parsePresetIndices(presetsAttr: string | undefined): number[] {
 
     return presetsAttr
         .split(',')
-        .map(function(preset) { return parseInt(preset.trim(), 10); });
+        .map(function(preset) { return parseInt(preset.trim(), 10); })
+        .filter(function(preset) { return Number.isFinite(preset); });
 }
 
 function parseTrackElementConfig(element: any): TrackElementConfig {
@@ -565,7 +503,7 @@ TrackSwitchPlugin.prototype.load = function(event) {
 
     if (this.numberOfTracks > 0) {
 
-        var a = document.createElement('audio');
+        var audioElement = document.createElement('audio');
 
         var mimeTypeTable = {
             ".aac"  : "audio/aac;",
@@ -588,27 +526,26 @@ TrackSwitchPlugin.prototype.load = function(event) {
 
         this.element.find('ts-track').each(function(i) {
 
-            that.trackSources[i] = $(this).find('ts-source');
+            const validSources: any[] = [];
+            $(this).find('ts-source').each(function() {
+                const source = $(this);
+                const sourceType = source.attr('type');
+                const sourceUrl = source.attr('src');
 
-            // Check the mime type for each source of the current track
-            for (var j=0; j<that.trackSources[i].length; j++) {
-
-                // If a type has been defined by the user, use that
-                if ('undefined' !== typeof $(that.trackSources[i][j]).attr('type')) {
-                    var mime = $(that.trackSources[i][j]).attr('type') + ';';
-                // else, compare the file extention to mime times of common audio formats.
-                } else {
-                    var ext = $(that.trackSources[i][j]).attr('src').substring($(that.trackSources[i][j]).attr('src').lastIndexOf("."));
-                    console.log(ext);
-                    var mime = mimeTypeTable[ext] !== undefined ? mimeTypeTable[ext] : "audio/"+ext.substr(1)+";";
+                if (!sourceUrl) {
+                    return;
                 }
 
-                // Beware of triple not!!! - If file type cannot be played...
-                if ( !(!!(a.canPlayType && a.canPlayType(mime).replace(/no/, ''))) ) {
-                    // ...eject it from the source list
-                    that.trackSources[i].splice(j, 1)
+                const ext = sourceUrl.slice(sourceUrl.lastIndexOf('.'));
+                const mime = sourceType ? sourceType + ';' : (mimeTypeTable[ext] ?? 'audio/' + ext.slice(1) + ';');
+                const canPlay = !!(audioElement.canPlayType && audioElement.canPlayType(mime).replace(/no/, ''));
+
+                if (canPlay) {
+                    validSources.push(this);
                 }
-            }
+            });
+
+            that.trackSources[i] = $(validSources);
 
         });
 
