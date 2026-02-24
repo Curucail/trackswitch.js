@@ -107,7 +107,7 @@ test('parsePresetIndices rejects malformed and negative values', () => {
     assert.deepEqual(internals.parsePresetIndices('1x,-2,3, 4 '), [3, 4]);
 });
 
-test('keyboard handler remains active on second instance after first destroy', () => {
+test('keyboard shortcuts are scoped to the last interacted instance', () => {
     document.body.innerHTML = [
         '<div id="a" class="player"><ts-track><ts-source src="a.mp3"></ts-source></ts-track></div>',
         '<div id="b" class="player"><ts-track><ts-source src="b.mp3"></ts-source></ts-track></div>',
@@ -126,22 +126,33 @@ test('keyboard handler remains active on second instance after first destroy', (
     let seen1 = 0;
     let seen2 = 0;
 
-    p1.handleKeyboardEvent = function() {
+    p1.seekRelative = function() {
         seen1 += 1;
     };
-    p2.handleKeyboardEvent = function() {
+    p2.seekRelative = function() {
         seen2 += 1;
     };
 
+    players.eq(0).trigger($.Event('mousedown', { which: 1 }));
+    window.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    assert.equal(seen1, 1);
+    assert.equal(seen2, 0);
+
+    players.eq(1).trigger($.Event('mousedown', { which: 1 }));
     window.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowRight' }));
     assert.equal(seen1, 1);
     assert.equal(seen2, 1);
 
-    p1.destroy();
+    p2.destroy();
+    window.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    assert.equal(seen1, 1, 'no instance should handle keyboard input when active owner is destroyed');
+    assert.equal(seen2, 1, 'destroyed player should be detached');
+
+    players.eq(0).trigger($.Event('mousedown', { which: 1 }));
     window.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowRight' }));
 
-    assert.equal(seen1, 1, 'destroyed player should be detached');
-    assert.equal(seen2, 2, 'other player should keep key handler');
+    assert.equal(seen1, 2, 'remaining player should receive keyboard input after being re-activated');
+    assert.equal(seen2, 1);
 });
 
 test('resize handler works without element id and is removed on destroy', () => {
@@ -240,4 +251,85 @@ test('play starts from loop point A when current position is outside active loop
     });
 
     assert.equal(capturedStart, 2);
+});
+
+test('load ignores duplicate activation while loading', () => {
+    const { plugin } = createPlayer(
+        '<div class="player"><ts-track><ts-source src="a.mp3?cache=1#frag" type="audio/mpeg"></ts-source></ts-track></div>',
+        { waveform: false, keyboard: false, looping: false }
+    );
+
+    let requests = 0;
+    plugin.prepareRequest = function() {
+        requests += 1;
+    };
+
+    const event = {
+        type: 'mousedown',
+        which: 1,
+        preventDefault() {},
+        stopPropagation() {},
+    };
+
+    plugin.load(event);
+    plugin.load(event);
+
+    assert.equal(plugin.isLoading, true);
+    assert.equal(requests, 1, 'duplicate load should not enqueue more requests while loading');
+});
+
+test('invalid loop point update still refreshes UI state', () => {
+    const { plugin } = createPlayer(
+        '<div class="player"><ts-track><ts-source src="a.mp3"></ts-source></ts-track></div>',
+        { waveform: false, keyboard: false, looping: true }
+    );
+
+    plugin.loopPointB = 1;
+    plugin.position = 0.95;
+
+    let updates = 0;
+    plugin.updateMainControls = function() {
+        updates += 1;
+    };
+
+    const ret = plugin.event_setLoopA({
+        type: 'mousedown',
+        which: 1,
+        preventDefault() {},
+        stopPropagation() {},
+    });
+
+    assert.equal(ret, false);
+    assert.equal(plugin.loopPointA, null);
+    assert.equal(updates, 1, 'loop UI should refresh even when the loop point is rejected');
+});
+
+test('seek ends when mouseup happens on window', () => {
+    const { player, plugin } = createPlayer(
+        '<div class="player"><ts-track><ts-source src="a.mp3"></ts-source></ts-track></div>',
+        { waveform: false, keyboard: false, looping: true }
+    );
+
+    plugin.loaded();
+    const seekwrap = player.find('.main-control .seekwrap').first();
+    assert.equal(seekwrap.length, 1);
+
+    seekwrap.trigger($.Event('mousedown', { which: 1, pageX: 10 }));
+    assert.equal(plugin.currentlySeeking, true, 'seek should start on mousedown');
+
+    $(window).trigger($.Event('mouseup', { which: 1, pageX: 10 }));
+    assert.equal(plugin.currentlySeeking, false, 'seek should end on window mouseup');
+});
+
+test('mime inference handles query and hash suffixes', () => {
+    const internals = $.trackSwitchInternals;
+    assert.equal(
+        internals.inferSourceMimeType('https://cdn.example/audio/file.MP3?x=1#frag', undefined, { '.mp3': 'audio/mpeg;' }),
+        'audio/mpeg;'
+    );
+});
+
+test('time formatter rolls milliseconds into next second', () => {
+    const internals = $.trackSwitchInternals;
+    assert.equal(internals.formatSecondsToHHMMSSmmm(1.9996), '00:00:02:000');
 });

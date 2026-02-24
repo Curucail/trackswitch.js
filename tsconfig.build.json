@@ -4,10 +4,9 @@
     "allowJs": false,
     "checkJs": false,
     "noEmit": false,
-    "outDir": "dist/tmp/ts",
-    "rootDir": "src"
+    "outFile": "dist/tmp/ts/trackswitch.js"
   },
   "include": [
-    "src/**/*.ts"
+    "src/trackswitch.ts"
   ]
 }
