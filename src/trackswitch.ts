@@ -1,5 +1,4 @@
-declare const $: any;
-declare const jQuery: any;
+/// <reference types="jquery" />
 
 interface PresetConfig {
     presetNames: string[];
@@ -27,12 +26,31 @@ interface TrackSwitchOptions {
     waveformBarWidth: number;
 }
 
+interface TrackProperty {
+    mute: boolean;
+    solo: boolean;
+    success: boolean;
+    error: boolean;
+    presetsForTrack: number[];
+}
+
+interface TrackTiming {
+    trimStart: number;
+    padStart: number;
+    audioDuration: number;
+    effectiveDuration: number;
+}
+
+type LoopMarker = 'A' | 'B' | null;
+
 function audioContextCheck(): AudioContext | null {
     return typeof AudioContext !== "undefined" ? new AudioContext() : null;
 }
 const audioContext = audioContextCheck();
 
 const pluginName = 'trackSwitch';
+let pluginInstanceCounter = 0;
+
 const defaults: Readonly<TrackSwitchOptions> = {
     mute: true,
     solo: true,
@@ -59,10 +77,46 @@ function normalizeOptions(options: TrackSwitchOptions): TrackSwitchOptions {
         options.radiosolo = true;
     }
 
+    if (!Number.isFinite(options.waveformBarWidth) || options.waveformBarWidth < 1) {
+        options.waveformBarWidth = 1;
+    }
+
     return options;
 }
 
-function buildPresetConfig(element: any): PresetConfig {
+function sanitizeInlineStyle(styleValue: unknown): string {
+    const style = typeof styleValue === 'string' ? styleValue.trim() : '';
+    if (!style) {
+        return '';
+    }
+
+    return style
+        .replace(/url\s*\(/gi, '')
+        .replace(/[<>]/g, '');
+}
+
+function escapeHtml(value: unknown): string {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function clampPercent(value: unknown): number {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+        return 0;
+    }
+    return Math.max(0, Math.min(100, parsed));
+}
+
+function parseStrictNonNegativeInt(value: string): number {
+    return /^\d+$/.test(value) ? Number(value) : NaN;
+}
+
+function buildPresetConfig(element: JQuery<HTMLElement>): PresetConfig {
     const presetNamesAttr = element.attr('preset-names') as string | undefined;
     let maxPresetIndex = -1;
 
@@ -94,42 +148,96 @@ function parsePresetIndices(presetsAttr: string | undefined): number[] {
 
     return presetsAttr
         .split(',')
-        .map(function(preset) { return parseInt(preset.trim(), 10); })
-        .filter(function(preset) { return Number.isFinite(preset); });
+        .map(function(preset) { return parseStrictNonNegativeInt(preset.trim()); })
+        .filter(function(preset) { return Number.isFinite(preset) && preset >= 0; });
 }
 
-function parseTrackElementConfig(element: any): TrackElementConfig {
+function parseTrackElementConfig(element: JQuery<HTMLElement>): TrackElementConfig {
     return {
         presetsForTrack: parsePresetIndices(element.attr('presets')),
-        seekMarginLeft: Number(element.data('seekMarginLeft')) || 0,
-        seekMarginRight: Number(element.data('seekMarginRight')) || 0,
+        seekMarginLeft: clampPercent(element.data('seekMarginLeft')),
+        seekMarginRight: clampPercent(element.data('seekMarginRight')),
     };
 }
 
-function TrackSwitchPlugin(element: Element, options: Partial<TrackSwitchOptions>) {
+class TrackSwitchPlugin {
+    [key: string]: any;
+    element: JQuery<HTMLElement>;
+    options: TrackSwitchOptions;
+    _defaults: Readonly<TrackSwitchOptions>;
+    _name: string;
+    instanceId: number;
+    eventNamespace: string;
+    isLoaded: boolean;
+    isDestroyed: boolean;
 
-    this.element = $(element);
+    numberOfTracks: number;
+    longestDuration: number;
+    playing: boolean;
+    repeat: boolean;
+    startTime: number;
+    position: number;
+    timerUpdateUI: ReturnType<typeof setInterval> | null;
+    timerMonitorPosition: ReturnType<typeof setInterval> | null;
+    currentlySeeking: boolean;
+    seekingElement: JQuery<HTMLElement> | null;
+    masterVolume: number;
+    iOSPlaybackUnlocked: boolean;
 
-    this.options = normalizeOptions($.extend({}, defaults, options));
+    loopPointA: number | null;
+    loopPointB: number | null;
+    loopEnabled: boolean;
+    rightClickDragging: boolean;
+    loopDragStart: number | null;
+    draggingMarker: LoopMarker;
+    loopMinDistance: number;
 
-    this._defaults = defaults;
-    this._name = pluginName;
+    presetNames: string[];
+    presetCount: number;
+    originalImage: string;
 
-    // Properties for the overall player
-    this.numberOfTracks = 0;
-    this.longestDuration = 0;
-    this.playing = false;
-    this.repeat = this.options.repeat;
-    this.startTime;
-    this.position = 0;
-    this.timerUpdateUI;
-    this.currentlySeeking = false;
-    this.seekingElement;
-    this.masterVolume = 1.0;
-    this.iOSPlaybackUnlocked = false;
+    trackProperties: TrackProperty[];
+    trackSources: Array<JQuery<HTMLElement>>;
+    trackGainNode: Array<GainNode>;
+    trackBuffer: Array<AudioBufferSourceNode>;
+    trackTiming: Array<TrackTiming>;
+    activeAudioSources: Array<AudioBufferSourceNode | null>;
 
-    // A/B Loop properties (only initialize if looping is enabled)
-    if (this.options.looping) {
+    waveformCanvas: HTMLCanvasElement[];
+    waveformData: number[][];
+    waveformContext: Array<CanvasRenderingContext2D | null>;
+    waveformOriginalHeight: number[];
+    resizeDebounceTimer: ReturnType<typeof setTimeout> | null;
+
+    gainNodeVolume: GainNode | null;
+    gainNodeMaster: GainNode | null;
+
+    constructor(element: Element, options: Partial<TrackSwitchOptions>) {
+        this.element = $(element) as JQuery<HTMLElement>;
+        this.options = normalizeOptions($.extend({}, defaults, options));
+
+        this._defaults = defaults;
+        this._name = pluginName;
+        this.instanceId = pluginInstanceCounter++;
+        this.eventNamespace = '.trackswitch.' + this.instanceId;
+        this.isLoaded = false;
+        this.isDestroyed = false;
+
+        // Properties for the overall player
+        this.numberOfTracks = 0;
+        this.longestDuration = 0;
+        this.playing = false;
+        this.repeat = this.options.repeat;
+        this.startTime = 0;
+        this.position = 0;
+        this.timerUpdateUI = null;
+        this.timerMonitorPosition = null;
+        this.currentlySeeking = false;
+        this.seekingElement = null;
+        this.masterVolume = 1.0;
+        this.iOSPlaybackUnlocked = false;
+
+        // A/B Loop properties
         this.loopPointA = null;  // Time in seconds, or null if not set
         this.loopPointB = null;  // Time in seconds, or null if not set
         this.loopEnabled = false; // Whether A/B loop is active
@@ -137,41 +245,45 @@ function TrackSwitchPlugin(element: Element, options: Partial<TrackSwitchOptions
         this.loopDragStart = null; // Stores starting position during right-drag
         this.draggingMarker = null; // Tracks which marker is being dragged ('A', 'B', or null)
         this.loopMinDistance = 0.1; // Minimum distance between loop points (0.1 seconds)
+
+        // Preset configuration properties
+        this.presetNames = [];
+        this.presetCount = 0;
+        this.originalImage = '';
+
+        // Properties and data for each track in coherent arrays
+        this.trackProperties = [];
+        this.trackSources = [];
+        this.trackGainNode = [];
+        this.trackBuffer = [];
+        this.trackTiming = [];
+        this.activeAudioSources = [];
+
+        // Waveform visualization properties
+        this.waveformCanvas = [];
+        this.waveformData = [];
+        this.waveformContext = [];
+        this.waveformOriginalHeight = [];
+        this.resizeDebounceTimer = null;
+
+        this.gainNodeVolume = null;
+        this.gainNodeMaster = null;
+
+        // Skip gain node creation if WebAudioAPI could not load.
+        if (audioContext) {
+            // Volume gain node (user-controlled, between master and destination)
+            this.gainNodeVolume = audioContext.createGain();
+            this.gainNodeVolume.gain.value = this.masterVolume;
+            this.gainNodeVolume.connect(audioContext.destination);
+
+            // Master output gain node setup (used for fade ramps)
+            this.gainNodeMaster = audioContext.createGain();
+            this.gainNodeMaster.gain.value = 0.0; // Start at 0.0 to allow fade in
+            this.gainNodeMaster.connect(this.gainNodeVolume);
+        }
+
+        this.init();
     }
-
-    // Preset configuration properties
-    this.presetNames = [];
-    this.presetCount = 0;
-
-    // Properties and data for each track in coherent arrays
-    this.trackProperties = [];
-    this.trackSources = [];
-    this.trackGainNode = [];
-    this.trackBuffer = [];
-    this.trackTiming = [];
-    this.activeAudioSources = [];
-
-    // Waveform visualization properties
-    this.waveformCanvas = [];
-    this.waveformData = [];
-    this.waveformContext = [];
-    this.waveformOriginalHeight = [];
-    this.resizeDebounceTimer = null;
-
-    // Skip gain node creation if WebAudioAPI could not load.
-    if (audioContext) {
-        // Volume gain node (user-controlled, between master and destination)
-        this.gainNodeVolume = audioContext.createGain();
-        this.gainNodeVolume.gain.value = this.masterVolume;
-        this.gainNodeVolume.connect(audioContext.destination);
-
-        // Master output gain node setup (used for fade ramps)
-        this.gainNodeMaster = audioContext.createGain();
-        this.gainNodeMaster.gain.value = 0.0 // Start at 0.0 to allow fade in
-        this.gainNodeMaster.connect(this.gainNodeVolume);
-    }
-
-    this.init();
 }
 
 
@@ -197,8 +309,8 @@ TrackSwitchPlugin.prototype.init = function() {
             presetDropdownHtml = '<li class="preset-selector-wrap">' +
                 '<select class="preset-selector" title="Select Preset">';
             for (var p = 0; p < this.presetNames.length; p++) {
-                presetDropdownHtml += '<option value="' + p + '"' + (p === 0 ? ' selected' : '') + '>' + 
-                    this.presetNames[p] + '</option>';
+                presetDropdownHtml += '<option value="' + p + '"' + (p === 0 ? ' selected' : '') + '>' +
+                    escapeHtml(this.presetNames[p]) + '</option>';
             }
             presetDropdownHtml += '</select></li>';
         }
@@ -271,11 +383,13 @@ TrackSwitchPlugin.prototype.init = function() {
         // Save a copy of the original image src to reset image to
         that.originalImage = this.src;
 
-        $(this).wrap( '<div class="seekable-img-wrap" style="' + $(this).data("style") + '; display: block;"></div>' );
+        const wrappedImage = $(this) as JQuery<HTMLImageElement>;
+        wrappedImage.wrap('<div class="seekable-img-wrap"></div>');
+        wrappedImage.parent('.seekable-img-wrap').attr('style', sanitizeInlineStyle(wrappedImage.data("style")) + '; display: block;');
 
-        var trackElementConfig = parseTrackElementConfig($(this));
+        var trackElementConfig = parseTrackElementConfig(wrappedImage as unknown as JQuery<HTMLElement>);
 
-        $(this).after(
+        wrappedImage.after(
             '<div class="seekwrap" style=" ' +
             'left: ' + trackElementConfig.seekMarginLeft + '%; ' +
             'right: ' + trackElementConfig.seekMarginRight + '%;">' +
@@ -298,12 +412,14 @@ TrackSwitchPlugin.prototype.init = function() {
             that.waveformOriginalHeight.push(this.height); // Store the original height attribute
 
             // Apply custom styling from data attribute
-            $(this).wrap( '<div class="waveform-wrap" style="' + ($(this).data("waveformStyle") || '') + '; display: block;"></div>' );
+            const wrappedCanvas = $(this) as JQuery<HTMLCanvasElement>;
+            wrappedCanvas.wrap('<div class="waveform-wrap"></div>');
+            wrappedCanvas.parent('.waveform-wrap').attr('style', sanitizeInlineStyle(wrappedCanvas.data("waveformStyle")) + '; display: block;');
 
-            $(this).after(
+            wrappedCanvas.after(
                 '<div class="seekwrap" style=" ' +
-                'left: ' + ($(this).data("seekMarginLeft") || 0) + '%; ' +
-                'right: ' + ($(this).data("seekMarginRight") || 0) + '%;">' +
+                'left: ' + clampPercent(wrappedCanvas.data("seekMarginLeft")) + '%; ' +
+                'right: ' + clampPercent(wrappedCanvas.data("seekMarginRight")) + '%;">' +
                     '<div class="loop-region"></div>' +
                     '<div class="loop-marker marker-a"></div>' +
                     '<div class="loop-marker marker-b"></div>' +
@@ -319,19 +435,19 @@ TrackSwitchPlugin.prototype.init = function() {
 
     // Prevent context menu on seekbar for right-click loop selection (only if looping is enabled)
     if (this.options.looping) {
-        this.element.on('contextmenu', '.seekwrap', function(e) {
+    this.element.on('contextmenu' + this.eventNamespace, '.seekwrap', function(e) {
             e.preventDefault();
             return false;
         });
     }
 
-    this.element.on('touchstart mousedown', '.overlay .activate', $.proxy(this.load, this));
-    this.element.on('touchstart mousedown', '.overlay #overlayinfo .info', $.proxy(function() {
+    this.element.on('touchstart' + this.eventNamespace + ' mousedown' + this.eventNamespace, '.overlay .activate', $.proxy(this.load, this));
+    this.element.on('touchstart' + this.eventNamespace + ' mousedown' + this.eventNamespace, '.overlay #overlayinfo .info', $.proxy(function() {
         this.element.find('.overlay .info').hide();
         this.element.find('.overlay .text').show();
     }, this));
-    this.element.one('loaded', $.proxy(this.loaded, this));
-    this.element.one('errored', $.proxy(this.errored, this));
+    this.element.one('loaded' + this.eventNamespace, $.proxy(this.loaded, this));
+    this.element.one('errored' + this.eventNamespace, $.proxy(this.errored, this));
 
     var tracklist = $('<ul class="track_list"></ul>');
 
@@ -341,7 +457,7 @@ TrackSwitchPlugin.prototype.init = function() {
 
         this.element.find('ts-track').each(function(i) {
 
-            var trackElementConfig = parseTrackElementConfig($(this));
+            var trackElementConfig = parseTrackElementConfig($(this) as JQuery<HTMLElement>);
             var presetsForTrack = trackElementConfig.presetsForTrack;
 
             that.trackProperties[i] = {
@@ -357,16 +473,19 @@ TrackSwitchPlugin.prototype.init = function() {
             var radiosolo = that.options.radiosolo ? " radio" : ""; // For styling the (radio)solo button
             var wholesolo = that.options.onlyradiosolo ? " solo" : ""; // For making whole track clickable
 
-            tracklist.append(
-                // User defined style and title fallback if not defined
-                '<li class="track' + tabview + wholesolo + '" style="' + ($(this).attr('style') || "") + '">' +
-                    ($(this).attr('title') || "Track " + (i+1)) +
-                    '<ul class="control">' +
-                        (that.options.mute ? '<li class="mute button" title="Mute">Mute</li>' : '') +
-                        (that.options.solo ? '<li class="solo button' + radiosolo + '" title="Solo">Solo</li>' : '') +
-                    '</ul>' +
-                '</li>'
-            );
+            var $track = $('<li class="track' + tabview + wholesolo + '"></li>');
+            $track.attr('style', sanitizeInlineStyle($(this).attr('style') || ''));
+            $track.append(document.createTextNode(String($(this).attr('title') || "Track " + (i+1))));
+
+            var $control = $('<ul class="control"></ul>');
+            if (that.options.mute) {
+                $control.append('<li class="mute button" title="Mute">Mute</li>');
+            }
+            if (that.options.solo) {
+                $control.append('<li class="solo button' + radiosolo + '" title="Solo">Solo</li>');
+            }
+            $track.append($control);
+            tracklist.append($track);
 
         });
 
@@ -383,7 +502,7 @@ TrackSwitchPlugin.prototype.init = function() {
         // Throw a player error if the WebAudioAPI could not load.
         if (!audioContext) {
             this.element.trigger("errored");
-            this.element.find("#overlaytext").html("Web Audio API is not supported in your browser. Please consider upgrading.");
+            this.element.find("#overlaytext").text("Web Audio API is not supported in your browser. Please consider upgrading.");
             return false;
         }
 
@@ -399,15 +518,43 @@ TrackSwitchPlugin.prototype.init = function() {
 
 // Remove player elements etc
 TrackSwitchPlugin.prototype.destroy = function() {
+    if (this.isDestroyed) {
+        return;
+    }
+    this.isDestroyed = true;
+
+    if (this.playing) {
+        this.stopAudio();
+    }
+
+    if (this.timerMonitorPosition) {
+        clearInterval(this.timerMonitorPosition);
+        this.timerMonitorPosition = null;
+    }
+    if (this.resizeDebounceTimer) {
+        clearTimeout(this.resizeDebounceTimer);
+        this.resizeDebounceTimer = null;
+    }
+
+    this.unbindEvents();
 
     this.element.find(".main-control").remove();
     this.element.find(".tracks").remove();
-    this.element.removeData();
+    this.gainNodeMaster?.disconnect();
+    this.gainNodeVolume?.disconnect();
+    this.element.removeData('plugin_' + pluginName);
+};
+
+TrackSwitchPlugin.prototype.canUseAudioGraph = function() {
+    return !!(audioContext && this.gainNodeMaster && this.gainNodeVolume);
 };
 
 
 // In case of source error, request next source if there is one, else fire a track error
 TrackSwitchPlugin.prototype.sourceFailed = function(currentTrack, currentSource, errorType) {
+    if (this.isDestroyed) {
+        return;
+    }
 
     // Request next source for this track if it exists, else throw error
     if (this.trackSources[currentTrack][currentSource+1] !== undefined) {
@@ -423,6 +570,10 @@ TrackSwitchPlugin.prototype.sourceFailed = function(currentTrack, currentSource,
 // On sucessful audio file request, decode it into an audiobuffer
 // Create and connect gain nodes for this track
 TrackSwitchPlugin.prototype.decodeAudio = function(request, currentTrack, currentSource) {
+    if (!this.canUseAudioGraph() || !audioContext || !this.gainNodeMaster) {
+        this.sourceFailed(currentTrack, currentSource, "Web Audio unavailable");
+        return;
+    }
 
     var that = this;
     var audioData = request.response;
@@ -432,7 +583,7 @@ TrackSwitchPlugin.prototype.decodeAudio = function(request, currentTrack, curren
     audioContext.decodeAudioData(audioData, function(decodedData) {
 
         that.trackGainNode[currentTrack] = audioContext.createGain();
-        that.trackGainNode[currentTrack].connect(that.gainNodeMaster);
+        that.trackGainNode[currentTrack].connect(that.gainNodeMaster as GainNode);
         that.trackBuffer[currentTrack] = audioContext.createBufferSource();
         that.trackBuffer[currentTrack].buffer = decodedData;
         that.trackTiming[currentTrack] = that.calculateTrackTiming(that.trackSources[currentTrack][currentSource], decodedData.duration);
@@ -454,6 +605,10 @@ TrackSwitchPlugin.prototype.makeRequest = function(currentTrack, currentSource) 
     var that = this;
 
     var audioURL = $(this.trackSources[currentTrack][currentSource]).attr('src');
+    if (!audioURL) {
+        this.sourceFailed(currentTrack, currentSource, "No Source URL");
+        return;
+    }
     var request = new XMLHttpRequest();
     request.open('GET', audioURL, true);
     request.responseType = 'arraybuffer';
@@ -490,6 +645,9 @@ TrackSwitchPlugin.prototype.prepareRequest = function(currentTrack, currentSourc
 // On player load/activate, find the audio tracks and sources and filter out ones we can't play
 // Then being the process of making requests for the files, starting with the first source of the first track
 TrackSwitchPlugin.prototype.load = function(event) {
+    if (this.isDestroyed) {
+        return false;
+    }
 
     if (!this.valid_click(event)) { return true; } // If not valid click, break out of func
 
@@ -526,7 +684,7 @@ TrackSwitchPlugin.prototype.load = function(event) {
 
         this.element.find('ts-track').each(function(i) {
 
-            const validSources: any[] = [];
+            const validSources: HTMLElement[] = [];
             $(this).find('ts-source').each(function() {
                 const source = $(this);
                 const sourceType = source.attr('type');
@@ -545,7 +703,7 @@ TrackSwitchPlugin.prototype.load = function(event) {
                 }
             });
 
-            that.trackSources[i] = $(validSources);
+            that.trackSources[i] = $(validSources) as JQuery<HTMLElement>;
 
         });
 
@@ -602,7 +760,7 @@ TrackSwitchPlugin.prototype.trackStatusChanged = function() {
             this.findLongest(); // When `findLongest()` complete, 'loaded()' is called
         } else {
             this.element.trigger("errored");
-            this.element.find("#overlaytext").html("One or more audio files failed to load.");
+            this.element.find("#overlaytext").text("One or more audio files failed to load.");
         }
 
     }
@@ -612,6 +770,10 @@ TrackSwitchPlugin.prototype.trackStatusChanged = function() {
 
 // When the audio files are completely (and sucessfully) loaded, unlock the player and set times
 TrackSwitchPlugin.prototype.loaded = function() {
+    if (this.isDestroyed) {
+        return;
+    }
+    this.isLoaded = true;
 
     this.element.find(".overlay").removeClass("loading");
     this.element.find(".overlay").hide().remove();
@@ -629,6 +791,10 @@ TrackSwitchPlugin.prototype.loaded = function() {
 
 // In the event of a player error, display error UI and unbind events
 TrackSwitchPlugin.prototype.errored = function() {
+    if (this.isDestroyed) {
+        return;
+    }
+    this.isLoaded = false;
 
     this.element.find(".overlay span").removeClass("fa-spin loading");
     this.element.addClass("error");
@@ -640,116 +806,80 @@ TrackSwitchPlugin.prototype.errored = function() {
         }
     });
 
+    if (this.timerMonitorPosition) {
+        clearInterval(this.timerMonitorPosition);
+        this.timerMonitorPosition = null;
+    }
+    if (this.resizeDebounceTimer) {
+        clearTimeout(this.resizeDebounceTimer);
+        this.resizeDebounceTimer = null;
+    }
+
     this.unbindEvents();
 };
 
 
 // Unbind all events previously bound
 TrackSwitchPlugin.prototype.unbindEvents = function() {
-
-    this.element.off('touchstart mousedown', '.overlay span');
-    this.element.off('loaded');
-
-    this.element.off('touchstart mousedown', '.playpause');
-    this.element.off('touchstart mousedown', '.stop');
-    this.element.off('touchstart mousedown', '.repeat');
-
-    this.element.off('mousedown touchstart', '.seekwrap');
-    this.element.off('mousemove touchmove');
-    this.element.off('mouseup touchend');
-
-    this.element.off('touchstart mousedown', '.mute');
-    this.element.off('touchstart mousedown', '.solo');
-
-    this.element.off('input', '.volume-slider');
-    this.element.off('mousedown touchstart mousemove touchmove mouseup touchend', '.volume-control');
-
-    if (this.presetCount >= 2) {
-        this.element.off('change', '.preset-selector');
-        this.element.off('wheel', '.preset-selector');
-        this.element.off('mousedown touchstart mouseup touchend click', '.preset-selector, .preset-selector-wrap');
-    }
-
-    if (this.options.looping) {
-        this.element.off('touchstart mousedown', '.loop-a');
-        this.element.off('touchstart mousedown', '.loop-b');
-        this.element.off('touchstart mousedown', '.loop-toggle');
-        this.element.off('touchstart mousedown', '.loop-clear');
-        this.element.off('mousedown touchstart', '.loop-marker');
-        this.element.off('contextmenu', '.seekwrap');
-    }
-
-    if (this.options.keyboard) {
-        $(window).off("keydown.trackswitch");
-    }
-
-    // Unbind window resize handler for waveforms
-    if (this.options.waveform && this.waveformCanvas.length > 0) {
-        var elementId = this.element.attr('id');
-        if (elementId) {
-            $(window).off('resize.trackswitch.waveform.' + elementId);
-        }
-    }
+    this.element.off(this.eventNamespace);
+    $(window).off(this.eventNamespace);
 
 };
 
 
 // Bind events for player controls and seeking
 TrackSwitchPlugin.prototype.bindEvents = function() {
+    var ns = this.eventNamespace;
 
-    this.element.on('touchstart mousedown', '.playpause', $.proxy(this.event_playpause, this));
-    this.element.on('touchstart mousedown', '.stop', $.proxy(this.event_stop, this));
-    this.element.on('touchstart mousedown', '.repeat', $.proxy(this.event_repeat, this));
+    this.element.on('touchstart' + ns + ' mousedown' + ns, '.playpause', $.proxy(this.event_playpause, this));
+    this.element.on('touchstart' + ns + ' mousedown' + ns, '.stop', $.proxy(this.event_stop, this));
+    this.element.on('touchstart' + ns + ' mousedown' + ns, '.repeat', $.proxy(this.event_repeat, this));
 
-    this.element.on('mousedown touchstart', '.seekwrap', $.proxy(this.event_seekStart, this));
-    this.element.on('mousemove touchmove', $.proxy(this.event_seekMove, this));
-    this.element.on('mouseup touchend', $.proxy(this.event_seekEnd, this));
+    this.element.on('mousedown' + ns + ' touchstart' + ns, '.seekwrap', $.proxy(this.event_seekStart, this));
+    this.element.on('mousemove' + ns + ' touchmove' + ns, $.proxy(this.event_seekMove, this));
+    this.element.on('mouseup' + ns + ' touchend' + ns, $.proxy(this.event_seekEnd, this));
 
-    this.element.on('touchstart mousedown', '.mute', $.proxy(this.event_mute, this));
-    this.element.on('touchstart mousedown', '.solo', $.proxy(this.event_solo, this));
+    this.element.on('touchstart' + ns + ' mousedown' + ns, '.mute', $.proxy(this.event_mute, this));
+    this.element.on('touchstart' + ns + ' mousedown' + ns, '.solo', $.proxy(this.event_solo, this));
 
-    this.element.on('input', '.volume-slider', $.proxy(this.event_volume, this));
+    this.element.on('input' + ns, '.volume-slider', $.proxy(this.event_volume, this));
     // Prevent volume slider interactions from triggering seek or other player events
-    this.element.on('mousedown touchstart mousemove touchmove mouseup touchend', '.volume-control', function(e) { e.stopPropagation(); });
+    this.element.on('mousedown' + ns + ' touchstart' + ns + ' mousemove' + ns + ' touchmove' + ns + ' mouseup' + ns + ' touchend' + ns, '.volume-control', function(e) { e.stopPropagation(); });
 
     if (this.presetCount >= 2) {
         // Handle both normal changes and explicit reapply requests
-        this.element.on('change preset:reapply', '.preset-selector', $.proxy(this.event_preset, this));
-        this.element.on('wheel', '.preset-selector', $.proxy(this.event_preset_scroll, this));
+        this.element.on('change' + ns + ' preset:reapply' + ns, '.preset-selector', $.proxy(this.event_preset, this));
+        this.element.on('wheel' + ns, '.preset-selector', $.proxy(this.event_preset_scroll, this));
         // Prevent preset interactions from being intercepted by other touch/mouse handlers on mobile
-        this.element.on('mousedown touchstart mouseup touchend click', '.preset-selector, .preset-selector-wrap', function(e) { e.stopPropagation(); });
+        this.element.on('mousedown' + ns + ' touchstart' + ns + ' mouseup' + ns + ' touchend' + ns + ' click' + ns, '.preset-selector, .preset-selector-wrap', function(e) { e.stopPropagation(); });
 
         // Track last applied preset value so we can detect "reapply same preset" clicks
-        this.element.on('change preset:reapply', '.preset-selector', function() {
+        this.element.on('change' + ns + ' preset:reapply' + ns, '.preset-selector', function() {
             var $select = $(this);
             $select.data('lastValue', $select.val());
         });
     }
 
     if (this.options.looping) {
-        this.element.on('touchstart mousedown', '.loop-a', $.proxy(this.event_setLoopA, this));
-        this.element.on('touchstart mousedown', '.loop-b', $.proxy(this.event_setLoopB, this));
-        this.element.on('touchstart mousedown', '.loop-toggle', $.proxy(this.event_toggleLoop, this));
-        this.element.on('touchstart mousedown', '.loop-clear', $.proxy(this.event_clearLoop, this));
+        this.element.on('touchstart' + ns + ' mousedown' + ns, '.loop-a', $.proxy(this.event_setLoopA, this));
+        this.element.on('touchstart' + ns + ' mousedown' + ns, '.loop-b', $.proxy(this.event_setLoopB, this));
+        this.element.on('touchstart' + ns + ' mousedown' + ns, '.loop-toggle', $.proxy(this.event_toggleLoop, this));
+        this.element.on('touchstart' + ns + ' mousedown' + ns, '.loop-clear', $.proxy(this.event_clearLoop, this));
 
-        this.element.on('mousedown touchstart', '.loop-marker', $.proxy(this.event_markerDragStart, this));
+        this.element.on('mousedown' + ns + ' touchstart' + ns, '.loop-marker', $.proxy(this.event_markerDragStart, this));
     }
 
     var that = this;
 
     if (this.options.keyboard) {
-        $(window).off("keydown.trackswitch"); // Unbind other players before binding new
-
-        $(window).on("keydown.trackswitch", function (event) {
+        $(window).on("keydown" + ns, function (event) {
             that.handleKeyboardEvent(event);
         });
     }
 
     // Bind window resize handler for responsive waveform regeneration
     if (this.options.waveform && this.waveformCanvas.length > 0) {
-        // Use a unique namespace to avoid conflicts between multiple players
-        var resizeEvent = 'resize.trackswitch.waveform.' + this.element.attr('id');
-        $(window).on(resizeEvent, function() {
+        $(window).on('resize' + ns, function() {
             that.handleWaveformResize();
         });
     }
@@ -932,6 +1062,9 @@ TrackSwitchPlugin.prototype.updateMainControls = function() {
 // Timer fuction to update the UI periodically (with new time and seek position)
 // Also listens for the longest track to end and stops or repeats as needed
 TrackSwitchPlugin.prototype.monitorPosition = function(context) {
+    if (!audioContext || context.isDestroyed) {
+        return;
+    }
 
     // context = this from outside the closure
 
@@ -967,6 +1100,13 @@ TrackSwitchPlugin.prototype.monitorPosition = function(context) {
 
 // Stop each track and destroy it's audio buffer and clear the timer
 TrackSwitchPlugin.prototype.stopAudio = function() {
+    if (!this.canUseAudioGraph() || !audioContext || !this.gainNodeMaster) {
+        if (this.timerMonitorPosition) {
+            clearInterval(this.timerMonitorPosition);
+            this.timerMonitorPosition = null;
+        }
+        return;
+    }
 
     // Create downward master gain ramp to fade signal out
     var now = audioContext.currentTime;
@@ -986,13 +1126,19 @@ TrackSwitchPlugin.prototype.stopAudio = function() {
         }
     }
 
-    clearInterval(this.timerMonitorPosition);
+    if (this.timerMonitorPosition) {
+        clearInterval(this.timerMonitorPosition);
+        this.timerMonitorPosition = null;
+    }
 
 }
 
 
 // Create, connect and start a new audio buffer for each track and begin update timer
 TrackSwitchPlugin.prototype.startAudio = function(newPos, duration) {
+    if (!this.canUseAudioGraph() || !audioContext || !this.gainNodeMaster) {
+        return;
+    }
 
     var that = this;
 
@@ -1026,6 +1172,10 @@ TrackSwitchPlugin.prototype.startAudio = function(newPos, duration) {
     for (var i=0; i<this.numberOfTracks; i++) {
 
         this.activeAudioSources[i] = null; // Destroy old sources before creating new ones...
+
+        if (!this.trackBuffer[i] || !this.trackBuffer[i].buffer || !this.trackGainNode[i]) {
+            continue;
+        }
 
         var timing = this.trackTiming[i] || {
             trimStart: 0,
@@ -1081,6 +1231,9 @@ TrackSwitchPlugin.prototype.startAudio = function(newPos, duration) {
 
     this.startTime = now - ( this.position || 0 );
 
+    if (this.timerMonitorPosition) {
+        clearInterval(this.timerMonitorPosition);
+    }
     this.timerMonitorPosition = setInterval(function(){
         that.monitorPosition(that);
     }, 16); // 62.5Hz for smooth motion
@@ -1090,6 +1243,9 @@ TrackSwitchPlugin.prototype.startAudio = function(newPos, duration) {
 
 // Pause player (used by other players to enforce globalsolo)
 TrackSwitchPlugin.prototype.pause = function() {
+    if (!audioContext) {
+        return;
+    }
 
     if (this.playing === true) {
         this.stopAudio();
@@ -1112,7 +1268,10 @@ TrackSwitchPlugin.prototype.pause_others = function() {
 
     if (this.options.globalsolo) {
         this.other_instances().each(function () {
-            $(this).data('plugin_' + pluginName).pause();
+            const plugin = $(this).data('plugin_' + pluginName);
+            if (plugin && typeof plugin.pause === 'function') {
+                plugin.pause();
+            }
         });
     }
 
@@ -1868,7 +2027,10 @@ TrackSwitchPlugin.prototype.event_mute = function(event) {
 // Handle preset selection from dropdown
 TrackSwitchPlugin.prototype.event_preset = function(event) {
 
-    var presetIndex = parseInt($(event.target).val());
+    var presetIndex = parseStrictNonNegativeInt(String($(event.target).val() ?? '0'));
+    if (!Number.isFinite(presetIndex)) {
+        presetIndex = 0;
+    }
     var that = this;
 
     // Apply the selected preset: solo tracks that belong to it, reset mutes
@@ -1889,7 +2051,10 @@ TrackSwitchPlugin.prototype.event_preset_scroll = function(event) {
     event.preventDefault();
 
     var $selector = $(event.target).closest('.preset-selector');
-    var currentIndex = parseInt($selector.val());
+    var currentIndex = parseStrictNonNegativeInt(String($selector.val() ?? '0'));
+    if (!Number.isFinite(currentIndex)) {
+        currentIndex = 0;
+    }
     var maxIndex = $selector.find('option').length - 1;
     var newIndex = currentIndex;
 
@@ -2266,17 +2431,19 @@ TrackSwitchPlugin.prototype.apply_track_properties = function() {
 
     var anySolos = false;
     $.each(this.trackProperties, function(i, value) {
-        anySolos = anySolos || that.trackProperties[i].solo;
+        var index = Number(i);
+        anySolos = anySolos || that.trackProperties[index].solo;
     });
 
     $.each(this.trackProperties, function(i, value) {
+        var index = Number(i);
 
       // 1) First update the UI elements to reflect the changes in properties...
 
-        var elem = that.element.find(".track_list li.track:nth-child(" + (i+1) + ")");
+        var elem = that.element.find(".track_list li.track:nth-child(" + (index + 1) + ")");
 
         // Update the mute icon status based on track mute state
-        if(that.trackProperties[i].mute) {
+        if(that.trackProperties[index].mute) {
             elem.find(".mute").addClass('checked');
         }
         else {
@@ -2284,7 +2451,7 @@ TrackSwitchPlugin.prototype.apply_track_properties = function() {
         }
 
         // Update the solo icon status based on track solo state
-        if(that.trackProperties[i].solo) {
+        if(that.trackProperties[index].solo) {
             elem.find(".solo").addClass('checked');
         }
         else {
@@ -2294,25 +2461,25 @@ TrackSwitchPlugin.prototype.apply_track_properties = function() {
       // 2) Then update the gains of each track depending on the new properties
 
         // Filter to stop the gains being edited before activation (gain undefined)
-        if (that.trackGainNode.length > 0) {
+        if (that.trackGainNode.length > 0 && that.trackGainNode[index]) {
 
-            that.trackGainNode[i].gain.value = 1;
+            that.trackGainNode[index].gain.value = 1;
 
             // First, only play tracks that are not muted
-            if(that.trackProperties[i].mute) {
-                that.trackGainNode[i].gain.value = 0;
+            if(that.trackProperties[index].mute) {
+                that.trackGainNode[index].gain.value = 0;
             }
             else {
-                that.trackGainNode[i].gain.value = 1;
+                that.trackGainNode[index].gain.value = 1;
             }
 
             // Then, if there are 1 or more soloed tracks, overwrite with their solo state
             if(anySolos) {
-                if(that.trackProperties[i].solo) {
-                    that.trackGainNode[i].gain.value = 1;
+                if(that.trackProperties[index].solo) {
+                    that.trackGainNode[index].gain.value = 1;
                 }
                 else {
-                    that.trackGainNode[i].gain.value = 0;
+                    that.trackGainNode[index].gain.value = 0;
                 }
             }
 
@@ -2329,7 +2496,11 @@ TrackSwitchPlugin.prototype.apply_track_properties = function() {
 
 // Handle volume slider input — update the volume gain node
 TrackSwitchPlugin.prototype.event_volume = function(event) {
-    var val = parseFloat($(event.target).val()) / 100;
+    var val = parseFloat(String($(event.target).val() ?? '0')) / 100;
+    if (!Number.isFinite(val)) {
+        val = 0;
+    }
+    val = Math.max(0, Math.min(1, val));
     this.masterVolume = val;
     if (this.gainNodeVolume) {
         this.gainNodeVolume.gain.value = val;
@@ -2366,4 +2537,10 @@ $.fn[pluginName] = function(options) {
             $(this).data('plugin_' + pluginName, new TrackSwitchPlugin(this, options));
         }
     });
+};
+
+(jQuery as unknown as { trackSwitchInternals?: unknown }).trackSwitchInternals = {
+    normalizeOptions: normalizeOptions,
+    parsePresetIndices: parsePresetIndices,
+    parseTrackElementConfig: parseTrackElementConfig,
 };

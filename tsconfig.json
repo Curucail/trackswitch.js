@@ -3,7 +3,8 @@
     "target": "ES2017",
     "module": "none",
     "noEmit": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": ["jquery"]
   },
   "include": [
     "src/**/*.ts"

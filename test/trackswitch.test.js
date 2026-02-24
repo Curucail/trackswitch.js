@@ -1,0 +1,243 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const path = require('node:path');
+const { JSDOM } = require('jsdom');
+
+const dom = new JSDOM('<!doctype html><html><body></body></html>', {
+    url: 'http://localhost/',
+    pretendToBeVisual: true,
+});
+
+global.window = dom.window;
+global.document = dom.window.document;
+global.navigator = dom.window.navigator;
+global.HTMLElement = dom.window.HTMLElement;
+global.HTMLCanvasElement = dom.window.HTMLCanvasElement;
+global.Event = dom.window.Event;
+global.MouseEvent = dom.window.MouseEvent;
+
+class MockGain {
+    constructor() {
+        this.gain = {
+            value: 1,
+            cancelScheduledValues() {},
+            setValueAtTime() {},
+            linearRampToValueAtTime() {},
+        };
+    }
+
+    connect() {}
+
+    disconnect() {}
+}
+
+class MockSource {
+    constructor() {
+        this.buffer = null;
+    }
+
+    connect() {}
+
+    disconnect() {}
+
+    start() {}
+
+    stop() {}
+}
+
+class MockAudioContext {
+    constructor() {
+        this.destination = {};
+        this.currentTime = 0;
+    }
+
+    createGain() {
+        return new MockGain();
+    }
+
+    createBufferSource() {
+        return new MockSource();
+    }
+
+    decodeAudioData(_buffer, onSuccess, _onError) {
+        onSuccess({
+            duration: 10,
+            getChannelData() {
+                return new Float32Array(1000);
+            },
+        });
+    }
+
+    resume() {
+        return Promise.resolve();
+    }
+}
+
+global.AudioContext = MockAudioContext;
+global.XMLHttpRequest = class MockXHR {
+    open() {}
+
+    send() {}
+};
+
+const jqueryFactory = require('jquery');
+const $ = jqueryFactory(dom.window);
+
+global.$ = $;
+global.jQuery = $;
+
+require(path.resolve(__dirname, '../dist/tmp/ts/trackswitch.js'));
+
+function createPlayer(markup, options) {
+    document.body.innerHTML = markup;
+    const player = $('.player');
+    player.trackSwitch(options || {});
+    const plugin = player.data('plugin_trackSwitch');
+    assert.ok(plugin, 'plugin instance should be attached');
+    return { player, plugin };
+}
+
+test.afterEach(() => {
+    $(window).off();
+    document.body.innerHTML = '';
+});
+
+test('parsePresetIndices rejects malformed and negative values', () => {
+    const internals = $.trackSwitchInternals;
+    assert.ok(internals, 'internals should be exposed');
+    assert.deepEqual(internals.parsePresetIndices('1x,-2,3, 4 '), [3, 4]);
+});
+
+test('keyboard handler remains active on second instance after first destroy', () => {
+    document.body.innerHTML = [
+        '<div id="a" class="player"><ts-track><ts-source src="a.mp3"></ts-source></ts-track></div>',
+        '<div id="b" class="player"><ts-track><ts-source src="b.mp3"></ts-source></ts-track></div>',
+    ].join('');
+
+    const players = $('.player');
+    players.eq(0).trackSwitch({ keyboard: true, waveform: false, looping: false });
+    players.eq(1).trackSwitch({ keyboard: true, waveform: false, looping: false });
+
+    const p1 = players.eq(0).data('plugin_trackSwitch');
+    const p2 = players.eq(1).data('plugin_trackSwitch');
+
+    p1.loaded();
+    p2.loaded();
+
+    let seen1 = 0;
+    let seen2 = 0;
+
+    p1.handleKeyboardEvent = function() {
+        seen1 += 1;
+    };
+    p2.handleKeyboardEvent = function() {
+        seen2 += 1;
+    };
+
+    window.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    assert.equal(seen1, 1);
+    assert.equal(seen2, 1);
+
+    p1.destroy();
+    window.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowRight' }));
+
+    assert.equal(seen1, 1, 'destroyed player should be detached');
+    assert.equal(seen2, 2, 'other player should keep key handler');
+});
+
+test('resize handler works without element id and is removed on destroy', () => {
+    const { plugin } = createPlayer(
+        '<div class="player"><canvas class="waveform" width="300" height="60"></canvas><ts-track><ts-source src="a.mp3"></ts-source></ts-track></div>',
+        { keyboard: false, waveform: true, looping: false }
+    );
+
+    let resizeCalls = 0;
+    plugin.handleWaveformResize = function() {
+        resizeCalls += 1;
+    };
+
+    plugin.loaded();
+    window.dispatchEvent(new dom.window.Event('resize'));
+    assert.equal(resizeCalls, 1);
+
+    plugin.destroy();
+    window.dispatchEvent(new dom.window.Event('resize'));
+    assert.equal(resizeCalls, 1, 'resize callback should be unbound after destroy');
+});
+
+test('destroy clears active timers and plugin data key', () => {
+    const { player, plugin } = createPlayer(
+        '<div class="player"><ts-track><ts-source src="a.mp3"></ts-source></ts-track></div>',
+        { waveform: false, keyboard: false, looping: false }
+    );
+
+    plugin.playing = true;
+    plugin.timerMonitorPosition = setInterval(() => {}, 1000);
+    plugin.resizeDebounceTimer = setTimeout(() => {}, 1000);
+
+    plugin.destroy();
+
+    assert.equal(plugin.isDestroyed, true);
+    assert.equal(plugin.timerMonitorPosition, null);
+    assert.equal(plugin.resizeDebounceTimer, null);
+    assert.equal(player.data('plugin_trackSwitch'), undefined);
+});
+
+test('wheel preset selection clamps boundaries and updates solo state', () => {
+    const { player, plugin } = createPlayer(
+        '<div class="player" preset-names="One,Two">' +
+            '<ts-track title="A" presets="0"><ts-source src="a.mp3"></ts-source></ts-track>' +
+            '<ts-track title="B" presets="1"><ts-source src="b.mp3"></ts-source></ts-track>' +
+        '</div>',
+        { waveform: false, keyboard: false, looping: false }
+    );
+
+    plugin.loaded();
+
+    const selector = player.find('.preset-selector');
+    assert.equal(selector.length, 1);
+
+    selector.val('0');
+    plugin.event_preset_scroll({
+        preventDefault() {},
+        target: selector[0],
+        originalEvent: { deltaY: -10 },
+    });
+    assert.equal(selector.val(), '0');
+
+    plugin.event_preset_scroll({
+        preventDefault() {},
+        target: selector[0],
+        originalEvent: { deltaY: 10 },
+    });
+
+    assert.equal(selector.val(), '1');
+    assert.equal(plugin.trackProperties[0].solo, false);
+    assert.equal(plugin.trackProperties[1].solo, true);
+});
+
+test('play starts from loop point A when current position is outside active loop', () => {
+    const { plugin } = createPlayer(
+        '<div class="player"><ts-track><ts-source src="a.mp3"></ts-source></ts-track></div>',
+        { waveform: false, keyboard: false, looping: true }
+    );
+
+    plugin.loopEnabled = true;
+    plugin.loopPointA = 2;
+    plugin.loopPointB = 5;
+    plugin.position = 9;
+
+    let capturedStart = -1;
+    plugin.startAudio = function(pos) {
+        capturedStart = pos;
+    };
+
+    plugin.event_playpause({
+        type: 'mousedown',
+        which: 1,
+        preventDefault() {},
+        stopPropagation() {},
+    });
+
+    assert.equal(capturedStart, 2);
+});
