@@ -350,22 +350,32 @@ $(".player").trackSwitch(settings);
     </ts-track>
 </div>
 
-Any combination of the following boolean flags is possible, where the indicated value depicts the default value.
+The player accepts the following options (defaults shown):
 
- - `mute`: If `true` show mute buttons. Defaults to `true`.
- - `solo`: If `true` show solo buttons. Defaults to `true`.
- - `globalsolo`: If `true` mute all other trackswitch instances when playback starts. Defaults to `true`.
- - `repeat`: If `true` initialize player with repeat button enabled. Defaults to `false`.
- - `radiosolo`: If `true` allow only 1 track to be soloed at a time (makes the <kbd>shift</kbd>+click behaviour the default). Useful for comparing rather than mixing tracks. Defaults to `false`.
- - `onlyradiosolo`: If `true` sets both `mute: false` and `radiosolo: true` in one argument. Useful for one track at a time comparison. Also makes the whole track row clickable. Defaults to `false`.
- - `tabview`: If `true` change the layout so tracks are arranged in a 'tab view'. This saves vertical space, for example on a presentation. Defaults to `false`.
- - `iosunmute`: If `true` run a one-time iOS/iPadOS unlock using a silent HTML5 audio element on first user interaction, so WebAudio playback is less likely to be muted by the hardware silent switch. Defaults to `true`.
- - `waveform`: If `true` enable waveform visualization for any `<canvas class="waveform">` elements in the player. Defaults to `true`.
- - `waveformBarWidth`: Width in pixels for each waveform bar (1-5 recommended). Lower values create denser, more detailed waveforms. Defaults to `2`.
+ - `mute` (`boolean`): Show mute buttons. Default: `true`.
+ - `solo` (`boolean`): Show solo buttons. Default: `true`.
+ - `globalsolo` (`boolean`): Pause other trackswitch instances when playback starts in the current player. Default: `true`.
+ - `repeat` (`boolean`): Initialize player with repeat enabled. Default: `false`.
+ - `radiosolo` (`boolean`): Allow only one track to be soloed at a time (equivalent to making <kbd>shift</kbd>+click solo behavior the default). Default: `false`.
+ - `onlyradiosolo` (`boolean`): Convenience mode for one-track-at-a-time comparison; forces `mute: false` and `radiosolo: true` and makes the whole track row clickable. Default: `false`.
+ - `tabview` (`boolean`): Arrange tracks in a compact tab-like layout. Default: `false`.
+ - `iosunmute` (`boolean`): Run a one-time iOS/iPadOS playback unlock on first user interaction to reduce silent-switch playback issues. Default: `true`.
+ - `keyboard` (`boolean`): Enable keyboard shortcuts for the active player instance. Default: `true`.
+ - `looping` (`boolean`): Enable A/B loop controls (buttons, markers, right-click drag, and loop-related keyboard shortcuts). Default: `true`.
+ - `waveform` (`boolean`): Enable waveform visualization for `<canvas class="waveform">` elements. Default: `true`.
+ - `waveformBarWidth` (`number`): Width in pixels for each waveform bar. Default: `1`.
+
+Option normalization rules:
+
+ - If both `mute` and `solo` are disabled, `solo` is automatically re-enabled.
+ - If `onlyradiosolo` is enabled, `mute` is forced to `false` and `radiosolo` is forced to `true`.
+ - If `waveformBarWidth` is invalid or lower than `1`, it is set to `1`.
 
 ### Keyboard Shortcuts
 
-trackswitch.js includes keyboard shortcuts for all playback controls:
+trackswitch.js includes keyboard shortcuts for all playback controls when `keyboard` is enabled.
+
+Keyboard input is scoped to the last player you interacted with (mouse or touch).
 
 **Playback Controls**
 - <kbd>Space</kbd> - Play / Pause
@@ -380,17 +390,17 @@ trackswitch.js includes keyboard shortcuts for all playback controls:
 **Volume**
 - <kbd>↑</kbd> / <kbd>↓</kbd> - Increase/decrease volume by 10%
 
-**Loop/Section Repeat**
+**Loop/Section Repeat** (available when `looping` is enabled)
 - <kbd>A</kbd> - Set loop point A at current position
 - <kbd>B</kbd> - Set loop point B at current position
 - <kbd>L</kbd> - Toggle loop on/off
 - <kbd>C</kbd> - Clear loop points
 
-When multiple players exist on a page, the last-clicked player receives keyboard input.
+When multiple players exist on a page, only the active (last interacted) player receives keyboard input.
 
 ### Loop/Section Repeat
 
-The player supports A/B loop functionality for repeating specific sections of audio. This is useful for practicing, analyzing, or focusing on particular parts of a track.
+When `looping` is enabled, the player supports A/B loop functionality for repeating specific sections of audio. This is useful for practicing, analyzing, or focusing on particular parts of a track.
 
 **Setting Loop Points**
 
@@ -401,7 +411,8 @@ There are multiple ways to define loop points:
 2. **UI Buttons**: Click the **A** and **B** buttons in the control bar to set loop points. The loop toggle button (⟲) enables or disables looping, and the clear button (✕) removes the loop points.
 
 3. **Right-Click Drag**: Right-click and drag across the seekbar to quickly select a loop region. The loop automatically enables when both points are set this way.
-Once loop points are set, black markers appear on the seekbar. You can drag these markers to adjust the loop boundaries. A minimum distance of 50ms is enforced between points.
+
+Once loop points are set, markers appear on the seekbar. You can drag these markers to adjust the loop boundaries. A minimum distance of 100ms (0.1s) is enforced between points.
 
 **Loop Behavior**
 
@@ -413,7 +424,7 @@ Once loop points are set, black markers appear on the seekbar. You can drag thes
 
 ## Additional Player Elements
 
-You can add aditional elements directly into the player, e.g. a paragraph `<p>` with some custom styling.
+You can add additional elements directly into the player, e.g. a paragraph `<p>` with some custom styling.
 
 ```html
 <div class="player">
@@ -507,14 +518,14 @@ Control waveform behavior through the player initialization settings:
 ```javascript
 jQuery(".player").trackSwitch({
     waveform: true,         // Enable/disable waveform visualization (default: true)
-    waveformBarWidth: 2     // Width of each waveform bar in pixels (default: 2)
+    waveformBarWidth: 1     // Width of each waveform bar in pixels (default: 1)
 });
 ```
 
 - `waveform` (boolean) - Enable or disable waveform visualization. Default: `true`
 - `waveformBarWidth` (number) - Width of each waveform bar in pixels. Default: `1`
   - `1` - High resolution, dense detail
-  - `2` - Balanced default appearance
+  - `2` - Balanced appearance
   - `3-4` - Chunky, bold style, easier to see on small displays
   - `5+` - Sparse, artistic style
 
