@@ -3,6 +3,8 @@ declare const jQuery: any;
 declare const webkitAudioContext: any;
 declare const mozAudioContext: any;
 
+type LegacyAudioContextCtor = typeof AudioContext | undefined;
+
 type LoopMarker = 'A' | 'B' | null;
 
 interface TrackProperty {
@@ -65,18 +67,18 @@ interface TrackSwitchOptions {
 
 // Put the audioContext in the global scope and pass it to each player instance.
 // WebAudioAPI fallback for IE: http://stackoverflow.com/a/27711181
-function audioContextCheck() {
-    if (typeof AudioContext !== "undefined") {
-        return new AudioContext();
-    } else if (typeof webkitAudioContext !== "undefined") {
-        return new webkitAudioContext();
-    } else if (typeof mozAudioContext !== "undefined") {
-        return new mozAudioContext();
-    } else {
-        return null;
+function audioContextCheck(): AudioContext | null {
+    var AudioContextCtor: LegacyAudioContextCtor = typeof AudioContext !== "undefined" ? AudioContext : undefined;
+    if (!AudioContextCtor && typeof webkitAudioContext !== "undefined") {
+        AudioContextCtor = webkitAudioContext;
     }
+    if (!AudioContextCtor && typeof mozAudioContext !== "undefined") {
+        AudioContextCtor = mozAudioContext;
+    }
+
+    return AudioContextCtor ? new AudioContextCtor() : null;
 }
-var audioContext = audioContextCheck();
+const audioContext = audioContextCheck();
 
 var legacyDocument = document as any;
 if (typeof legacyDocument.registerElement !== "undefined") {
@@ -84,21 +86,72 @@ if (typeof legacyDocument.registerElement !== "undefined") {
     var TsSource = legacyDocument.registerElement('ts-source');
 }
 
-var pluginName = 'trackSwitch',
-    defaults = {
-        mute: true,
-        solo: true,
-        globalsolo: true,
-        repeat: false,
-        radiosolo: false,
-        onlyradiosolo: false,
-        tabview: false,
-        iosunmute: true,
-        keyboard: true,
-        looping: true,
-        waveform: true,
-        waveformBarWidth: 1,
+const pluginName = 'trackSwitch';
+const defaults: TrackSwitchOptions = {
+    mute: true,
+    solo: true,
+    globalsolo: true,
+    repeat: false,
+    radiosolo: false,
+    onlyradiosolo: false,
+    tabview: false,
+    iosunmute: true,
+    keyboard: true,
+    looping: true,
+    waveform: true,
+    waveformBarWidth: 1,
+};
+
+function normalizeOptions(options: TrackSwitchOptions): TrackSwitchOptions {
+    if (!options.mute && !options.solo) {
+        console.error("Cannot disable both solo and mute, reactivating solo");
+        options.solo = true;
+    }
+
+    if (options.onlyradiosolo) {
+        options.mute = false;
+        options.radiosolo = true;
+    }
+
+    return options;
+}
+
+function buildPresetConfig(element: any): PresetConfig {
+    const presetNamesAttr = element.attr('preset-names') as string | undefined;
+    let maxPresetIndex = -1;
+
+    element.find('ts-track').each(function() {
+        const presets = parsePresetIndices($(this).attr('presets'));
+        presets.forEach(function(preset) {
+            if (preset > maxPresetIndex) {
+                maxPresetIndex = preset;
+            }
+        });
+    });
+
+    const presetCount = maxPresetIndex >= 0 ? maxPresetIndex + 1 : 0;
+    const presetNames: string[] = [];
+
+    if (presetNamesAttr) {
+        const userNames = presetNamesAttr.split(',').map(function(name) { return name.trim(); });
+        for (let presetIndex = 0; presetIndex < presetCount; presetIndex++) {
+            if (presetIndex < userNames.length && userNames[presetIndex]) {
+                presetNames.push(userNames[presetIndex]);
+            } else {
+                presetNames.push('Preset ' + presetIndex);
+            }
+        }
+    } else {
+        for (let presetIndex = 0; presetIndex < presetCount; presetIndex++) {
+            presetNames.push('Preset ' + presetIndex);
+        }
+    }
+
+    return {
+        presetNames: presetNames,
+        presetCount: presetCount,
     };
+}
 
 function parsePresetIndices(presetsAttr: string | undefined): number[] {
     if (!presetsAttr) {
@@ -123,17 +176,7 @@ function TrackSwitchPlugin(element: Element, options: Partial<TrackSwitchOptions
 
     this.element = $(element);
 
-    this.options = $.extend({}, defaults, options);
-
-    if(!this.options.mute && !this.options.solo) {
-        console.error("Cannot disable both solo and mute, reactivating solo");
-        this.options.solo = true;
-    }
-
-    if(this.options.onlyradiosolo) {
-        this.options.mute = false;
-        this.options.radiosolo = true;
-    }
+    this.options = normalizeOptions($.extend({}, defaults, options));
 
     this._defaults = defaults;
     this._name = pluginName;
@@ -209,40 +252,9 @@ TrackSwitchPlugin.prototype.init = function() {
     this.element.addClass("jquery-trackswitch");
 
     // Parse preset configuration early so we can conditionally include preset dropdown
-    // Read preset names from preset-names attribute (comma-separated)
-    var presetNamesAttr = this.element.attr('preset-names');
-    var maxPresetIndex = -1;
-    
-    // First pass: scan all ts-track elements to find max preset index
-    this.element.find('ts-track').each(function() {
-        var presets = parsePresetIndices($(this).attr('presets'));
-        presets.forEach(function(preset) {
-            if (preset > maxPresetIndex) {
-                maxPresetIndex = preset;
-            }
-        });
-    });
-
-    // Only include explicitly defined presets
-    this.presetCount = maxPresetIndex >= 0 ? maxPresetIndex + 1 : 0;
-
-    // Set preset names: either from attribute or auto-generate
-    if (presetNamesAttr) {
-        var userNames = presetNamesAttr.split(',').map(function(name) { return name.trim(); });
-        // Fill in missing preset names with auto-generated ones
-        for (var p = 0; p < this.presetCount; p++) {
-            if (p < userNames.length && userNames[p]) {
-                this.presetNames.push(userNames[p]);
-            } else {
-                this.presetNames.push('Preset ' + p);
-            }
-        }
-    } else {
-        // Auto-generate all preset names
-        for (var p = 0; p < this.presetCount; p++) {
-            this.presetNames.push('Preset ' + p);
-        }
-    }
+    var presetConfig = buildPresetConfig(this.element);
+    this.presetNames = presetConfig.presetNames;
+    this.presetCount = presetConfig.presetCount;
 
     if(this.element.find(".main-control").length === 0) {
         // Build preset dropdown HTML (only if presetCount >= 2)
