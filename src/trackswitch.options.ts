@@ -9,7 +9,7 @@ const defaults: Readonly<TrackSwitchOptions> = {
     tabview: false,
     iosunmute: true,
     keyboard: true,
-    looping: true,
+    looping: false,
     seekbar: true,
     waveform: true,
     waveformBarWidth: 1,
