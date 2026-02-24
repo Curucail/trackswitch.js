@@ -10,7 +10,7 @@ Install from npm:
 $ npm install trackswitch --save
 ```
 
-Alternatively, you can manually download and include [`trackswitch.min.css`](https://raw.githubusercontent.com/audiolabs/trackswitch.js/gh-pages/dist/css/trackswitch.min.css) and [`trackswitch.min.js`](https://raw.githubusercontent.com/audiolabs/trackswitch.js/gh-pages/dist/js/trackswitch.min.js) in your page.
+Alternatively, you can manually download and include [`trackswitch.min.css`](https://github.com/audiolabs/trackswitch.js/releases/download/v0.1.0/trackswitch.min.css) and [`trackswitch.min.js`](https://github.com/audiolabs/trackswitch.js/releases/download/v0.1.0/trackswitch.min.js) in your page.
 
 
 ## Example
