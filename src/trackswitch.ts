@@ -3,7 +3,7 @@ declare const jQuery: any;
 declare const webkitAudioContext: any;
 declare const mozAudioContext: any;
 
-type LegacyAudioContextCtor = typeof AudioContext | undefined;
+type AudioContextConstructor = new () => AudioContext;
 
 type LoopMarker = 'A' | 'B' | null;
 
@@ -44,7 +44,7 @@ interface PresetConfig {
     presetCount: number;
 }
 
-interface DomTrackConfig {
+interface TrackElementConfig {
     presetsForTrack: number[];
     seekMarginLeft: number;
     seekMarginRight: number;
@@ -68,15 +68,12 @@ interface TrackSwitchOptions {
 // Put the audioContext in the global scope and pass it to each player instance.
 // WebAudioAPI fallback for IE: http://stackoverflow.com/a/27711181
 function audioContextCheck(): AudioContext | null {
-    var AudioContextCtor: LegacyAudioContextCtor = typeof AudioContext !== "undefined" ? AudioContext : undefined;
-    if (!AudioContextCtor && typeof webkitAudioContext !== "undefined") {
-        AudioContextCtor = webkitAudioContext;
-    }
-    if (!AudioContextCtor && typeof mozAudioContext !== "undefined") {
-        AudioContextCtor = mozAudioContext;
-    }
+    const globalAudioContext = typeof AudioContext !== "undefined" ? (AudioContext as AudioContextConstructor) : undefined;
+    const webkitAudio = typeof webkitAudioContext !== "undefined" ? (webkitAudioContext as AudioContextConstructor) : undefined;
+    const mozAudio = typeof mozAudioContext !== "undefined" ? (mozAudioContext as AudioContextConstructor) : undefined;
+    const audioContextCtor = globalAudioContext ?? webkitAudio ?? mozAudio;
 
-    return AudioContextCtor ? new AudioContextCtor() : null;
+    return audioContextCtor ? new audioContextCtor() : null;
 }
 const audioContext = audioContextCheck();
 
@@ -87,7 +84,7 @@ if (typeof legacyDocument.registerElement !== "undefined") {
 }
 
 const pluginName = 'trackSwitch';
-const defaults: TrackSwitchOptions = {
+const defaults: Readonly<TrackSwitchOptions> = {
     mute: true,
     solo: true,
     globalsolo: true,
@@ -160,11 +157,10 @@ function parsePresetIndices(presetsAttr: string | undefined): number[] {
 
     return presetsAttr
         .split(',')
-        .map(function(preset) { return parseInt(preset.trim(), 10); })
-        .filter(function(preset) { return !Number.isNaN(preset); });
+        .map(function(preset) { return parseInt(preset.trim(), 10); });
 }
 
-function parseSeekOffsets(element: any): DomTrackConfig {
+function parseTrackElementConfig(element: any): TrackElementConfig {
     return {
         presetsForTrack: parsePresetIndices(element.attr('presets')),
         seekMarginLeft: Number(element.data('seekMarginLeft')) || 0,
@@ -339,12 +335,12 @@ TrackSwitchPlugin.prototype.init = function() {
 
         $(this).wrap( '<div class="seekable-img-wrap" style="' + $(this).data("style") + '; display: block;"></div>' );
 
-        var domTrackConfig = parseSeekOffsets($(this));
+        var trackElementConfig = parseTrackElementConfig($(this));
 
         $(this).after(
             '<div class="seekwrap" style=" ' +
-            'left: ' + domTrackConfig.seekMarginLeft + '%; ' +
-            'right: ' + domTrackConfig.seekMarginRight + '%;">' +
+            'left: ' + trackElementConfig.seekMarginLeft + '%; ' +
+            'right: ' + trackElementConfig.seekMarginRight + '%;">' +
                 '<div class="loop-region"></div>' +
                 '<div class="loop-marker marker-a"></div>' +
                 '<div class="loop-marker marker-b"></div>' +
@@ -407,8 +403,8 @@ TrackSwitchPlugin.prototype.init = function() {
 
         this.element.find('ts-track').each(function(i) {
 
-            var domTrackConfig = parseSeekOffsets($(this));
-            var presetsForTrack = domTrackConfig.presetsForTrack;
+            var trackElementConfig = parseTrackElementConfig($(this));
+            var presetsForTrack = trackElementConfig.presetsForTrack;
 
             that.trackProperties[i] = {
                 mute: this.hasAttribute('mute'),  // <ts-track title="Track" mute>
