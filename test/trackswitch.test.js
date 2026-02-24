@@ -80,8 +80,7 @@ global.XMLHttpRequest = class MockXHR {
     send() {}
 };
 
-const jqueryFactory = require('jquery');
-const $ = jqueryFactory(dom.window);
+const $ = require('jquery');
 
 global.$ = $;
 global.jQuery = $;
@@ -180,6 +179,7 @@ test('destroy clears active timers and plugin data key', () => {
     assert.equal(plugin.isDestroyed, true);
     assert.equal(plugin.timerMonitorPosition, null);
     assert.equal(plugin.resizeDebounceTimer, null);
+    assert.equal(player.find('.track_list').length, 0);
     assert.equal(player.data('plugin_trackSwitch'), undefined);
 });
 

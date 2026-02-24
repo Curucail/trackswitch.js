@@ -42,6 +42,23 @@ interface TrackTiming {
 }
 
 type LoopMarker = 'A' | 'B' | null;
+type TrackSwitchEvent = {
+    type: string;
+    which?: number;
+    pageX?: number;
+    key?: string;
+    code?: string;
+    shiftKey?: boolean;
+    target?: EventTarget | null;
+    originalEvent?: Event & {
+        deltaY?: number;
+        touches?: ArrayLike<{ pageX: number }>;
+    };
+    preventDefault(): void;
+    stopPropagation(): void;
+};
+
+type PluginCollection = JQuery<HTMLElement>;
 
 function audioContextCheck(): AudioContext | null {
     return typeof AudioContext !== "undefined" ? new AudioContext() : null;
@@ -160,8 +177,63 @@ function parseTrackElementConfig(element: JQuery<HTMLElement>): TrackElementConf
     };
 }
 
+function getPointerPageX(event: TrackSwitchEvent): number | null {
+    if (event.type.indexOf('mouse') >= 0) {
+        return typeof event.pageX === 'number' ? event.pageX : null;
+    }
+
+    const touchEvent = event.originalEvent;
+    const touches = touchEvent?.touches;
+    if (touches && touches.length > 0) {
+        const firstTouch = touches[0];
+        return typeof firstTouch?.pageX === 'number' ? firstTouch.pageX : null;
+    }
+
+    return null;
+}
+
+function ensurePositiveWidth(width: number | undefined): number {
+    if (typeof width !== 'number' || !Number.isFinite(width) || width < 1) {
+        return 1;
+    }
+    return width;
+}
+
+function getSeekMetrics(
+    seekingElement: JQuery<HTMLElement> | null,
+    event: TrackSwitchEvent,
+    longestDuration: number
+): { posXRel: number; seekWidth: number; posXRelLimited: number; timePerc: number; time: number } | null {
+    if (!seekingElement || seekingElement.length === 0) {
+        return null;
+    }
+
+    const pageX = getPointerPageX(event);
+    if (pageX === null) {
+        return null;
+    }
+
+    const offset = seekingElement.offset();
+    if (!offset) {
+        return null;
+    }
+
+    const posXRel = pageX - offset.left;
+    const seekWidth = ensurePositiveWidth(seekingElement.width());
+    const posXRelLimited = posXRel < 0 ? 0 : posXRel > seekWidth ? seekWidth : posXRel;
+    const timePerc = (posXRelLimited / seekWidth) * 100;
+    const time = longestDuration * (timePerc / 100);
+
+    return {
+        posXRel: posXRel,
+        seekWidth: seekWidth,
+        posXRelLimited: posXRelLimited,
+        timePerc: timePerc,
+        time: time,
+    };
+}
+
 class TrackSwitchPlugin {
-    [key: string]: any;
     element: JQuery<HTMLElement>;
     options: TrackSwitchOptions;
     _defaults: Readonly<TrackSwitchOptions>;
@@ -177,7 +249,6 @@ class TrackSwitchPlugin {
     repeat: boolean;
     startTime: number;
     position: number;
-    timerUpdateUI: ReturnType<typeof setInterval> | null;
     timerMonitorPosition: ReturnType<typeof setInterval> | null;
     currentlySeeking: boolean;
     seekingElement: JQuery<HTMLElement> | null;
@@ -199,12 +270,12 @@ class TrackSwitchPlugin {
     trackProperties: TrackProperty[];
     trackSources: Array<JQuery<HTMLElement>>;
     trackGainNode: Array<GainNode>;
-    trackBuffer: Array<AudioBufferSourceNode>;
+    trackBuffer: Array<AudioBuffer | null>;
     trackTiming: Array<TrackTiming>;
     activeAudioSources: Array<AudioBufferSourceNode | null>;
 
     waveformCanvas: HTMLCanvasElement[];
-    waveformData: number[][];
+    waveformData: Array<Float32Array | null>;
     waveformContext: Array<CanvasRenderingContext2D | null>;
     waveformOriginalHeight: number[];
     resizeDebounceTimer: ReturnType<typeof setTimeout> | null;
@@ -212,7 +283,7 @@ class TrackSwitchPlugin {
     gainNodeVolume: GainNode | null;
     gainNodeMaster: GainNode | null;
 
-    constructor(element: Element, options: Partial<TrackSwitchOptions>) {
+    constructor(element: Element, options: Partial<TrackSwitchOptions> = {}) {
         this.element = $(element) as JQuery<HTMLElement>;
         this.options = normalizeOptions($.extend({}, defaults, options));
 
@@ -230,7 +301,6 @@ class TrackSwitchPlugin {
         this.repeat = this.options.repeat;
         this.startTime = 0;
         this.position = 0;
-        this.timerUpdateUI = null;
         this.timerMonitorPosition = null;
         this.currentlySeeking = false;
         this.seekingElement = null;
@@ -284,6 +354,67 @@ class TrackSwitchPlugin {
 
         this.init();
     }
+}
+
+interface TrackSwitchPlugin {
+    init(): boolean | void;
+    destroy(): void;
+    canUseAudioGraph(): boolean;
+    sourceFailed(currentTrack: number, currentSource: number, errorType: string): void;
+    decodeAudio(request: XMLHttpRequest, currentTrack: number, currentSource: number): void;
+    makeRequest(currentTrack: number, currentSource: number): void;
+    prepareRequest(currentTrack: number, currentSource: number): void;
+    load(event: TrackSwitchEvent): boolean | void;
+    findLongest(): void;
+    trackStatusChanged(): void;
+    loaded(): void;
+    errored(): void;
+    unbindEvents(): void;
+    bindEvents(): void;
+    valid_click(event: TrackSwitchEvent): boolean;
+    isIOSDevice(): boolean;
+    unlockIOSPlayback(): void;
+    secondsToHHMMSSmmm(seconds: number): string;
+    calculateTrackTiming(sourceElement: HTMLElement | JQuery<HTMLElement>, bufferDuration: number): TrackTiming;
+    updateMainControls(): void;
+    monitorPosition(context: TrackSwitchPlugin): void;
+    stopAudio(): void;
+    startAudio(newPos?: number, duration?: number): void;
+    pause(): void;
+    other_instances(): PluginCollection;
+    pause_others(): void;
+    seekRelative(seconds: number): void;
+    adjustVolume(delta: number): void;
+    handleKeyboardEvent(event: TrackSwitchEvent): boolean | void;
+    event_playpause(event: TrackSwitchEvent): boolean | void;
+    event_stop(event: TrackSwitchEvent): boolean | void;
+    event_repeat(event: TrackSwitchEvent): boolean | void;
+    event_setLoopA(event: TrackSwitchEvent): boolean | void;
+    event_setLoopB(event: TrackSwitchEvent): boolean | void;
+    event_toggleLoop(event: TrackSwitchEvent): boolean | void;
+    event_clearLoop(event: TrackSwitchEvent): boolean | void;
+    seek(event: TrackSwitchEvent): void;
+    event_seekStart(event: TrackSwitchEvent): boolean | void;
+    event_seekMove(event: TrackSwitchEvent): boolean | void;
+    event_seekEnd(event: TrackSwitchEvent): boolean | void;
+    event_markerDragStart(event: TrackSwitchEvent): boolean | void;
+    _index_from_target(target: EventTarget | null): number;
+    event_solo(event: TrackSwitchEvent): boolean | void;
+    event_mute(event: TrackSwitchEvent): boolean | void;
+    event_preset(event: TrackSwitchEvent): void;
+    event_preset_scroll(event: TrackSwitchEvent): void;
+    switch_image(): void;
+    calculateWaveformPeaks(buffer: AudioBuffer, width: number): Float32Array;
+    drawWaveform(canvasIndex: number, peaks: Float32Array): void;
+    drawDummyWaveform(canvasIndex: number): void;
+    drawDummyWaveforms(): void;
+    generateWaveforms(): void;
+    calculateMixedWaveform(): Float32Array | null;
+    switchWaveform(): void;
+    handleWaveformResize(): void;
+    apply_track_properties(): void;
+    event_volume(event: TrackSwitchEvent): void;
+    deselect(index?: number): void;
 }
 
 
@@ -378,16 +509,17 @@ TrackSwitchPlugin.prototype.init = function() {
     }
 
     // Wrap any seekable poster images in seekable markup
-    this.element.find('.seekable:not(.seekable-img-wrap > .seekable)').each(function() {
+    this.element.find('.seekable:not(.seekable-img-wrap > .seekable)').each(function(this: HTMLElement) {
 
         // Save a copy of the original image src to reset image to
-        that.originalImage = this.src;
+        var imageElement = this as HTMLImageElement;
+        that.originalImage = imageElement.src;
 
-        const wrappedImage = $(this) as JQuery<HTMLImageElement>;
+        const wrappedImage = $(imageElement) as JQuery<HTMLImageElement>;
         wrappedImage.wrap('<div class="seekable-img-wrap"></div>');
         wrappedImage.parent('.seekable-img-wrap').attr('style', sanitizeInlineStyle(wrappedImage.data("style")) + '; display: block;');
 
-        var trackElementConfig = parseTrackElementConfig(wrappedImage as unknown as JQuery<HTMLElement>);
+        var trackElementConfig = parseTrackElementConfig(wrappedImage as JQuery<HTMLElement>);
 
         wrappedImage.after(
             '<div class="seekwrap" style=" ' +
@@ -404,15 +536,16 @@ TrackSwitchPlugin.prototype.init = function() {
 
     // Wrap any waveform canvases in seekable markup (similar to seekable images)
     if (this.options.waveform) {
-        this.element.find('canvas.waveform:not(.waveform-wrap > canvas.waveform)').each(function(index) {
+        this.element.find('canvas.waveform:not(.waveform-wrap > canvas.waveform)').each(function(this: HTMLElement) {
+            var canvasElement = this as HTMLCanvasElement;
 
             // Store canvas reference and original height
-            that.waveformCanvas.push(this);
-            that.waveformContext.push(this.getContext('2d'));
-            that.waveformOriginalHeight.push(this.height); // Store the original height attribute
+            that.waveformCanvas.push(canvasElement);
+            that.waveformContext.push(canvasElement.getContext('2d'));
+            that.waveformOriginalHeight.push(canvasElement.height); // Store the original height attribute
 
             // Apply custom styling from data attribute
-            const wrappedCanvas = $(this) as JQuery<HTMLCanvasElement>;
+            const wrappedCanvas = $(canvasElement) as JQuery<HTMLCanvasElement>;
             wrappedCanvas.wrap('<div class="waveform-wrap"></div>');
             wrappedCanvas.parent('.waveform-wrap').attr('style', sanitizeInlineStyle(wrappedCanvas.data("waveformStyle")) + '; display: block;');
 
@@ -539,7 +672,7 @@ TrackSwitchPlugin.prototype.destroy = function() {
     this.unbindEvents();
 
     this.element.find(".main-control").remove();
-    this.element.find(".tracks").remove();
+    this.element.find(".track_list").remove();
     this.gainNodeMaster?.disconnect();
     this.gainNodeVolume?.disconnect();
     this.element.removeData('plugin_' + pluginName);
@@ -584,8 +717,7 @@ TrackSwitchPlugin.prototype.decodeAudio = function(request, currentTrack, curren
 
         that.trackGainNode[currentTrack] = audioContext.createGain();
         that.trackGainNode[currentTrack].connect(that.gainNodeMaster as GainNode);
-        that.trackBuffer[currentTrack] = audioContext.createBufferSource();
-        that.trackBuffer[currentTrack].buffer = decodedData;
+        that.trackBuffer[currentTrack] = decodedData;
         that.trackTiming[currentTrack] = that.calculateTrackTiming(that.trackSources[currentTrack][currentSource], decodedData.duration);
 
         // Fire a success if the decoding works and allow the player to proceed
@@ -663,7 +795,7 @@ TrackSwitchPlugin.prototype.load = function(event) {
 
         var audioElement = document.createElement('audio');
 
-        var mimeTypeTable = {
+        var mimeTypeTable: Record<string, string> = {
             ".aac"  : "audio/aac;",
             ".aif"  : "audio/aiff;",
             ".aiff" : "audio/aiff;",
@@ -726,7 +858,11 @@ TrackSwitchPlugin.prototype.findLongest = function() {
 
     for (var i=0; i<this.numberOfTracks; i++) {
 
-        var currentDuration = this.trackTiming[i] ? this.trackTiming[i].effectiveDuration : this.trackBuffer[i].buffer.duration;
+        var timing = this.trackTiming[i];
+        var trackBuffer = this.trackBuffer[i];
+        var currentDuration = timing
+            ? timing.effectiveDuration
+            : (trackBuffer ? trackBuffer.duration : 0);
 
         if (currentDuration > this.longestDuration) {
             this.longestDuration = currentDuration
@@ -905,7 +1041,7 @@ TrackSwitchPlugin.prototype.valid_click = function(event) {
 // Detect iOS/iPadOS Safari devices where WebAudio can be muted by hardware silent mode
 TrackSwitchPlugin.prototype.isIOSDevice = function() {
 
-    var nav: any = window.navigator || {};
+    var nav = window.navigator as Navigator & { userAgent?: string; platform?: string; maxTouchPoints?: number };
     var userAgent = nav.userAgent || "";
     var platform = nav.platform || "";
     var maxTouchPoints = nav.maxTouchPoints || 0;
@@ -979,8 +1115,8 @@ TrackSwitchPlugin.prototype.secondsToHHMMSSmmm = function(seconds) {
 TrackSwitchPlugin.prototype.calculateTrackTiming = function(sourceElement, bufferDuration) {
 
     var source = $(sourceElement);
-    var startOffsetMs = parseFloat(source.attr('start-offset-ms'));
-    var endOffsetMs = parseFloat(source.attr('end-offset-ms'));
+    var startOffsetMs = parseFloat(source.attr('start-offset-ms') ?? '');
+    var endOffsetMs = parseFloat(source.attr('end-offset-ms') ?? '');
 
     var startOffset = isNaN(startOffsetMs) ? 0 : startOffsetMs / 1000;
     var endOffset = isNaN(endOffsetMs) ? 0 : endOffsetMs / 1000;
@@ -1119,9 +1255,10 @@ TrackSwitchPlugin.prototype.stopAudio = function() {
     this.gainNodeMaster.gain.linearRampToValueAtTime(0.0, now + downwardRamp);
 
     for (var i=0; i<this.numberOfTracks; i++) {
-        if (this.activeAudioSources[i]) {
+        var activeSource = this.activeAudioSources[i];
+        if (activeSource) {
             try {
-                this.activeAudioSources[i].stop(now + downwardRamp);
+                activeSource.stop(now + downwardRamp);
             } catch (e) {}
         }
     }
@@ -1173,14 +1310,20 @@ TrackSwitchPlugin.prototype.startAudio = function(newPos, duration) {
 
         this.activeAudioSources[i] = null; // Destroy old sources before creating new ones...
 
-        if (!this.trackBuffer[i] || !this.trackBuffer[i].buffer || !this.trackGainNode[i]) {
+        if (!this.trackBuffer[i] || !this.trackGainNode[i]) {
+            continue;
+        }
+
+        var trackBuffer = this.trackBuffer[i];
+        if (!trackBuffer) {
             continue;
         }
 
         var timing = this.trackTiming[i] || {
             trimStart: 0,
             padStart: 0,
-            audioDuration: this.trackBuffer[i].buffer.duration
+            audioDuration: trackBuffer.duration,
+            effectiveDuration: trackBuffer.duration,
         };
 
         if (timing.audioDuration <= 0) {
@@ -1221,11 +1364,11 @@ TrackSwitchPlugin.prototype.startAudio = function(newPos, duration) {
             continue;
         }
 
-        this.activeAudioSources[i] = audioContext.createBufferSource();
-        this.activeAudioSources[i].buffer = this.trackBuffer[i].buffer;
-        this.activeAudioSources[i].connect(this.trackGainNode[i]);
-
-        this.activeAudioSources[i].start(startAt, sourceOffset, playDuration);
+        var createdSource = audioContext.createBufferSource();
+        createdSource.buffer = trackBuffer;
+        createdSource.connect(this.trackGainNode[i]);
+        createdSource.start(startAt, sourceOffset, playDuration);
+        this.activeAudioSources[i] = createdSource;
 
     }
 
@@ -1267,7 +1410,7 @@ TrackSwitchPlugin.prototype.other_instances = function() {
 TrackSwitchPlugin.prototype.pause_others = function() {
 
     if (this.options.globalsolo) {
-        this.other_instances().each(function () {
+        this.other_instances().each(function (this: HTMLElement) {
             const plugin = $(this).data('plugin_' + pluginName);
             if (plugin && typeof plugin.pause === 'function') {
                 plugin.pause();
@@ -1317,7 +1460,7 @@ TrackSwitchPlugin.prototype.seekRelative = function(seconds) {
 TrackSwitchPlugin.prototype.adjustVolume = function(delta) {
 
     var volumeSlider = this.element.find('.volume-slider');
-    var currentVolume = parseFloat(volumeSlider.val());
+    var currentVolume = parseFloat(String(volumeSlider.val() ?? '0'));
     var newVolume = currentVolume + delta;
     
     // Clamp to valid range [0, 100]
@@ -1336,7 +1479,7 @@ TrackSwitchPlugin.prototype.adjustVolume = function(delta) {
 TrackSwitchPlugin.prototype.handleKeyboardEvent = function(event) {
 
     // Don't intercept keyboard shortcuts when user is typing in an input field
-    if ($(event.target).closest('input, textarea, select, [contenteditable="true"], [contenteditable=""], [role="textbox"]').length) {
+    if ($(event.target ?? document.body).closest('input, textarea, select, [contenteditable="true"], [contenteditable=""], [role="textbox"]').length) {
         return;
     }
     
@@ -1357,7 +1500,7 @@ TrackSwitchPlugin.prototype.handleKeyboardEvent = function(event) {
         case 'Escape':
         case 'Esc': // Escape - Stop
             event.preventDefault();
-            var stopEvent = $.Event('mousedown', { which: 1, type: 'mousedown' });
+            var stopEvent = $.Event('mousedown', { which: 1, type: 'mousedown' }) as unknown as TrackSwitchEvent;
             this.event_stop(stopEvent);
             handled = true;
             break;
@@ -1410,7 +1553,7 @@ TrackSwitchPlugin.prototype.handleKeyboardEvent = function(event) {
         case 'R':
         case 'KeyR': // R - Toggle repeat
             event.preventDefault();
-            var repeatEvent = $.Event('mousedown', { which: 1, type: 'mousedown' });
+            var repeatEvent = $.Event('mousedown', { which: 1, type: 'mousedown' }) as unknown as TrackSwitchEvent;
             this.event_repeat(repeatEvent);
             handled = true;
             break;
@@ -1421,7 +1564,7 @@ TrackSwitchPlugin.prototype.handleKeyboardEvent = function(event) {
         case 'KeyA': // A - Set loop point A at current position (only if looping enabled)
             if (this.options.looping) {
                 event.preventDefault();
-                var loopAEvent = $.Event('mousedown', { which: 1, type: 'mousedown' });
+                var loopAEvent = $.Event('mousedown', { which: 1, type: 'mousedown' }) as unknown as TrackSwitchEvent;
                 this.event_setLoopA(loopAEvent);
                 handled = true;
             }
@@ -1433,7 +1576,7 @@ TrackSwitchPlugin.prototype.handleKeyboardEvent = function(event) {
         case 'KeyB': // B - Set loop point B at current position (only if looping enabled)
             if (this.options.looping) {
                 event.preventDefault();
-                var loopBEvent = $.Event('mousedown', { which: 1, type: 'mousedown' });
+                var loopBEvent = $.Event('mousedown', { which: 1, type: 'mousedown' }) as unknown as TrackSwitchEvent;
                 this.event_setLoopB(loopBEvent);
                 handled = true;
             }
@@ -1445,7 +1588,7 @@ TrackSwitchPlugin.prototype.handleKeyboardEvent = function(event) {
         case 'KeyL': // L - Toggle loop on/off (only if looping enabled)
             if (this.options.looping) {
                 event.preventDefault();
-                var toggleLoopEvent = $.Event('mousedown', { which: 1, type: 'mousedown' });
+                var toggleLoopEvent = $.Event('mousedown', { which: 1, type: 'mousedown' }) as unknown as TrackSwitchEvent;
                 this.event_toggleLoop(toggleLoopEvent);
                 handled = true;
             }
@@ -1457,7 +1600,7 @@ TrackSwitchPlugin.prototype.handleKeyboardEvent = function(event) {
         case 'KeyC': // C - Clear loop points (only if looping enabled)
             if (this.options.looping) {
                 event.preventDefault();
-                var clearLoopEvent = $.Event('mousedown', { which: 1, type: 'mousedown' });
+                var clearLoopEvent = $.Event('mousedown', { which: 1, type: 'mousedown' }) as unknown as TrackSwitchEvent;
                 this.event_clearLoop(clearLoopEvent);
                 handled = true;
             }
@@ -1709,27 +1852,15 @@ TrackSwitchPlugin.prototype.event_clearLoop = function(event) {
 
 // When seeking, calculate the desired position in the audio from the position on the slider
 TrackSwitchPlugin.prototype.seek = function(event) {
-
-    // Getting the position of the event is different for mouse and touch...
-    if (event.type.indexOf("mouse") >= 0) {
-        var posXRel = event.pageX - $(this.seekingElement).offset().left;
-    } else {
-        var posXRel = event.originalEvent.touches[0].pageX - $(this.seekingElement).offset().left;
+    var seekMetrics = getSeekMetrics(this.seekingElement, event, this.longestDuration);
+    if (!seekMetrics) {
+        return;
     }
 
-    // Limit the seeking to within the seekbar min/max
-    var seekWidth = $(this.seekingElement).width();
-    seekWidth = seekWidth < 1 ? 1 : seekWidth // Lower limit of width to 1 to avoid dividing by 0
-
-    // Constrain posXRel to within the seekable object
-    var posXRelLimted = posXRel < 0 ? 0 : posXRel > seekWidth ? seekWidth : posXRel;
-
-    var timePerc = ( posXRelLimted / seekWidth ) * 100;
-
-    var newPosTime = this.longestDuration * (timePerc/100);
+    var newPosTime = seekMetrics.time;
 
     // Only perform the audio part of the seek function if mouse is within seekable area!
-    if (posXRel >= 0 && posXRel <= seekWidth) {
+    if (seekMetrics.posXRel >= 0 && seekMetrics.posXRel <= seekMetrics.seekWidth) {
 
         if (this.playing) {
             this.stopAudio();
@@ -1752,19 +1883,23 @@ TrackSwitchPlugin.prototype.seek = function(event) {
 TrackSwitchPlugin.prototype.event_seekStart = function(event) {
 
     // Check for right-click (button 3) for loop selection
-    if (event.type === "mousedown" && event.which === 3) {
+    if (this.options.looping && event.type === "mousedown" && event.which === 3) {
         event.preventDefault();
-        
+
+        if (!event.target) {
+            return true;
+        }
+
         this.rightClickDragging = true;
         this.seekingElement = $(event.target).closest('.seekwrap');
-        
-        // Calculate the starting position
-        var posXRel = event.pageX - $(this.seekingElement).offset().left;
-        var seekWidth = $(this.seekingElement).width();
-        seekWidth = seekWidth < 1 ? 1 : seekWidth;
-        var posXRelLimited = posXRel < 0 ? 0 : posXRel > seekWidth ? seekWidth : posXRel;
-        var timePerc = (posXRelLimited / seekWidth) * 100;
-        var startTime = this.longestDuration * (timePerc / 100);
+
+        var seekMetrics = getSeekMetrics(this.seekingElement, event, this.longestDuration);
+        if (!seekMetrics) {
+            this.rightClickDragging = false;
+            return true;
+        }
+
+        var startTime = seekMetrics.time;
         
         this.loopDragStart = startTime;
         this.loopPointA = startTime;
@@ -1781,7 +1916,13 @@ TrackSwitchPlugin.prototype.event_seekStart = function(event) {
     event.preventDefault();
 
     // Must save which seekwrap (not direct element) is being seeked on!
+    if (!event.target) {
+        return true;
+    }
     this.seekingElement = $(event.target).closest('.seekwrap');
+    if (this.seekingElement.length === 0) {
+        return true;
+    }
 
     this.seek(event);
     this.currentlySeeking = true;
@@ -1805,17 +1946,12 @@ TrackSwitchPlugin.prototype.event_seekMove = function(event) {
     // Handle marker dragging
     if (this.draggingMarker !== null) {
         event.preventDefault();
-        
-        // Calculate current position
-        var posXRel = event.type.indexOf("mouse") >= 0 
-            ? event.pageX - $(this.seekingElement).offset().left
-            : event.originalEvent.touches[0].pageX - $(this.seekingElement).offset().left;
-        
-        var seekWidth = $(this.seekingElement).width();
-        seekWidth = seekWidth < 1 ? 1 : seekWidth;
-        var posXRelLimited = posXRel < 0 ? 0 : posXRel > seekWidth ? seekWidth : posXRel;
-        var timePerc = (posXRelLimited / seekWidth) * 100;
-        var newTime = this.longestDuration * (timePerc / 100);
+
+        var markerSeekMetrics = getSeekMetrics(this.seekingElement, event, this.longestDuration);
+        if (!markerSeekMetrics) {
+            return false;
+        }
+        var newTime = markerSeekMetrics.time;
         
         // Update the appropriate marker with minimum distance constraint
         if (this.draggingMarker === 'A') {
@@ -1839,16 +1975,14 @@ TrackSwitchPlugin.prototype.event_seekMove = function(event) {
     }
 
     // Handle right-click drag for loop selection
-    if (this.rightClickDragging) {
+    if (this.options.looping && this.rightClickDragging) {
         event.preventDefault();
-        
-        // Calculate current position
-        var posXRel = event.pageX - $(this.seekingElement).offset().left;
-        var seekWidth = $(this.seekingElement).width();
-        seekWidth = seekWidth < 1 ? 1 : seekWidth;
-        var posXRelLimited = posXRel < 0 ? 0 : posXRel > seekWidth ? seekWidth : posXRel;
-        var timePerc = (posXRelLimited / seekWidth) * 100;
-        var currentTime = this.longestDuration * (timePerc / 100);
+
+        var dragSeekMetrics = getSeekMetrics(this.seekingElement, event, this.longestDuration);
+        if (!dragSeekMetrics || this.loopDragStart === null) {
+            return false;
+        }
+        var currentTime = dragSeekMetrics.time;
         
         // Update loop points based on drag direction
         if (currentTime >= this.loopDragStart) {
@@ -1945,20 +2079,24 @@ TrackSwitchPlugin.prototype.event_seekEnd = function(event) {
 // Start dragging a loop marker
 TrackSwitchPlugin.prototype.event_markerDragStart = function(event) {
 
-    if (!this.valid_click(event)) { return true; } // If not valid click, break out of func
+    if (!this.options.looping || !this.valid_click(event)) { return true; } // If not valid click, break out of func
+    if (!event.target) {
+        return true;
+    }
 
     event.preventDefault();
     event.stopPropagation(); // Prevent seek from triggering
 
     // Determine which marker is being dragged
-    if ($(event.target).hasClass('marker-a')) {
+    var eventTarget = $(event.target);
+    if (eventTarget.hasClass('marker-a')) {
         this.draggingMarker = 'A';
-    } else if ($(event.target).hasClass('marker-b')) {
+    } else if (eventTarget.hasClass('marker-b')) {
         this.draggingMarker = 'B';
     }
 
     // Store the seekwrap element for position calculations
-    this.seekingElement = $(event.target).closest('.seekwrap');
+    this.seekingElement = eventTarget.closest('.seekwrap');
 
     return false;
 
@@ -1967,6 +2105,9 @@ TrackSwitchPlugin.prototype.event_markerDragStart = function(event) {
 
 // A shorthandle to resolve click target index number. Used for mute/solo buttons
 TrackSwitchPlugin.prototype._index_from_target = function(target) {
+    if (!(target instanceof Element)) {
+        return -1;
+    }
     return $(target).closest(".track").prevAll().length;
 };
 
@@ -1978,7 +2119,10 @@ TrackSwitchPlugin.prototype.event_solo = function(event) {
 
     // Events not prevented/halted as this stops scrolling for full track solo
 
-    var targetIndex = this._index_from_target(event.target);
+    var targetIndex = this._index_from_target(event.target ?? null);
+    if (targetIndex < 0 || !this.trackProperties[targetIndex]) {
+        return true;
+    }
     var that = this;
 
     var currentState = this.trackProperties[targetIndex].solo;
@@ -2011,7 +2155,10 @@ TrackSwitchPlugin.prototype.event_mute = function(event) {
 
     event.preventDefault();
 
-    var targetIndex = this._index_from_target(event.target);
+    var targetIndex = this._index_from_target(event.target ?? null);
+    if (targetIndex < 0 || !this.trackProperties[targetIndex]) {
+        return true;
+    }
 
     // Flip the current mute state of the selected track
     this.trackProperties[targetIndex].mute = !this.trackProperties[targetIndex].mute;
@@ -2026,6 +2173,9 @@ TrackSwitchPlugin.prototype.event_mute = function(event) {
 
 // Handle preset selection from dropdown
 TrackSwitchPlugin.prototype.event_preset = function(event) {
+    if (!event.target) {
+        return;
+    }
 
     var presetIndex = parseStrictNonNegativeInt(String($(event.target).val() ?? '0'));
     if (!Number.isFinite(presetIndex)) {
@@ -2049,6 +2199,9 @@ TrackSwitchPlugin.prototype.event_preset = function(event) {
 TrackSwitchPlugin.prototype.event_preset_scroll = function(event) {
 
     event.preventDefault();
+    if (!event.target) {
+        return;
+    }
 
     var $selector = $(event.target).closest('.preset-selector');
     var currentIndex = parseStrictNonNegativeInt(String($selector.val() ?? '0'));
@@ -2059,9 +2212,10 @@ TrackSwitchPlugin.prototype.event_preset_scroll = function(event) {
     var newIndex = currentIndex;
 
     // Scroll down (deltaY > 0) moves to next preset, scroll up (deltaY < 0) moves to previous
-    if (event.originalEvent.deltaY > 0) {
+    var deltaY = event.originalEvent?.deltaY ?? 0;
+    if (deltaY > 0) {
         newIndex = Math.min(currentIndex + 1, maxIndex);
-    } else if (event.originalEvent.deltaY < 0) {
+    } else if (deltaY < 0) {
         newIndex = Math.max(currentIndex - 1, 0);
     }
 
@@ -2075,7 +2229,7 @@ TrackSwitchPlugin.prototype.event_preset_scroll = function(event) {
 TrackSwitchPlugin.prototype.switch_image = function() {
 
     var that = this;
-    var numSoloed = 0, imageSrc;
+    var numSoloed = 0, imageSrc: string | undefined;
 
     // For each track that's soloed, set it's image as the image src...
     $.each(this.trackProperties, function(i, value) {
@@ -2101,7 +2255,7 @@ TrackSwitchPlugin.prototype.switch_image = function() {
 TrackSwitchPlugin.prototype.calculateWaveformPeaks = function(buffer, width) {
 
     if (!buffer || width <= 0) {
-        return [];
+        return new Float32Array(0);
     }
 
     var channelData = buffer.getChannelData(0); // Use first channel (mono or left channel)
@@ -2279,9 +2433,10 @@ TrackSwitchPlugin.prototype.generateWaveforms = function() {
         var barWidth = that.options.waveformBarWidth;
         var peakCount = Math.floor(canvas.width / barWidth);
         for (var i = 0; i < that.numberOfTracks; i++) {
-            if (that.trackBuffer[i] && that.trackBuffer[i].buffer) {
+            var trackBuffer = that.trackBuffer[i];
+            if (trackBuffer) {
                 // Calculate peaks based on adjusted width for configurable bar width
-                that.waveformData[i] = that.calculateWaveformPeaks(that.trackBuffer[i].buffer, peakCount);
+                that.waveformData[i] = that.calculateWaveformPeaks(trackBuffer, peakCount);
             }
         }
 
@@ -2300,37 +2455,28 @@ TrackSwitchPlugin.prototype.calculateMixedWaveform = function() {
         return null;
     }
 
-    var that = this;
     var anySolos = false;
-    
-    // Check if any tracks are soloed
-    $.each(this.trackProperties, function(i, value) {
-        anySolos = anySolos || that.trackProperties[i].solo;
-    });
+    for (var i = 0; i < this.trackProperties.length; i++) {
+        anySolos = anySolos || this.trackProperties[i].solo;
+    }
 
     // Determine which tracks are audible
-    var audibleTracks = [];
-    $.each(this.trackProperties, function(i, value) {
-        if (that.waveformData[i]) {
-            var isAudible = false;
-            
-            if (anySolos) {
-                // If there are solos, only soloed tracks are audible
-                isAudible = that.trackProperties[i].solo;
-            } else {
-                // If no solos, all non-muted tracks are audible
-                isAudible = !that.trackProperties[i].mute;
-            }
-            
-            if (isAudible) {
-                audibleTracks.push(i);
-            }
+    var audibleTracks: number[] = [];
+    for (var t = 0; t < this.trackProperties.length; t++) {
+        var peaks = this.waveformData[t];
+        if (!peaks) {
+            continue;
         }
-    });
+
+        var isAudible = anySolos ? this.trackProperties[t].solo : !this.trackProperties[t].mute;
+        if (isAudible) {
+            audibleTracks.push(t);
+        }
+    }
 
     // If only one audible track, return its waveform directly
     if (audibleTracks.length === 1) {
-        return this.waveformData[audibleTracks[0]];
+        return this.waveformData[audibleTracks[0]] || null;
     }
 
     // If no audible tracks, return null
@@ -2339,15 +2485,20 @@ TrackSwitchPlugin.prototype.calculateMixedWaveform = function() {
     }
 
     // Mix multiple tracks by summing their peaks
-    var width = this.waveformData[audibleTracks[0]].length;
+    var firstTrackPeaks = this.waveformData[audibleTracks[0]];
+    if (!firstTrackPeaks) {
+        return null;
+    }
+    var width = firstTrackPeaks.length;
     var mixedPeaks = new Float32Array(width);
 
     for (var x = 0; x < width; x++) {
         var sum = 0;
-        for (var t = 0; t < audibleTracks.length; t++) {
-            var trackIndex = audibleTracks[t];
-            if (this.waveformData[trackIndex] && x < this.waveformData[trackIndex].length) {
-                sum += this.waveformData[trackIndex][x];
+        for (var trackCursor = 0; trackCursor < audibleTracks.length; trackCursor++) {
+            var trackIndex = audibleTracks[trackCursor];
+            var trackPeaks = this.waveformData[trackIndex];
+            if (trackPeaks && x < trackPeaks.length) {
+                sum += trackPeaks[x];
             }
         }
         // Average the sum to prevent clipping
@@ -2409,8 +2560,9 @@ TrackSwitchPlugin.prototype.handleWaveformResize = function() {
                 var barWidth = that.options.waveformBarWidth;
                 var peakCount = Math.floor(canvas.width / barWidth);
                 for (var i = 0; i < that.numberOfTracks; i++) {
-                    if (that.trackBuffer[i] && that.trackBuffer[i].buffer) {
-                        that.waveformData[i] = that.calculateWaveformPeaks(that.trackBuffer[i].buffer, peakCount);
+                    var trackBuffer = that.trackBuffer[i];
+                    if (trackBuffer) {
+                        that.waveformData[i] = that.calculateWaveformPeaks(trackBuffer, peakCount);
                     }
                 }
 
@@ -2496,6 +2648,10 @@ TrackSwitchPlugin.prototype.apply_track_properties = function() {
 
 // Handle volume slider input — update the volume gain node
 TrackSwitchPlugin.prototype.event_volume = function(event) {
+    if (!event.target) {
+        return;
+    }
+
     var val = parseFloat(String($(event.target).val() ?? '0')) / 100;
     if (!Number.isFinite(val)) {
         val = 0;
@@ -2521,18 +2677,22 @@ TrackSwitchPlugin.prototype.event_volume = function(event) {
 
 
 TrackSwitchPlugin.prototype.deselect = function(index) {
-    var selection: any = ('getSelection' in window)
-        ? window.getSelection()
-        : ('selection' in document)
-            ? (document as any).selection
-            : null;
-    if (selection && 'removeAllRanges' in selection) selection.removeAllRanges();
-    else if (selection && 'empty' in selection) selection.empty();
+    var selection = window.getSelection();
+    if (selection) {
+        selection.removeAllRanges();
+        return;
+    }
+
+    var legacySelection = (document as Document & { selection?: { empty?: () => void } }).selection;
+    if (legacySelection?.empty) {
+        legacySelection.empty();
+    }
 };
 
 
-$.fn[pluginName] = function(options) {
-    return this.each(function () {
+var jqueryPlugins = $.fn as unknown as Record<string, (this: PluginCollection, options?: Partial<TrackSwitchOptions>) => PluginCollection>;
+jqueryPlugins[pluginName] = function(this: PluginCollection, options?: Partial<TrackSwitchOptions>) {
+    return this.each(function(this: HTMLElement) {
         if (!$(this).data('plugin_' + pluginName)) {
             $(this).data('plugin_' + pluginName, new TrackSwitchPlugin(this, options));
         }
