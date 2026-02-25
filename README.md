@@ -68,7 +68,7 @@ trackswitch.js includes comprehensive keyboard shortcuts for controlling playbac
 - **Home** - Jump to start
 
 ### Volume
-- **↑ / ↓** - Increase/decrease volume by 10%
+- **↑ / ↓** - Increase/decrease volume by 10% (when `globalvolume` is enabled)
 
 When multiple players exist on a page, the last-clicked player receives keyboard input.
 

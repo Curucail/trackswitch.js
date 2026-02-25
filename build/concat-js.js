@@ -24,7 +24,9 @@ if (typeof jQuery === 'undefined') {
 const footer = '\n}();';
 
 // Read and process JS file
-let js = fs.readFileSync('js/trackswitch.js', 'utf8');
+const transpiledPath = 'dist/tmp/ts/trackswitch.js';
+const sourcePath = fs.existsSync(transpiledPath) ? transpiledPath : 'js/trackswitch.js';
+let js = fs.readFileSync(sourcePath, 'utf8');
 
 // Remove export/import statements
 js = js

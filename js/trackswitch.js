@@ -1,3 +1,39 @@
+/**
+ * @typedef {Object} TrackProperty
+ * @property {boolean} mute
+ * @property {boolean} solo
+ * @property {boolean} success
+ * @property {boolean} error
+ * @property {number[]} presetsForTrack
+ */
+
+/**
+ * @typedef {Object} TrackTiming
+ * @property {number} startOffset
+ * @property {number} endOffset
+ * @property {number} effectiveDuration
+ */
+
+/**
+ * @typedef {Object} LoopState
+ * @property {?number} loopPointA
+ * @property {?number} loopPointB
+ * @property {boolean} loopEnabled
+ * @property {boolean} rightClickDragging
+ * @property {?number} loopDragStart
+ * @property {?('A'|'B')} draggingMarker
+ * @property {number} loopMinDistance
+ */
+
+/**
+ * @typedef {Object} WaveformState
+ * @property {HTMLCanvasElement[]} waveformCanvas
+ * @property {number[][]} waveformData
+ * @property {(CanvasRenderingContext2D|null)[]} waveformContext
+ * @property {number[]} waveformOriginalHeight
+ * @property {?number} resizeDebounceTimer
+ */
+
 // Put the audioContext in the global scope and pass it to each player instance.
 // WebAudioAPI fallback for IE: http://stackoverflow.com/a/27711181
 function audioContextCheck() {
