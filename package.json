@@ -8,10 +8,13 @@
   "scripts": {
     "build": "npm run build:css && npm run build:js",
     "build:css": "esbuild css/trackswitch.css --bundle --minify --outfile=dist/css/trackswitch.min.css",
+    "build:css:watch": "esbuild css/trackswitch.css --bundle --outfile=dist/css/trackswitch.min.css --watch=forever",
     "build:js": "node scripts/build-js.mjs",
+    "build:js:watch": "esbuild src/index.ts --bundle --platform=browser --format=iife --global-name=TrackSwitch --target=es2017 --outfile=dist/js/trackswitch.js --watch=forever",
     "build:test": "esbuild src/index.ts --bundle --platform=node --format=cjs --target=es2019 --outfile=dist/tmp/ts/trackswitch.js",
     "minify:js": "node scripts/build-js.mjs --minify-only",
     "clean": "rimraf dist",
+    "dev": "npm run build && sh -c 'npm run build:css:watch & npm run build:js:watch & wait'",
     "prebuild": "npm run clean",
     "typecheck": "tsc --project tsconfig.json",
     "test": "npm run build:test && node --test"
