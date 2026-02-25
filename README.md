@@ -96,7 +96,7 @@ Development
     npm install
     npm run build
 
-This will compile Sass, bundle TypeScript, and minify CSS/JS into the `dist/` folder.
+This will bundle TypeScript and minify CSS/JS into the `dist/` folder.
 
 ### Build Scripts
 
