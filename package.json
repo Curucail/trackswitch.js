@@ -17,7 +17,7 @@
     "prebuild": "npm run clean",
     "transpile:ts": "tsc --project tsconfig.build.json",
     "typecheck": "tsc --project tsconfig.json",
-    "test": "npm run transpile:ts && node --test test"
+    "test": "npm run transpile:ts && node --test"
   },
   "repository": {
     "type": "git",
