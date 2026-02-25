@@ -1,0 +1,186 @@
+/* TRACK STYLES ------------------------------------------------------------- */
+
+.trackswitch ul.track_list {
+    padding: 0;
+}
+
+.trackswitch li.track {
+    background-color: #DDDDDD;
+    position: relative;
+    min-height: 32px;
+    /* Required if there is no title defined */
+    padding: 8px 10px 8px 60px;
+    /* Top Right Bottom Left */
+}
+
+.trackswitch li.track.tabs {
+    display: inline-block;
+    padding-right: 12px;
+    border: 1px solid #999;
+}
+
+/* SPECIFICITY PROBLEMS!!!!!!!!! -------------------------------------------------------------------------------- TODO */
+.trackswitch li.track:not(.tabs):nth-child(even) {
+    background-color: #EEEEEE;
+}
+
+/* NEVER USE IMPORTANT, SORT OUT THE SPECIFICITY PROBLEMS ------------------------------------------------------- TODO */
+.trackswitch li.track.error {
+    background-color: #DD9B9B !important;
+}
+
+.trackswitch li.track.error:before {
+    content: "\f071  ERROR";
+    /* fa-exclamation-triangle */
+    display: inline;
+    padding-right: 10px;
+    color: #7C2525;
+    cursor: inherit;
+}
+
+.trackswitch li.track ul.control {
+    position: absolute;
+    top: calc(50% - 14px);
+    left: 5px;
+    padding-left: 2px;
+}
+
+.trackswitch li.track ul.control li {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    /*margin: 0; This realignes the controls with bootstrap (overridden) */
+    text-align: center;
+}
+
+.trackswitch .control li.button {
+    position: relative;
+    text-indent: -9999px;
+    line-height: 0;
+    cursor: pointer;
+}
+
+.trackswitch .control li.button:after {
+    position: absolute;
+    top: 0;
+}
+
+.trackswitch .control li.playpause:after {
+    content: "\f04b";
+    /* fa-play */
+}
+
+.trackswitch .control li.playpause.checked:after {
+    content: "\f04c";
+    /* fa-pause */
+}
+
+.trackswitch .control li.stop:after {
+    content: "\f04d";
+    /* fa-stop */
+}
+
+.trackswitch .control li.repeat:after {
+    content: "\f01e";
+    /* fa-repeat */
+    opacity: 0.5;
+}
+
+.trackswitch .control li.repeat.checked:after {
+    opacity: 1;
+}
+
+.trackswitch .control li.loop-a:after,
+.trackswitch .control li.loop-b:after {
+    font-family: Arial, sans-serif;
+    font-weight: bold;
+    font-size: 12px;
+    text-indent: 0;
+    opacity: 0.5;
+    border: 1.5px solid currentColor;
+    border-radius: 3px;
+    padding: 1px 4px;
+    line-height: 1.2;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.trackswitch .control li.loop-a:after {
+    content: "A";
+    /* Letter A */
+}
+
+.trackswitch .control li.loop-b:after {
+    content: "B";
+    /* Letter B */
+}
+
+.trackswitch .control li.loop-a.checked:after,
+.trackswitch .control li.loop-a.active:after,
+.trackswitch .control li.loop-b.checked:after,
+.trackswitch .control li.loop-b.active:after {
+    opacity: 1;
+}
+
+.trackswitch .control li.loop-toggle:after {
+    content: "\f021";
+    /* fa-refresh / loop icon */
+    opacity: 0.5;
+    position: absolute;
+    left: 0;
+}
+
+.trackswitch .control li.loop-toggle.checked:after {
+    opacity: 1;
+}
+
+.trackswitch .control li.loop-clear:after {
+    content: "\f00d";
+    /* fa-times / X icon */
+    opacity: 0.5;
+    position: absolute;
+    left: -5px;
+}
+
+.trackswitch .control li.loop-clear:hover:after {
+    opacity: 1;
+}
+
+.trackswitch .control li.mute:after {
+    content: "\f028";
+    /* fa-volume-up */
+    position: absolute;
+    bottom: 50%;
+    left: 4px;
+    /* Necessary to do it this way? ----------------------------------------------------- TODO */
+}
+
+.trackswitch .control li.mute.checked:after {
+    content: "\f026";
+    /* fa-volume-off */
+}
+
+.trackswitch .control li.solo:after {
+    content: "\f10c";
+    /* fa-circle-o */
+    position: absolute;
+    bottom: 50%;
+    left: 4px;
+    /* Necessary to do it this way? and can we combine it ------------------------------- TODO */
+}
+
+.trackswitch .control li.solo.checked:after {
+    content: "\f05d";
+    /* fa-check-circle-o */
+}
+
+.trackswitch .control li.solo.radio {
+    /* .radio bootstrap fix */
+    margin: 0;
+}
+
+.trackswitch .control li.solo.radio.checked:after {
+    content: "\f192";
+    /* fa-dot-circle-o */
+}

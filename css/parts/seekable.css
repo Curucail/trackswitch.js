@@ -1,0 +1,78 @@
+/* SEEKABLE/POSTER IMAGE STYLES --------------------------------------------- */
+
+/* Is the display: block added to the wrap in the js necessary? ------------------------------------------------- TODO */
+.trackswitch img {
+    max-width: 100%;
+    /* Limit images to 100% width (unless overridden by the user) */
+    display: block;
+    margin: 0;
+    /* Prevent inheritence from kirby styles */
+    padding: 0;
+}
+
+.trackswitch .seekable-img-wrap {
+    display: inline-block;
+    position: relative;
+}
+
+.trackswitch .seekable-img-wrap .seekwrap {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    cursor: pointer;
+}
+
+.trackswitch .seekable-img-wrap .seekwrap .seekhead {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-left: 2px solid #000000;
+    border-right: 2px solid #FFFFFF;
+}
+
+.trackswitch .seekable-img-wrap .seekwrap .loop-marker {
+    position: absolute;
+    width: 10px;
+    /* Wider for click target */
+    top: 0;
+    bottom: 0;
+    display: none;
+    /* Hidden by default, shown via JS */
+    z-index: 2;
+    cursor: ew-resize;
+    /* Show draggable cursor */
+    margin-left: -5px;
+    /* Center the click target */
+    background: transparent;
+}
+
+.trackswitch .seekable-img-wrap .seekwrap .loop-marker:after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background-color: #333;
+    transform: translateX(-50%);
+}
+
+.trackswitch .seekable-img-wrap .seekwrap .loop-region {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    display: none;
+    /* Hidden by default, shown via JS */
+    background-color: rgba(237, 140, 1, 0.15);
+    /* Semi-transparent orange */
+    z-index: 1;
+}
+
+.trackswitch .seekable-img-wrap .seekwrap .loop-region.active {
+    background-color: rgba(237, 140, 1, 0.3);
+    /* Brighter orange when looping is active */
+}
+
+

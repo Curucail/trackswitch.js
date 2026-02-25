@@ -1,0 +1,50 @@
+.trackswitch *,
+.trackswitch *:before,
+.trackswitch *:after {
+    box-sizing: border-box;
+}
+
+.trackswitch {
+    background: #EEEEEE;
+    position: relative;
+    margin: 10px;
+    overflow: hidden;
+    color: #000000;
+    line-height: 1;
+    /* Reset line-height to stop it inheriting from page */
+}
+
+.trackswitch ts-track {
+    display: none;
+}
+
+/* Reset list elements from bootstrap styling */
+.trackswitch ul {
+    margin: 0;
+    padding: 0;
+}
+
+.trackswitch li {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.trackswitch p {
+    margin: 0;
+}
+
+/* Font Awesome icon hooks */
+.trackswitch .overlay span:after,
+.trackswitch li.track.error:before,
+.trackswitch .control li.button:after {
+    content: "";
+    display: block;
+    font-family: FontAwesome;
+    font-style: normal;
+    font-weight: normal;
+    font-size: 16px;
+    line-height: 1;
+    text-indent: 0;
+}
+

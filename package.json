@@ -7,10 +7,9 @@
   "license": "MIT",
   "scripts": {
     "build": "npm run build:css && npm run build:js",
-    "build:css": "npm run concat:css && npm run minify:css",
+    "build:css": "npm run minify:css",
     "build:js": "npm run transpile:ts && esbuild src/index.ts --bundle --platform=browser --format=iife --global-name=TrackSwitch --target=es2017 --outfile=dist/js/trackswitch.js && npm run minify:js",
-    "concat:css": "node build/concat-css.js",
-    "minify:css": "esbuild dist/tmp/concat.css --minify --outfile=dist/css/trackswitch.min.css",
+    "minify:css": "esbuild css/trackswitch.css --bundle --minify --outfile=dist/css/trackswitch.min.css",
     "minify:js": "esbuild dist/js/trackswitch.js --minify --outfile=dist/js/trackswitch.min.js",
     "clean": "rimraf dist",
     "prebuild": "npm run clean",

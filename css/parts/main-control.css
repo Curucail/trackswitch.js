@@ -1,0 +1,230 @@
+/* MAIN CONTROL STYLES ------------------------------------------------------ */
+
+/* Desktop (default): CSS Grid layout
+   Row 1: playback | volume | loop | preset | seekbar | timing
+   Seekbar moves to row 2 (full width) if container is too narrow */
+
+.trackswitch .main-control {
+    container-type: inline-size;
+}
+
+.trackswitch .main-control ul.control {
+    background-color: #333;
+    min-height: 36px;
+    padding: 4px 12px;
+    color: #DDDDDD;
+    display: grid;
+    grid-template-columns: auto auto auto auto 1fr auto;
+    grid-template-rows: auto;
+    align-items: center;
+    gap: 6px 24px;
+}
+
+.trackswitch .main-control .playback-group {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.trackswitch .main-control .volume {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+.trackswitch .main-control .loop-group {
+    grid-column: 3;
+    grid-row: 1;
+}
+
+.trackswitch .main-control .preset-selector-wrap {
+    justify-self: left;
+    grid-column: 4;
+    grid-row: 1;
+}
+
+.trackswitch .main-control .timing {
+    grid-column: 6;
+    grid-row: 1;
+    justify-self: end;
+}
+
+.trackswitch .main-control .seekwrap {
+    grid-column: 5;
+    grid-row: 1;
+}
+
+/* Playback group (play/stop/repeat) */
+.trackswitch .main-control .playback-group>.playback-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.trackswitch .main-control .playback-group>.playback-controls>li.button {
+    margin: 0;
+}
+
+/* Generic button styles within main-control */
+.trackswitch .main-control .button {
+    width: 15px;
+    height: 16px;
+    cursor: pointer;
+}
+
+
+/* Timing */
+.trackswitch .main-control .timing {
+    font-family: monospace;
+    white-space: nowrap;
+}
+
+/* Seekbar */
+.trackswitch .main-control .seekwrap {
+    overflow: hidden;
+    height: 28px;
+    cursor: pointer;
+    min-width: 200px;
+    width: 100%;
+}
+
+.trackswitch .main-control .seekwrap .seekbar {
+    background-color: #ED8C01;
+    height: 6px;
+    margin: 11px 4px 0 0;
+    position: relative;
+    box-shadow: 4px 0 0 0 #ED8C01;
+}
+
+.trackswitch .main-control .seekwrap .seekbar .seekhead {
+    background-color: #ED8C01;
+    position: absolute;
+    width: 4px;
+    height: 22px;
+    top: -8px;
+    left: 0;
+}
+
+.trackswitch .main-control .seekwrap .seekbar .loop-marker {
+    position: absolute;
+    width: 8px;
+    height: 22px;
+    top: -8px;
+    display: none;
+    z-index: 2;
+    cursor: ew-resize;
+    margin-left: -4px;
+    background: transparent;
+}
+
+.trackswitch .main-control .seekwrap .seekbar .loop-marker:after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: #333;
+    transform: translateX(-50%);
+}
+
+.trackswitch .main-control .seekwrap .seekbar .loop-region {
+    position: absolute;
+    height: 100%;
+    top: 0;
+    display: none;
+    background-color: rgba(237, 140, 1, 0.1);
+    z-index: 1;
+}
+
+.trackswitch .main-control .seekwrap .seekbar .loop-region.active {
+    background-color: rgba(237, 140, 1, 0.4);
+}
+
+/* Volume control */
+.trackswitch .main-control .volume-control {
+    display: flex;
+    align-items: center;
+}
+
+.trackswitch .main-control .volume-icon {
+    font-family: FontAwesome;
+    font-size: 16px;
+    color: #DDDDDD;
+    margin-right: 8px;
+    width: 16px;
+    display: inline-block;
+    text-align: left;
+}
+
+.trackswitch .main-control .volume-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 80px;
+    height: 4px;
+    background: #555;
+    outline: none;
+    cursor: pointer;
+}
+
+.trackswitch .main-control .volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    background: #ED8C01;
+    cursor: pointer;
+    border-radius: 50%;
+}
+
+.trackswitch .main-control .volume-slider::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    background: #ED8C01;
+    cursor: pointer;
+    border-radius: 50%;
+    border: none;
+}
+
+/* Loop group */
+.trackswitch .main-control .control>li.loop-group>.loop-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.trackswitch .main-control .control>li.loop-group>.loop-controls>li.button {
+    margin: 0;
+}
+
+/* Preset selector */
+.trackswitch .main-control .preset-selector-wrap {
+    position: relative;
+    z-index: 3;
+}
+
+.trackswitch .main-control .preset-selector {
+    background-color: #555;
+    color: #DDDDDD;
+    border: 1px solid #333;
+    padding: 4px 2px 4px 2px;
+    font-size: 13px;
+    cursor: pointer;
+    border-radius: 4px;
+    pointer-events: auto;
+    touch-action: manipulation;
+}
+
+.trackswitch .main-control .preset-selector:hover {
+    background-color: #666;
+}
+
+.trackswitch .main-control .preset-selector:focus {
+    outline: none;
+    background-color: #666;
+    color: #DDDDDD;
+}
+
+.trackswitch .main-control .preset-selector option {
+    background-color: #333;
+    color: #DDDDDD;
+}
+

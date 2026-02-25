@@ -1,0 +1,112 @@
+/* OVERLAY STYLES ----------------------------------------------------------- */
+
+.trackswitch .overlay {
+    background-color: rgba(0, 0, 0, 0.3);
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 10;
+}
+
+.trackswitch .overlay>span,
+.trackswitch .overlay>p,
+.trackswitch .overlay #overlayinfo span.info {
+    display: block;
+    position: absolute;
+    text-align: center;
+}
+
+.trackswitch .overlay>span {
+    background-color: #F1C40F;
+    width: 50px;
+    height: 50px;
+    top: calc(50% - 25px);
+    left: calc(50% - 25px);
+    text-indent: -9999px;
+    line-height: 0;
+    border-radius: 100%;
+    cursor: pointer;
+}
+
+.trackswitch .overlay>span.loading {
+    cursor: inherit;
+}
+
+.trackswitch .overlay>span:after {
+    content: "\f011";
+    /* fa-power-off */
+    padding-top: 7px;
+    font-size: 28pt;
+}
+
+.trackswitch .overlay>span.loading:after {
+    content: "\f110";
+    /* fa-spinner */
+}
+
+
+.trackswitch.error .overlay {
+    background: rgba(0, 0, 0, 0.6);
+}
+
+.trackswitch.error .overlay>span {
+    background: #C03328;
+    cursor: inherit;
+}
+
+.trackswitch.error .overlay>span:after {
+    content: "\f12a";
+    /* fa-exclamation */
+}
+
+.trackswitch.error .overlay p {
+    width: 100%;
+    top: calc(50% + 35px);
+    color: #FFFFFF;
+}
+
+.trackswitch .overlay #overlayinfo {
+    height: 40px;
+    width: 100%;
+    bottom: 5px;
+    right: 10px;
+    color: #000000;
+    text-align: right;
+    font-size: 14pt;
+}
+
+.trackswitch .overlay #overlayinfo span.info {
+    bottom: 0;
+    right: 0;
+    width: 380px;
+    cursor: pointer;
+    text-indent: -9999px;
+    opacity: 0.4;
+}
+
+.trackswitch .overlay #overlayinfo span.info:after {
+    content: "\f05a";
+    /* fa-info-circle */
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    font-size: 16pt;
+}
+
+.trackswitch .overlay #overlayinfo span.text {
+    display: none;
+    position: absolute;
+    right: 0;
+}
+
+.trackswitch .overlay #overlayinfo span.text strong {
+    font-weight: bold;
+}
+
+.trackswitch .overlay #overlayinfo a {
+    color: #EEEEEE;
+    text-decoration: underline;
+}
+
