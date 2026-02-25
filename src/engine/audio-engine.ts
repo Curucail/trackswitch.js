@@ -26,32 +26,53 @@ interface LoadTrackResult {
     error: string | null;
 }
 
+const RESUME_WAIT_TIMEOUT_MS = 250;
+
 export class AudioEngine {
-    private readonly context: AudioContext | null;
+    private context: AudioContext | null;
     private readonly features: TrackSwitchFeatures;
-    private readonly gainNodeMaster: GainNode | null;
-    private readonly gainNodeVolume: GainNode | null;
+    private gainNodeMaster: GainNode | null;
+    private gainNodeVolume: GainNode | null;
+    private masterVolume: number;
 
     constructor(features: TrackSwitchFeatures, initialVolume: number) {
         this.features = features;
-        this.context = getAudioContext();
+        this.context = null;
         this.gainNodeMaster = null;
         this.gainNodeVolume = null;
+        this.masterVolume = Math.max(0, Math.min(1, Number.isFinite(initialVolume) ? initialVolume : 0));
+    }
 
-        if (!this.context) {
+    private initializeAudioGraph(): void {
+        if (this.context && this.gainNodeMaster && this.gainNodeVolume) {
             return;
         }
 
-        const volumeNode = this.context.createGain();
-        volumeNode.gain.value = this.features.globalvolume ? initialVolume : 1.0;
-        volumeNode.connect(this.context.destination);
+        const context = getAudioContext();
+        if (!context) {
+            this.context = null;
+            this.gainNodeMaster = null;
+            this.gainNodeVolume = null;
+            return;
+        }
 
-        const masterNode = this.context.createGain();
-        masterNode.gain.value = 0.0;
-        masterNode.connect(volumeNode);
+        this.context = context;
 
-        this.gainNodeMaster = masterNode;
-        this.gainNodeVolume = volumeNode;
+        if (!this.gainNodeVolume) {
+            const volumeNode = this.context.createGain();
+            volumeNode.gain.value = this.features.globalvolume ? this.masterVolume : 1.0;
+            volumeNode.connect(this.context.destination);
+            this.gainNodeVolume = volumeNode;
+        }
+
+        if (!this.gainNodeMaster && this.gainNodeVolume) {
+            const masterNode = this.context.createGain();
+            masterNode.gain.value = 0.0;
+            masterNode.connect(this.gainNodeVolume);
+            this.gainNodeMaster = masterNode;
+        }
+
+        this.setMasterVolume(this.masterVolume);
     }
 
     get currentTime(): number {
@@ -59,23 +80,81 @@ export class AudioEngine {
     }
 
     canUseAudioGraph(): boolean {
+        this.initializeAudioGraph();
+        return !!(this.context && this.gainNodeMaster && this.gainNodeVolume);
+    }
+
+    private requestContextResume(): Promise<void> {
+        if (!this.context) {
+            return Promise.resolve();
+        }
+
+        if (this.context.state !== 'suspended' && this.context.state !== 'interrupted') {
+            return Promise.resolve();
+        }
+
+        try {
+            const maybePromise = this.context.resume();
+            if (maybePromise && typeof (maybePromise as Promise<void>).then === 'function') {
+                return (maybePromise as Promise<void>).then(function() {}).catch(function() {});
+            }
+        } catch (_error) {
+            // ignore
+        }
+
+        return Promise.resolve();
+    }
+
+    private async waitForResumeAttempt(timeoutMs: number): Promise<void> {
+        const resumeAttempt = this.requestContextResume();
+        let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+        const timeoutPromise = new Promise<void>((resolve) => {
+            timeoutId = setTimeout(resolve, timeoutMs);
+        });
+
+        await Promise.race([resumeAttempt, timeoutPromise]);
+
+        if (timeoutId !== null) {
+            clearTimeout(timeoutId);
+        }
+    }
+
+    primeFromUserGesture(): void {
+        this.initializeAudioGraph();
+
+        void this.requestContextResume();
+    }
+
+    async prepareForPlaybackStart(): Promise<boolean> {
+        this.primeFromUserGesture();
+
+        if (!this.context || !this.gainNodeMaster || !this.gainNodeVolume) {
+            return false;
+        }
+
+        await this.waitForResumeAttempt(RESUME_WAIT_TIMEOUT_MS);
+
         return !!(this.context && this.gainNodeMaster && this.gainNodeVolume);
     }
 
     getContext(): AudioContext | null {
+        this.initializeAudioGraph();
         return this.context;
     }
 
     async unlockIOSPlayback(): Promise<void> {
-        if (!this.features.iosunmute || !this.context) {
+        if (!this.features.iosunmute) {
             return;
         }
 
-        try {
-            await this.context.resume();
-        } catch (_error) {
-            // ignore
+        this.initializeAudioGraph();
+
+        if (!this.context) {
+            return;
         }
+
+        await this.waitForResumeAttempt(RESUME_WAIT_TIMEOUT_MS);
 
         try {
             const unlockAudio = document.createElement('audio');
@@ -92,7 +171,19 @@ export class AudioEngine {
             };
 
             if (playPromise && typeof playPromise.then === 'function') {
-                await playPromise.then(cleanup).catch(function() {});
+                let timeoutId: ReturnType<typeof setTimeout> | null = null;
+                const playAttempt = (playPromise as Promise<void>).then(function() {}).catch(function() {});
+                const timeoutPromise = new Promise<void>((resolve) => {
+                    timeoutId = setTimeout(resolve, RESUME_WAIT_TIMEOUT_MS);
+                });
+
+                await Promise.race([playAttempt, timeoutPromise]);
+
+                if (timeoutId !== null) {
+                    clearTimeout(timeoutId);
+                }
+
+                cleanup();
             } else {
                 cleanup();
             }
@@ -243,6 +334,7 @@ export class AudioEngine {
         }
 
         const nextVolume = Math.max(0, Math.min(1, Number.isFinite(volume) ? volume : 0));
+        this.masterVolume = nextVolume;
         this.gainNodeVolume.gain.value = this.features.globalvolume ? nextVolume : 1;
     }
 

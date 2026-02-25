@@ -143,13 +143,16 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             return;
         }
 
-        if (!this.audioEngine.canUseAudioGraph()) {
+        this.isLoading = true;
+        this.renderer.setOverlayLoading(true);
+
+        const prepared = await this.audioEngine.prepareForPlaybackStart();
+        if (!prepared) {
+            this.isLoading = false;
+            this.renderer.setOverlayLoading(false);
             this.handleError('Web Audio API is not supported in your browser. Please consider upgrading.');
             return;
         }
-
-        this.isLoading = true;
-        this.renderer.setOverlayLoading(true);
 
         if (!this.iOSPlaybackUnlocked) {
             this.iOSPlaybackUnlocked = true;
@@ -524,12 +527,13 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     }
 
     onOverlayActivate(event: ControllerPointerEvent): void {
-        if (!isPrimaryInput(event)) {
+        if (!isPrimaryInput(event) && event.type !== 'click') {
             return;
         }
 
         event.preventDefault();
         this.setKeyboardActive();
+        this.audioEngine.primeFromUserGesture();
         void this.load();
         event.stopPropagation();
     }
@@ -546,6 +550,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         }
 
         event.preventDefault();
+        this.audioEngine.primeFromUserGesture();
         this.togglePlay();
         event.stopPropagation();
     }

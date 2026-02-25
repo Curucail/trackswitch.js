@@ -122,10 +122,7 @@ export class InputBinder {
     }
 
     bind(): void {
-        this.addDelegatedListener('touchstart', '.overlay .activate', (event) => {
-            this.controller.onOverlayActivate(event);
-        });
-        this.addDelegatedListener('mousedown', '.overlay .activate', (event) => {
+        this.addDelegatedListener('click', '.overlay .activate', (event) => {
             this.controller.onOverlayActivate(event);
         });
 
