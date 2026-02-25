@@ -221,6 +221,59 @@ test('preset application updates solo state without DOM coupling', () => {
     controller.destroy();
 });
 
+test('initial preset is applied to state and solo button classes', () => {
+    const controller = createController({
+        features: { waveform: false, keyboard: false, looping: false },
+        tracks: [
+            { title: 'A', presets: [0], sources: [{ src: 'a.mp3' }] },
+            { title: 'B', presets: [1], sources: [{ src: 'b.mp3' }] },
+            { title: 'C', presets: [0], sources: [{ src: 'c.mp3' }] },
+        ],
+    });
+
+    const snapshot = controller.getState();
+    assert.equal(snapshot.tracks[0].solo, true);
+    assert.equal(snapshot.tracks[1].solo, false);
+    assert.equal(snapshot.tracks[2].solo, true);
+
+    const firstSolo = document.querySelector('.track_list li.track:nth-child(1) .solo');
+    const secondSolo = document.querySelector('.track_list li.track:nth-child(2) .solo');
+    const thirdSolo = document.querySelector('.track_list li.track:nth-child(3) .solo');
+
+    assert.ok(firstSolo && secondSolo && thirdSolo);
+    assert.equal(firstSolo.classList.contains('checked'), true);
+    assert.equal(secondSolo.classList.contains('checked'), false);
+    assert.equal(thirdSolo.classList.contains('checked'), true);
+
+    controller.destroy();
+});
+
+test('presets are disabled when onlyradiosolo is enabled', () => {
+    const controller = createController({
+        features: { waveform: false, keyboard: false, looping: false, onlyradiosolo: true },
+        tracks: [
+            { title: 'A', presets: [0], sources: [{ src: 'a.mp3' }] },
+            { title: 'B', presets: [0], sources: [{ src: 'b.mp3' }] },
+            { title: 'C', presets: [1], sources: [{ src: 'c.mp3' }] },
+        ],
+    });
+
+    assert.equal(document.querySelector('.preset-selector'), null);
+
+    const initial = controller.getState();
+    assert.equal(initial.tracks[0].solo, true);
+    assert.equal(initial.tracks[1].solo, false);
+    assert.equal(initial.tracks[2].solo, false);
+
+    controller.applyPreset(1);
+    const afterPresetAttempt = controller.getState();
+    assert.equal(afterPresetAttempt.tracks[0].solo, true);
+    assert.equal(afterPresetAttempt.tracks[1].solo, false);
+    assert.equal(afterPresetAttempt.tracks[2].solo, false);
+
+    controller.destroy();
+});
+
 test('controller destroy tears down rendered UI', async () => {
     const controller = createController({
         features: { waveform: false, keyboard: false, looping: false },

@@ -104,7 +104,9 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             this.runtimes[0].state.solo = true;
         }
 
-        const presetNames = derivePresetNames(config);
+        const presetNames = this.features.onlyradiosolo
+            ? []
+            : derivePresetNames(config);
         this.presetCount = presetNames.length;
 
         this.audioEngine = new AudioEngine(this.features, this.state.volume);
@@ -122,7 +124,11 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         this.inputBinder = new InputBinder(this.root, this.features, this);
         this.inputBinder.bind();
 
-        this.applyTrackProperties();
+        if (this.presetCount > 0) {
+            this.applyPreset(0);
+        } else {
+            this.applyTrackProperties();
+        }
         this.updateMainControls();
 
         if (this.runtimes.length === 0) {
@@ -471,6 +477,10 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     }
 
     applyPreset(presetIndex: number): void {
+        if (this.features.onlyradiosolo) {
+            return;
+        }
+
         this.runtimes.forEach(function(runtime) {
             const presets = runtime.definition.presets ?? [];
             runtime.state.solo = presets.indexOf(presetIndex) !== -1;
