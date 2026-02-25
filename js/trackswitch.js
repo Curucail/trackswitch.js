@@ -158,7 +158,7 @@ Plugin.prototype.init = function() {
     var that = this;
 
     // Add class for default CSS stylesheet
-    this.element.addClass("jquery-trackswitch");
+    this.element.addClass("trackswitch");
 
     // Parse preset configuration early so we can conditionally include preset dropdown
     // Read preset names from preset-names attribute (comma-separated)
@@ -1118,7 +1118,7 @@ Plugin.prototype.pause = function() {
 
 // Returns the other players on the page (for globalsolo)
 Plugin.prototype.other_instances = function() {
-    return $(".jquery-trackswitch").not(this.element);
+    return $(".trackswitch").not(this.element);
 };
 
 

@@ -49,7 +49,6 @@ export class ViewRenderer {
 
     initialize(runtimes: TrackRuntime[]): void {
         this.root.classList.add('trackswitch');
-        this.root.classList.add('jquery-trackswitch');
 
         if (!this.query('.main-control')) {
             this.root.insertAdjacentHTML('afterbegin', this.buildMainControlHtml());
