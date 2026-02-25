@@ -13,6 +13,23 @@ This tool can be installed using
 alternatively you can manually download and include [`dist/css/trackswitch.min.css`](https://raw.githubusercontent.com/audiolabs/trackswitch.js/gh-pages/dist/css/trackswitch.min.css) and
 [`dist/js/trackswitch.min.js`](https://raw.githubusercontent.com/audiolabs/trackswitch.js/gh-pages/dist/js/trackswitch.min.js).
 
+Initialization
+--------------
+
+```html
+<script src="dist/js/trackswitch.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.player').forEach(function (player) {
+    TrackSwitch.createTrackSwitch(player);
+  });
+});
+</script>
+```
+
+Migration (breaking): old jQuery plugin initialization
+`$('.player').trackSwitch()` becomes `TrackSwitch.createTrackSwitch(playerElement)`.
+
 
 ## Whats included
 
@@ -79,11 +96,11 @@ Development
     npm install
     npm run build
 
-This will compile Sass, concatenate files, and minify CSS/JS into the `dist/` folder.
+This will compile Sass, bundle TypeScript, and minify CSS/JS into the `dist/` folder.
 
 ### Build Scripts
 
 - `npm run build` - Full build (clean, compile, minify)
 - `npm run build:css` - Compile and minify CSS only
-- `npm run build:js` - Concatenate and minify JS only
+- `npm run build:js` - Bundle and minify JS only
 - `npm run clean` - Remove `dist/` folder

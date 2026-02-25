@@ -11,14 +11,26 @@ const dom = new JSDOM('<!doctype html><html><body></body></html>', {
 global.window = dom.window;
 global.document = dom.window.document;
 global.navigator = dom.window.navigator;
+global.Element = dom.window.Element;
 global.HTMLElement = dom.window.HTMLElement;
 global.HTMLCanvasElement = dom.window.HTMLCanvasElement;
 global.Event = dom.window.Event;
 global.MouseEvent = dom.window.MouseEvent;
 
+global.getComputedStyle = dom.window.getComputedStyle.bind(dom.window);
+
 if (dom.window.HTMLMediaElement && dom.window.HTMLMediaElement.prototype) {
     dom.window.HTMLMediaElement.prototype.canPlayType = function() {
         return 'probably';
+    };
+    dom.window.HTMLMediaElement.prototype.play = function() {
+        return Promise.resolve();
+    };
+    dom.window.HTMLMediaElement.prototype.pause = function() {
+        return undefined;
+    };
+    dom.window.HTMLMediaElement.prototype.load = function() {
+        return undefined;
     };
 }
 
@@ -104,11 +116,6 @@ global.XMLHttpRequest = class MockXHR {
     }
 };
 
-const $ = require('jquery');
-
-global.$ = $;
-global.jQuery = $;
-
 const trackSwitch = require(path.resolve(__dirname, '../dist/tmp/ts/trackswitch.js'));
 const {
     WaveformEngine,
@@ -117,18 +124,26 @@ const {
     formatSecondsToHHMMSSmmm,
     inferSourceMimeType,
     parsePresetIndices,
+    parseTrackSwitchMarkup,
     playerStateReducer,
 } = trackSwitch;
 
-function createController(config, markup) {
+function dispatchMouse(target, type, options = {}) {
+    target.dispatchEvent(new dom.window.MouseEvent(type, {
+        bubbles: true,
+        cancelable: true,
+        ...options,
+    }));
+}
+
+function createController(init, markup) {
     document.body.innerHTML = markup || '<div class="player"></div>';
     const root = document.querySelector('.player');
     assert.ok(root, 'root should exist');
-    return createTrackSwitch(root, config);
+    return createTrackSwitch(root, init);
 }
 
 test.afterEach(() => {
-    $(window).off();
     document.body.innerHTML = '';
 });
 
@@ -258,26 +273,26 @@ test('keyboard shortcuts are scoped to active instance', async () => {
         originalB(seconds);
     };
 
-    $(rootA).trigger($.Event('mousedown', { which: 1 }));
-    window.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    dispatchMouse(rootA, 'mousedown', { button: 0 });
+    window.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
 
     assert.equal(seenA, 1);
     assert.equal(seenB, 0);
 
-    $(rootB).trigger($.Event('mousedown', { which: 1 }));
-    window.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    dispatchMouse(rootB, 'mousedown', { button: 0 });
+    window.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
 
     assert.equal(seenA, 1);
     assert.equal(seenB, 1);
 
     controllerB.destroy();
-    window.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    window.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
 
     assert.equal(seenA, 1);
     assert.equal(seenB, 1);
 
-    $(rootA).trigger($.Event('mousedown', { which: 1 }));
-    window.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    dispatchMouse(rootA, 'mousedown', { button: 0 });
+    window.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
 
     assert.equal(seenA, 2);
     assert.equal(seenB, 1);
@@ -285,23 +300,53 @@ test('keyboard shortcuts are scoped to active instance', async () => {
     controllerA.destroy();
 });
 
-test('legacy jQuery adapter maps markup to controller', async () => {
-    document.body.innerHTML = '<div class="player"><ts-track title="A"><ts-source src="a.mp3"></ts-source></ts-track></div>';
-    const player = $('.player');
+test('createTrackSwitch parses ts-track markup when tracks are omitted', async () => {
+    document.body.innerHTML = [
+        '<div class="player" preset-names="One,Two">',
+        '  <ts-track title="Lead" presets="0" data-img="lead.png">',
+        '    <ts-source src="lead.mp3" type="audio/mpeg"></ts-source>',
+        '  </ts-track>',
+        '  <ts-track title="Bass" presets="1">',
+        '    <ts-source src="bass.mp3"></ts-source>',
+        '  </ts-track>',
+        '</div>',
+    ].join('');
 
-    player.trackSwitch({ waveform: false, keyboard: false, looping: false });
+    const root = document.querySelector('.player');
+    assert.ok(root);
 
-    const plugin = player.data('plugin_trackSwitch');
-    assert.ok(plugin, 'controller should be attached to plugin key');
+    const controller = createTrackSwitch(root, {
+        features: { waveform: false, keyboard: false, looping: false },
+    });
 
-    await plugin.load();
-    plugin.play();
+    await controller.load();
+    const snapshot = controller.getState();
 
-    assert.equal(player.find('.main-control').length, 1);
-    assert.equal(plugin.getState().state.playing, true);
+    assert.equal(snapshot.tracks.length, 2);
+    assert.equal(snapshot.isLoaded, true);
 
-    player.trackSwitch('destroy');
-    assert.equal(player.data('plugin_trackSwitch'), undefined);
+    controller.destroy();
+});
+
+test('parseTrackSwitchMarkup parses declarative tracks without jQuery', () => {
+    document.body.innerHTML = [
+        '<div class="player">',
+        '  <ts-track title="Track A" presets="0,2" data-seek-margin-left="5" data-seek-margin-right="10">',
+        '    <ts-source src="a.mp3" start-offset-ms="100"></ts-source>',
+        '  </ts-track>',
+        '</div>',
+    ].join('');
+
+    const root = document.querySelector('.player');
+    assert.ok(root);
+
+    const tracks = parseTrackSwitchMarkup(root);
+
+    assert.equal(tracks.length, 1);
+    assert.equal(tracks[0].title, 'Track A');
+    assert.deepEqual(tracks[0].presets, [0, 2]);
+    assert.equal(tracks[0].sources.length, 1);
+    assert.equal(tracks[0].sources[0].startOffsetMs, 100);
 });
 
 test('utility exports remain available as named exports', () => {

@@ -6,9 +6,7 @@
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "lib": ["DOM", "ES2020"],
-    "allowUmdGlobalAccess": true,
-    "types": ["jquery"]
+    "lib": ["DOM", "ES2020"]
   },
   "include": [
     "src/**/*.ts"

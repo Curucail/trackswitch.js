@@ -115,19 +115,19 @@ function getPointerPageX(event: ControllerPointerEvent): number | null {
     return null;
 }
 
-function ensurePositiveWidth(width: number | undefined): number {
-    if (typeof width !== 'number' || !Number.isFinite(width) || width < 1) {
+function ensurePositiveWidth(width: number): number {
+    if (!Number.isFinite(width) || width < 1) {
         return 1;
     }
     return width;
 }
 
 export function getSeekMetrics(
-    seekingElement: JQuery<HTMLElement> | null,
+    seekingElement: HTMLElement | null,
     event: ControllerPointerEvent,
     longestDuration: number
 ): { posXRel: number; seekWidth: number; posXRelLimited: number; timePerc: number; time: number } | null {
-    if (!seekingElement || seekingElement.length === 0) {
+    if (!seekingElement) {
         return null;
     }
 
@@ -136,13 +136,11 @@ export function getSeekMetrics(
         return null;
     }
 
-    const offset = seekingElement.offset();
-    if (!offset) {
-        return null;
-    }
+    const rect = seekingElement.getBoundingClientRect();
+    const offsetLeft = rect.left + window.scrollX;
 
-    const posXRel = pageX - offset.left;
-    const seekWidth = ensurePositiveWidth(seekingElement.width());
+    const posXRel = pageX - offsetLeft;
+    const seekWidth = ensurePositiveWidth(rect.width || seekingElement.clientWidth || 0);
     const posXRelLimited = posXRel < 0 ? 0 : posXRel > seekWidth ? seekWidth : posXRel;
     const timePerc = (posXRelLimited / seekWidth) * 100;
     const time = longestDuration * (timePerc / 100);
@@ -179,7 +177,7 @@ export function calculateTrackTiming(source: TrackSourceDefinition, bufferDurati
     };
 }
 
-export function derivePresetNames(config: TrackSwitchConfig): string[] {
+export function derivePresetNames(config: Pick<TrackSwitchConfig, 'tracks' | 'presetNames'>): string[] {
     let maxPresetIndex = -1;
 
     config.tracks.forEach(function(track: TrackDefinition) {
@@ -209,4 +207,13 @@ export function clamp(value: number, min: number, max: number): number {
         return min;
     }
     return Math.max(min, Math.min(max, value));
+}
+
+export function eventTargetAsElement(target: EventTarget | null | undefined): Element | null {
+    if (!target || typeof target !== 'object') {
+        return null;
+    }
+
+    const candidate = target as { nodeType?: unknown };
+    return candidate.nodeType === 1 ? target as Element : null;
 }

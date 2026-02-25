@@ -20,7 +20,7 @@ title: trackswitch.js
 
 # Initialization
 
-Trackswitch requires jQuery (v3.7.x) and Fontawesome to be included to work, e.g.
+Trackswitch requires Fontawesome and the TrackSwitch bundle, e.g.
 
 ```html
 <!-- ... -->
@@ -51,16 +51,19 @@ Trackswitch requires jQuery (v3.7.x) and Fontawesome to be included to work, e.g
 
 <!-- ... -->
 
-<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="crossorigin="anonymous"></script>
 <script src="trackswitch.min.js"></script>
 <script type="text/javascript">
-    jQuery(document).ready(function() {
-        jQuery(".player").trackSwitch();
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.player').forEach(function(player) {
+            TrackSwitch.createTrackSwitch(player);
+        });
     });
 </script>
 
 <!-- ... -->
 ```
+
+Migration (breaking): replace the legacy plugin initialization call with `TrackSwitch.createTrackSwitch(playerElement)`.
 
 Alternatively you can of course use [Browserify](http://browserify.org/).
 
@@ -332,7 +335,9 @@ var settings = {
     onlyradiosolo: true,
     repeat: true,
 };
-$(".player").trackSwitch(settings);
+TrackSwitch.createTrackSwitch(document.querySelector('.player'), {
+    features: settings,
+});
 ```
 
 <div class="customplayer" style="margin-top: 30px; margin-bottom: 60px;">
@@ -518,9 +523,11 @@ The waveform will be automatically generated when the audio loads. Before loadin
 Control waveform behavior through the player initialization settings:
 
 ```javascript
-jQuery(".player").trackSwitch({
-    waveform: true,         // Enable/disable waveform visualization (default: true)
-    waveformBarWidth: 1     // Width of each waveform bar in pixels (default: 1)
+TrackSwitch.createTrackSwitch(document.querySelector('.player'), {
+    features: {
+        waveform: true,         // Enable/disable waveform visualization (default: true)
+        waveformBarWidth: 1     // Width of each waveform bar in pixels (default: 1)
+    },
 });
 ```
 
@@ -558,7 +565,7 @@ Customize waveform colors using CSS custom properties:
 You can also style the waveform wrapper:
 
 ```css
-.jquery-trackswitch .waveform-wrap {
+.trackswitch .waveform-wrap {
     margin: 15px 0;
     border-radius: 8px;
     overflow: hidden;

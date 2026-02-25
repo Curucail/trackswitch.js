@@ -43,6 +43,12 @@ export interface TrackSwitchConfig {
     features?: Partial<TrackSwitchFeatures>;
 }
 
+export interface TrackSwitchInit {
+    tracks?: TrackDefinition[];
+    presetNames?: string[];
+    features?: Partial<TrackSwitchFeatures>;
+}
+
 export interface TrackTiming {
     trimStart: number;
     padStart: number;

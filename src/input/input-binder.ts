@@ -1,12 +1,12 @@
 import { TrackSwitchFeatures } from '../domain/types';
-import { ControllerPointerEvent } from '../utils/helpers';
+import { ControllerPointerEvent, eventTargetAsElement } from '../utils/helpers';
 
 export interface InputController {
     eventNamespace: string;
     presetCount: number;
     setKeyboardActive(): void;
     onOverlayActivate(event: ControllerPointerEvent): void;
-    onOverlayInfo(_event: ControllerPointerEvent): void;
+    onOverlayInfo(event: ControllerPointerEvent): void;
     onPlayPause(event: ControllerPointerEvent): void;
     onStop(event: ControllerPointerEvent): void;
     onRepeat(event: ControllerPointerEvent): void;
@@ -27,137 +27,292 @@ export interface InputController {
     onResize(): void;
 }
 
+function eventToPointerEvent(event: Event): ControllerPointerEvent {
+    const mouseEvent = event as MouseEvent;
+    const keyboardEvent = event as KeyboardEvent;
+    const touchEvent = event as TouchEvent;
+
+    let pageX: number | undefined;
+    if (typeof mouseEvent.pageX === 'number') {
+        pageX = mouseEvent.pageX;
+    } else if (touchEvent.touches && touchEvent.touches.length > 0) {
+        pageX = touchEvent.touches[0].pageX;
+    } else if (touchEvent.changedTouches && touchEvent.changedTouches.length > 0) {
+        pageX = touchEvent.changedTouches[0].pageX;
+    }
+
+    let which = (mouseEvent as unknown as { which?: number }).which;
+    if (which === undefined && typeof mouseEvent.button === 'number') {
+        if (mouseEvent.button === 0) {
+            which = 1;
+        } else if (mouseEvent.button === 1) {
+            which = 2;
+        } else if (mouseEvent.button === 2) {
+            which = 3;
+        }
+    }
+
+    return {
+        type: event.type,
+        which: which,
+        pageX: pageX,
+        key: keyboardEvent.key,
+        code: keyboardEvent.code,
+        shiftKey: keyboardEvent.shiftKey,
+        target: event.target,
+        originalEvent: event as Event & {
+            deltaY?: number;
+            touches?: ArrayLike<{ pageX: number }>;
+        },
+        preventDefault: function() {
+            event.preventDefault();
+        },
+        stopPropagation: function() {
+            event.stopPropagation();
+        },
+    };
+}
+
 export class InputBinder {
-    private readonly root: JQuery<HTMLElement>;
+    private readonly root: HTMLElement;
     private readonly features: TrackSwitchFeatures;
     private readonly controller: InputController;
+    private readonly unbinders: Array<() => void> = [];
 
-    constructor(root: JQuery<HTMLElement>, features: TrackSwitchFeatures, controller: InputController) {
+    constructor(root: HTMLElement, features: TrackSwitchFeatures, controller: InputController) {
         this.root = root;
         this.features = features;
         this.controller = controller;
     }
 
+    private addListener(target: EventTarget, type: string, listener: EventListener, options?: AddEventListenerOptions): void {
+        target.addEventListener(type, listener, options);
+        this.unbinders.push(function() {
+            target.removeEventListener(type, listener, options);
+        });
+    }
+
+    private addDelegatedListener(
+        type: string,
+        selector: string,
+        callback: (event: ControllerPointerEvent, matchedElement: Element) => void,
+        target?: EventTarget
+    ): void {
+        const eventTarget = target || this.root;
+
+        const listener = (event: Event) => {
+            const eventElement = eventTargetAsElement(event.target);
+            if (!eventElement) {
+                return;
+            }
+
+            const matched = eventElement.closest(selector);
+            if (!matched) {
+                return;
+            }
+
+            if (eventTarget === this.root && !this.root.contains(matched)) {
+                return;
+            }
+
+            callback(eventToPointerEvent(event), matched);
+        };
+
+        this.addListener(eventTarget, type, listener as EventListener);
+    }
+
     bind(): void {
-        const ns = this.controller.eventNamespace;
-
-        if (this.features.looping) {
-            this.root.on('contextmenu' + ns, '.seekwrap', function(event) {
-                event.preventDefault();
-                return false;
-            });
-        }
-
-        this.root.on('touchstart' + ns + ' mousedown' + ns, '.overlay .activate', (event) => {
-            this.controller.onOverlayActivate(event as unknown as ControllerPointerEvent);
+        this.addDelegatedListener('touchstart', '.overlay .activate', (event) => {
+            this.controller.onOverlayActivate(event);
+        });
+        this.addDelegatedListener('mousedown', '.overlay .activate', (event) => {
+            this.controller.onOverlayActivate(event);
         });
 
-        this.root.on('touchstart' + ns + ' mousedown' + ns, '.overlay #overlayinfo .info', (event) => {
-            this.controller.onOverlayInfo(event as unknown as ControllerPointerEvent);
+        this.addDelegatedListener('touchstart', '.overlay #overlayinfo .info', (event) => {
+            this.controller.onOverlayInfo(event);
+        });
+        this.addDelegatedListener('mousedown', '.overlay #overlayinfo .info', (event) => {
+            this.controller.onOverlayInfo(event);
         });
 
-        this.root.on('touchstart' + ns + ' mousedown' + ns, () => {
+        const activateKeyboard = () => {
             this.controller.setKeyboardActive();
+        };
+        this.addListener(this.root, 'touchstart', activateKeyboard as EventListener);
+        this.addListener(this.root, 'mousedown', activateKeyboard as EventListener);
+
+        this.addDelegatedListener('touchstart', '.playpause', (event) => {
+            this.controller.onPlayPause(event);
+        });
+        this.addDelegatedListener('mousedown', '.playpause', (event) => {
+            this.controller.onPlayPause(event);
         });
 
-        this.root.on('touchstart' + ns + ' mousedown' + ns, '.playpause', (event) => {
-            this.controller.onPlayPause(event as unknown as ControllerPointerEvent);
+        this.addDelegatedListener('touchstart', '.stop', (event) => {
+            this.controller.onStop(event);
+        });
+        this.addDelegatedListener('mousedown', '.stop', (event) => {
+            this.controller.onStop(event);
         });
 
-        this.root.on('touchstart' + ns + ' mousedown' + ns, '.stop', (event) => {
-            this.controller.onStop(event as unknown as ControllerPointerEvent);
+        this.addDelegatedListener('touchstart', '.repeat', (event) => {
+            this.controller.onRepeat(event);
+        });
+        this.addDelegatedListener('mousedown', '.repeat', (event) => {
+            this.controller.onRepeat(event);
         });
 
-        this.root.on('touchstart' + ns + ' mousedown' + ns, '.repeat', (event) => {
-            this.controller.onRepeat(event as unknown as ControllerPointerEvent);
+        this.addDelegatedListener('touchstart', '.seekwrap', (event) => {
+            this.controller.onSeekStart(event);
+        });
+        this.addDelegatedListener('mousedown', '.seekwrap', (event) => {
+            this.controller.onSeekStart(event);
         });
 
-        this.root.on('mousedown' + ns + ' touchstart' + ns, '.seekwrap', (event) => {
-            this.controller.onSeekStart(event as unknown as ControllerPointerEvent);
+        this.addListener(window, 'touchmove', (event) => {
+            this.controller.onSeekMove(eventToPointerEvent(event));
+        }, { passive: false });
+        this.addListener(window, 'mousemove', (event) => {
+            this.controller.onSeekMove(eventToPointerEvent(event));
         });
 
-        $(window).on('mousemove' + ns + ' touchmove' + ns, (event) => {
-            this.controller.onSeekMove(event as unknown as ControllerPointerEvent);
+        this.addListener(window, 'touchend', (event) => {
+            this.controller.onSeekEnd(eventToPointerEvent(event));
+        }, { passive: false });
+        this.addListener(window, 'touchcancel', (event) => {
+            this.controller.onSeekEnd(eventToPointerEvent(event));
+        }, { passive: false });
+        this.addListener(window, 'mouseup', (event) => {
+            this.controller.onSeekEnd(eventToPointerEvent(event));
         });
 
-        $(window).on('mouseup' + ns + ' touchend' + ns + ' touchcancel' + ns, (event) => {
-            this.controller.onSeekEnd(event as unknown as ControllerPointerEvent);
+        this.addDelegatedListener('touchstart', '.mute', (event) => {
+            this.controller.onMute(event);
+        });
+        this.addDelegatedListener('mousedown', '.mute', (event) => {
+            this.controller.onMute(event);
         });
 
-        this.root.on('touchstart' + ns + ' mousedown' + ns, '.mute', (event) => {
-            this.controller.onMute(event as unknown as ControllerPointerEvent);
+        this.addDelegatedListener('touchstart', '.solo', (event) => {
+            this.controller.onSolo(event);
         });
-
-        this.root.on('touchstart' + ns + ' mousedown' + ns, '.solo', (event) => {
-            this.controller.onSolo(event as unknown as ControllerPointerEvent);
+        this.addDelegatedListener('mousedown', '.solo', (event) => {
+            this.controller.onSolo(event);
         });
 
         if (this.features.globalvolume) {
-            this.root.on('input' + ns, '.volume-slider', (event) => {
-                this.controller.onVolume(event as unknown as ControllerPointerEvent);
+            this.addDelegatedListener('input', '.volume-slider', (event) => {
+                this.controller.onVolume(event);
             });
 
-            this.root.on(
-                'mousedown' + ns + ' touchstart' + ns + ' mousemove' + ns + ' touchmove' + ns + ' mouseup' + ns + ' touchend' + ns,
-                '.volume-control',
-                function(event) {
+            const stopPropagationOnVolume = (event: Event) => {
+                const eventElement = eventTargetAsElement(event.target);
+                if (!eventElement) {
+                    return;
+                }
+                const matched = eventElement.closest('.volume-control');
+                if (matched && this.root.contains(matched)) {
                     event.stopPropagation();
                 }
-            );
+            };
+
+            this.addListener(this.root, 'touchstart', stopPropagationOnVolume as EventListener, { passive: false });
+            this.addListener(this.root, 'touchmove', stopPropagationOnVolume as EventListener, { passive: false });
+            this.addListener(this.root, 'touchend', stopPropagationOnVolume as EventListener, { passive: false });
+            this.addListener(this.root, 'mousedown', stopPropagationOnVolume as EventListener);
+            this.addListener(this.root, 'mousemove', stopPropagationOnVolume as EventListener);
+            this.addListener(this.root, 'mouseup', stopPropagationOnVolume as EventListener);
         }
 
         if (this.controller.presetCount >= 2) {
-            this.root.on('change' + ns + ' preset:reapply' + ns, '.preset-selector', (event) => {
-                this.controller.onPreset(event as unknown as ControllerPointerEvent);
+            this.addDelegatedListener('change', '.preset-selector', (event) => {
+                this.controller.onPreset(event);
             });
 
-            this.root.on('wheel' + ns, '.preset-selector', (event) => {
-                this.controller.onPresetScroll(event as unknown as ControllerPointerEvent);
+            this.addDelegatedListener('wheel', '.preset-selector', (event) => {
+                this.controller.onPresetScroll(event);
             });
 
-            this.root.on(
-                'mousedown' + ns + ' touchstart' + ns + ' mouseup' + ns + ' touchend' + ns + ' click' + ns,
-                '.preset-selector, .preset-selector-wrap',
-                function(event) {
+            const stopPresetPropagation = (event: Event) => {
+                const eventElement = eventTargetAsElement(event.target);
+                if (!eventElement) {
+                    return;
+                }
+
+                const matched = eventElement.closest('.preset-selector, .preset-selector-wrap');
+                if (matched && this.root.contains(matched)) {
                     event.stopPropagation();
                 }
-            );
+            };
+
+            this.addListener(this.root, 'touchstart', stopPresetPropagation as EventListener, { passive: false });
+            this.addListener(this.root, 'touchend', stopPresetPropagation as EventListener, { passive: false });
+            this.addListener(this.root, 'mousedown', stopPresetPropagation as EventListener);
+            this.addListener(this.root, 'mouseup', stopPresetPropagation as EventListener);
+            this.addListener(this.root, 'click', stopPresetPropagation as EventListener);
         }
 
         if (this.features.looping) {
-            this.root.on('touchstart' + ns + ' mousedown' + ns, '.loop-a', (event) => {
-                this.controller.onSetLoopA(event as unknown as ControllerPointerEvent);
+            this.addDelegatedListener('touchstart', '.loop-a', (event) => {
+                this.controller.onSetLoopA(event);
             });
-            this.root.on('touchstart' + ns + ' mousedown' + ns, '.loop-b', (event) => {
-                this.controller.onSetLoopB(event as unknown as ControllerPointerEvent);
+            this.addDelegatedListener('mousedown', '.loop-a', (event) => {
+                this.controller.onSetLoopA(event);
             });
-            this.root.on('touchstart' + ns + ' mousedown' + ns, '.loop-toggle', (event) => {
-                this.controller.onToggleLoop(event as unknown as ControllerPointerEvent);
+
+            this.addDelegatedListener('touchstart', '.loop-b', (event) => {
+                this.controller.onSetLoopB(event);
             });
-            this.root.on('touchstart' + ns + ' mousedown' + ns, '.loop-clear', (event) => {
-                this.controller.onClearLoop(event as unknown as ControllerPointerEvent);
+            this.addDelegatedListener('mousedown', '.loop-b', (event) => {
+                this.controller.onSetLoopB(event);
             });
-            this.root.on('mousedown' + ns + ' touchstart' + ns, '.loop-marker', (event) => {
-                this.controller.onMarkerDragStart(event as unknown as ControllerPointerEvent);
+
+            this.addDelegatedListener('touchstart', '.loop-toggle', (event) => {
+                this.controller.onToggleLoop(event);
+            });
+            this.addDelegatedListener('mousedown', '.loop-toggle', (event) => {
+                this.controller.onToggleLoop(event);
+            });
+
+            this.addDelegatedListener('touchstart', '.loop-clear', (event) => {
+                this.controller.onClearLoop(event);
+            });
+            this.addDelegatedListener('mousedown', '.loop-clear', (event) => {
+                this.controller.onClearLoop(event);
+            });
+
+            this.addDelegatedListener('touchstart', '.loop-marker', (event) => {
+                this.controller.onMarkerDragStart(event);
+            });
+            this.addDelegatedListener('mousedown', '.loop-marker', (event) => {
+                this.controller.onMarkerDragStart(event);
+            });
+
+            this.addDelegatedListener('contextmenu', '.seekwrap', (event) => {
+                event.preventDefault();
             });
         }
 
         if (this.features.keyboard) {
-            $(window).on('keydown' + ns, (event) => {
-                this.controller.onKeyboard(event as unknown as ControllerPointerEvent);
+            this.addListener(window, 'keydown', (event) => {
+                this.controller.onKeyboard(eventToPointerEvent(event));
             });
         }
 
         if (this.features.waveform) {
-            $(window).on('resize' + ns, () => {
+            this.addListener(window, 'resize', () => {
                 this.controller.onResize();
             });
         }
     }
 
     unbind(): void {
-        const ns = this.controller.eventNamespace;
-        this.root.off(ns);
-        $(window).off(ns);
+        while (this.unbinders.length > 0) {
+            const unbind = this.unbinders.pop();
+            if (unbind) {
+                unbind();
+            }
+        }
     }
 }

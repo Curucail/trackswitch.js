@@ -1,5 +1,5 @@
 import { createTrackSwitch } from './core/track-switch-controller';
-import { registerLegacyJQueryAdapter } from './adapters/legacy-jquery/register';
+import { parseTrackSwitchMarkup } from './core/markup-parser';
 import { normalizeFeatures, defaultFeatures } from './domain/options';
 import { createInitialPlayerState, playerStateReducer } from './domain/state';
 import { WaveformEngine } from './engine/waveform-engine';
@@ -10,7 +10,7 @@ import {
 } from './utils/helpers';
 
 export { createTrackSwitch };
-export { registerLegacyJQueryAdapter };
+export { parseTrackSwitchMarkup };
 export { normalizeFeatures, defaultFeatures };
 export { createInitialPlayerState, playerStateReducer };
 export { WaveformEngine };
@@ -28,12 +28,6 @@ export type {
     TrackSwitchEventMap,
     TrackSwitchEventName,
     TrackSwitchFeatures,
+    TrackSwitchInit,
     TrackSwitchSnapshot,
 } from './domain/types';
-
-const maybeJQuery = (globalThis as unknown as { jQuery?: JQueryStatic; $?: JQueryStatic }).jQuery
-    || (globalThis as unknown as { $?: JQueryStatic }).$;
-
-if (maybeJQuery && typeof maybeJQuery.fn === 'object') {
-    registerLegacyJQueryAdapter(maybeJQuery);
-}

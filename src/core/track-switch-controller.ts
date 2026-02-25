@@ -8,6 +8,7 @@ import {
     TrackSwitchEventMap,
     TrackSwitchEventName,
     TrackSwitchFeatures,
+    TrackSwitchInit,
     TrackSwitchSnapshot,
     TrackSwitchUiState,
 } from '../domain/types';
@@ -22,18 +23,33 @@ import {
     clamp,
     ControllerPointerEvent,
     derivePresetNames,
+    eventTargetAsElement,
     getSeekMetrics,
     isPrimaryInput,
     parseStrictNonNegativeInt,
 } from '../utils/helpers';
-import { requireJQuery } from '../utils/jquery';
+import { parsePresetNamesFromMarkup, parseTrackSwitchMarkup } from './markup-parser';
 
 let instanceCounter = 0;
 let activeKeyboardInstanceId: number | null = null;
 const controllerRegistry = new Set<TrackSwitchControllerImpl>();
 
+function closestInRoot(root: HTMLElement, target: EventTarget | null | undefined, selector: string): HTMLElement | null {
+    const element = eventTargetAsElement(target ?? null);
+    if (!element) {
+        return null;
+    }
+
+    const matched = element.closest(selector);
+    if (!matched || !root.contains(matched)) {
+        return null;
+    }
+
+    return matched as HTMLElement;
+}
+
 export class TrackSwitchControllerImpl implements TrackSwitchController, InputController {
-    private readonly root: JQuery<HTMLElement>;
+    private readonly root: HTMLElement;
     private readonly features: TrackSwitchFeatures;
     private readonly audioEngine: AudioEngine;
     private readonly waveformEngine: WaveformEngine;
@@ -51,7 +67,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     private timerMonitorPosition: ReturnType<typeof setInterval> | null = null;
     private resizeDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-    private seekingElement: JQuery<HTMLElement> | null = null;
+    private seekingElement: HTMLElement | null = null;
     private rightClickDragging = false;
     private loopDragStart: number | null = null;
     private draggingMarker: LoopMarker | null = null;
@@ -71,8 +87,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     public readonly presetCount: number;
 
     constructor(rootElement: HTMLElement, config: TrackSwitchConfig) {
-        const $ = requireJQuery();
-        this.root = $(rootElement) as JQuery<HTMLElement>;
+        this.root = rootElement;
 
         this.features = normalizeFeatures(config.features);
         this.state = createInitialPlayerState(this.features.repeat);
@@ -81,7 +96,11 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             return createTrackRuntime(track, index);
         });
 
-        if (this.features.radiosolo && this.runtimes.length > 0 && !this.runtimes.some(function(runtime) { return runtime.state.solo; })) {
+        if (
+            this.features.radiosolo
+            && this.runtimes.length > 0
+            && !this.runtimes.some(function(runtime) { return runtime.state.solo; })
+        ) {
             this.runtimes[0].state.solo = true;
         }
 
@@ -199,9 +218,6 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         if (activeKeyboardInstanceId === this.instanceId) {
             activeKeyboardInstanceId = null;
         }
-
-        this.root.removeData('plugin_trackSwitch');
-        this.root.removeData('trackSwitchController');
 
         this.listeners.loaded.clear();
         this.listeners.error.clear();
@@ -374,10 +390,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
                 },
             };
 
-            if (
-                this.state.playing
-                && (this.state.position < loopA || this.state.position > loopB)
-            ) {
+            if (this.state.playing && (this.state.position < loopA || this.state.position > loopB)) {
                 this.stopAudio();
                 this.startAudio(loopA);
             }
@@ -556,12 +569,8 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         if (this.features.looping && event.type === 'mousedown' && event.which === 3) {
             event.preventDefault();
 
-            if (!event.target) {
-                return;
-            }
-
             this.rightClickDragging = true;
-            this.seekingElement = $(event.target).closest('.seekwrap');
+            this.seekingElement = closestInRoot(this.root, event.target, '.seekwrap');
 
             const seekMetrics = getSeekMetrics(this.seekingElement, event, this.longestDuration);
             if (!seekMetrics) {
@@ -590,12 +599,8 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         }
 
         event.preventDefault();
-        if (!event.target) {
-            return;
-        }
-
-        this.seekingElement = $(event.target).closest('.seekwrap');
-        if (this.seekingElement.length === 0) {
+        this.seekingElement = closestInRoot(this.root, event.target, '.seekwrap');
+        if (!this.seekingElement) {
             return;
         }
 
@@ -749,10 +754,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
                         },
                     };
 
-                    if (
-                        this.state.playing
-                        && (this.state.position < loopA || this.state.position > loopB)
-                    ) {
+                    if (this.state.playing && (this.state.position < loopA || this.state.position > loopB)) {
                         this.stopAudio();
                         this.startAudio(loopA);
                     }
@@ -808,20 +810,23 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     }
 
     onVolume(event: ControllerPointerEvent): void {
-        if (!event.target) {
+        const target = eventTargetAsElement(event.target ?? null);
+        if (!(target instanceof HTMLInputElement)) {
             return;
         }
 
-        const volume = parseFloat(String($(event.target).val() ?? '0')) / 100;
+        const volume = parseFloat(target.value || '0') / 100;
         this.setVolume(volume);
     }
 
     onPreset(event: ControllerPointerEvent): void {
-        if (!event.target) {
+        const target = eventTargetAsElement(event.target ?? null);
+        const selector = target?.closest('.preset-selector');
+        if (!(selector instanceof HTMLSelectElement)) {
             return;
         }
 
-        let presetIndex = parseStrictNonNegativeInt(String($(event.target).val() ?? '0'));
+        let presetIndex = parseStrictNonNegativeInt(selector.value || '0');
         if (!Number.isFinite(presetIndex)) {
             presetIndex = 0;
         }
@@ -832,18 +837,19 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     onPresetScroll(event: ControllerPointerEvent): void {
         event.preventDefault();
 
-        if (!event.target) {
+        const target = eventTargetAsElement(event.target ?? null);
+        const selector = target?.closest('.preset-selector');
+        if (!(selector instanceof HTMLSelectElement)) {
             return;
         }
 
-        const selector = $(event.target).closest('.preset-selector');
-        let currentIndex = parseStrictNonNegativeInt(String(selector.val() ?? '0'));
+        let currentIndex = parseStrictNonNegativeInt(selector.value || '0');
         if (!Number.isFinite(currentIndex)) {
             currentIndex = 0;
         }
 
-        const maxIndex = selector.find('option').length - 1;
-        const deltaY = event.originalEvent?.deltaY ?? 0;
+        const maxIndex = selector.options.length - 1;
+        const deltaY = (event as unknown as { deltaY?: number }).deltaY ?? event.originalEvent?.deltaY ?? 0;
 
         if (deltaY > 0) {
             currentIndex = Math.min(currentIndex + 1, maxIndex);
@@ -851,8 +857,8 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             currentIndex = Math.max(currentIndex - 1, 0);
         }
 
-        selector.val(currentIndex);
-        selector.trigger('change');
+        selector.value = String(currentIndex);
+        selector.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
     onSetLoopA(event: ControllerPointerEvent): void {
@@ -892,21 +898,25 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     }
 
     onMarkerDragStart(event: ControllerPointerEvent): void {
-        if (!this.features.looping || !isPrimaryInput(event) || !event.target) {
+        if (!this.features.looping || !isPrimaryInput(event)) {
+            return;
+        }
+
+        const target = eventTargetAsElement(event.target ?? null);
+        if (!target) {
             return;
         }
 
         event.preventDefault();
         event.stopPropagation();
 
-        const target = $(event.target);
-        if (target.hasClass('marker-a')) {
+        if (target.classList.contains('marker-a')) {
             this.draggingMarker = 'A';
-        } else if (target.hasClass('marker-b')) {
+        } else if (target.classList.contains('marker-b')) {
             this.draggingMarker = 'B';
         }
 
-        this.seekingElement = target.closest('.seekwrap');
+        this.seekingElement = closestInRoot(this.root, event.target, '.seekwrap');
     }
 
     onKeyboard(event: ControllerPointerEvent): void {
@@ -914,11 +924,8 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             return;
         }
 
-        if (
-            $(event.target ?? document.body)
-                .closest('input, textarea, select, [contenteditable="true"], [contenteditable=""], [role="textbox"]')
-                .length
-        ) {
+        const target = eventTargetAsElement(event.target ?? null);
+        if (target && target.closest('input, textarea, select, [contenteditable="true"], [contenteditable=""], [role="textbox"]')) {
             return;
         }
 
@@ -1041,10 +1048,12 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     }
 
     private trackIndexFromTarget(target: EventTarget | null): number {
-        if (!(target instanceof Element)) {
+        const track = closestInRoot(this.root, target, '.track');
+        if (!track || !track.parentElement) {
             return -1;
         }
-        return $(target).closest('.track').prevAll().length;
+
+        return Array.from(track.parentElement.children).indexOf(track);
     }
 
     private applyTrackProperties(): void {
@@ -1227,6 +1236,22 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     }
 }
 
-export function createTrackSwitch(rootElement: HTMLElement, config: TrackSwitchConfig): TrackSwitchController {
-    return new TrackSwitchControllerImpl(rootElement, config);
+function normalizeInit(root: HTMLElement, init: TrackSwitchInit = {}): TrackSwitchConfig {
+    const tracks = init.tracks && init.tracks.length > 0
+        ? init.tracks
+        : parseTrackSwitchMarkup(root);
+
+    const presetNames = init.presetNames && init.presetNames.length > 0
+        ? init.presetNames
+        : parsePresetNamesFromMarkup(root);
+
+    return {
+        tracks: tracks,
+        presetNames: presetNames,
+        features: init.features,
+    };
+}
+
+export function createTrackSwitch(rootElement: HTMLElement, init: TrackSwitchInit = {}): TrackSwitchController {
+    return new TrackSwitchControllerImpl(rootElement, normalizeInit(rootElement, init));
 }

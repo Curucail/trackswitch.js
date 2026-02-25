@@ -11,8 +11,20 @@ function buildSeekWrap(leftPercent: number, rightPercent: number): string {
         + '</div>';
 }
 
+function setDisplay(element: Element, displayValue: string): void {
+    (element as HTMLElement).style.display = displayValue;
+}
+
+function setLeftPercent(element: Element, value: number): void {
+    (element as HTMLElement).style.left = value + '%';
+}
+
+function setWidthPercent(element: Element, value: number): void {
+    (element as HTMLElement).style.width = value + '%';
+}
+
 export class ViewRenderer {
-    private readonly root: JQuery<HTMLElement>;
+    private readonly root: HTMLElement;
     private readonly features: TrackSwitchFeatures;
     private readonly presetNames: string[];
 
@@ -21,25 +33,36 @@ export class ViewRenderer {
     private readonly waveformContexts: Array<CanvasRenderingContext2D | null> = [];
     private readonly waveformOriginalHeight: number[] = [];
 
-    constructor(root: JQuery<HTMLElement>, features: TrackSwitchFeatures, presetNames: string[]) {
+    constructor(root: HTMLElement, features: TrackSwitchFeatures, presetNames: string[]) {
         this.root = root;
         this.features = features;
         this.presetNames = presetNames;
     }
 
-    initialize(runtimes: TrackRuntime[]): void {
-        this.root.addClass('jquery-trackswitch');
+    private query(selector: string): HTMLElement | null {
+        return this.root.querySelector(selector);
+    }
 
-        if (this.root.find('.main-control').length === 0) {
-            this.root.prepend(this.buildMainControlHtml());
+    private queryAll(selector: string): HTMLElement[] {
+        return Array.from(this.root.querySelectorAll(selector)) as HTMLElement[];
+    }
+
+    initialize(runtimes: TrackRuntime[]): void {
+        this.root.classList.add('trackswitch');
+        this.root.classList.add('jquery-trackswitch');
+
+        if (!this.query('.main-control')) {
+            this.root.insertAdjacentHTML('afterbegin', this.buildMainControlHtml());
         }
 
         this.wrapSeekableImages();
         this.wrapWaveformCanvases();
         this.renderTrackList(runtimes);
 
-        if (this.root.find('.seekable:not(.seekable-img-wrap > .seekable)').length > 0) {
-            this.root.find('.main-control .seekwrap').hide();
+        if (this.query('.seekable:not(.seekable-img-wrap > .seekable)')) {
+            this.queryAll('.main-control .seekwrap').forEach(function(seekWrap) {
+                setDisplay(seekWrap, 'none');
+            });
         }
 
         this.updateTiming(0, 0);
@@ -105,52 +128,83 @@ export class ViewRenderer {
     }
 
     private renderTrackList(runtimes: TrackRuntime[]): void {
-        this.root.find('.track_list').remove();
-        const list = $('<ul class="track_list"></ul>');
+        this.queryAll('.track_list').forEach(function(existing) {
+            existing.remove();
+        });
+
+        const list = document.createElement('ul');
+        list.className = 'track_list';
 
         runtimes.forEach((runtime, index) => {
             const tabviewClass = this.features.tabview ? ' tabs' : '';
             const radioSoloClass = this.features.radiosolo ? ' radio' : '';
             const wholeSoloClass = this.features.onlyradiosolo ? ' solo' : '';
 
-            const track = $('<li class="track' + tabviewClass + wholeSoloClass + '"></li>');
-            track.attr('style', sanitizeInlineStyle(runtime.definition.style || ''));
+            const track = document.createElement('li');
+            track.className = 'track' + tabviewClass + wholeSoloClass;
+            track.setAttribute('style', sanitizeInlineStyle(runtime.definition.style || ''));
             track.append(document.createTextNode(runtime.definition.title || 'Track ' + (index + 1)));
 
-            const controls = $('<ul class="control"></ul>');
+            const controls = document.createElement('ul');
+            controls.className = 'control';
+
             if (this.features.mute) {
-                controls.append('<li class="mute button" title="Mute">Mute</li>');
-            }
-            if (this.features.solo) {
-                controls.append('<li class="solo button' + radioSoloClass + '" title="Solo">Solo</li>');
+                const mute = document.createElement('li');
+                mute.className = 'mute button';
+                mute.title = 'Mute';
+                mute.textContent = 'Mute';
+                controls.appendChild(mute);
             }
 
-            track.append(controls);
-            list.append(track);
+            if (this.features.solo) {
+                const solo = document.createElement('li');
+                solo.className = 'solo button' + radioSoloClass;
+                solo.title = 'Solo';
+                solo.textContent = 'Solo';
+                controls.appendChild(solo);
+            }
+
+            track.appendChild(controls);
+            list.appendChild(track);
         });
 
-        this.root.append(list);
+        this.root.appendChild(list);
     }
 
     private wrapSeekableImages(): void {
-        const that = this;
-        this.root.find('.seekable:not(.seekable-img-wrap > .seekable)').each(function(this: HTMLElement) {
-            const image = this as HTMLImageElement;
-            if (!that.originalImage) {
-                that.originalImage = image.src;
+        const candidates = this.queryAll('.seekable');
+
+        candidates.forEach((candidate) => {
+            if (!(candidate instanceof HTMLImageElement)) {
+                return;
             }
 
-            const wrappedImage = $(image) as JQuery<HTMLImageElement>;
-            wrappedImage.wrap('<div class="seekable-img-wrap"></div>');
-            wrappedImage.parent('.seekable-img-wrap').attr(
-                'style',
-                sanitizeInlineStyle(wrappedImage.data('style')) + '; display: block;'
-            );
+            if (candidate.parentElement?.classList.contains('seekable-img-wrap')) {
+                return;
+            }
 
-            wrappedImage.after(buildSeekWrap(
-                clampPercent(wrappedImage.data('seekMarginLeft')),
-                clampPercent(wrappedImage.data('seekMarginRight'))
-            ));
+            if (!this.originalImage) {
+                this.originalImage = candidate.src;
+            }
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'seekable-img-wrap';
+            wrapper.setAttribute('style', sanitizeInlineStyle(candidate.getAttribute('data-style')) + '; display: block;');
+
+            const parent = candidate.parentElement;
+            if (!parent) {
+                return;
+            }
+
+            parent.insertBefore(wrapper, candidate);
+            wrapper.appendChild(candidate);
+            wrapper.insertAdjacentHTML(
+                'beforeend',
+                buildSeekWrap(
+                    clampPercent(candidate.getAttribute('data-seek-margin-left')),
+                    clampPercent(candidate.getAttribute('data-seek-margin-right'))
+                )
+            );
         });
     }
 
@@ -159,24 +213,38 @@ export class ViewRenderer {
             return;
         }
 
-        const that = this;
-        this.root.find('canvas.waveform:not(.waveform-wrap > canvas.waveform)').each(function(this: HTMLElement) {
-            const canvas = this as HTMLCanvasElement;
-            that.waveformCanvases.push(canvas);
-            that.waveformContexts.push(canvas.getContext('2d'));
-            that.waveformOriginalHeight.push(canvas.height);
+        const canvases = this.root.querySelectorAll('canvas.waveform');
+        canvases.forEach((canvasElement) => {
+            if (!(canvasElement instanceof HTMLCanvasElement)) {
+                return;
+            }
 
-            const wrappedCanvas = $(canvas) as JQuery<HTMLCanvasElement>;
-            wrappedCanvas.wrap('<div class="waveform-wrap"></div>');
-            wrappedCanvas.parent('.waveform-wrap').attr(
-                'style',
-                sanitizeInlineStyle(wrappedCanvas.data('waveformStyle')) + '; display: block;'
+            if (canvasElement.parentElement?.classList.contains('waveform-wrap')) {
+                return;
+            }
+
+            this.waveformCanvases.push(canvasElement);
+            this.waveformContexts.push(canvasElement.getContext('2d'));
+            this.waveformOriginalHeight.push(canvasElement.height);
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'waveform-wrap';
+            wrapper.setAttribute('style', sanitizeInlineStyle(canvasElement.getAttribute('data-waveform-style')) + '; display: block;');
+
+            const parent = canvasElement.parentElement;
+            if (!parent) {
+                return;
+            }
+
+            parent.insertBefore(wrapper, canvasElement);
+            wrapper.appendChild(canvasElement);
+            wrapper.insertAdjacentHTML(
+                'beforeend',
+                buildSeekWrap(
+                    clampPercent(canvasElement.getAttribute('data-seek-margin-left')),
+                    clampPercent(canvasElement.getAttribute('data-seek-margin-right'))
+                )
             );
-
-            wrappedCanvas.after(buildSeekWrap(
-                clampPercent(wrappedCanvas.data('seekMarginLeft')),
-                clampPercent(wrappedCanvas.data('seekMarginRight'))
-            ));
         });
     }
 
@@ -241,15 +309,20 @@ export class ViewRenderer {
     }
 
     updateMainControls(state: TrackSwitchUiState): void {
-        this.root.find('.playpause').toggleClass('checked', state.playing);
-        this.root.find('.repeat').toggleClass('checked', state.repeat);
+        this.queryAll('.playpause').forEach(function(element) {
+            element.classList.toggle('checked', state.playing);
+        });
+
+        this.queryAll('.repeat').forEach(function(element) {
+            element.classList.toggle('checked', state.repeat);
+        });
 
         const timePerc = state.longestDuration > 0
             ? (state.position / state.longestDuration) * 100
             : 0;
 
-        this.root.find('.seekhead').each(function() {
-            $(this).css({ left: timePerc + '%' });
+        this.queryAll('.seekhead').forEach(function(seekhead) {
+            setLeftPercent(seekhead, timePerc);
         });
 
         this.updateTiming(state.position, state.longestDuration);
@@ -258,23 +331,42 @@ export class ViewRenderer {
             return;
         }
 
-        this.root.find('.loop-a').toggleClass('checked', state.loop.pointA !== null);
-        this.root.find('.loop-b').toggleClass('checked', state.loop.pointB !== null);
-        this.root.find('.loop-toggle').toggleClass('checked', state.loop.enabled);
-        this.root.find('.loop-a, .loop-b').toggleClass('active', state.loop.enabled);
+        this.queryAll('.loop-a').forEach(function(element) {
+            element.classList.toggle('checked', state.loop.pointA !== null);
+            element.classList.toggle('active', state.loop.enabled);
+        });
+
+        this.queryAll('.loop-b').forEach(function(element) {
+            element.classList.toggle('checked', state.loop.pointB !== null);
+            element.classList.toggle('active', state.loop.enabled);
+        });
+
+        this.queryAll('.loop-toggle').forEach(function(element) {
+            element.classList.toggle('checked', state.loop.enabled);
+        });
 
         if (state.loop.pointA !== null && state.longestDuration > 0) {
             const pointAPerc = (state.loop.pointA / state.longestDuration) * 100;
-            this.root.find('.loop-marker.marker-a').css({ left: pointAPerc + '%', display: 'block' });
+            this.queryAll('.loop-marker.marker-a').forEach(function(marker) {
+                setLeftPercent(marker, pointAPerc);
+                setDisplay(marker, 'block');
+            });
         } else {
-            this.root.find('.loop-marker.marker-a').css({ display: 'none' });
+            this.queryAll('.loop-marker.marker-a').forEach(function(marker) {
+                setDisplay(marker, 'none');
+            });
         }
 
         if (state.loop.pointB !== null && state.longestDuration > 0) {
             const pointBPerc = (state.loop.pointB / state.longestDuration) * 100;
-            this.root.find('.loop-marker.marker-b').css({ left: pointBPerc + '%', display: 'block' });
+            this.queryAll('.loop-marker.marker-b').forEach(function(marker) {
+                setLeftPercent(marker, pointBPerc);
+                setDisplay(marker, 'block');
+            });
         } else {
-            this.root.find('.loop-marker.marker-b').css({ display: 'none' });
+            this.queryAll('.loop-marker.marker-b').forEach(function(marker) {
+                setDisplay(marker, 'none');
+            });
         }
 
         if (state.loop.pointA !== null && state.loop.pointB !== null && state.longestDuration > 0) {
@@ -282,21 +374,37 @@ export class ViewRenderer {
             const pointBPerc = (state.loop.pointB / state.longestDuration) * 100;
             const widthPerc = pointBPerc - pointAPerc;
 
-            this.root.find('.loop-region').css({
-                left: pointAPerc + '%',
-                width: widthPerc + '%',
-                display: 'block',
-            }).toggleClass('active', state.loop.enabled);
+            this.queryAll('.loop-region').forEach(function(region) {
+                setLeftPercent(region, pointAPerc);
+                setWidthPercent(region, widthPerc);
+                setDisplay(region, 'block');
+                region.classList.toggle('active', state.loop.enabled);
+            });
         } else {
-            this.root.find('.loop-region').css({ display: 'none' });
+            this.queryAll('.loop-region').forEach(function(region) {
+                setDisplay(region, 'none');
+                region.classList.remove('active');
+            });
         }
     }
 
     updateTrackControls(runtimes: TrackRuntime[]): void {
         runtimes.forEach((runtime, index) => {
-            const row = this.root.find('.track_list li.track:nth-child(' + (index + 1) + ')');
-            row.find('.mute').toggleClass('checked', runtime.state.mute);
-            row.find('.solo').toggleClass('checked', runtime.state.solo);
+            const row = this.query('.track_list li.track:nth-child(' + (index + 1) + ')');
+            if (!row) {
+                return;
+            }
+
+            const mute = row.querySelector('.mute');
+            const solo = row.querySelector('.solo');
+
+            if (mute) {
+                mute.classList.toggle('checked', runtime.state.mute);
+            }
+
+            if (solo) {
+                solo.classList.toggle('checked', runtime.state.solo);
+            }
         });
     }
 
@@ -315,63 +423,100 @@ export class ViewRenderer {
             imageSrc = this.originalImage;
         }
 
-        if (imageSrc) {
-            this.root.find('.seekable').attr('src', imageSrc);
+        if (!imageSrc) {
+            return;
         }
+
+        this.queryAll('.seekable').forEach(function(element) {
+            if (element instanceof HTMLImageElement) {
+                element.src = imageSrc as string;
+            }
+        });
     }
 
     setVolumeSlider(volumeZeroToOne: number): void {
-        const slider = this.root.find('.volume-slider');
-        if (slider.length === 0) {
+        const slider = this.query('.volume-slider');
+        if (!slider || !(slider instanceof HTMLInputElement)) {
             return;
         }
-        slider.val(Math.round(volumeZeroToOne * 100));
+
+        slider.value = String(Math.round(volumeZeroToOne * 100));
         this.updateVolumeIcon(volumeZeroToOne);
     }
 
     updateVolumeIcon(volumeZeroToOne: number): void {
-        const volumeIcon = this.root.find('.volume-control .volume-icon');
-        volumeIcon.removeClass('fa-volume-off fa-volume-down fa-volume-up');
+        this.queryAll('.volume-control .volume-icon').forEach(function(icon) {
+            icon.classList.remove('fa-volume-off', 'fa-volume-down', 'fa-volume-up');
 
-        if (volumeZeroToOne === 0) {
-            volumeIcon.addClass('fa-volume-off');
-        } else if (volumeZeroToOne < 0.5) {
-            volumeIcon.addClass('fa-volume-down');
-        } else {
-            volumeIcon.addClass('fa-volume-up');
-        }
+            if (volumeZeroToOne === 0) {
+                icon.classList.add('fa-volume-off');
+            } else if (volumeZeroToOne < 0.5) {
+                icon.classList.add('fa-volume-down');
+            } else {
+                icon.classList.add('fa-volume-up');
+            }
+        });
     }
 
     setOverlayLoading(isLoading: boolean): void {
-        this.root.find('.overlay .activate').toggleClass('fa-spin loading', isLoading);
-        this.root.find('.overlay').toggleClass('loading', isLoading);
+        this.queryAll('.overlay .activate').forEach(function(activate) {
+            activate.classList.toggle('fa-spin', isLoading);
+            activate.classList.toggle('loading', isLoading);
+        });
+
+        this.queryAll('.overlay').forEach(function(overlay) {
+            overlay.classList.toggle('loading', isLoading);
+        });
     }
 
     showOverlayInfoText(): void {
-        this.root.find('.overlay .info').hide();
-        this.root.find('.overlay .text').show();
+        this.queryAll('.overlay .info').forEach(function(info) {
+            setDisplay(info, 'none');
+        });
+
+        this.queryAll('.overlay .text').forEach(function(text) {
+            setDisplay(text, 'block');
+        });
     }
 
     hideOverlayOnLoaded(): void {
-        this.root.find('.overlay').hide().remove();
+        this.queryAll('.overlay').forEach(function(overlay) {
+            overlay.remove();
+        });
     }
 
     showError(message: string, runtimes: TrackRuntime[]): void {
-        this.root.addClass('error');
-        this.root.find('.overlay .activate').removeClass('fa-spin loading');
-        this.root.find('#overlaytext').text(message);
+        this.root.classList.add('error');
+
+        this.queryAll('.overlay .activate').forEach(function(activate) {
+            activate.classList.remove('fa-spin', 'loading');
+        });
+
+        const overlayText = this.query('#overlaytext');
+        if (overlayText) {
+            overlayText.textContent = message;
+        }
 
         runtimes.forEach((runtime, index) => {
             if (!runtime.errored) {
                 return;
             }
-            this.root.find('.track_list > li:nth-child(' + (index + 1) + ')').addClass('error');
+
+            const row = this.query('.track_list > li:nth-child(' + (index + 1) + ')');
+            if (row) {
+                row.classList.add('error');
+            }
         });
     }
 
     destroy(): void {
-        this.root.find('.main-control').remove();
-        this.root.find('.track_list').remove();
+        this.queryAll('.main-control').forEach(function(mainControl) {
+            mainControl.remove();
+        });
+
+        this.queryAll('.track_list').forEach(function(trackList) {
+            trackList.remove();
+        });
     }
 
     getPresetCount(): number {
@@ -379,7 +524,12 @@ export class ViewRenderer {
     }
 
     updateTiming(position: number, longestDuration: number): void {
-        this.root.find('.timing .time').html(formatSecondsToHHMMSSmmm(position));
-        this.root.find('.timing .length').html(formatSecondsToHHMMSSmmm(longestDuration));
+        this.queryAll('.timing .time').forEach(function(node) {
+            node.textContent = formatSecondsToHHMMSSmmm(position);
+        });
+
+        this.queryAll('.timing .length').forEach(function(node) {
+            node.textContent = formatSecondsToHHMMSSmmm(longestDuration);
+        });
     }
 }

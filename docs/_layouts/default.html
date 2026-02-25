@@ -44,12 +44,21 @@
     </section>
 
     <script src="https://cdn.rawgit.com/download/polymer-cdn/1.5.0/lib/webcomponentsjs/webcomponents-lite.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
     <script src="js/trackswitch.min.js"></script>
     <script type="text/javascript">
-        jQuery(document).ready(function() {
-            jQuery(".customplayer").trackSwitch({ onlyradiosolo: true, repeat: true });
-            jQuery(".player").trackSwitch();
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.customplayer').forEach(function(player) {
+                TrackSwitch.createTrackSwitch(player, {
+                    features: {
+                        onlyradiosolo: true,
+                        repeat: true,
+                    },
+                });
+            });
+
+            document.querySelectorAll('.player').forEach(function(player) {
+                TrackSwitch.createTrackSwitch(player);
+            });
         });
     </script>
   </body>
