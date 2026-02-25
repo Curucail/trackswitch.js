@@ -237,6 +237,37 @@ test('controller destroy tears down rendered UI', async () => {
     assert.equal(document.querySelectorAll('.track_list').length, 0);
 });
 
+test('dragging a loop marker does not seek the playhead', async () => {
+    const controller = createController({
+        features: { waveform: false, keyboard: false, looping: true },
+        tracks: [{ title: 'A', sources: [{ src: 'a.mp3' }] }],
+    });
+
+    await controller.load();
+
+    controller.seekTo(2);
+    controller.setLoopPoint('A');
+    controller.seekTo(6);
+    controller.setLoopPoint('B');
+    controller.seekTo(4);
+
+    const initialPosition = controller.getState().state.position;
+
+    const markerA = document.querySelector('.loop-marker.marker-a');
+    assert.ok(markerA, 'loop marker A should exist');
+
+    dispatchMouse(markerA, 'mousedown', { button: 0, pageX: 1 });
+    assert.equal(controller.getState().state.position, initialPosition);
+
+    dispatchMouse(window, 'mousemove', { button: 0, pageX: 0 });
+    assert.equal(controller.getState().state.position, initialPosition);
+
+    dispatchMouse(window, 'mouseup', { button: 0, pageX: 0 });
+    assert.equal(controller.getState().state.position, initialPosition);
+
+    controller.destroy();
+});
+
 test('keyboard shortcuts are scoped to active instance', async () => {
     document.body.innerHTML = '<div id="a" class="player"></div><div id="b" class="player"></div>';
 

@@ -566,6 +566,10 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             return;
         }
 
+        if (isPrimaryInput(event) && closestInRoot(this.root, event.target, '.loop-marker')) {
+            return;
+        }
+
         if (this.features.looping && event.type === 'mousedown' && event.which === 3) {
             event.preventDefault();
 
