@@ -1,10 +1,10 @@
-:is(.trackswitch, .jquery-trackswitch) *,
-:is(.trackswitch, .jquery-trackswitch) *:before,
-:is(.trackswitch, .jquery-trackswitch) *:after {
+.trackswitch *,
+.trackswitch *:before,
+.trackswitch *:after {
     box-sizing: border-box;
 }
 
-:is(.trackswitch, .jquery-trackswitch) {
+.trackswitch {
     background: #EEEEEE;
     position: relative;
     margin: 10px;
@@ -14,26 +14,30 @@
     /* Reset line-height to stop it inheriting from page */
 }
 
-:is(.trackswitch, .jquery-trackswitch) ts-track {
+.trackswitch ts-track {
     display: none;
 }
 
 /* Reset list elements from bootstrap styling */
-:is(.trackswitch, .jquery-trackswitch) ul {
+.trackswitch ul {
     margin: 0;
     padding: 0;
 }
 
-:is(.trackswitch, .jquery-trackswitch) li {
+.trackswitch li {
     margin: 0;
     padding: 0;
     list-style: none;
 }
 
+.trackswitch p {
+    margin: 0;
+}
+
 /* Font Awesome icon hooks */
-:is(.trackswitch, .jquery-trackswitch) .overlay span:after,
-:is(.trackswitch, .jquery-trackswitch) li.track.error:before,
-:is(.trackswitch, .jquery-trackswitch) .control li.button:after {
+.trackswitch .overlay span:after,
+.trackswitch li.track.error:before,
+.trackswitch .control li.button:after {
     content: "";
     display: block;
     font-family: FontAwesome;
@@ -46,7 +50,7 @@
 
 /* OVERLAY STYLES ----------------------------------------------------------- */
 
-:is(.trackswitch, .jquery-trackswitch) .overlay {
+.trackswitch .overlay {
     background-color: rgba(0, 0, 0, 0.3);
     position: absolute;
     top: 0;
@@ -56,15 +60,15 @@
     z-index: 10;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .overlay>span,
-:is(.trackswitch, .jquery-trackswitch) .overlay>p,
-:is(.trackswitch, .jquery-trackswitch) .overlay #overlayinfo span.info {
+.trackswitch .overlay>span,
+.trackswitch .overlay>p,
+.trackswitch .overlay #overlayinfo span.info {
     display: block;
     position: absolute;
     text-align: center;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .overlay>span {
+.trackswitch .overlay>span {
     background-color: #F1C40F;
     width: 50px;
     height: 50px;
@@ -76,44 +80,44 @@
     cursor: pointer;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .overlay>span.loading {
+.trackswitch .overlay>span.loading {
     cursor: inherit;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .overlay>span:after {
+.trackswitch .overlay>span:after {
     content: "\f011";
     /* fa-power-off */
     padding-top: 7px;
     font-size: 28pt;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .overlay>span.loading:after {
+.trackswitch .overlay>span.loading:after {
     content: "\f110";
     /* fa-spinner */
 }
 
 
-:is(.trackswitch, .jquery-trackswitch).error .overlay {
+.trackswitch.error .overlay {
     background: rgba(0, 0, 0, 0.6);
 }
 
-:is(.trackswitch, .jquery-trackswitch).error .overlay>span {
+.trackswitch.error .overlay>span {
     background: #C03328;
     cursor: inherit;
 }
 
-:is(.trackswitch, .jquery-trackswitch).error .overlay>span:after {
+.trackswitch.error .overlay>span:after {
     content: "\f12a";
     /* fa-exclamation */
 }
 
-:is(.trackswitch, .jquery-trackswitch).error .overlay p {
+.trackswitch.error .overlay p {
     width: 100%;
     top: calc(50% + 35px);
     color: #FFFFFF;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .overlay #overlayinfo {
+.trackswitch .overlay #overlayinfo {
     height: 40px;
     width: 100%;
     bottom: 5px;
@@ -123,7 +127,7 @@
     font-size: 14pt;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .overlay #overlayinfo span.info {
+.trackswitch .overlay #overlayinfo span.info {
     bottom: 0;
     right: 0;
     width: 380px;
@@ -132,7 +136,7 @@
     opacity: 0.4;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .overlay #overlayinfo span.info:after {
+.trackswitch .overlay #overlayinfo span.info:after {
     content: "\f05a";
     /* fa-info-circle */
     position: absolute;
@@ -141,17 +145,17 @@
     font-size: 16pt;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .overlay #overlayinfo span.text {
+.trackswitch .overlay #overlayinfo span.text {
     display: none;
     position: absolute;
     right: 0;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .overlay #overlayinfo span.text strong {
+.trackswitch .overlay #overlayinfo span.text strong {
     font-weight: bold;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .overlay #overlayinfo a {
+.trackswitch .overlay #overlayinfo a {
     color: #EEEEEE;
     text-decoration: underline;
 }
@@ -162,11 +166,11 @@
    Row 1: playback | volume | loop | preset | seekbar | timing
    Seekbar moves to row 2 (full width) if container is too narrow */
 
-:is(.trackswitch, .jquery-trackswitch) .main-control {
+.trackswitch .main-control {
     container-type: inline-size;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .main-control ul.control {
+.trackswitch .main-control ul.control {
     background-color: #333;
     min-height: 36px;
     padding: 4px 12px;
@@ -178,51 +182,51 @@
     gap: 6px 24px;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .main-control .playback-group {
+.trackswitch .main-control .playback-group {
     grid-column: 1;
     grid-row: 1;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .main-control .volume {
+.trackswitch .main-control .volume {
     grid-column: 2;
     grid-row: 1;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .main-control .loop-group {
+.trackswitch .main-control .loop-group {
     grid-column: 3;
     grid-row: 1;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .main-control .preset-selector-wrap {
+.trackswitch .main-control .preset-selector-wrap {
     justify-self: left;
     grid-column: 4;
     grid-row: 1;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .main-control .timing {
+.trackswitch .main-control .timing {
     grid-column: 6;
     grid-row: 1;
     justify-self: end;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .main-control .seekwrap {
+.trackswitch .main-control .seekwrap {
     grid-column: 5;
     grid-row: 1;
 }
 
 /* Playback group (play/stop/repeat) */
-:is(.trackswitch, .jquery-trackswitch) .main-control .playback-group>.playback-controls {
+.trackswitch .main-control .playback-group>.playback-controls {
     display: flex;
     align-items: center;
     gap: 10px;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .main-control .playback-group>.playback-controls>li.button {
+.trackswitch .main-control .playback-group>.playback-controls>li.button {
     margin: 0;
 }
 
 /* Generic button styles within main-control */
-:is(.trackswitch, .jquery-trackswitch) .main-control .button {
+.trackswitch .main-control .button {
     width: 15px;
     height: 16px;
     cursor: pointer;
@@ -230,13 +234,13 @@
 
 
 /* Timing */
-:is(.trackswitch, .jquery-trackswitch) .main-control .timing {
+.trackswitch .main-control .timing {
     font-family: monospace;
     white-space: nowrap;
 }
 
 /* Seekbar */
-:is(.trackswitch, .jquery-trackswitch) .main-control .seekwrap {
+.trackswitch .main-control .seekwrap {
     overflow: hidden;
     height: 28px;
     cursor: pointer;
@@ -244,7 +248,7 @@
     width: 100%;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .main-control .seekwrap .seekbar {
+.trackswitch .main-control .seekwrap .seekbar {
     background-color: #ED8C01;
     height: 6px;
     margin: 11px 4px 0 0;
@@ -252,7 +256,7 @@
     box-shadow: 4px 0 0 0 #ED8C01;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .main-control .seekwrap .seekbar .seekhead {
+.trackswitch .main-control .seekwrap .seekbar .seekhead {
     background-color: #ED8C01;
     position: absolute;
     width: 4px;
@@ -261,7 +265,7 @@
     left: 0;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .main-control .seekwrap .seekbar .loop-marker {
+.trackswitch .main-control .seekwrap .seekbar .loop-marker {
     position: absolute;
     width: 8px;
     height: 22px;
@@ -273,7 +277,7 @@
     background: transparent;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .main-control .seekwrap .seekbar .loop-marker:after {
+.trackswitch .main-control .seekwrap .seekbar .loop-marker:after {
     content: '';
     position: absolute;
     left: 50%;
@@ -284,7 +288,7 @@
     transform: translateX(-50%);
 }
 
-:is(.trackswitch, .jquery-trackswitch) .main-control .seekwrap .seekbar .loop-region {
+.trackswitch .main-control .seekwrap .seekbar .loop-region {
     position: absolute;
     height: 100%;
     top: 0;
@@ -293,17 +297,17 @@
     z-index: 1;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .main-control .seekwrap .seekbar .loop-region.active {
+.trackswitch .main-control .seekwrap .seekbar .loop-region.active {
     background-color: rgba(237, 140, 1, 0.4);
 }
 
 /* Volume control */
-:is(.trackswitch, .jquery-trackswitch) .main-control .volume-control {
+.trackswitch .main-control .volume-control {
     display: flex;
     align-items: center;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .main-control .volume-icon {
+.trackswitch .main-control .volume-icon {
     font-family: FontAwesome;
     font-size: 16px;
     color: #DDDDDD;
@@ -313,7 +317,7 @@
     text-align: left;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .main-control .volume-slider {
+.trackswitch .main-control .volume-slider {
     -webkit-appearance: none;
     appearance: none;
     width: 80px;
@@ -323,7 +327,7 @@
     cursor: pointer;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .main-control .volume-slider::-webkit-slider-thumb {
+.trackswitch .main-control .volume-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
     width: 12px;
@@ -333,7 +337,7 @@
     border-radius: 50%;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .main-control .volume-slider::-moz-range-thumb {
+.trackswitch .main-control .volume-slider::-moz-range-thumb {
     width: 12px;
     height: 12px;
     background: #ED8C01;
@@ -343,23 +347,23 @@
 }
 
 /* Loop group */
-:is(.trackswitch, .jquery-trackswitch) .main-control .control>li.loop-group>.loop-controls {
+.trackswitch .main-control .control>li.loop-group>.loop-controls {
     display: flex;
     align-items: center;
     gap: 10px;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .main-control .control>li.loop-group>.loop-controls>li.button {
+.trackswitch .main-control .control>li.loop-group>.loop-controls>li.button {
     margin: 0;
 }
 
 /* Preset selector */
-:is(.trackswitch, .jquery-trackswitch) .main-control .preset-selector-wrap {
+.trackswitch .main-control .preset-selector-wrap {
     position: relative;
     z-index: 3;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .main-control .preset-selector {
+.trackswitch .main-control .preset-selector {
     background-color: #555;
     color: #DDDDDD;
     border: 1px solid #333;
@@ -371,24 +375,24 @@
     touch-action: manipulation;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .main-control .preset-selector:hover {
+.trackswitch .main-control .preset-selector:hover {
     background-color: #666;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .main-control .preset-selector:focus {
+.trackswitch .main-control .preset-selector:focus {
     outline: none;
     background-color: #666;
     color: #DDDDDD;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .main-control .preset-selector option {
+.trackswitch .main-control .preset-selector option {
     background-color: #333;
     color: #DDDDDD;
 }
 
 /* PLAYER TITLE STYLES ------------------------------------------------------ */
 
-:is(.trackswitch, .jquery-trackswitch)>p {
+.trackswitch>p {
     /* Player title <p> */
     margin: 12px 10px;
 }
@@ -397,7 +401,7 @@
 /* SEEKABLE/POSTER IMAGE STYLES --------------------------------------------- */
 
 /* Is the display: block added to the wrap in the js necessary? ------------------------------------------------- TODO */
-:is(.trackswitch, .jquery-trackswitch) img {
+.trackswitch img {
     max-width: 100%;
     /* Limit images to 100% width (unless overridden by the user) */
     display: block;
@@ -406,12 +410,12 @@
     padding: 0;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .seekable-img-wrap {
+.trackswitch .seekable-img-wrap {
     display: inline-block;
     position: relative;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .seekable-img-wrap .seekwrap {
+.trackswitch .seekable-img-wrap .seekwrap {
     position: absolute;
     top: 0;
     right: 0;
@@ -420,7 +424,7 @@
     cursor: pointer;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .seekable-img-wrap .seekwrap .seekhead {
+.trackswitch .seekable-img-wrap .seekwrap .seekhead {
     position: absolute;
     top: 0;
     bottom: 0;
@@ -428,7 +432,7 @@
     border-right: 2px solid #FFFFFF;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .seekable-img-wrap .seekwrap .loop-marker {
+.trackswitch .seekable-img-wrap .seekwrap .loop-marker {
     position: absolute;
     width: 10px;
     /* Wider for click target */
@@ -444,7 +448,7 @@
     background: transparent;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .seekable-img-wrap .seekwrap .loop-marker:after {
+.trackswitch .seekable-img-wrap .seekwrap .loop-marker:after {
     content: '';
     position: absolute;
     left: 50%;
@@ -455,7 +459,7 @@
     transform: translateX(-50%);
 }
 
-:is(.trackswitch, .jquery-trackswitch) .seekable-img-wrap .seekwrap .loop-region {
+.trackswitch .seekable-img-wrap .seekwrap .loop-region {
     position: absolute;
     top: 0;
     bottom: 0;
@@ -466,7 +470,7 @@
     z-index: 1;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .seekable-img-wrap .seekwrap .loop-region.active {
+.trackswitch .seekable-img-wrap .seekwrap .loop-region.active {
     background-color: rgba(237, 140, 1, 0.3);
     /* Brighter orange when looping is active */
 }
@@ -474,14 +478,14 @@
 
 /* WAVEFORM VISUALIZATION STYLES -------------------------------------------- */
 
-:is(.trackswitch, .jquery-trackswitch) .waveform-wrap {
+.trackswitch .waveform-wrap {
     display: block;
     position: relative;
     width: 100%;
     margin: 10px 0;
 }
 
-:is(.trackswitch, .jquery-trackswitch) canvas.waveform {
+.trackswitch canvas.waveform {
     display: block;
     width: 100%;
     background-color: rgba(0, 0, 0, 0.05);
@@ -490,7 +494,7 @@
     /* CSS custom property for waveform color (orange) */
 }
 
-:is(.trackswitch, .jquery-trackswitch) .waveform-wrap .seekwrap {
+.trackswitch .waveform-wrap .seekwrap {
     position: absolute;
     top: 0;
     right: 0;
@@ -501,7 +505,7 @@
     /* Ensure overlay captures click events */
 }
 
-:is(.trackswitch, .jquery-trackswitch) .waveform-wrap .seekwrap .seekhead {
+.trackswitch .waveform-wrap .seekwrap .seekhead {
     position: absolute;
     top: 0;
     bottom: 0;
@@ -511,7 +515,7 @@
     z-index: 3;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .waveform-wrap .seekwrap .loop-marker {
+.trackswitch .waveform-wrap .seekwrap .loop-marker {
     position: absolute;
     width: 10px;
     /* Wider for click target */
@@ -527,7 +531,7 @@
     background: transparent;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .waveform-wrap .seekwrap .loop-marker:after {
+.trackswitch .waveform-wrap .seekwrap .loop-marker:after {
     content: '';
     position: absolute;
     left: 50%;
@@ -539,7 +543,7 @@
     transform: translateX(-50%);
 }
 
-:is(.trackswitch, .jquery-trackswitch) .waveform-wrap .seekwrap .loop-region {
+.trackswitch .waveform-wrap .seekwrap .loop-region {
     position: absolute;
     top: 0;
     bottom: 0;
@@ -550,7 +554,7 @@
     z-index: 1;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .waveform-wrap .seekwrap .loop-region.active {
+.trackswitch .waveform-wrap .seekwrap .loop-region.active {
     background-color: rgba(237, 140, 1, 0.3);
     /* Brighter orange when looping is active */
 }
@@ -558,11 +562,11 @@
 
 /* TRACK STYLES ------------------------------------------------------------- */
 
-:is(.trackswitch, .jquery-trackswitch) ul.track_list {
+.trackswitch ul.track_list {
     padding: 0;
 }
 
-:is(.trackswitch, .jquery-trackswitch) li.track {
+.trackswitch li.track {
     background-color: #DDDDDD;
     position: relative;
     min-height: 32px;
@@ -571,23 +575,23 @@
     /* Top Right Bottom Left */
 }
 
-:is(.trackswitch, .jquery-trackswitch) li.track.tabs {
+.trackswitch li.track.tabs {
     display: inline-block;
     padding-right: 12px;
     border: 1px solid #999;
 }
 
 /* SPECIFICITY PROBLEMS!!!!!!!!! -------------------------------------------------------------------------------- TODO */
-:is(.trackswitch, .jquery-trackswitch) li.track:not(.tabs):nth-child(even) {
+.trackswitch li.track:not(.tabs):nth-child(even) {
     background-color: #EEEEEE;
 }
 
 /* NEVER USE IMPORTANT, SORT OUT THE SPECIFICITY PROBLEMS ------------------------------------------------------- TODO */
-:is(.trackswitch, .jquery-trackswitch) li.track.error {
+.trackswitch li.track.error {
     background-color: #DD9B9B !important;
 }
 
-:is(.trackswitch, .jquery-trackswitch) li.track.error:before {
+.trackswitch li.track.error:before {
     content: "\f071  ERROR";
     /* fa-exclamation-triangle */
     display: inline;
@@ -596,14 +600,14 @@
     cursor: inherit;
 }
 
-:is(.trackswitch, .jquery-trackswitch) li.track ul.control {
+.trackswitch li.track ul.control {
     position: absolute;
     top: calc(50% - 14px);
     left: 5px;
     padding-left: 2px;
 }
 
-:is(.trackswitch, .jquery-trackswitch) li.track ul.control li {
+.trackswitch li.track ul.control li {
     display: inline-block;
     width: 24px;
     height: 24px;
@@ -611,45 +615,45 @@
     text-align: center;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .control li.button {
+.trackswitch .control li.button {
     position: relative;
     text-indent: -9999px;
     line-height: 0;
     cursor: pointer;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .control li.button:after {
+.trackswitch .control li.button:after {
     position: absolute;
     top: 0;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .control li.playpause:after {
+.trackswitch .control li.playpause:after {
     content: "\f04b";
     /* fa-play */
 }
 
-:is(.trackswitch, .jquery-trackswitch) .control li.playpause.checked:after {
+.trackswitch .control li.playpause.checked:after {
     content: "\f04c";
     /* fa-pause */
 }
 
-:is(.trackswitch, .jquery-trackswitch) .control li.stop:after {
+.trackswitch .control li.stop:after {
     content: "\f04d";
     /* fa-stop */
 }
 
-:is(.trackswitch, .jquery-trackswitch) .control li.repeat:after {
+.trackswitch .control li.repeat:after {
     content: "\f01e";
     /* fa-repeat */
     opacity: 0.5;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .control li.repeat.checked:after {
+.trackswitch .control li.repeat.checked:after {
     opacity: 1;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .control li.loop-a:after,
-:is(.trackswitch, .jquery-trackswitch) .control li.loop-b:after {
+.trackswitch .control li.loop-a:after,
+.trackswitch .control li.loop-b:after {
     font-family: Arial, sans-serif;
     font-weight: bold;
     font-size: 12px;
@@ -664,24 +668,24 @@
     left: 0;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .control li.loop-a:after {
+.trackswitch .control li.loop-a:after {
     content: "A";
     /* Letter A */
 }
 
-:is(.trackswitch, .jquery-trackswitch) .control li.loop-b:after {
+.trackswitch .control li.loop-b:after {
     content: "B";
     /* Letter B */
 }
 
-:is(.trackswitch, .jquery-trackswitch) .control li.loop-a.checked:after,
-:is(.trackswitch, .jquery-trackswitch) .control li.loop-a.active:after,
-:is(.trackswitch, .jquery-trackswitch) .control li.loop-b.checked:after,
-:is(.trackswitch, .jquery-trackswitch) .control li.loop-b.active:after {
+.trackswitch .control li.loop-a.checked:after,
+.trackswitch .control li.loop-a.active:after,
+.trackswitch .control li.loop-b.checked:after,
+.trackswitch .control li.loop-b.active:after {
     opacity: 1;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .control li.loop-toggle:after {
+.trackswitch .control li.loop-toggle:after {
     content: "\f021";
     /* fa-refresh / loop icon */
     opacity: 0.5;
@@ -689,11 +693,11 @@
     left: 0;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .control li.loop-toggle.checked:after {
+.trackswitch .control li.loop-toggle.checked:after {
     opacity: 1;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .control li.loop-clear:after {
+.trackswitch .control li.loop-clear:after {
     content: "\f00d";
     /* fa-times / X icon */
     opacity: 0.5;
@@ -701,11 +705,11 @@
     left: -5px;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .control li.loop-clear:hover:after {
+.trackswitch .control li.loop-clear:hover:after {
     opacity: 1;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .control li.mute:after {
+.trackswitch .control li.mute:after {
     content: "\f028";
     /* fa-volume-up */
     position: absolute;
@@ -714,12 +718,12 @@
     /* Necessary to do it this way? ----------------------------------------------------- TODO */
 }
 
-:is(.trackswitch, .jquery-trackswitch) .control li.mute.checked:after {
+.trackswitch .control li.mute.checked:after {
     content: "\f026";
     /* fa-volume-off */
 }
 
-:is(.trackswitch, .jquery-trackswitch) .control li.solo:after {
+.trackswitch .control li.solo:after {
     content: "\f10c";
     /* fa-circle-o */
     position: absolute;
@@ -728,17 +732,17 @@
     /* Necessary to do it this way? and can we combine it ------------------------------- TODO */
 }
 
-:is(.trackswitch, .jquery-trackswitch) .control li.solo.checked:after {
+.trackswitch .control li.solo.checked:after {
     content: "\f05d";
     /* fa-check-circle-o */
 }
 
-:is(.trackswitch, .jquery-trackswitch) .control li.solo.radio {
+.trackswitch .control li.solo.radio {
     /* .radio bootstrap fix */
     margin: 0;
 }
 
-:is(.trackswitch, .jquery-trackswitch) .control li.solo.radio.checked:after {
+.trackswitch .control li.solo.radio.checked:after {
     content: "\f192";
     /* fa-dot-circle-o */
 }
@@ -746,7 +750,7 @@
 
 /* Narrow container fallback: seekbar moves to full-width row 2 */
 @container (max-width: 1000px) {
-    :is(.trackswitch, .jquery-trackswitch) .main-control ul.control {
+    .trackswitch .main-control ul.control {
         grid-template-columns: auto auto auto auto 1fr;
         grid-template-rows: auto auto;
         gap: 6px 24px;
@@ -754,12 +758,12 @@
         padding: 8px 12px 4px 12px;
     }
 
-    :is(.trackswitch, .jquery-trackswitch) .main-control .seekwrap {
+    .trackswitch .main-control .seekwrap {
         grid-column: 1 / -1;
         grid-row: 2;
     }
 
-    :is(.trackswitch, .jquery-trackswitch) .main-control .timing {
+    .trackswitch .main-control .timing {
         grid-column: 5;
         grid-row: 1;
     }
@@ -776,7 +780,7 @@
 
     /* OVERLAY STYLES --------------------------------------------------------- */
 
-    :is(.trackswitch, .jquery-trackswitch) .overlay span {
+    .trackswitch .overlay span {
         width: 70px;
         height: 70px;
         top: calc(50% - 35px);
@@ -784,78 +788,78 @@
         line-height: 10px;
     }
 
-    :is(.trackswitch, .jquery-trackswitch) .overlay span:after {
+    .trackswitch .overlay span:after {
         padding-top: 3px;
         font-size: 36pt;
     }
 
-    :is(.trackswitch, .jquery-trackswitch).error .overlay p {
+    .trackswitch.error .overlay p {
         top: calc(50% + 45px);
     }
 
 
     /* MAIN CONTROL STYLES ---------------------------------------------------- */
 
-    :is(.trackswitch, .jquery-trackswitch) .main-control ul.control {
+    .trackswitch .main-control ul.control {
         grid-template-columns: auto auto auto 1fr;
         grid-template-rows: auto auto auto auto;
         gap: 4px 16px;
     }
 
-    :is(.trackswitch, .jquery-trackswitch) .main-control .playback-group {
+    .trackswitch .main-control .playback-group {
         grid-column: 1;
         grid-row: 1;
     }
 
-    :is(.trackswitch, .jquery-trackswitch) .main-control .playback-group>.playback-controls {
+    .trackswitch .main-control .playback-group>.playback-controls {
         gap: 18px;
     }
 
-    :is(.trackswitch, .jquery-trackswitch) .main-control .volume {
+    .trackswitch .main-control .volume {
         grid-column: 2;
         grid-row: 1;
         margin: 8px 8px 0 10px;
         justify-self: left;
     }
 
-    :is(.trackswitch, .jquery-trackswitch) .main-control .loop-group {
+    .trackswitch .main-control .loop-group {
         grid-column: 3;
         grid-row: 1;
         margin: 10px 8px 0 10px;
         justify-self: right;
     }
 
-    :is(.trackswitch, .jquery-trackswitch) .main-control .preset-selector-wrap {
+    .trackswitch .main-control .preset-selector-wrap {
         grid-column: 4;
         grid-row: 1;
         justify-self: left;
     }
 
-    :is(.trackswitch, .jquery-trackswitch) .main-control .timing {
+    .trackswitch .main-control .timing {
         grid-column: 1 / -1;
         grid-row: 3;
         justify-self: center;
     }
 
-    :is(.trackswitch, .jquery-trackswitch) .main-control .seekwrap {
+    .trackswitch .main-control .seekwrap {
         grid-column: 1 / -1;
         grid-row: 4;
     }
 
     /* Larger touch targets for buttons */
-    :is(.trackswitch, .jquery-trackswitch) .control li.button:after {
+    .trackswitch .control li.button:after {
         font-size: 23px;
     }
 
     /* Loop group mobile touch hardening */
-    :is(.trackswitch, .jquery-trackswitch) .main-control .control>li.loop-group>.loop-controls {
+    .trackswitch .main-control .control>li.loop-group>.loop-controls {
         gap: 4px;
     }
 
-    :is(.trackswitch, .jquery-trackswitch) .main-control .control>li.loop-group>.loop-controls>li.loop-a,
-    :is(.trackswitch, .jquery-trackswitch) .main-control .control>li.loop-group>.loop-controls>li.loop-b,
-    :is(.trackswitch, .jquery-trackswitch) .main-control .control>li.loop-group>.loop-controls>li.loop-toggle,
-    :is(.trackswitch, .jquery-trackswitch) .main-control .control>li.loop-group>.loop-controls>li.loop-clear {
+    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-a,
+    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-b,
+    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-toggle,
+    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-clear {
         width: 30px;
         height: 30px;
         position: relative;
@@ -864,42 +868,42 @@
         pointer-events: auto;
     }
 
-    :is(.trackswitch, .jquery-trackswitch) .control li.loop-a:after,
-    :is(.trackswitch, .jquery-trackswitch) .control li.loop-b:after,
-    :is(.trackswitch, .jquery-trackswitch) .control li.loop-toggle:after,
-    :is(.trackswitch, .jquery-trackswitch) .control li.loop-clear:after {
+    .trackswitch .control li.loop-a:after,
+    .trackswitch .control li.loop-b:after,
+    .trackswitch .control li.loop-toggle:after,
+    .trackswitch .control li.loop-clear:after {
         pointer-events: none;
     }
 
-    :is(.trackswitch, .jquery-trackswitch) .control li.loop-a:after,
-    :is(.trackswitch, .jquery-trackswitch) .control li.loop-b:after {
+    .trackswitch .control li.loop-a:after,
+    .trackswitch .control li.loop-b:after {
         font-size: 16px;
         padding: 1px 3px;
     }
 
     /* Volume slider larger touch target */
-    :is(.trackswitch, .jquery-trackswitch) .main-control .volume-control .volume-icon {
+    .trackswitch .main-control .volume-control .volume-icon {
         font-size: 20px;
         width: 20px;
     }
 
-    :is(.trackswitch, .jquery-trackswitch) .main-control .volume-slider {
+    .trackswitch .main-control .volume-slider {
         height: 4px;
         margin: 0;
     }
 
-    :is(.trackswitch, .jquery-trackswitch) .main-control .volume-slider::-webkit-slider-thumb {
+    .trackswitch .main-control .volume-slider::-webkit-slider-thumb {
         width: 16px;
         height: 16px;
     }
 
-    :is(.trackswitch, .jquery-trackswitch) .main-control .volume-slider::-moz-range-thumb {
+    .trackswitch .main-control .volume-slider::-moz-range-thumb {
         width: 16px;
         height: 16px;
     }
 
     /* Preset and timing adjustments */
-    :is(.trackswitch, .jquery-trackswitch) .main-control .preset-selector {
+    .trackswitch .main-control .preset-selector {
         font-size: 16px;
         margin-top: 4px;
         margin-left: 0px;
@@ -909,20 +913,20 @@
 
     /* TRACK STYLES ----------------------------------------------------------- */
 
-    :is(.trackswitch, .jquery-trackswitch) li.track {
+    .trackswitch li.track {
         padding-left: 80px;
     }
 
-    :is(.trackswitch, .jquery-trackswitch) li.track ul.control {
+    .trackswitch li.track ul.control {
         top: calc(50% - 19px);
     }
 
-    :is(.trackswitch, .jquery-trackswitch) .track .control li.button {
+    .trackswitch .track .control li.button {
         margin: 0 10px 0 0;
     }
 
-    :is(.trackswitch, .jquery-trackswitch) .control li.mute:after,
-    :is(.trackswitch, .jquery-trackswitch) .control li.solo:after {
+    .trackswitch .control li.mute:after,
+    .trackswitch .control li.solo:after {
         padding-top: 0;
         bottom: 35%;
     }
@@ -936,47 +940,47 @@
        Row 3: timing (centered)
        Row 4: seekbar (full width) */
 
-    :is(.trackswitch, .jquery-trackswitch) .main-control ul.control {
+    .trackswitch .main-control ul.control {
         grid-template-columns: 1fr 1fr;
         grid-template-rows: auto auto auto auto;
         gap: 8px 8px;
     }
 
-    :is(.trackswitch, .jquery-trackswitch) .main-control .playback-group {
+    .trackswitch .main-control .playback-group {
         grid-column: 1;
         grid-row: 1;
     }
 
-    :is(.trackswitch, .jquery-trackswitch) .main-control .playback-group>.playback-controls {
+    .trackswitch .main-control .playback-group>.playback-controls {
         gap: 20px;
     }
 
-    :is(.trackswitch, .jquery-trackswitch) .main-control .volume {
+    .trackswitch .main-control .volume {
         grid-column: 2;
         grid-row: 1;
         justify-self: end;
     }
 
-    :is(.trackswitch, .jquery-trackswitch) .main-control .loop-group {
+    .trackswitch .main-control .loop-group {
         grid-column: 2;
         grid-row: 2;
         justify-self: end;
         margin: 5px 0 0 0;
     }
 
-    :is(.trackswitch, .jquery-trackswitch) .main-control .preset-selector-wrap {
+    .trackswitch .main-control .preset-selector-wrap {
         grid-column: 1;
         grid-row: 2;
         justify-self: left;
     }
 
-    :is(.trackswitch, .jquery-trackswitch) .main-control .timing {
+    .trackswitch .main-control .timing {
         grid-column: 1 / -1;
         grid-row: 3;
         justify-self: center;
     }
 
-    :is(.trackswitch, .jquery-trackswitch) .main-control .seekwrap {
+    .trackswitch .main-control .seekwrap {
         grid-column: 1 / -1;
         grid-row: 4;
     }
