@@ -1,6 +1,6 @@
 {
   "name": "trackswitch",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": "Nils Werner (nils.werner@audiolabs-erlangen.de)",
   "description": "Multitrack Audio Player",
   "homepage": "https://github.com/audiolabs/trackswitch.js",
@@ -25,6 +25,8 @@
   },
   "style": "dist/css/trackswitch.min.css",
   "main": "dist/js/trackswitch.js",
+  "unpkg": "dist/js/trackswitch.min.js",
+  "jsdelivr": "dist/js/trackswitch.min.js",
   "files": [
     "dist/",
     "LICENSE",
