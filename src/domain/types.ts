@@ -1,0 +1,139 @@
+export type LoopMarker = 'A' | 'B';
+
+export interface TrackSourceDefinition {
+    src: string;
+    type?: string;
+    startOffsetMs?: number;
+    endOffsetMs?: number;
+}
+
+export interface TrackDefinition {
+    id?: string;
+    title?: string;
+    muted?: boolean;
+    solo?: boolean;
+    image?: string;
+    style?: string;
+    presets?: number[];
+    seekMarginLeft?: number;
+    seekMarginRight?: number;
+    sources: TrackSourceDefinition[];
+}
+
+export interface TrackSwitchFeatures {
+    mute: boolean;
+    solo: boolean;
+    globalsolo: boolean;
+    globalvolume: boolean;
+    repeat: boolean;
+    radiosolo: boolean;
+    onlyradiosolo: boolean;
+    tabview: boolean;
+    iosunmute: boolean;
+    keyboard: boolean;
+    looping: boolean;
+    seekbar: boolean;
+    waveform: boolean;
+    waveformBarWidth: number;
+}
+
+export interface TrackSwitchConfig {
+    tracks: TrackDefinition[];
+    presetNames?: string[];
+    features?: Partial<TrackSwitchFeatures>;
+}
+
+export interface TrackTiming {
+    trimStart: number;
+    padStart: number;
+    audioDuration: number;
+    effectiveDuration: number;
+}
+
+export interface TrackState {
+    mute: boolean;
+    solo: boolean;
+}
+
+export interface TrackRuntime {
+    id: string;
+    definition: TrackDefinition;
+    state: TrackState;
+    gainNode: GainNode | null;
+    buffer: AudioBuffer | null;
+    timing: TrackTiming | null;
+    activeSource: AudioBufferSourceNode | null;
+    sourceIndex: number;
+    successful: boolean;
+    errored: boolean;
+    waveformCache: Map<string, Float32Array>;
+}
+
+export interface LoopState {
+    pointA: number | null;
+    pointB: number | null;
+    enabled: boolean;
+}
+
+export interface PlayerState {
+    playing: boolean;
+    repeat: boolean;
+    position: number;
+    startTime: number;
+    currentlySeeking: boolean;
+    loop: LoopState;
+    volume: number;
+}
+
+export type TrackSwitchEventName = 'loaded' | 'error' | 'position' | 'trackState';
+
+export interface TrackSwitchEventMap {
+    loaded: { longestDuration: number };
+    error: { message: string };
+    position: { position: number; duration: number };
+    trackState: { index: number; state: TrackState };
+}
+
+export type TrackSwitchEventHandler<K extends TrackSwitchEventName> = (
+    payload: TrackSwitchEventMap[K]
+) => void;
+
+export interface TrackSwitchSnapshot {
+    isLoaded: boolean;
+    isLoading: boolean;
+    isDestroyed: boolean;
+    longestDuration: number;
+    features: TrackSwitchFeatures;
+    state: PlayerState;
+    tracks: TrackState[];
+}
+
+export interface TrackSwitchController {
+    load(): Promise<void>;
+    destroy(): void;
+    togglePlay(): void;
+    play(): void;
+    pause(): void;
+    stop(): void;
+    seekTo(seconds: number): void;
+    seekRelative(seconds: number): void;
+    setRepeat(enabled: boolean): void;
+    setVolume(volumeZeroToOne: number): void;
+    setLoopPoint(marker: LoopMarker): boolean;
+    toggleLoop(): boolean;
+    clearLoop(): void;
+    toggleMute(trackIndex: number): void;
+    toggleSolo(trackIndex: number, exclusive?: boolean): void;
+    applyPreset(presetIndex: number): void;
+    getState(): TrackSwitchSnapshot;
+    on<K extends TrackSwitchEventName>(eventName: K, handler: TrackSwitchEventHandler<K>): () => void;
+    off<K extends TrackSwitchEventName>(eventName: K, handler: TrackSwitchEventHandler<K>): void;
+}
+
+export interface TrackSwitchUiState {
+    playing: boolean;
+    repeat: boolean;
+    position: number;
+    longestDuration: number;
+    loop: LoopState;
+}

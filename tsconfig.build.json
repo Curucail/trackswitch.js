@@ -1,12 +1,7 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "allowJs": false,
-    "checkJs": false,
     "noEmit": false,
-    "outFile": "dist/tmp/ts/trackswitch.js"
-  },
-  "include": [
-    "src/trackswitch.ts"
-  ]
+    "outDir": "dist/tmp/esm"
+  }
 }
