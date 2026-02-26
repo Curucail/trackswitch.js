@@ -153,7 +153,7 @@ test('createTrackSwitch throws when tracks are omitted', () => {
     assert.ok(root);
 
     assert.throws(() => createTrackSwitch(root), {
-        message: 'TrackSwitch JS-only mode requires init.tracks with at least one track.',
+        message: 'TrackSwitch requires init.tracks with at least one track.',
     });
 });
 
@@ -163,7 +163,7 @@ test('createTrackSwitch throws when tracks are empty', () => {
     assert.ok(root);
 
     assert.throws(() => createTrackSwitch(root, { tracks: [] }), {
-        message: 'TrackSwitch JS-only mode requires init.tracks with at least one track.',
+        message: 'TrackSwitch requires init.tracks with at least one track.',
     });
 });
 
@@ -457,7 +457,7 @@ test('keyboard shortcuts are scoped to active instance', async () => {
     controllerA.destroy();
 });
 
-test('createTrackSwitch rejects legacy declarative markup', () => {
+test('createTrackSwitch ignores legacy declarative markup when tracks are provided', () => {
     document.body.innerHTML = [
         '<div class="player" preset-names="One,Two">',
         '  <ts-track title="Lead" presets="0" data-img="lead.png">',
@@ -472,12 +472,13 @@ test('createTrackSwitch rejects legacy declarative markup', () => {
     const root = document.querySelector('.player');
     assert.ok(root);
 
-    assert.throws(() => createTrackSwitch(root, {
+    const controller = createTrackSwitch(root, {
         features: { waveform: false, keyboard: false, looping: false },
         tracks: [{ title: 'Lead', sources: [{ src: 'lead.mp3' }] }],
-    }), {
-        message: 'Declarative markup has been removed. Remove `preset-names`, `<ts-track>`, and `<ts-source>` markup and pass all track data via TrackSwitch.createTrackSwitch(rootElement, init).',
     });
+
+    assert.ok(controller);
+    controller.destroy();
 });
 
 test('ui image config injects seekable image and margins', () => {

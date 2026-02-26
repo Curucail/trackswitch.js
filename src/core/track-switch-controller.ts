@@ -37,8 +37,7 @@ import {
 let instanceCounter = 0;
 let activeKeyboardInstanceId: number | null = null;
 const controllerRegistry = new Set<TrackSwitchControllerImpl>();
-const TRACKS_REQUIRED_ERROR = 'TrackSwitch JS-only mode requires init.tracks with at least one track.';
-const LEGACY_MARKUP_ERROR = 'Declarative markup has been removed. Remove `preset-names`, `<ts-track>`, and `<ts-source>` markup and pass all track data via TrackSwitch.createTrackSwitch(rootElement, init).';
+const TRACKS_REQUIRED_ERROR = 'TrackSwitch requires init.tracks with at least one track.';
 
 function closestInRoot(root: HTMLElement, target: EventTarget | null | undefined, selector: string): HTMLElement | null {
     const element = eventTargetAsElement(target ?? null);
@@ -52,14 +51,6 @@ function closestInRoot(root: HTMLElement, target: EventTarget | null | undefined
     }
 
     return matched as HTMLElement;
-}
-
-function hasLegacyDeclarativeMarkup(root: HTMLElement): boolean {
-    if (root.hasAttribute('preset-names')) {
-        return true;
-    }
-
-    return root.querySelector('ts-track, ts-source') !== null;
 }
 
 function toMarginString(value: number | undefined): string {
@@ -1385,10 +1376,6 @@ function normalizeInit(root: HTMLElement, init: TrackSwitchInit | undefined): Tr
     const resolvedFeatures = waveformRequiredByUi
         ? { ...(resolvedInit?.features ?? {}), waveform: true }
         : resolvedInit?.features;
-
-    if (hasLegacyDeclarativeMarkup(root)) {
-        throw new Error(LEGACY_MARKUP_ERROR);
-    }
 
     if (!resolvedInit?.tracks || resolvedInit.tracks.length === 0) {
         throw new Error(TRACKS_REQUIRED_ERROR);

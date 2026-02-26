@@ -23,15 +23,6 @@ export function normalizeFeatures(features: Partial<TrackSwitchFeatures> | undef
         ...defaultFeatures,
         ...(features ?? {}),
     };
-    const rawFeatures = features as (Partial<TrackSwitchFeatures> & { timing?: boolean }) | undefined;
-
-    if (
-        rawFeatures
-        && !Object.prototype.hasOwnProperty.call(rawFeatures, 'timer')
-        && typeof rawFeatures.timing === 'boolean'
-    ) {
-        normalized.timer = rawFeatures.timing;
-    }
 
     if (!normalized.mute && !normalized.solo) {
         normalized.solo = true;
