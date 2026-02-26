@@ -197,6 +197,20 @@
         font-size: 14px;
     }
 
+    .trackswitch .overlay #overlayinfo {
+        font-size: 8pt;
+        bottom: 15px;
+    }
+
+    .trackswitch .overlay #overlayinfo span.info:after {
+        font-size: 13pt;
+    }
+
+    .trackswitch .overlay #overlayinfo span.text {
+        font-size: 11pt;
+        line-height: 1.2;
+    }
+
     .trackswitch li.track {
         min-height: 40px;
     }
