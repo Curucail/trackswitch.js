@@ -26,7 +26,7 @@
     <h2 class="project-tagline">{{ site.description | default: site.github.project_tagline }}</h2>
     <a href="https://www.npmjs.com/package/trackswitch" class="btn">View on npm</a>
     {% if site.github.is_project_page %}
-    <a href="{{ site.github.zip_url }}" class="btn">Download as ZIP</a>
+    <a href="{{ site.github.repository_url }}/releases" class="btn">Download as ZIP</a>
     <a href="{{ site.github.repository_url }}" class="btn">View on GitHub</a>
     {% endif %}
   </section>
@@ -37,20 +37,18 @@
     <footer class="site-footer">
       <div style="display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 20px;">
         <a href="https://www.audiolabs-erlangen.de/">
-          <img src="{{ '/assets/alabs.png' | relative_url }}" alt="" style="height: 60px; width: auto;" />
+          <img src="{{ '/assets/alabs.png' | relative_url }}" alt="" style="height: 30px; width: auto;" />
         </a>
         <a href="https://www.iis.fraunhofer.de/">
-          <img src="{{ '/assets/iis.png' | relative_url }}" alt="" style="height: 60px; width: auto;" />
+          <img src="{{ '/assets/iis.png' | relative_url }}" alt="" style="height: 30px; width: auto;" />
         </a>
         <a href="https://www.fau.de/">
-          <img src="{{ '/assets/fau.png' | relative_url }}" alt="" style="height: 60px; width: auto;" />
+          <img src="{{ '/assets/fau.png' | relative_url }}" alt="" style="height: 30px; width: auto;" />
         </a>
       </div>
     </footer>
   </section>
 
-  <script
-    src="https://cdn.rawgit.com/download/polymer-cdn/1.5.0/lib/webcomponentsjs/webcomponents-lite.min.js"></script>
   <script src="js/trackswitch.min.js"></script>
   <script type="text/javascript">
     document.addEventListener('DOMContentLoaded', function () {
@@ -93,18 +91,14 @@
               width: 1200,
               height: 150,
               style: 'margin: 20px auto;',
-            },
-          ],
-        };
-
-        if (type === 'custom') {
-          init.features = {
+            }],
+          features: {
             onlyradiosolo: true,
             looping: true,
             repeat: true,
             globalvolume: true,
-          };
-        }
+          },
+        };
 
         return init;
       }

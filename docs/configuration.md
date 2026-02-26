@@ -224,8 +224,7 @@ TrackSwitch.createTrackSwitch(playerElement, {
             type: 'image',
             src: 'mix.png',
             seekable: true,
-            style: 'margin: 20px auto; max-width: 900px;',
-            seekMarginLeft: 5,
+            seekMarginLeft: 10,
             seekMarginRight: 10,
         },
         {
