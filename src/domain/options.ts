@@ -16,7 +16,6 @@ export const defaultFeatures: Readonly<TrackSwitchFeatures> = {
     timer: true,
     presets: true,
     waveform: true,
-    waveformBarWidth: 1,
 };
 
 export function normalizeFeatures(features: Partial<TrackSwitchFeatures> | undefined): TrackSwitchFeatures {
@@ -45,10 +44,6 @@ export function normalizeFeatures(features: Partial<TrackSwitchFeatures> | undef
 
     if (normalized.radiosolo || normalized.onlyradiosolo) {
         normalized.presets = false;
-    }
-
-    if (!Number.isFinite(normalized.waveformBarWidth) || normalized.waveformBarWidth < 1) {
-        normalized.waveformBarWidth = 1;
     }
 
     return normalized;

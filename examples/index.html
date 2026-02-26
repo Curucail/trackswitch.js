@@ -57,27 +57,28 @@
                             style: 'margin: 20px auto;',
                         },
                     ],
-                    waveform: {
-                        width: 1200,
-                        height: 150,
-                    },
+                    waveforms: [
+                        {
+                            width: 1200,
+                            height: 150,
+                            waveformBarWidth: 1,
+                        },
+                    ],
                 },
                 features: {
                     solo: true,
                     globalsolo: true,
-                    globalvolume: false,
+                    globalvolume: true,
                     repeat: false,
                     radiosolo: false,
                     onlyradiosolo: false,
                     tabview: false,
                     iosunmute: true,
                     keyboard: true,
-                    looping: false,
+                    looping: true,
                     seekbar: true,
                     timer: true,
                     presets: true,
-                    waveform: true,
-                    waveformBarWidth: 1,
                 },
             });
         });

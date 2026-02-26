@@ -36,7 +36,6 @@ export interface TrackSwitchFeatures {
     timer: boolean;
     presets: boolean;
     waveform: boolean;
-    waveformBarWidth: number;
 }
 
 export interface TrackSwitchImageConfig {
@@ -50,6 +49,7 @@ export interface TrackSwitchImageConfig {
 export interface TrackSwitchWaveformConfig {
     width?: number;
     height?: number;
+    waveformBarWidth?: number;
     style?: string;
     seekMarginLeft?: number;
     seekMarginRight?: number;
@@ -57,7 +57,7 @@ export interface TrackSwitchWaveformConfig {
 
 export interface TrackSwitchUiConfig {
     images?: TrackSwitchImageConfig[];
-    waveform?: TrackSwitchWaveformConfig;
+    waveforms?: TrackSwitchWaveformConfig[];
 }
 
 export interface TrackSwitchConfig {

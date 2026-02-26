@@ -57,10 +57,12 @@ document.addEventListener('DOMContentLoaded', function () {
           style: 'margin: 20px auto;',
         },
       ],
-      waveform: {
-        width: 1200,
-        height: 150,
-      },
+      waveforms: [
+        {
+          width: 1200,
+          height: 150,
+        },
+      ],
     },
   });
 });

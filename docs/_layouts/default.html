@@ -35,15 +35,15 @@
     {{ content }}
 
     <footer class="site-footer">
-      <div style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
+      <div style="display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 20px;">
         <a href="https://www.audiolabs-erlangen.de/">
-          <img src="{{ '/assets/alabs.png' | relative_url }}" alt="" style="height: 80px; width: auto;" />
+          <img src="{{ '/assets/alabs.png' | relative_url }}" alt="" style="height: 60px; width: auto;" />
         </a>
         <a href="https://www.iis.fraunhofer.de/">
-          <img src="{{ '/assets/iis.png' | relative_url }}" alt="" style="height: 80px; width: auto;" />
+          <img src="{{ '/assets/iis.png' | relative_url }}" alt="" style="height: 60px; width: auto;" />
         </a>
         <a href="https://www.fau.de/">
-          <img src="{{ '/assets/fau.png' | relative_url }}" alt="" style="height: 80px; width: auto;" />
+          <img src="{{ '/assets/fau.png' | relative_url }}" alt="" style="height: 60px; width: auto;" />
         </a>
       </div>
     </footer>
@@ -88,11 +88,13 @@
           presetNames: ['All Tracks', 'Violins & Synths', 'Drums & Bass', 'Drums Only'],
           tracks: buildTracks(basePath),
           ui: {
-            waveform: {
-              width: 1200,
-              height: 150,
-              style: 'margin: 20px auto;',
-            },
+            waveforms: [
+              {
+                width: 1200,
+                height: 150,
+                style: 'margin: 20px auto;',
+              },
+            ],
           },
         };
 

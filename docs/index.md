@@ -18,6 +18,7 @@ Alternatively, download and include [`trackswitch.min.css`](https://github.com/a
 
 ```html
 <div id="player"></div>
+
 <script src="trackswitch.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -50,11 +51,19 @@ document.addEventListener('DOMContentLoaded', function () {
             },
         ],
         ui: {
-            waveform: {
-                width: 1200,
-                height: 150,
-                style: 'margin: 20px auto;',
-            },
+            waveforms: [
+                {
+                    width: 1200,
+                    height: 150,
+                    style: 'margin: 20px auto;',
+                },
+            ],
+        },
+        features: {
+            onlyradiosolo: true,
+            looping: true,
+            repeat: true,
+            globalvolume: true,
         },
     });
 });

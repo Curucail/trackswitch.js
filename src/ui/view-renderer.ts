@@ -23,6 +23,15 @@ function setWidthPercent(element: Element, value: number): void {
     (element as HTMLElement).style.width = value + '%';
 }
 
+function parseWaveformBarWidth(value: string | null, fallback: number): number {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed < 1) {
+        return fallback;
+    }
+
+    return Math.max(1, Math.floor(parsed));
+}
+
 export class ViewRenderer {
     private readonly root: HTMLElement;
     private readonly features: TrackSwitchFeatures;
@@ -32,6 +41,7 @@ export class ViewRenderer {
     private readonly waveformCanvases: HTMLCanvasElement[] = [];
     private readonly waveformContexts: Array<CanvasRenderingContext2D | null> = [];
     private readonly waveformOriginalHeight: number[] = [];
+    private readonly waveformCanvasBarWidths: number[] = [];
 
     constructor(root: HTMLElement, features: TrackSwitchFeatures, presetNames: string[]) {
         this.root = root;
@@ -227,6 +237,9 @@ export class ViewRenderer {
             this.waveformCanvases.push(canvasElement);
             this.waveformContexts.push(canvasElement.getContext('2d'));
             this.waveformOriginalHeight.push(canvasElement.height);
+            this.waveformCanvasBarWidths.push(
+                parseWaveformBarWidth(canvasElement.getAttribute('data-waveform-bar-width'), 1)
+            );
 
             const wrapper = document.createElement('div');
             wrapper.className = 'waveform-wrap';
@@ -257,6 +270,7 @@ export class ViewRenderer {
         for (let i = 0; i < this.waveformCanvases.length; i += 1) {
             const canvas = this.waveformCanvases[i];
             const context = this.waveformContexts[i];
+            const barWidth = this.waveformCanvasBarWidths[i] || 1;
             if (!context) {
                 continue;
             }
@@ -271,7 +285,7 @@ export class ViewRenderer {
                 canvas.height = originalHeight;
             }
 
-            waveformEngine.drawPlaceholder(canvas, context, this.features.waveformBarWidth, 0.3);
+            waveformEngine.drawPlaceholder(canvas, context, barWidth, 0.3);
         }
     }
 
@@ -283,6 +297,7 @@ export class ViewRenderer {
         for (let i = 0; i < this.waveformCanvases.length; i += 1) {
             const canvas = this.waveformCanvases[i];
             const context = this.waveformContexts[i];
+            const barWidth = this.waveformCanvasBarWidths[i] || 1;
             if (!context) {
                 continue;
             }
@@ -297,15 +312,15 @@ export class ViewRenderer {
                 canvas.height = originalHeight;
             }
 
-            const peakCount = Math.max(1, Math.floor(canvas.width / this.features.waveformBarWidth));
-            const mixed = waveformEngine.calculateMixedWaveform(runtimes, peakCount, this.features.waveformBarWidth);
+            const peakCount = Math.max(1, Math.floor(canvas.width / barWidth));
+            const mixed = waveformEngine.calculateMixedWaveform(runtimes, peakCount, barWidth);
 
             if (!mixed) {
-                waveformEngine.drawPlaceholder(canvas, context, this.features.waveformBarWidth, 0.3);
+                waveformEngine.drawPlaceholder(canvas, context, barWidth, 0.3);
                 continue;
             }
 
-            waveformEngine.drawWaveform(canvas, context, mixed, this.features.waveformBarWidth);
+            waveformEngine.drawWaveform(canvas, context, mixed, barWidth);
         }
     }
 

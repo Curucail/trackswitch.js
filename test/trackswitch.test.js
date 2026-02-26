@@ -531,49 +531,72 @@ test('ui config allows at most one seekable image', () => {
     });
 });
 
-test('ui waveform config injects default canvas dimensions', () => {
+test('ui waveforms config injects default canvas dimensions', () => {
     const controller = createController({
         features: { waveform: true, keyboard: false, looping: false },
         tracks: [{ title: 'A', sources: [{ src: 'a.mp3' }] }],
-        ui: { waveform: {} },
+        ui: { waveforms: [{}] },
     });
 
-    const canvas = document.querySelector('canvas.waveform');
+    const canvases = document.querySelectorAll('canvas.waveform');
+    assert.equal(canvases.length, 1);
+
+    const canvas = canvases[0];
     assert.ok(canvas);
     assert.equal(canvas.width, 1200);
     assert.equal(canvas.height, 150);
+    assert.equal(canvas.getAttribute('data-waveform-bar-width'), '1');
     assert.ok(document.querySelector('.waveform-wrap'));
 
     controller.destroy();
 });
 
-test('ui waveform config injects custom canvas and seek margins', () => {
+test('ui waveforms config injects multiple canvases with individual bar widths', () => {
     const controller = createController({
         features: { waveform: true, keyboard: false, looping: false },
         tracks: [{ title: 'A', sources: [{ src: 'a.mp3' }] }],
         ui: {
-            waveform: {
-                width: 640,
-                height: 96,
-                style: 'margin: 8px 0;',
-                seekMarginLeft: 3,
-                seekMarginRight: 7,
-            },
+            waveforms: [
+                {
+                    width: 640,
+                    height: 96,
+                    waveformBarWidth: 3,
+                    style: 'margin: 8px 0;',
+                    seekMarginLeft: 3,
+                    seekMarginRight: 7,
+                },
+                {
+                    width: 480,
+                    height: 72,
+                    waveformBarWidth: 5,
+                    style: 'margin: 4px 0;',
+                },
+            ],
         },
     });
 
-    const canvas = document.querySelector('canvas.waveform');
-    assert.ok(canvas);
-    assert.equal(canvas.width, 640);
-    assert.equal(canvas.height, 96);
-    assert.equal(canvas.getAttribute('data-seek-margin-left'), '3');
-    assert.equal(canvas.getAttribute('data-seek-margin-right'), '7');
+    const canvases = document.querySelectorAll('canvas.waveform');
+    assert.equal(canvases.length, 2);
 
-    const wrapper = document.querySelector('.waveform-wrap');
-    assert.ok(wrapper);
-    assert.ok(wrapper.getAttribute('style').includes('margin: 8px 0;'));
+    const firstCanvas = canvases[0];
+    const secondCanvas = canvases[1];
 
-    const seekWrap = wrapper.querySelector('.seekwrap');
+    assert.equal(firstCanvas.width, 640);
+    assert.equal(firstCanvas.height, 96);
+    assert.equal(firstCanvas.getAttribute('data-waveform-bar-width'), '3');
+    assert.equal(firstCanvas.getAttribute('data-seek-margin-left'), '3');
+    assert.equal(firstCanvas.getAttribute('data-seek-margin-right'), '7');
+
+    assert.equal(secondCanvas.width, 480);
+    assert.equal(secondCanvas.height, 72);
+    assert.equal(secondCanvas.getAttribute('data-waveform-bar-width'), '5');
+
+    const wrappers = document.querySelectorAll('.waveform-wrap');
+    assert.equal(wrappers.length, 2);
+    assert.ok(wrappers[0].getAttribute('style').includes('margin: 8px 0;'));
+    assert.ok(wrappers[1].getAttribute('style').includes('margin: 4px 0;'));
+
+    const seekWrap = wrappers[0].querySelector('.seekwrap');
     assert.ok(seekWrap);
     assert.ok(seekWrap.getAttribute('style').includes('left: 3%'));
     assert.ok(seekWrap.getAttribute('style').includes('right: 7%'));
@@ -581,15 +604,29 @@ test('ui waveform config injects custom canvas and seek margins', () => {
     controller.destroy();
 });
 
-test('waveform UI is not injected when waveform feature is disabled', () => {
+test('ui waveforms config enables waveform rendering even when feature is false', () => {
     const controller = createController({
         features: { waveform: false, keyboard: false, looping: false },
         tracks: [{ title: 'A', sources: [{ src: 'a.mp3' }] }],
-        ui: { waveform: { width: 700, height: 180 } },
+        ui: { waveforms: [{ width: 700, height: 180 }] },
     });
 
-    assert.equal(document.querySelector('canvas.waveform'), null);
-    assert.equal(document.querySelector('.waveform-wrap'), null);
+    assert.equal(controller.getState().features.waveform, true);
+    assert.equal(document.querySelectorAll('canvas.waveform').length, 1);
+    assert.equal(document.querySelectorAll('.waveform-wrap').length, 1);
+
+    controller.destroy();
+});
+
+test('legacy ui.waveform config is ignored without throwing', () => {
+    const controller = createController({
+        features: { waveform: false, keyboard: false, looping: false },
+        tracks: [{ title: 'A', sources: [{ src: 'a.mp3' }] }],
+        ui: { waveform: {} },
+    });
+
+    assert.equal(document.querySelectorAll('canvas.waveform').length, 0);
+    assert.equal(document.querySelectorAll('.waveform-wrap').length, 0);
 
     controller.destroy();
 });

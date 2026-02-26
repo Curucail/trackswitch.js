@@ -77,11 +77,13 @@ document.addEventListener('DOMContentLoaded', function () {
                     style: 'margin: 16px auto;',
                 },
             ],
-            waveform: {
-                width: 1200,
-                height: 150,
-                style: 'margin: 16px auto;',
-            },
+            waveforms: [
+                {
+                    width: 1200,
+                    height: 150,
+                    style: 'margin: 16px auto;',
+                },
+            ],
         },
     });
 });
@@ -240,23 +242,28 @@ Image UI rules:
 - At most one image may set `seekable: true`.
 - More than one seekable image throws: `TrackSwitch UI config supports at most one seekable image.`
 
-### Waveform Canvas
+### Waveform Canvases
 
 ```javascript
 TrackSwitch.createTrackSwitch(playerElement, {
     tracks: tracks,
     ui: {
-        waveform: {
-            width: 1200,
-            height: 200,
-            style: 'margin: 20px auto; max-width: 1000px;',
-            seekMarginLeft: 3,
-            seekMarginRight: 3,
-        },
-    },
-    features: {
-        waveform: true,
-        waveformBarWidth: 2,
+        waveforms: [
+            {
+                width: 1200,
+                height: 200,
+                waveformBarWidth: 2,
+                style: 'margin: 20px auto; max-width: 1000px;',
+                seekMarginLeft: 3,
+                seekMarginRight: 3,
+            },
+            {
+                width: 1200,
+                height: 110,
+                waveformBarWidth: 5,
+                style: 'margin: 10px auto; max-width: 1000px;',
+            },
+        ],
     },
 });
 ```
@@ -264,7 +271,10 @@ TrackSwitch.createTrackSwitch(playerElement, {
 Waveform UI rules:
 
 - Defaults: `width: 1200`, `height: 150`.
-- Waveform rendering is still controlled by `features.waveform`.
+- Default `waveformBarWidth` is `1`.
+- Use `ui.waveforms` (array). `ui.waveform` is not supported.
+- Providing at least one entry in `ui.waveforms` implicitly enables waveform rendering.
+- Invalid or `< 1` `ui.waveforms[i].waveformBarWidth` is reset to `1`.
 
 ## Player Features
 
@@ -289,7 +299,6 @@ TrackSwitch.createTrackSwitch(playerElement, {
         timer: true,
         presets: true,
         waveform: true,
-        waveformBarWidth: 1,
     },
 });
 ```
@@ -311,14 +320,13 @@ Defaults:
 - `timer`: `true`
 - `presets`: `true`
 - `waveform`: `true`
-- `waveformBarWidth`: `1`
 
 Normalization rules:
 
 - If both `mute` and `solo` are false, `solo` is forced to true.
 - `onlyradiosolo: true` forces `mute: false` and `radiosolo: true`.
 - `radiosolo` or `onlyradiosolo` forces `presets: false`.
-- Invalid or `< 1` `waveformBarWidth` is reset to `1`.
+- `ui.waveforms` forces `waveform: true` when at least one waveform is configured.
 
 ## Keyboard Shortcuts
 

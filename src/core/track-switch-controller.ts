@@ -13,6 +13,7 @@ import {
     TrackSwitchSnapshot,
     TrackSwitchUiConfig,
     TrackSwitchUiState,
+    TrackSwitchWaveformConfig,
 } from '../domain/types';
 import { normalizeFeatures } from '../domain/options';
 import { createInitialPlayerState, playerStateReducer, PlayerAction } from '../domain/state';
@@ -72,6 +73,21 @@ function toCanvasSize(value: number | undefined, fallback: number): number {
     return Math.max(1, Math.round(value));
 }
 
+function normalizeWaveformBarWidth(value: number | undefined): number {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 1) {
+        return 1;
+    }
+
+    return Math.max(1, Math.floor(value));
+}
+
+function normalizeWaveformConfig(waveform: TrackSwitchWaveformConfig): TrackSwitchWaveformConfig {
+    return {
+        ...waveform,
+        waveformBarWidth: normalizeWaveformBarWidth(waveform.waveformBarWidth),
+    };
+}
+
 function injectImage(root: HTMLElement, image: TrackSwitchImageConfig): void {
     const imageElement = document.createElement('img');
     imageElement.src = image.src;
@@ -95,11 +111,12 @@ function injectImage(root: HTMLElement, image: TrackSwitchImageConfig): void {
     root.appendChild(imageElement);
 }
 
-function injectWaveform(root: HTMLElement, waveform: NonNullable<TrackSwitchUiConfig['waveform']>): void {
+function injectWaveform(root: HTMLElement, waveform: TrackSwitchWaveformConfig): void {
     const canvas = document.createElement('canvas');
     canvas.className = 'waveform';
     canvas.width = toCanvasSize(waveform.width, 1200);
     canvas.height = toCanvasSize(waveform.height, 150);
+    canvas.setAttribute('data-waveform-bar-width', String(normalizeWaveformBarWidth(waveform.waveformBarWidth)));
 
     if (typeof waveform.style === 'string') {
         canvas.setAttribute('data-waveform-style', waveform.style);
@@ -116,7 +133,11 @@ function injectWaveform(root: HTMLElement, waveform: NonNullable<TrackSwitchUiCo
     root.appendChild(canvas);
 }
 
-function injectConfiguredUiElements(root: HTMLElement, ui: TrackSwitchUiConfig | undefined, waveformEnabled: boolean): void {
+function injectConfiguredUiElements(
+    root: HTMLElement,
+    ui: TrackSwitchUiConfig | undefined,
+    waveforms: TrackSwitchWaveformConfig[]
+): void {
     if (!ui) {
         return;
     }
@@ -134,9 +155,9 @@ function injectConfiguredUiElements(root: HTMLElement, ui: TrackSwitchUiConfig |
         injectImage(root, image);
     });
 
-    if (ui.waveform && waveformEnabled) {
-        injectWaveform(root, ui.waveform);
-    }
+    waveforms.forEach(function(waveform) {
+        injectWaveform(root, waveform);
+    });
 }
 
 export class TrackSwitchControllerImpl implements TrackSwitchController, InputController {
@@ -1348,7 +1369,16 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
 function normalizeInit(root: HTMLElement, init: TrackSwitchInit | undefined): TrackSwitchConfig {
     const resolvedInit = init as TrackSwitchInit | undefined;
-    const normalizedFeatures = normalizeFeatures(resolvedInit?.features);
+    const resolvedUi = resolvedInit?.ui
+        ? {
+            ...resolvedInit.ui,
+            waveforms: (resolvedInit.ui.waveforms ?? []).map(normalizeWaveformConfig),
+        }
+        : resolvedInit?.ui;
+    const waveformRequiredByUi = Boolean(resolvedUi?.waveforms && resolvedUi.waveforms.length > 0);
+    const resolvedFeatures = waveformRequiredByUi
+        ? { ...(resolvedInit?.features ?? {}), waveform: true }
+        : resolvedInit?.features;
 
     if (hasLegacyDeclarativeMarkup(root)) {
         throw new Error(LEGACY_MARKUP_ERROR);
@@ -1358,13 +1388,13 @@ function normalizeInit(root: HTMLElement, init: TrackSwitchInit | undefined): Tr
         throw new Error(TRACKS_REQUIRED_ERROR);
     }
 
-    injectConfiguredUiElements(root, resolvedInit.ui, normalizedFeatures.waveform);
+    injectConfiguredUiElements(root, resolvedUi, resolvedUi?.waveforms ?? []);
 
     return {
         tracks: resolvedInit.tracks,
         presetNames: resolvedInit.presetNames,
-        features: resolvedInit.features,
-        ui: resolvedInit.ui,
+        features: resolvedFeatures,
+        ui: resolvedUi,
     };
 }
 
