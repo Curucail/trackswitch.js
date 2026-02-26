@@ -49,21 +49,19 @@ document.addEventListener('DOMContentLoaded', function () {
         sources: [{ src: 'drums.mp3', type: 'audio/mpeg' }],
       },
     ],
-    ui: {
-      images: [
-        {
-          src: 'mix.png',
-          seekable: true,
-          style: 'margin: 20px auto;',
-        },
-      ],
-      waveforms: [
-        {
-          width: 1200,
-          height: 150,
-        },
-      ],
-    },
+    ui: [
+      {
+        type: 'image',
+        src: 'mix.png',
+        seekable: true,
+        style: 'margin: 20px auto;',
+      },
+      {
+        type: 'waveform',
+        width: 1200,
+        height: 150,
+      },
+    ],
   });
 });
 </script>

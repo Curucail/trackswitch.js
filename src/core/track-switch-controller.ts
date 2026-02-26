@@ -12,6 +12,7 @@ import {
     TrackSwitchInit,
     TrackSwitchSnapshot,
     TrackSwitchUiConfig,
+    TrackSwitchUiElement,
     TrackSwitchUiState,
     TrackSwitchWaveformConfig,
 } from '../domain/types';
@@ -81,11 +82,19 @@ function normalizeWaveformBarWidth(value: number | undefined): number {
     return Math.max(1, Math.floor(value));
 }
 
-function normalizeWaveformConfig(waveform: TrackSwitchWaveformConfig): TrackSwitchWaveformConfig {
+function normalizeWaveformConfig<T extends TrackSwitchWaveformConfig>(waveform: T): T {
     return {
         ...waveform,
         waveformBarWidth: normalizeWaveformBarWidth(waveform.waveformBarWidth),
     };
+}
+
+function normalizeUiElement(element: TrackSwitchUiElement): TrackSwitchUiElement {
+    if (element.type === 'waveform') {
+        return normalizeWaveformConfig(element);
+    }
+
+    return element;
 }
 
 function injectImage(root: HTMLElement, image: TrackSwitchImageConfig): void {
@@ -133,30 +142,28 @@ function injectWaveform(root: HTMLElement, waveform: TrackSwitchWaveformConfig):
     root.appendChild(canvas);
 }
 
-function injectConfiguredUiElements(
-    root: HTMLElement,
-    ui: TrackSwitchUiConfig | undefined,
-    waveforms: TrackSwitchWaveformConfig[]
-): void {
-    if (!ui) {
+function injectConfiguredUiElements(root: HTMLElement, uiElements: TrackSwitchUiConfig | undefined): void {
+    if (!uiElements) {
         return;
     }
 
-    const images = ui.images ?? [];
-    const seekableCount = images.filter(function(entry) {
-        return Boolean(entry.seekable);
+    const seekableCount = uiElements.filter(function(entry) {
+        return entry.type === 'image' && Boolean(entry.seekable);
     }).length;
 
     if (seekableCount > 1) {
         throw new Error('TrackSwitch UI config supports at most one seekable image.');
     }
 
-    images.forEach(function(image) {
-        injectImage(root, image);
-    });
+    uiElements.forEach(function(entry) {
+        if (entry.type === 'image') {
+            injectImage(root, entry);
+            return;
+        }
 
-    waveforms.forEach(function(waveform) {
-        injectWaveform(root, waveform);
+        if (entry.type === 'waveform') {
+            injectWaveform(root, entry);
+        }
     });
 }
 
@@ -1369,13 +1376,12 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
 function normalizeInit(root: HTMLElement, init: TrackSwitchInit | undefined): TrackSwitchConfig {
     const resolvedInit = init as TrackSwitchInit | undefined;
-    const resolvedUi = resolvedInit?.ui
-        ? {
-            ...resolvedInit.ui,
-            waveforms: (resolvedInit.ui.waveforms ?? []).map(normalizeWaveformConfig),
-        }
-        : resolvedInit?.ui;
-    const waveformRequiredByUi = Boolean(resolvedUi?.waveforms && resolvedUi.waveforms.length > 0);
+    const resolvedUi = Array.isArray(resolvedInit?.ui)
+        ? resolvedInit.ui.map(normalizeUiElement)
+        : undefined;
+    const waveformRequiredByUi = Boolean(resolvedUi && resolvedUi.some(function(entry) {
+        return entry.type === 'waveform';
+    }));
     const resolvedFeatures = waveformRequiredByUi
         ? { ...(resolvedInit?.features ?? {}), waveform: true }
         : resolvedInit?.features;
@@ -1388,7 +1394,7 @@ function normalizeInit(root: HTMLElement, init: TrackSwitchInit | undefined): Tr
         throw new Error(TRACKS_REQUIRED_ERROR);
     }
 
-    injectConfiguredUiElements(root, resolvedUi, resolvedUi?.waveforms ?? []);
+    injectConfiguredUiElements(root, resolvedUi);
 
     return {
         tracks: resolvedInit.tracks,

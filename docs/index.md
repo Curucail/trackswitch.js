@@ -50,15 +50,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 sources: [{ src: 'drums.mp3' }],
             },
         ],
-        ui: {
-            waveforms: [
-                {
-                    width: 1200,
-                    height: 150,
-                    style: 'margin: 20px auto;',
-                },
-            ],
-        },
+        ui: [
+            {
+                type: 'waveform',
+                width: 1200,
+                height: 150,
+                style: 'margin: 20px auto;',
+            },
+        ],
         features: {
             onlyradiosolo: true,
             looping: true,

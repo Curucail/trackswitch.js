@@ -87,15 +87,14 @@
         var init = {
           presetNames: ['All Tracks', 'Violins & Synths', 'Drums & Bass', 'Drums Only'],
           tracks: buildTracks(basePath),
-          ui: {
-            waveforms: [
-              {
-                width: 1200,
-                height: 150,
-                style: 'margin: 20px auto;',
-              },
-            ],
-          },
+          ui: [
+            {
+              type: 'waveform',
+              width: 1200,
+              height: 150,
+              style: 'margin: 20px auto;',
+            },
+          ],
         };
 
         if (type === 'custom') {

@@ -484,15 +484,14 @@ test('ui image config injects seekable image and margins', () => {
     const controller = createController({
         features: { waveform: false, keyboard: false, looping: false, seekbar: true },
         tracks: [{ title: 'A', sources: [{ src: 'a.mp3' }] }],
-        ui: {
-            images: [{
-                src: 'cover.png',
-                seekable: true,
-                style: 'margin: 10px auto;',
-                seekMarginLeft: 5,
-                seekMarginRight: 10,
-            }],
-        },
+        ui: [{
+            type: 'image',
+            src: 'cover.png',
+            seekable: true,
+            style: 'margin: 10px auto;',
+            seekMarginLeft: 5,
+            seekMarginRight: 10,
+        }],
     });
 
     const image = document.querySelector('img.seekable');
@@ -520,22 +519,20 @@ test('ui config allows at most one seekable image', () => {
 
     assert.throws(() => createTrackSwitch(root, {
         tracks: [{ title: 'A', sources: [{ src: 'a.mp3' }] }],
-        ui: {
-            images: [
-                { src: 'cover-a.png', seekable: true },
-                { src: 'cover-b.png', seekable: true },
-            ],
-        },
+        ui: [
+            { type: 'image', src: 'cover-a.png', seekable: true },
+            { type: 'image', src: 'cover-b.png', seekable: true },
+        ],
     }), {
         message: 'TrackSwitch UI config supports at most one seekable image.',
     });
 });
 
-test('ui waveforms config injects default canvas dimensions', () => {
+test('ui waveform element injects default canvas dimensions', () => {
     const controller = createController({
         features: { waveform: true, keyboard: false, looping: false },
         tracks: [{ title: 'A', sources: [{ src: 'a.mp3' }] }],
-        ui: { waveforms: [{}] },
+        ui: [{ type: 'waveform' }],
     });
 
     const canvases = document.querySelectorAll('canvas.waveform');
@@ -551,28 +548,36 @@ test('ui waveforms config injects default canvas dimensions', () => {
     controller.destroy();
 });
 
-test('ui waveforms config injects multiple canvases with individual bar widths', () => {
+test('ui element ordering supports mixed image and waveform entries', () => {
     const controller = createController({
-        features: { waveform: true, keyboard: false, looping: false },
+        features: { waveform: false, keyboard: false, looping: false },
         tracks: [{ title: 'A', sources: [{ src: 'a.mp3' }] }],
-        ui: {
-            waveforms: [
-                {
-                    width: 640,
-                    height: 96,
-                    waveformBarWidth: 3,
-                    style: 'margin: 8px 0;',
-                    seekMarginLeft: 3,
-                    seekMarginRight: 7,
-                },
-                {
-                    width: 480,
-                    height: 72,
-                    waveformBarWidth: 5,
-                    style: 'margin: 4px 0;',
-                },
-            ],
-        },
+        ui: [
+            {
+                type: 'waveform',
+                width: 640,
+                height: 96,
+                waveformBarWidth: 3,
+                style: 'margin: 8px 0;',
+                seekMarginLeft: 3,
+                seekMarginRight: 7,
+            },
+            {
+                type: 'image',
+                src: 'cover.png',
+                seekable: true,
+                style: 'margin: 10px auto;',
+                seekMarginLeft: 5,
+                seekMarginRight: 10,
+            },
+            {
+                type: 'waveform',
+                width: 480,
+                height: 72,
+                waveformBarWidth: 5,
+                style: 'margin: 4px 0;',
+            },
+        ],
     });
 
     const canvases = document.querySelectorAll('canvas.waveform');
@@ -592,9 +597,19 @@ test('ui waveforms config injects multiple canvases with individual bar widths',
     assert.equal(secondCanvas.getAttribute('data-waveform-bar-width'), '5');
 
     const wrappers = document.querySelectorAll('.waveform-wrap');
+    const imageWrappers = document.querySelectorAll('.seekable-img-wrap');
     assert.equal(wrappers.length, 2);
+    assert.equal(imageWrappers.length, 1);
     assert.ok(wrappers[0].getAttribute('style').includes('margin: 8px 0;'));
     assert.ok(wrappers[1].getAttribute('style').includes('margin: 4px 0;'));
+    assert.ok(imageWrappers[0].getAttribute('style').includes('margin: 10px auto;'));
+
+    const uiElementOrder = Array.from(document.querySelector('.player').children)
+        .map(function(element) { return element.className; })
+        .filter(function(className) {
+            return className === 'waveform-wrap' || className === 'seekable-img-wrap';
+        });
+    assert.deepEqual(uiElementOrder, ['waveform-wrap', 'seekable-img-wrap', 'waveform-wrap']);
 
     const seekWrap = wrappers[0].querySelector('.seekwrap');
     assert.ok(seekWrap);
@@ -604,29 +619,16 @@ test('ui waveforms config injects multiple canvases with individual bar widths',
     controller.destroy();
 });
 
-test('ui waveforms config enables waveform rendering even when feature is false', () => {
+test('ui waveform elements enable waveform rendering even when feature is false', () => {
     const controller = createController({
         features: { waveform: false, keyboard: false, looping: false },
         tracks: [{ title: 'A', sources: [{ src: 'a.mp3' }] }],
-        ui: { waveforms: [{ width: 700, height: 180 }] },
+        ui: [{ type: 'waveform', width: 700, height: 180 }],
     });
 
     assert.equal(controller.getState().features.waveform, true);
     assert.equal(document.querySelectorAll('canvas.waveform').length, 1);
     assert.equal(document.querySelectorAll('.waveform-wrap').length, 1);
-
-    controller.destroy();
-});
-
-test('legacy ui.waveform config is ignored without throwing', () => {
-    const controller = createController({
-        features: { waveform: false, keyboard: false, looping: false },
-        tracks: [{ title: 'A', sources: [{ src: 'a.mp3' }] }],
-        ui: { waveform: {} },
-    });
-
-    assert.equal(document.querySelectorAll('canvas.waveform').length, 0);
-    assert.equal(document.querySelectorAll('.waveform-wrap').length, 0);
 
     controller.destroy();
 });

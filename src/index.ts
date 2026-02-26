@@ -28,7 +28,10 @@ export type {
     TrackSwitchFeatures,
     TrackSwitchInit,
     TrackSwitchImageConfig,
+    TrackSwitchImageUiElement,
     TrackSwitchSnapshot,
     TrackSwitchUiConfig,
+    TrackSwitchUiElement,
     TrackSwitchWaveformConfig,
+    TrackSwitchWaveformUiElement,
 } from './domain/types';

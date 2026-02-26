@@ -69,22 +69,20 @@ document.addEventListener('DOMContentLoaded', function () {
                 sources: [{ src: 'drums.mp3', type: 'audio/mpeg' }],
             },
         ],
-        ui: {
-            images: [
-                {
-                    src: 'mix.png',
-                    seekable: true,
-                    style: 'margin: 16px auto;',
-                },
-            ],
-            waveforms: [
-                {
-                    width: 1200,
-                    height: 150,
-                    style: 'margin: 16px auto;',
-                },
-            ],
-        },
+        ui: [
+            {
+                type: 'image',
+                src: 'mix.png',
+                seekable: true,
+                style: 'margin: 16px auto;',
+            },
+            {
+                type: 'waveform',
+                width: 1200,
+                height: 150,
+                style: 'margin: 16px auto;',
+            },
+        ],
     });
 });
 </script>
@@ -214,26 +212,27 @@ Preset rules:
 ## UI Elements
 
 Use `ui` for non-track visual elements so HTML can stay minimal.
+`ui` is an ordered array, so element order in the array is the rendered order.
 
 ### Seekable / Non-Seekable Images
 
 ```javascript
 TrackSwitch.createTrackSwitch(playerElement, {
     tracks: tracks,
-    ui: {
-        images: [
-            {
-                src: 'mix.png',
-                seekable: true,
-                style: 'margin: 20px auto; max-width: 900px;',
-                seekMarginLeft: 5,
-                seekMarginRight: 10,
-            },
-            {
-                src: 'cover.jpg',
-            },
-        ],
-    },
+    ui: [
+        {
+            type: 'image',
+            src: 'mix.png',
+            seekable: true,
+            style: 'margin: 20px auto; max-width: 900px;',
+            seekMarginLeft: 5,
+            seekMarginRight: 10,
+        },
+        {
+            type: 'image',
+            src: 'cover.jpg',
+        },
+    ],
 });
 ```
 
@@ -247,24 +246,24 @@ Image UI rules:
 ```javascript
 TrackSwitch.createTrackSwitch(playerElement, {
     tracks: tracks,
-    ui: {
-        waveforms: [
-            {
-                width: 1200,
-                height: 200,
-                waveformBarWidth: 2,
-                style: 'margin: 20px auto; max-width: 1000px;',
-                seekMarginLeft: 3,
-                seekMarginRight: 3,
-            },
-            {
-                width: 1200,
-                height: 110,
-                waveformBarWidth: 5,
-                style: 'margin: 10px auto; max-width: 1000px;',
-            },
-        ],
-    },
+    ui: [
+        {
+            type: 'waveform',
+            width: 1200,
+            height: 200,
+            waveformBarWidth: 2,
+            style: 'margin: 20px auto; max-width: 1000px;',
+            seekMarginLeft: 3,
+            seekMarginRight: 3,
+        },
+        {
+            type: 'waveform',
+            width: 1200,
+            height: 110,
+            waveformBarWidth: 5,
+            style: 'margin: 10px auto; max-width: 1000px;',
+        },
+    ],
 });
 ```
 
@@ -272,9 +271,9 @@ Waveform UI rules:
 
 - Defaults: `width: 1200`, `height: 150`.
 - Default `waveformBarWidth` is `1`.
-- Use `ui.waveforms` (array). `ui.waveform` is not supported.
-- Providing at least one entry in `ui.waveforms` implicitly enables waveform rendering.
-- Invalid or `< 1` `ui.waveforms[i].waveformBarWidth` is reset to `1`.
+- Use `ui` array entries with `type: 'waveform'`.
+- Providing at least one waveform entry in `ui` implicitly enables waveform rendering.
+- Invalid or `< 1` `waveformBarWidth` is reset to `1`.
 
 ## Player Features
 
@@ -326,7 +325,7 @@ Normalization rules:
 - If both `mute` and `solo` are false, `solo` is forced to true.
 - `onlyradiosolo: true` forces `mute: false` and `radiosolo: true`.
 - `radiosolo` or `onlyradiosolo` forces `presets: false`.
-- `ui.waveforms` forces `waveform: true` when at least one waveform is configured.
+- `ui` forces `waveform: true` when at least one waveform element is configured.
 
 ## Keyboard Shortcuts
 

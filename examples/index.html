@@ -50,21 +50,19 @@
                         sources: [{ src: 'data/drums.mp3' }],
                     },
                 ],
-                ui: {
-                    images: [
-                        {
-                            src: 'data/cover.png',
-                            style: 'margin: 20px auto;',
-                        },
-                    ],
-                    waveforms: [
-                        {
-                            width: 1200,
-                            height: 150,
-                            waveformBarWidth: 1,
-                        },
-                    ],
-                },
+                ui: [
+                    {
+                        type: 'waveform',
+                        width: 1200,
+                        height: 150,
+                        waveformBarWidth: 1,
+                    },
+                    {
+                        type: 'image',
+                        src: 'data/cover.png',
+                        style: 'margin: 20px auto;',
+                    },
+                ],
                 features: {
                     solo: true,
                     globalsolo: true,

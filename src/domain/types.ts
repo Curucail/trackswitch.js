@@ -55,10 +55,16 @@ export interface TrackSwitchWaveformConfig {
     seekMarginRight?: number;
 }
 
-export interface TrackSwitchUiConfig {
-    images?: TrackSwitchImageConfig[];
-    waveforms?: TrackSwitchWaveformConfig[];
+export interface TrackSwitchImageUiElement extends TrackSwitchImageConfig {
+    type: 'image';
 }
+
+export interface TrackSwitchWaveformUiElement extends TrackSwitchWaveformConfig {
+    type: 'waveform';
+}
+
+export type TrackSwitchUiElement = TrackSwitchImageUiElement | TrackSwitchWaveformUiElement;
+export type TrackSwitchUiConfig = TrackSwitchUiElement[];
 
 export interface TrackSwitchConfig {
     tracks: TrackDefinition[];
