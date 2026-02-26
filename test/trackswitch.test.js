@@ -118,6 +118,7 @@ global.XMLHttpRequest = class MockXHR {
 };
 
 const trackSwitch = require(path.resolve(__dirname, '../dist/tmp/ts/trackswitch.js'));
+const seekHelpers = require(path.resolve(__dirname, '../dist/tmp/ts/seek.js'));
 const {
     WaveformEngine,
     createInitialPlayerState,
@@ -127,6 +128,7 @@ const {
     parsePresetIndices,
     playerStateReducer,
 } = trackSwitch;
+const { getSeekMetrics } = seekHelpers;
 
 function dispatchMouse(target, type, options = {}) {
     target.dispatchEvent(new dom.window.MouseEvent(type, {
@@ -632,6 +634,101 @@ test('ui waveform elements enable waveform rendering even when feature is false'
     assert.equal(document.querySelectorAll('.waveform-wrap').length, 1);
 
     controller.destroy();
+});
+
+test('globalsolo pauses other playing controllers', async () => {
+    document.body.innerHTML = '<div id="a" class="player"></div><div id="b" class="player"></div>';
+
+    const rootA = document.getElementById('a');
+    const rootB = document.getElementById('b');
+    assert.ok(rootA && rootB);
+
+    const controllerA = createTrackSwitch(rootA, {
+        features: { waveform: false, keyboard: false, looping: false, globalsolo: true },
+        tracks: [{ title: 'A', sources: [{ src: 'a.mp3' }] }],
+    });
+
+    const controllerB = createTrackSwitch(rootB, {
+        features: { waveform: false, keyboard: false, looping: false, globalsolo: true },
+        tracks: [{ title: 'B', sources: [{ src: 'b.mp3' }] }],
+    });
+
+    await controllerA.load();
+    await controllerB.load();
+
+    controllerA.play();
+    assert.equal(controllerA.getState().state.playing, true);
+    assert.equal(controllerB.getState().state.playing, false);
+
+    controllerB.play();
+    assert.equal(controllerB.getState().state.playing, true);
+    assert.equal(controllerA.getState().state.playing, false);
+
+    controllerA.destroy();
+    controllerB.destroy();
+});
+
+test('getSeekMetrics clamps pointer coordinates to bounds', () => {
+    const seekElement = document.createElement('div');
+    seekElement.getBoundingClientRect = function() {
+        return {
+            left: 100,
+            width: 200,
+        };
+    };
+
+    const beforeBounds = getSeekMetrics(seekElement, {
+        type: 'mousedown',
+        pageX: 80,
+        preventDefault() {},
+        stopPropagation() {},
+    }, 20);
+    assert.ok(beforeBounds);
+    assert.equal(beforeBounds.posXRelLimited, 0);
+    assert.equal(beforeBounds.time, 0);
+
+    const insideBounds = getSeekMetrics(seekElement, {
+        type: 'mousedown',
+        pageX: 150,
+        preventDefault() {},
+        stopPropagation() {},
+    }, 20);
+    assert.ok(insideBounds);
+    assert.equal(insideBounds.posXRelLimited, 50);
+    assert.equal(insideBounds.time, 5);
+
+    const afterBounds = getSeekMetrics(seekElement, {
+        type: 'mousedown',
+        pageX: 400,
+        preventDefault() {},
+        stopPropagation() {},
+    }, 20);
+    assert.ok(afterBounds);
+    assert.equal(afterBounds.posXRelLimited, 200);
+    assert.equal(afterBounds.time, 20);
+});
+
+test('getSeekMetrics returns null for missing seek element or pointer data', () => {
+    assert.equal(getSeekMetrics(null, {
+        type: 'mousedown',
+        pageX: 100,
+        preventDefault() {},
+        stopPropagation() {},
+    }, 20), null);
+
+    const seekElement = document.createElement('div');
+    seekElement.getBoundingClientRect = function() {
+        return {
+            left: 10,
+            width: 100,
+        };
+    };
+
+    assert.equal(getSeekMetrics(seekElement, {
+        type: 'mousedown',
+        preventDefault() {},
+        stopPropagation() {},
+    }, 20), null);
 });
 
 test('utility exports remain available as named exports', () => {

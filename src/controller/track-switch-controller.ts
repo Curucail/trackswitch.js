@@ -8,13 +8,8 @@ import {
     TrackSwitchEventMap,
     TrackSwitchEventName,
     TrackSwitchFeatures,
-    TrackSwitchImageConfig,
-    TrackSwitchInit,
     TrackSwitchSnapshot,
-    TrackSwitchUiConfig,
-    TrackSwitchUiElement,
     TrackSwitchUiState,
-    TrackSwitchWaveformConfig,
 } from '../domain/types';
 import { normalizeFeatures } from '../domain/options';
 import { createInitialPlayerState, playerStateReducer, PlayerAction } from '../domain/state';
@@ -23,21 +18,18 @@ import { AudioEngine } from '../engine/audio-engine';
 import { WaveformEngine } from '../engine/waveform-engine';
 import { ViewRenderer } from '../ui/view-renderer';
 import { InputBinder, InputController } from '../input/input-binder';
+import { eventTargetAsElement } from '../shared/dom';
+import { clamp } from '../shared/math';
+import { derivePresetNames, parseStrictNonNegativeInt } from '../shared/preset';
+import { ControllerPointerEvent, getSeekMetrics, isPrimaryInput } from '../shared/seek';
 import {
-    clamp,
-    clampPercent,
-    ControllerPointerEvent,
-    derivePresetNames,
-    eventTargetAsElement,
-    getSeekMetrics,
-    isPrimaryInput,
-    parseStrictNonNegativeInt,
-} from '../utils/helpers';
-
-let instanceCounter = 0;
-let activeKeyboardInstanceId: number | null = null;
-const controllerRegistry = new Set<TrackSwitchControllerImpl>();
-const TRACKS_REQUIRED_ERROR = 'TrackSwitch requires init.tracks with at least one track.';
+    allocateInstanceId,
+    isKeyboardControllerActive,
+    pauseOtherControllers,
+    registerController,
+    setActiveKeyboardController,
+    unregisterController,
+} from './controller-registry';
 
 function closestInRoot(root: HTMLElement, target: EventTarget | null | undefined, selector: string): HTMLElement | null {
     const element = eventTargetAsElement(target ?? null);
@@ -51,111 +43,6 @@ function closestInRoot(root: HTMLElement, target: EventTarget | null | undefined
     }
 
     return matched as HTMLElement;
-}
-
-function toMarginString(value: number | undefined): string {
-    return String(clampPercent(value));
-}
-
-function toCanvasSize(value: number | undefined, fallback: number): number {
-    if (!Number.isFinite(value) || !value) {
-        return fallback;
-    }
-
-    return Math.max(1, Math.round(value));
-}
-
-function normalizeWaveformBarWidth(value: number | undefined): number {
-    if (typeof value !== 'number' || !Number.isFinite(value) || value < 1) {
-        return 1;
-    }
-
-    return Math.max(1, Math.floor(value));
-}
-
-function normalizeWaveformConfig<T extends TrackSwitchWaveformConfig>(waveform: T): T {
-    return {
-        ...waveform,
-        waveformBarWidth: normalizeWaveformBarWidth(waveform.waveformBarWidth),
-    };
-}
-
-function normalizeUiElement(element: TrackSwitchUiElement): TrackSwitchUiElement {
-    if (element.type === 'waveform') {
-        return normalizeWaveformConfig(element);
-    }
-
-    return element;
-}
-
-function injectImage(root: HTMLElement, image: TrackSwitchImageConfig): void {
-    const imageElement = document.createElement('img');
-    imageElement.src = image.src;
-
-    if (image.seekable) {
-        imageElement.classList.add('seekable');
-    }
-
-    if (typeof image.style === 'string') {
-        imageElement.setAttribute('data-style', image.style);
-    }
-
-    if (typeof image.seekMarginLeft === 'number') {
-        imageElement.setAttribute('data-seek-margin-left', toMarginString(image.seekMarginLeft));
-    }
-
-    if (typeof image.seekMarginRight === 'number') {
-        imageElement.setAttribute('data-seek-margin-right', toMarginString(image.seekMarginRight));
-    }
-
-    root.appendChild(imageElement);
-}
-
-function injectWaveform(root: HTMLElement, waveform: TrackSwitchWaveformConfig): void {
-    const canvas = document.createElement('canvas');
-    canvas.className = 'waveform';
-    canvas.width = toCanvasSize(waveform.width, 1200);
-    canvas.height = toCanvasSize(waveform.height, 150);
-    canvas.setAttribute('data-waveform-bar-width', String(normalizeWaveformBarWidth(waveform.waveformBarWidth)));
-
-    if (typeof waveform.style === 'string') {
-        canvas.setAttribute('data-waveform-style', waveform.style);
-    }
-
-    if (typeof waveform.seekMarginLeft === 'number') {
-        canvas.setAttribute('data-seek-margin-left', toMarginString(waveform.seekMarginLeft));
-    }
-
-    if (typeof waveform.seekMarginRight === 'number') {
-        canvas.setAttribute('data-seek-margin-right', toMarginString(waveform.seekMarginRight));
-    }
-
-    root.appendChild(canvas);
-}
-
-function injectConfiguredUiElements(root: HTMLElement, uiElements: TrackSwitchUiConfig | undefined): void {
-    if (!uiElements) {
-        return;
-    }
-
-    const seekableCount = uiElements.filter(function(entry) {
-        return entry.type === 'image' && Boolean(entry.seekable);
-    }).length;
-
-    if (seekableCount > 1) {
-        throw new Error('TrackSwitch UI config supports at most one seekable image.');
-    }
-
-    uiElements.forEach(function(entry) {
-        if (entry.type === 'image') {
-            injectImage(root, entry);
-            return;
-        }
-
-        if (entry.type === 'waveform') {
-            injectWaveform(root, entry);
-        }
-    });
 }
 
 export class TrackSwitchControllerImpl implements TrackSwitchController, InputController {
@@ -223,8 +110,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         this.waveformEngine = new WaveformEngine();
         this.renderer = new ViewRenderer(this.root, this.features, presetNames);
 
-        this.instanceId = instanceCounter;
-        instanceCounter += 1;
+        this.instanceId = allocateInstanceId();
 
         this.eventNamespace = '.trackswitch.' + this.instanceId;
 
@@ -245,7 +131,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             this.handleError('No tracks available.');
         }
 
-        controllerRegistry.add(this);
+        registerController(this);
     }
 
     async load(): Promise<void> {
@@ -334,16 +220,12 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         this.renderer.destroy();
         this.audioEngine.disconnect();
 
-        if (activeKeyboardInstanceId === this.instanceId) {
-            activeKeyboardInstanceId = null;
-        }
-
         this.listeners.loaded.clear();
         this.listeners.error.clear();
         this.listeners.position.clear();
         this.listeners.trackState.clear();
 
-        controllerRegistry.delete(this);
+        unregisterController(this);
     }
 
     togglePlay(): void {
@@ -633,7 +515,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     }
 
     setKeyboardActive(): void {
-        activeKeyboardInstanceId = this.instanceId;
+        setActiveKeyboardController(this.instanceId);
     }
 
     onOverlayActivate(event: ControllerPointerEvent): void {
@@ -1049,7 +931,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     }
 
     onKeyboard(event: ControllerPointerEvent): void {
-        if (!this.features.keyboard || activeKeyboardInstanceId !== this.instanceId) {
+        if (!this.features.keyboard || !isKeyboardControllerActive(this.instanceId)) {
             return;
         }
 
@@ -1232,12 +1114,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             return;
         }
 
-        controllerRegistry.forEach((controller) => {
-            if (controller === this) {
-                return;
-            }
-            controller.pause();
-        });
+        pauseOtherControllers(this);
     }
 
     private startAudio(newPosition?: number, snippetDuration?: number): void {
@@ -1363,34 +1240,4 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         this.renderer.showError(message, this.runtimes);
         this.emit('error', { message: message });
     }
-}
-
-function normalizeInit(root: HTMLElement, init: TrackSwitchInit | undefined): TrackSwitchConfig {
-    const resolvedInit = init as TrackSwitchInit | undefined;
-    const resolvedUi = Array.isArray(resolvedInit?.ui)
-        ? resolvedInit.ui.map(normalizeUiElement)
-        : undefined;
-    const waveformRequiredByUi = Boolean(resolvedUi && resolvedUi.some(function(entry) {
-        return entry.type === 'waveform';
-    }));
-    const resolvedFeatures = waveformRequiredByUi
-        ? { ...(resolvedInit?.features ?? {}), waveform: true }
-        : resolvedInit?.features;
-
-    if (!resolvedInit?.tracks || resolvedInit.tracks.length === 0) {
-        throw new Error(TRACKS_REQUIRED_ERROR);
-    }
-
-    injectConfiguredUiElements(root, resolvedUi);
-
-    return {
-        tracks: resolvedInit.tracks,
-        presetNames: resolvedInit.presetNames,
-        features: resolvedFeatures,
-        ui: resolvedUi,
-    };
-}
-
-export function createTrackSwitch(rootElement: HTMLElement, init: TrackSwitchInit): TrackSwitchController {
-    return new TrackSwitchControllerImpl(rootElement, normalizeInit(rootElement, init));
 }

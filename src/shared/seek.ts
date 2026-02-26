@@ -1,0 +1,74 @@
+export interface ControllerPointerEvent {
+    type: string;
+    which?: number;
+    pageX?: number;
+    key?: string;
+    code?: string;
+    shiftKey?: boolean;
+    target?: EventTarget | null;
+    originalEvent?: Event & {
+        deltaY?: number;
+        touches?: ArrayLike<{ pageX: number }>;
+    };
+    preventDefault(): void;
+    stopPropagation(): void;
+}
+
+function getPointerPageX(event: ControllerPointerEvent): number | null {
+    if (event.type.indexOf('mouse') >= 0) {
+        return typeof event.pageX === 'number' ? event.pageX : null;
+    }
+
+    const touchEvent = event.originalEvent;
+    const touches = touchEvent?.touches;
+    if (touches && touches.length > 0) {
+        const firstTouch = touches[0];
+        return typeof firstTouch?.pageX === 'number' ? firstTouch.pageX : null;
+    }
+
+    return null;
+}
+
+function ensurePositiveWidth(width: number): number {
+    if (!Number.isFinite(width) || width < 1) {
+        return 1;
+    }
+
+    return width;
+}
+
+export function getSeekMetrics(
+    seekingElement: HTMLElement | null,
+    event: ControllerPointerEvent,
+    longestDuration: number
+): { posXRel: number; seekWidth: number; posXRelLimited: number; timePerc: number; time: number } | null {
+    if (!seekingElement) {
+        return null;
+    }
+
+    const pageX = getPointerPageX(event);
+    if (pageX === null) {
+        return null;
+    }
+
+    const rect = seekingElement.getBoundingClientRect();
+    const offsetLeft = rect.left + window.scrollX;
+
+    const posXRel = pageX - offsetLeft;
+    const seekWidth = ensurePositiveWidth(rect.width || seekingElement.clientWidth || 0);
+    const posXRelLimited = posXRel < 0 ? 0 : posXRel > seekWidth ? seekWidth : posXRel;
+    const timePerc = (posXRelLimited / seekWidth) * 100;
+    const time = longestDuration * (timePerc / 100);
+
+    return {
+        posXRel: posXRel,
+        seekWidth: seekWidth,
+        posXRelLimited: posXRelLimited,
+        timePerc: timePerc,
+        time: time,
+    };
+}
+
+export function isPrimaryInput(event: ControllerPointerEvent): boolean {
+    return event.type === 'touchstart' || (event.type === 'mousedown' && event.which === 1);
+}

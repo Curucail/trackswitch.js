@@ -1,5 +1,7 @@
 import { TrackRuntime, TrackSwitchFeatures, TrackSwitchUiState } from '../domain/types';
-import { clampPercent, escapeHtml, formatSecondsToHHMMSSmmm, sanitizeInlineStyle } from '../utils/helpers';
+import { escapeHtml, sanitizeInlineStyle } from '../shared/dom';
+import { formatSecondsToHHMMSSmmm } from '../shared/format';
+import { clampPercent } from '../shared/math';
 import { WaveformEngine } from '../engine/waveform-engine';
 
 function buildSeekWrap(leftPercent: number, rightPercent: number): string {

@@ -1,12 +1,10 @@
-import { createTrackSwitch } from './core/track-switch-controller';
+import { createTrackSwitch } from './controller/create-track-switch';
 import { normalizeFeatures, defaultFeatures } from './domain/options';
 import { createInitialPlayerState, playerStateReducer } from './domain/state';
 import { WaveformEngine } from './engine/waveform-engine';
-import {
-    inferSourceMimeType,
-    formatSecondsToHHMMSSmmm,
-    parsePresetIndices,
-} from './utils/helpers';
+import { inferSourceMimeType } from './shared/audio';
+import { formatSecondsToHHMMSSmmm } from './shared/format';
+import { parsePresetIndices } from './shared/preset';
 
 export { createTrackSwitch };
 export { normalizeFeatures, defaultFeatures };

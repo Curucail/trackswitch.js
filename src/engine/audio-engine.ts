@@ -1,5 +1,5 @@
 import { TrackRuntime, TrackSwitchFeatures } from '../domain/types';
-import { calculateTrackTiming, inferSourceMimeType } from '../utils/helpers';
+import { calculateTrackTiming, inferSourceMimeType } from '../shared/audio';
 import { getAudioContext } from './audio-context';
 
 const MIME_TYPE_TABLE: Record<string, string> = {

@@ -1,5 +1,6 @@
 import { TrackSwitchFeatures } from '../domain/types';
-import { ControllerPointerEvent, eventTargetAsElement } from '../utils/helpers';
+import { eventTargetAsElement } from '../shared/dom';
+import { ControllerPointerEvent } from '../shared/seek';
 
 export interface InputController {
     eventNamespace: string;
