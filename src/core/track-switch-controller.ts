@@ -480,7 +480,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     }
 
     applyPreset(presetIndex: number): void {
-        if (this.features.onlyradiosolo) {
+        if (!this.features.presets) {
             return;
         }
 
