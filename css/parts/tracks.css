@@ -11,6 +11,8 @@
     /* Required if there is no title defined */
     padding: 8px 10px 8px 60px;
     /* Top Right Bottom Left */
+    display: flex;
+    align-items: center;
 }
 
 .trackswitch li.track.tabs {
@@ -40,7 +42,8 @@
 
 .trackswitch li.track ul.control {
     position: absolute;
-    top: calc(50% - 14px);
+    top: 50%;
+    transform: translateY(-50%);
     left: 5px;
     padding-left: 2px;
 }

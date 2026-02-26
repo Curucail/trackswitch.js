@@ -182,11 +182,48 @@
 .trackswitch .main-control .control>li.loop-group>.loop-controls {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 4px;
 }
 
 .trackswitch .main-control .control>li.loop-group>.loop-controls>li.button {
     margin: 0;
+    width: 22px;
+    height: 22px;
+    position: relative;
+}
+
+/* Normalize loop glyph geometry so A/B and icon buttons share size + centering */
+.trackswitch .main-control .control>li.loop-group>.loop-controls>li.button:after {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-a:after,
+.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-b:after {
+    width: calc(100% - 4px);
+    height: calc(100% - 4px);
+    margin: auto;
+    border: 1px solid currentColor;
+    border-radius: 3px;
+    padding: 0;
+    font-size: 13px;
+    font-family: Arial, sans-serif;
+    font-weight: bold;
+}
+
+.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-toggle,
+.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-clear {
+    width: 16px;
+    height: 24px;
+}
+
+.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-toggle:after,
+.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-clear:after {
+    font-size: 17px;
 }
 
 /* Preset selector */
