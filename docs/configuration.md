@@ -310,7 +310,7 @@ If you don't define `preset-names`, preset names will be auto-generated as "Pres
 
 **Preset Dropdown Visibility**
 
-The preset selector dropdown only appears in the control bar when **2 or more presets** are defined. With 0 or 1 presets, the dropdown is hidden.
+The preset selector dropdown only appears in the control bar when **2 or more presets** are defined and `features.presets` is `true`. With 0 or 1 presets, or when `features.presets` is `false`, the dropdown is hidden.
 
 **Preset Behavior**
 
@@ -369,6 +369,8 @@ The player accepts the following options (defaults shown):
  - `keyboard` (`boolean`): Enable keyboard shortcuts for the active player instance. Default: `true`.
  - `looping` (`boolean`): Enable A/B loop controls (buttons, markers, right-click drag, and loop-related keyboard shortcuts). Default: `true`.
  - `seekbar` (`boolean`): Show or hide the main control-bar seekbar. Seekable images and waveforms remain interactive regardless of this setting. Default: `true`.
+ - `timer` (`boolean`): Show or hide the timing tracker in the main control bar. Default: `true`.
+ - `presets` (`boolean`): Show or hide the preset selector dropdown (when two or more presets exist). Default: `true`.
  - `waveform` (`boolean`): Enable waveform visualization for `<canvas class="waveform">` elements. Default: `true`.
  - `waveformBarWidth` (`number`): Width in pixels for each waveform bar. Default: `1`.
 

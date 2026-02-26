@@ -70,7 +70,7 @@ export class ViewRenderer {
 
     private buildMainControlHtml(): string {
         let presetDropdownHtml = '';
-        if (this.presetNames.length >= 2) {
+        if (this.features.presets && this.presetNames.length >= 2) {
             presetDropdownHtml += '<li class="preset-selector-wrap"><select class="preset-selector" title="Select Preset">';
             for (let i = 0; i < this.presetNames.length; i += 1) {
                 presetDropdownHtml += '<option value="' + i + '"' + (i === 0 ? ' selected' : '') + '>'
@@ -111,7 +111,9 @@ export class ViewRenderer {
                     + '</ul></li>'
                 : '')
             + presetDropdownHtml
-            + '<li class="timing"><span class="time">--:--:--:---</span> / <span class="length">--:--:--:---</span></li>'
+            + (this.features.timer
+                ? '<li class="timing"><span class="time">--:--:--:---</span> / <span class="length">--:--:--:---</span></li>'
+                : '')
             + (this.features.seekbar
                 ? '<li class="seekwrap">'
                     + '<div class="seekbar">'
@@ -324,7 +326,9 @@ export class ViewRenderer {
             setLeftPercent(seekhead, timePerc);
         });
 
-        this.updateTiming(state.position, state.longestDuration);
+        if (this.features.timer) {
+            this.updateTiming(state.position, state.longestDuration);
+        }
 
         if (!this.features.looping) {
             return;

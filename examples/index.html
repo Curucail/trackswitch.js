@@ -41,9 +41,21 @@
             document.querySelectorAll('.player').forEach(function (player) {
                 TrackSwitch.createTrackSwitch(player, {
                     features: {
+                        solo: true,
+                        globalsolo: true,
+                        globalvolume: false,
+                        repeat: false,
+                        radiosolo: false,
+                        onlyradiosolo: false,
+                        tabview: false,
+                        iosunmute: true,
+                        keyboard: true,
+                        looping: false,
+                        seekbar: true,
+                        timer: true,
+                        presets: false,
+                        waveform: true,
                         waveformBarWidth: 1,
-                        looping: true,
-                        globalvolume: true,
                     },
                 });
             });

@@ -13,6 +13,8 @@ export const defaultFeatures: Readonly<TrackSwitchFeatures> = {
     keyboard: true,
     looping: false,
     seekbar: true,
+    timer: true,
+    presets: true,
     waveform: true,
     waveformBarWidth: 1,
 };
@@ -22,6 +24,15 @@ export function normalizeFeatures(features: Partial<TrackSwitchFeatures> | undef
         ...defaultFeatures,
         ...(features ?? {}),
     };
+    const rawFeatures = features as (Partial<TrackSwitchFeatures> & { timing?: boolean }) | undefined;
+
+    if (
+        rawFeatures
+        && !Object.prototype.hasOwnProperty.call(rawFeatures, 'timer')
+        && typeof rawFeatures.timing === 'boolean'
+    ) {
+        normalized.timer = rawFeatures.timing;
+    }
 
     if (!normalized.mute && !normalized.solo) {
         normalized.solo = true;

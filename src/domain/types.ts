@@ -33,6 +33,8 @@ export interface TrackSwitchFeatures {
     keyboard: boolean;
     looping: boolean;
     seekbar: boolean;
+    timer: boolean;
+    presets: boolean;
     waveform: boolean;
     waveformBarWidth: number;
 }

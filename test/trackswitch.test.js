@@ -274,6 +274,31 @@ test('presets are disabled when onlyradiosolo is enabled', () => {
     controller.destroy();
 });
 
+test('preset selector can be hidden via presets feature', () => {
+    const controller = createController({
+        features: { waveform: false, keyboard: false, looping: false, presets: false },
+        tracks: [
+            { title: 'A', presets: [0], sources: [{ src: 'a.mp3' }] },
+            { title: 'B', presets: [1], sources: [{ src: 'b.mp3' }] },
+        ],
+    });
+
+    assert.equal(document.querySelector('.preset-selector'), null);
+
+    controller.destroy();
+});
+
+test('timer feature can disable timing tracker UI', () => {
+    const controller = createController({
+        features: { waveform: false, keyboard: false, looping: false, timer: false },
+        tracks: [{ title: 'A', sources: [{ src: 'a.mp3' }] }],
+    });
+
+    assert.equal(document.querySelector('.main-control .timing'), null);
+
+    controller.destroy();
+});
+
 test('controller destroy tears down rendered UI', async () => {
     const controller = createController({
         features: { waveform: false, keyboard: false, looping: false },

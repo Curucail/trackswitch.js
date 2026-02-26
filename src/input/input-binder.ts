@@ -222,7 +222,7 @@ export class InputBinder {
             this.addListener(this.root, 'mouseup', stopPropagationOnVolume as EventListener);
         }
 
-        if (this.controller.presetCount >= 2) {
+        if (this.features.presets && this.controller.presetCount >= 2) {
             this.addDelegatedListener('change', '.preset-selector', (event) => {
                 this.controller.onPreset(event);
             });
