@@ -17,18 +17,71 @@ Initialization
 --------------
 
 ```html
+<div id="player"></div>
 <script src="dist/js/trackswitch.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  document.querySelectorAll('.player').forEach(function (player) {
-    TrackSwitch.createTrackSwitch(player);
+  TrackSwitch.createTrackSwitch(document.getElementById('player'), {
+    presetNames: ['All Tracks', 'Violins & Synths', 'Drums & Bass', 'Drums Only'],
+    tracks: [
+      {
+        title: 'Violins',
+        image: 'violins.png',
+        presets: [0, 1],
+        sources: [{ src: 'violins.mp3', type: 'audio/mpeg' }],
+      },
+      {
+        title: 'Synths',
+        image: 'synth.png',
+        presets: [0, 1],
+        sources: [{ src: 'synth.mp3', type: 'audio/mpeg' }],
+      },
+      {
+        title: 'Bass',
+        image: 'bass.png',
+        presets: [0, 2],
+        sources: [{ src: 'bass.mp3', type: 'audio/mpeg' }],
+      },
+      {
+        title: 'Drums',
+        image: 'drums.png',
+        presets: [0, 2, 3],
+        sources: [{ src: 'drums.mp3', type: 'audio/mpeg' }],
+      },
+    ],
+    ui: {
+      images: [
+        {
+          src: 'mix.png',
+          seekable: true,
+          style: 'margin: 20px auto;',
+        },
+      ],
+      waveform: {
+        width: 1200,
+        height: 150,
+      },
+    },
   });
 });
 </script>
 ```
 
-Migration (breaking): old jQuery plugin initialization
-`$('.player').trackSwitch()` becomes `TrackSwitch.createTrackSwitch(playerElement)`.
+Breaking migration notes:
+
+- Old jQuery plugin initialization: `$('.player').trackSwitch()` becomes `TrackSwitch.createTrackSwitch(playerElement, init)`.
+- Declarative `<ts-track>`, `<ts-source>`, and `preset-names` markup are no longer supported.
+- `init.tracks` is required and must contain at least one track.
+
+Errors thrown by the JS-only migration:
+
+```text
+TrackSwitch JS-only mode requires init.tracks with at least one track.
+```
+
+```text
+Declarative markup has been removed. Remove `preset-names`, `<ts-track>`, and `<ts-source>` markup and pass all track data via TrackSwitch.createTrackSwitch(rootElement, init).
+```
 
 
 ## Whats included

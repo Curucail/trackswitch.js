@@ -1,65 +1,120 @@
 <!DOCTYPE html>
-<html lang="{{ site.lang | default: "en-US" }}">
-  <head>
-    <meta charset="UTF-8">
-    <title>{{ page.title | default: site.title }}</title>
-    <meta name="description" content="{{ page.description | default: site.description | default: site.github.project_tagline }}"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#157878">
-    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css' />
-    <link rel="stylesheet" href="{{ '/assets/css/style.css?v=' | append: site.github.build_revision | relative_url }}" />
-    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous" />
-    <link rel="stylesheet" href="{{ '/css/trackswitch.min.css' | relative_url }}" />
-    <link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}" />
-  </head>
-  <body>
-    <section class="page-header">
-      <h1 class="project-name">
-        <a href="{{ '/' | relative_url }}">
-          {{ site.title | default: site.github.repository_name }}
-        </a>
-      </h1>
-      <h2 class="project-tagline">{{ site.description | default: site.github.project_tagline }}</h2>
-      <a href="https://www.npmjs.com/package/trackswitch" class="btn">View on npm</a>
-      {% if site.github.is_project_page %}
-        <a href="{{ site.github.zip_url }}" class="btn">Download as ZIP</a>
-        <a href="{{ site.github.repository_url }}" class="btn">View on GitHub</a>
-      {% endif %}
-    </section>
+<html lang="{{ site.lang | default: " en-US" }}">
 
-    <section class="main-content">
-      {{ content }}
+<head>
+  <meta charset="UTF-8">
+  <title>{{ page.title | default: site.title }}</title>
+  <meta name="description"
+    content="{{ page.description | default: site.description | default: site.github.project_tagline }}" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#157878">
+  <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css' />
+  <link rel="stylesheet" href="{{ '/assets/css/style.css?v=' | append: site.github.build_revision | relative_url }}" />
+  <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet"
+    integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous" />
+  <link rel="stylesheet" href="{{ '/css/trackswitch.min.css' | relative_url }}" />
+  <link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}" />
+</head>
 
-      <footer class="site-footer">
+<body>
+  <section class="page-header">
+    <h1 class="project-name">
+      <a href="{{ '/' | relative_url }}">
+        {{ site.title | default: site.github.repository_name }}
+      </a>
+    </h1>
+    <h2 class="project-tagline">{{ site.description | default: site.github.project_tagline }}</h2>
+    <a href="https://www.npmjs.com/package/trackswitch" class="btn">View on npm</a>
+    {% if site.github.is_project_page %}
+    <a href="{{ site.github.zip_url }}" class="btn">Download as ZIP</a>
+    <a href="{{ site.github.repository_url }}" class="btn">View on GitHub</a>
+    {% endif %}
+  </section>
+
+  <section class="main-content">
+    {{ content }}
+
+    <footer class="site-footer">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
         <a href="https://www.audiolabs-erlangen.de/">
-          <img src="{{ '/assets/alabs.png' | relative_url }}" alt="" />
+          <img src="{{ '/assets/alabs.png' | relative_url }}" alt="" style="height: 80px; width: auto;" />
         </a>
         <a href="https://www.iis.fraunhofer.de/">
-          <img src="{{ '/assets/iis.png' | relative_url }}" alt="" />
+          <img src="{{ '/assets/iis.png' | relative_url }}" alt="" style="height: 80px; width: auto;" />
         </a>
         <a href="https://www.fau.de/">
-          <img src="{{ '/assets/fau.png' | relative_url }}" alt="" />
+          <img src="{{ '/assets/fau.png' | relative_url }}" alt="" style="height: 80px; width: auto;" />
         </a>
-      </footer>
-    </section>
+      </div>
+    </footer>
+  </section>
 
-    <script src="https://cdn.rawgit.com/download/polymer-cdn/1.5.0/lib/webcomponentsjs/webcomponents-lite.min.js"></script>
-    <script src="js/trackswitch.min.js"></script>
-    <script type="text/javascript">
-        document.addEventListener('DOMContentLoaded', function() {
-            document.querySelectorAll('.customplayer').forEach(function(player) {
-                TrackSwitch.createTrackSwitch(player, {
-                    features: {
-                        onlyradiosolo: true,
-                        repeat: true,
-                    },
-                });
-            });
+  <script
+    src="https://cdn.rawgit.com/download/polymer-cdn/1.5.0/lib/webcomponentsjs/webcomponents-lite.min.js"></script>
+  <script src="js/trackswitch.min.js"></script>
+  <script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function () {
+      function buildTracks(basePath) {
+        return [
+          {
+            title: 'Violins',
+            image: basePath + '/violins.png',
+            presets: [0, 1],
+            sources: [{ src: basePath + '/violins.mp3' }],
+          },
+          {
+            title: 'Synths',
+            image: basePath + '/synth.png',
+            presets: [0, 1],
+            sources: [{ src: basePath + '/synth.mp3' }],
+          },
+          {
+            title: 'Bass',
+            image: basePath + '/bass.png',
+            presets: [0, 2],
+            sources: [{ src: basePath + '/bass.mp3' }],
+          },
+          {
+            title: 'Drums',
+            image: basePath + '/drums.png',
+            presets: [0, 2, 3],
+            sources: [{ src: basePath + '/drums.mp3' }],
+          },
+        ];
+      }
 
-            document.querySelectorAll('.player').forEach(function(player) {
-                TrackSwitch.createTrackSwitch(player);
-            });
-        });
-    </script>
-  </body>
+      function createDemoInit(type, basePath) {
+        var init = {
+          presetNames: ['All Tracks', 'Violins & Synths', 'Drums & Bass', 'Drums Only'],
+          tracks: buildTracks(basePath),
+          ui: {
+            waveform: {
+              width: 1200,
+              height: 150,
+              style: 'margin: 20px auto;',
+            },
+          },
+        };
+
+        if (type === 'custom') {
+          init.features = {
+            onlyradiosolo: true,
+            looping: true,
+            repeat: true,
+            globalvolume: true,
+          };
+        }
+
+        return init;
+      }
+
+      document.querySelectorAll('[data-ts-demo]').forEach(function (player) {
+        var type = player.getAttribute('data-ts-demo') || 'default';
+        var basePath = player.getAttribute('data-ts-base') || 'data/multitracks';
+        TrackSwitch.createTrackSwitch(player, createDemoInit(type, basePath));
+      });
+    });
+  </script>
+</body>
+
 </html>

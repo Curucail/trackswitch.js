@@ -39,16 +39,39 @@ export interface TrackSwitchFeatures {
     waveformBarWidth: number;
 }
 
+export interface TrackSwitchImageConfig {
+    src: string;
+    seekable?: boolean;
+    style?: string;
+    seekMarginLeft?: number;
+    seekMarginRight?: number;
+}
+
+export interface TrackSwitchWaveformConfig {
+    width?: number;
+    height?: number;
+    style?: string;
+    seekMarginLeft?: number;
+    seekMarginRight?: number;
+}
+
+export interface TrackSwitchUiConfig {
+    images?: TrackSwitchImageConfig[];
+    waveform?: TrackSwitchWaveformConfig;
+}
+
 export interface TrackSwitchConfig {
     tracks: TrackDefinition[];
     presetNames?: string[];
     features?: Partial<TrackSwitchFeatures>;
+    ui?: TrackSwitchUiConfig;
 }
 
 export interface TrackSwitchInit {
-    tracks?: TrackDefinition[];
+    tracks: TrackDefinition[];
     presetNames?: string[];
     features?: Partial<TrackSwitchFeatures>;
+    ui?: TrackSwitchUiConfig;
 }
 
 export interface TrackTiming {

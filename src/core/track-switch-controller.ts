@@ -8,8 +8,10 @@ import {
     TrackSwitchEventMap,
     TrackSwitchEventName,
     TrackSwitchFeatures,
+    TrackSwitchImageConfig,
     TrackSwitchInit,
     TrackSwitchSnapshot,
+    TrackSwitchUiConfig,
     TrackSwitchUiState,
 } from '../domain/types';
 import { normalizeFeatures } from '../domain/options';
@@ -21,6 +23,7 @@ import { ViewRenderer } from '../ui/view-renderer';
 import { InputBinder, InputController } from '../input/input-binder';
 import {
     clamp,
+    clampPercent,
     ControllerPointerEvent,
     derivePresetNames,
     eventTargetAsElement,
@@ -28,11 +31,12 @@ import {
     isPrimaryInput,
     parseStrictNonNegativeInt,
 } from '../utils/helpers';
-import { parsePresetNamesFromMarkup, parseTrackSwitchMarkup } from './markup-parser';
 
 let instanceCounter = 0;
 let activeKeyboardInstanceId: number | null = null;
 const controllerRegistry = new Set<TrackSwitchControllerImpl>();
+const TRACKS_REQUIRED_ERROR = 'TrackSwitch JS-only mode requires init.tracks with at least one track.';
+const LEGACY_MARKUP_ERROR = 'Declarative markup has been removed. Remove `preset-names`, `<ts-track>`, and `<ts-source>` markup and pass all track data via TrackSwitch.createTrackSwitch(rootElement, init).';
 
 function closestInRoot(root: HTMLElement, target: EventTarget | null | undefined, selector: string): HTMLElement | null {
     const element = eventTargetAsElement(target ?? null);
@@ -46,6 +50,93 @@ function closestInRoot(root: HTMLElement, target: EventTarget | null | undefined
     }
 
     return matched as HTMLElement;
+}
+
+function hasLegacyDeclarativeMarkup(root: HTMLElement): boolean {
+    if (root.hasAttribute('preset-names')) {
+        return true;
+    }
+
+    return root.querySelector('ts-track, ts-source') !== null;
+}
+
+function toMarginString(value: number | undefined): string {
+    return String(clampPercent(value));
+}
+
+function toCanvasSize(value: number | undefined, fallback: number): number {
+    if (!Number.isFinite(value) || !value) {
+        return fallback;
+    }
+
+    return Math.max(1, Math.round(value));
+}
+
+function injectImage(root: HTMLElement, image: TrackSwitchImageConfig): void {
+    const imageElement = document.createElement('img');
+    imageElement.src = image.src;
+
+    if (image.seekable) {
+        imageElement.classList.add('seekable');
+    }
+
+    if (typeof image.style === 'string') {
+        imageElement.setAttribute('data-style', image.style);
+    }
+
+    if (typeof image.seekMarginLeft === 'number') {
+        imageElement.setAttribute('data-seek-margin-left', toMarginString(image.seekMarginLeft));
+    }
+
+    if (typeof image.seekMarginRight === 'number') {
+        imageElement.setAttribute('data-seek-margin-right', toMarginString(image.seekMarginRight));
+    }
+
+    root.appendChild(imageElement);
+}
+
+function injectWaveform(root: HTMLElement, waveform: NonNullable<TrackSwitchUiConfig['waveform']>): void {
+    const canvas = document.createElement('canvas');
+    canvas.className = 'waveform';
+    canvas.width = toCanvasSize(waveform.width, 1200);
+    canvas.height = toCanvasSize(waveform.height, 150);
+
+    if (typeof waveform.style === 'string') {
+        canvas.setAttribute('data-waveform-style', waveform.style);
+    }
+
+    if (typeof waveform.seekMarginLeft === 'number') {
+        canvas.setAttribute('data-seek-margin-left', toMarginString(waveform.seekMarginLeft));
+    }
+
+    if (typeof waveform.seekMarginRight === 'number') {
+        canvas.setAttribute('data-seek-margin-right', toMarginString(waveform.seekMarginRight));
+    }
+
+    root.appendChild(canvas);
+}
+
+function injectConfiguredUiElements(root: HTMLElement, ui: TrackSwitchUiConfig | undefined, waveformEnabled: boolean): void {
+    if (!ui) {
+        return;
+    }
+
+    const images = ui.images ?? [];
+    const seekableCount = images.filter(function(entry) {
+        return Boolean(entry.seekable);
+    }).length;
+
+    if (seekableCount > 1) {
+        throw new Error('TrackSwitch UI config supports at most one seekable image.');
+    }
+
+    images.forEach(function(image) {
+        injectImage(root, image);
+    });
+
+    if (ui.waveform && waveformEnabled) {
+        injectWaveform(root, ui.waveform);
+    }
 }
 
 export class TrackSwitchControllerImpl implements TrackSwitchController, InputController {
@@ -1255,22 +1346,28 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     }
 }
 
-function normalizeInit(root: HTMLElement, init: TrackSwitchInit = {}): TrackSwitchConfig {
-    const tracks = init.tracks && init.tracks.length > 0
-        ? init.tracks
-        : parseTrackSwitchMarkup(root);
+function normalizeInit(root: HTMLElement, init: TrackSwitchInit | undefined): TrackSwitchConfig {
+    const resolvedInit = init as TrackSwitchInit | undefined;
+    const normalizedFeatures = normalizeFeatures(resolvedInit?.features);
 
-    const presetNames = init.presetNames && init.presetNames.length > 0
-        ? init.presetNames
-        : parsePresetNamesFromMarkup(root);
+    if (hasLegacyDeclarativeMarkup(root)) {
+        throw new Error(LEGACY_MARKUP_ERROR);
+    }
+
+    if (!resolvedInit?.tracks || resolvedInit.tracks.length === 0) {
+        throw new Error(TRACKS_REQUIRED_ERROR);
+    }
+
+    injectConfiguredUiElements(root, resolvedInit.ui, normalizedFeatures.waveform);
 
     return {
-        tracks: tracks,
-        presetNames: presetNames,
-        features: init.features,
+        tracks: resolvedInit.tracks,
+        presetNames: resolvedInit.presetNames,
+        features: resolvedInit.features,
+        ui: resolvedInit.ui,
     };
 }
 
-export function createTrackSwitch(rootElement: HTMLElement, init: TrackSwitchInit = {}): TrackSwitchController {
+export function createTrackSwitch(rootElement: HTMLElement, init: TrackSwitchInit): TrackSwitchController {
     return new TrackSwitchControllerImpl(rootElement, normalizeInit(rootElement, init));
 }

@@ -13,6 +13,7 @@ global.document = dom.window.document;
 global.navigator = dom.window.navigator;
 global.Element = dom.window.Element;
 global.HTMLElement = dom.window.HTMLElement;
+global.HTMLImageElement = dom.window.HTMLImageElement;
 global.HTMLCanvasElement = dom.window.HTMLCanvasElement;
 global.Event = dom.window.Event;
 global.MouseEvent = dom.window.MouseEvent;
@@ -124,7 +125,6 @@ const {
     formatSecondsToHHMMSSmmm,
     inferSourceMimeType,
     parsePresetIndices,
-    parseTrackSwitchMarkup,
     playerStateReducer,
 } = trackSwitch;
 
@@ -145,6 +145,26 @@ function createController(init, markup) {
 
 test.afterEach(() => {
     document.body.innerHTML = '';
+});
+
+test('createTrackSwitch throws when tracks are omitted', () => {
+    document.body.innerHTML = '<div class="player"></div>';
+    const root = document.querySelector('.player');
+    assert.ok(root);
+
+    assert.throws(() => createTrackSwitch(root), {
+        message: 'TrackSwitch JS-only mode requires init.tracks with at least one track.',
+    });
+});
+
+test('createTrackSwitch throws when tracks are empty', () => {
+    document.body.innerHTML = '<div class="player"></div>';
+    const root = document.querySelector('.player');
+    assert.ok(root);
+
+    assert.throws(() => createTrackSwitch(root, { tracks: [] }), {
+        message: 'TrackSwitch JS-only mode requires init.tracks with at least one track.',
+    });
 });
 
 test('waveform peaks handle tiny buffers with large widths', () => {
@@ -437,7 +457,7 @@ test('keyboard shortcuts are scoped to active instance', async () => {
     controllerA.destroy();
 });
 
-test('createTrackSwitch parses ts-track markup when tracks are omitted', async () => {
+test('createTrackSwitch rejects legacy declarative markup', () => {
     document.body.innerHTML = [
         '<div class="player" preset-names="One,Two">',
         '  <ts-track title="Lead" presets="0" data-img="lead.png">',
@@ -452,41 +472,130 @@ test('createTrackSwitch parses ts-track markup when tracks are omitted', async (
     const root = document.querySelector('.player');
     assert.ok(root);
 
-    const controller = createTrackSwitch(root, {
+    assert.throws(() => createTrackSwitch(root, {
         features: { waveform: false, keyboard: false, looping: false },
+        tracks: [{ title: 'Lead', sources: [{ src: 'lead.mp3' }] }],
+    }), {
+        message: 'Declarative markup has been removed. Remove `preset-names`, `<ts-track>`, and `<ts-source>` markup and pass all track data via TrackSwitch.createTrackSwitch(rootElement, init).',
+    });
+});
+
+test('ui image config injects seekable image and margins', () => {
+    const controller = createController({
+        features: { waveform: false, keyboard: false, looping: false, seekbar: true },
+        tracks: [{ title: 'A', sources: [{ src: 'a.mp3' }] }],
+        ui: {
+            images: [{
+                src: 'cover.png',
+                seekable: true,
+                style: 'margin: 10px auto;',
+                seekMarginLeft: 5,
+                seekMarginRight: 10,
+            }],
+        },
     });
 
-    await controller.load();
-    const snapshot = controller.getState();
+    const image = document.querySelector('img.seekable');
+    assert.ok(image);
+    assert.equal(image.getAttribute('src'), 'http://localhost/cover.png');
+    assert.equal(image.getAttribute('data-seek-margin-left'), '5');
+    assert.equal(image.getAttribute('data-seek-margin-right'), '10');
 
-    assert.equal(snapshot.tracks.length, 2);
-    assert.equal(snapshot.isLoaded, true);
+    const wrapper = document.querySelector('.seekable-img-wrap');
+    assert.ok(wrapper);
+    assert.ok(wrapper.getAttribute('style').includes('margin: 10px auto;'));
+
+    const seekWrap = wrapper.querySelector('.seekwrap');
+    assert.ok(seekWrap);
+    assert.ok(seekWrap.getAttribute('style').includes('left: 5%'));
+    assert.ok(seekWrap.getAttribute('style').includes('right: 10%'));
 
     controller.destroy();
 });
 
-test('parseTrackSwitchMarkup parses declarative tracks without jQuery', () => {
-    document.body.innerHTML = [
-        '<div class="player">',
-        '  <ts-track title="Track A" presets="0,2" data-seek-margin-left="5" data-seek-margin-right="10">',
-        '    <ts-source src="a.mp3" start-offset-ms="100"></ts-source>',
-        '  </ts-track>',
-        '</div>',
-    ].join('');
-
+test('ui config allows at most one seekable image', () => {
+    document.body.innerHTML = '<div class="player"></div>';
     const root = document.querySelector('.player');
     assert.ok(root);
 
-    const tracks = parseTrackSwitchMarkup(root);
+    assert.throws(() => createTrackSwitch(root, {
+        tracks: [{ title: 'A', sources: [{ src: 'a.mp3' }] }],
+        ui: {
+            images: [
+                { src: 'cover-a.png', seekable: true },
+                { src: 'cover-b.png', seekable: true },
+            ],
+        },
+    }), {
+        message: 'TrackSwitch UI config supports at most one seekable image.',
+    });
+});
 
-    assert.equal(tracks.length, 1);
-    assert.equal(tracks[0].title, 'Track A');
-    assert.deepEqual(tracks[0].presets, [0, 2]);
-    assert.equal(tracks[0].sources.length, 1);
-    assert.equal(tracks[0].sources[0].startOffsetMs, 100);
+test('ui waveform config injects default canvas dimensions', () => {
+    const controller = createController({
+        features: { waveform: true, keyboard: false, looping: false },
+        tracks: [{ title: 'A', sources: [{ src: 'a.mp3' }] }],
+        ui: { waveform: {} },
+    });
+
+    const canvas = document.querySelector('canvas.waveform');
+    assert.ok(canvas);
+    assert.equal(canvas.width, 1200);
+    assert.equal(canvas.height, 150);
+    assert.ok(document.querySelector('.waveform-wrap'));
+
+    controller.destroy();
+});
+
+test('ui waveform config injects custom canvas and seek margins', () => {
+    const controller = createController({
+        features: { waveform: true, keyboard: false, looping: false },
+        tracks: [{ title: 'A', sources: [{ src: 'a.mp3' }] }],
+        ui: {
+            waveform: {
+                width: 640,
+                height: 96,
+                style: 'margin: 8px 0;',
+                seekMarginLeft: 3,
+                seekMarginRight: 7,
+            },
+        },
+    });
+
+    const canvas = document.querySelector('canvas.waveform');
+    assert.ok(canvas);
+    assert.equal(canvas.width, 640);
+    assert.equal(canvas.height, 96);
+    assert.equal(canvas.getAttribute('data-seek-margin-left'), '3');
+    assert.equal(canvas.getAttribute('data-seek-margin-right'), '7');
+
+    const wrapper = document.querySelector('.waveform-wrap');
+    assert.ok(wrapper);
+    assert.ok(wrapper.getAttribute('style').includes('margin: 8px 0;'));
+
+    const seekWrap = wrapper.querySelector('.seekwrap');
+    assert.ok(seekWrap);
+    assert.ok(seekWrap.getAttribute('style').includes('left: 3%'));
+    assert.ok(seekWrap.getAttribute('style').includes('right: 7%'));
+
+    controller.destroy();
+});
+
+test('waveform UI is not injected when waveform feature is disabled', () => {
+    const controller = createController({
+        features: { waveform: false, keyboard: false, looping: false },
+        tracks: [{ title: 'A', sources: [{ src: 'a.mp3' }] }],
+        ui: { waveform: { width: 700, height: 180 } },
+    });
+
+    assert.equal(document.querySelector('canvas.waveform'), null);
+    assert.equal(document.querySelector('.waveform-wrap'), null);
+
+    controller.destroy();
 });
 
 test('utility exports remain available as named exports', () => {
+    assert.equal(Object.prototype.hasOwnProperty.call(trackSwitch, 'parseTrackSwitchMarkup'), false);
     assert.deepEqual(parsePresetIndices('1x,-2,3,4'), [3, 4]);
     assert.equal(
         inferSourceMimeType('https://cdn.example/audio/file.MP3?x=1#frag', undefined, { '.mp3': 'audio/mpeg;' }),

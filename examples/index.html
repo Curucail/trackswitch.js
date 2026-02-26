@@ -16,48 +16,69 @@
 
 <body>
 
-    <div class="player" preset-names="All Tracks,Violins & Synths,Drums & Bass,Drums Only">
-        <img style="margin: 20px auto;" src="data/cover.png">
-        <canvas class="waveform" width="1200" height="150"></canvas>
-        <ts-track title="Violins" data-img="data/violins.png" presets="0,1">
-            <ts-source src="data/violins.mp3"></ts-source>
-        </ts-track>
-        <ts-track title="Synths" data-img="data/synth.png" presets="0,1">
-            <ts-source src="data/synth.mp3"></ts-source>
-        </ts-track>
-        <ts-track title="Bass" data-img="data/bass.png" presets="0,2">
-            <ts-source src="data/bass.mp3"></ts-source>
-        </ts-track>
-        <ts-track title="Drums" data-img="data/drums.png" presets="0,2,3">
-            <ts-source src="data/drums.mp3"></ts-source>
-        </ts-track>
-    </div>
-
+    <div id="player"></div>
 
     <script src="../dist/js/trackswitch.min.js"></script>
 
     <script type="text/javascript">
         document.addEventListener('DOMContentLoaded', function () {
-            document.querySelectorAll('.player').forEach(function (player) {
-                TrackSwitch.createTrackSwitch(player, {
-                    features: {
-                        solo: true,
-                        globalsolo: true,
-                        globalvolume: false,
-                        repeat: false,
-                        radiosolo: false,
-                        onlyradiosolo: false,
-                        tabview: false,
-                        iosunmute: true,
-                        keyboard: true,
-                        looping: false,
-                        seekbar: true,
-                        timer: true,
-                        presets: false,
-                        waveform: true,
-                        waveformBarWidth: 1,
+            TrackSwitch.createTrackSwitch(document.getElementById('player'), {
+                presetNames: ['All Tracks', 'Violins & Synths', 'Drums & Bass', 'Drums Only'],
+                tracks: [
+                    {
+                        title: 'Violins',
+                        image: 'data/violins.png',
+                        presets: [0, 1],
+                        sources: [{ src: 'data/violins.mp3' }],
                     },
-                });
+                    {
+                        title: 'Synths',
+                        image: 'data/synth.png',
+                        presets: [0, 1],
+                        sources: [{ src: 'data/synth.mp3' }],
+                    },
+                    {
+                        title: 'Bass',
+                        image: 'data/bass.png',
+                        presets: [0, 2],
+                        sources: [{ src: 'data/bass.mp3' }],
+                    },
+                    {
+                        title: 'Drums',
+                        image: 'data/drums.png',
+                        presets: [0, 2, 3],
+                        sources: [{ src: 'data/drums.mp3' }],
+                    },
+                ],
+                ui: {
+                    images: [
+                        {
+                            src: 'data/cover.png',
+                            style: 'margin: 20px auto;',
+                        },
+                    ],
+                    waveform: {
+                        width: 1200,
+                        height: 150,
+                    },
+                },
+                features: {
+                    solo: true,
+                    globalsolo: true,
+                    globalvolume: false,
+                    repeat: false,
+                    radiosolo: false,
+                    onlyradiosolo: false,
+                    tabview: false,
+                    iosunmute: true,
+                    keyboard: true,
+                    looping: false,
+                    seekbar: true,
+                    timer: true,
+                    presets: true,
+                    waveform: true,
+                    waveformBarWidth: 1,
+                },
             });
         });
     </script>

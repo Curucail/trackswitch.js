@@ -7,55 +7,63 @@ title: trackswitch.js
 Install from npm:
 
 ```shell
-$ npm install trackswitch --save
+npm install trackswitch --save
 ```
 
-Alternatively, you can manually download and include [`trackswitch.min.css`](https://github.com/audiolabs/trackswitch.js/releases/download/v0.1.0/trackswitch.min.css) and [`trackswitch.min.js`](https://github.com/audiolabs/trackswitch.js/releases/download/v0.1.0/trackswitch.min.js) in your page.
-
+Alternatively, download and include [`trackswitch.min.css`](https://github.com/audiolabs/trackswitch.js/releases/download/v0.1.0/trackswitch.min.css) and [`trackswitch.min.js`](https://github.com/audiolabs/trackswitch.js/releases/download/v0.1.0/trackswitch.min.js).
 
 ## Example
 
-<div class="player" style="margin-top: 30px; margin-bottom: 60px;" preset-names="All Tracks,Violins & Synths,Drums & Bass,Drums Only">
-    <canvas class="waveform" width="1200" height="150"></canvas>
-    <ts-track title="Violins" presets="0,1">
-        <ts-source src="data/multitracks/violins.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Synths" presets="0,1">
-        <ts-source src="data/multitracks/synth.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Bass" presets="0,2">
-        <ts-source src="data/multitracks/bass.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Drums" presets="0,2,3">
-        <ts-source src="data/multitracks/drums.mp3"></ts-source>
-    </ts-track>
-</div>
+<div class="player" data-ts-demo="default" style="margin-top: 30px; margin-bottom: 60px;"></div>
 
 ```html
-<div class="player" preset-names="All Tracks,Violins & Synths,Drums & Bass,Drums Only">
-    <!--
-      STEM file Halcyon Sky - Koronium 5 by Native Instruments
-      https://www.native-instruments.com/en/products/maschine/maschine-expansions/halcyon-sky
-    -->
-    <canvas class="waveform" width="1200" height="150"></canvas>
-    <ts-track title="Violins" presets="0,1">
-        <ts-source src="violins.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Synths" presets="0,1">
-        <ts-source src="synth.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Bass" presets="0,2">
-        <ts-source src="bass.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Drums" presets="0,2,3">
-        <ts-source src="drums.mp3"></ts-source>
-    </ts-track>
-</div>
+<div id="player"></div>
+<script src="trackswitch.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    TrackSwitch.createTrackSwitch(document.getElementById('player'), {
+        presetNames: ['All Tracks', 'Violins & Synths', 'Drums & Bass', 'Drums Only'],
+        tracks: [
+            {
+                title: 'Violins',
+                presets: [0, 1],
+                image: 'violins.png',
+                sources: [{ src: 'violins.mp3' }],
+            },
+            {
+                title: 'Synths',
+                presets: [0, 1],
+                image: 'synth.png',
+                sources: [{ src: 'synth.mp3' }],
+            },
+            {
+                title: 'Bass',
+                presets: [0, 2],
+                image: 'bass.png',
+                sources: [{ src: 'bass.mp3' }],
+            },
+            {
+                title: 'Drums',
+                presets: [0, 2, 3],
+                image: 'drums.png',
+                sources: [{ src: 'drums.mp3' }],
+            },
+        ],
+        ui: {
+            waveform: {
+                width: 1200,
+                height: 150,
+                style: 'margin: 20px auto;',
+            },
+        },
+    });
+});
+</script>
 ```
 
 ## Configuration
 
-See the [configuration guide](configuration.md) for the full option reference and behavior details.
+See the [configuration guide](configuration.md) for the full option reference.
 
 ## Usage scenarios
 
@@ -63,7 +71,7 @@ See [examples](examples.md).
 
 ## Citation
 
-If you use this tool to present your results, please make sure to cite the relevant publication:
+If you use this tool to present your results, please cite:
 
 Werner, Nils, et al. **"trackswitch.js: A Versatile Web-Based Audio Player for Presenting Scientific Results."** 3rd web audio conference, London, UK. 2017.
 
