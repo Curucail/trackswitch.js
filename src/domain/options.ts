@@ -43,6 +43,10 @@ export function normalizeFeatures(features: Partial<TrackSwitchFeatures> | undef
         normalized.radiosolo = true;
     }
 
+    if (normalized.radiosolo || normalized.onlyradiosolo) {
+        normalized.presets = false;
+    }
+
     if (!Number.isFinite(normalized.waveformBarWidth) || normalized.waveformBarWidth < 1) {
         normalized.waveformBarWidth = 1;
     }

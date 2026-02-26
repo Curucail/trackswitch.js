@@ -259,6 +259,34 @@ test('presets are disabled when onlyradiosolo is enabled', () => {
     });
 
     assert.equal(document.querySelector('.preset-selector'), null);
+    assert.equal(controller.getState().features.presets, false);
+
+    const initial = controller.getState();
+    assert.equal(initial.tracks[0].solo, true);
+    assert.equal(initial.tracks[1].solo, false);
+    assert.equal(initial.tracks[2].solo, false);
+
+    controller.applyPreset(1);
+    const afterPresetAttempt = controller.getState();
+    assert.equal(afterPresetAttempt.tracks[0].solo, true);
+    assert.equal(afterPresetAttempt.tracks[1].solo, false);
+    assert.equal(afterPresetAttempt.tracks[2].solo, false);
+
+    controller.destroy();
+});
+
+test('presets are disabled when radiosolo is enabled', () => {
+    const controller = createController({
+        features: { waveform: false, keyboard: false, looping: false, radiosolo: true },
+        tracks: [
+            { title: 'A', presets: [0], sources: [{ src: 'a.mp3' }] },
+            { title: 'B', presets: [1], sources: [{ src: 'b.mp3' }] },
+            { title: 'C', presets: [0], sources: [{ src: 'c.mp3' }] },
+        ],
+    });
+
+    assert.equal(document.querySelector('.preset-selector'), null);
+    assert.equal(controller.getState().features.presets, false);
 
     const initial = controller.getState();
     assert.equal(initial.tracks[0].solo, true);

@@ -104,7 +104,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             this.runtimes[0].state.solo = true;
         }
 
-        const presetNames = this.features.onlyradiosolo
+        const presetNames = !this.features.presets
             ? []
             : derivePresetNames(config);
         this.presetCount = presetNames.length;

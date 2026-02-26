@@ -378,6 +378,7 @@ Option normalization rules:
 
  - If both `mute` and `solo` are disabled, `solo` is automatically re-enabled.
  - If `onlyradiosolo` is enabled, `mute` is forced to `false` and `radiosolo` is forced to `true`.
+ - If `radiosolo` or `onlyradiosolo` is enabled, `presets` is forced to `false`.
  - If `waveformBarWidth` is invalid or lower than `1`, it is set to `1`.
 
 ### Keyboard Shortcuts
