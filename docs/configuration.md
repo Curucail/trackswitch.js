@@ -125,12 +125,15 @@ Image element:
 Waveform element:
 
 ```javascript
-{ type: 'waveform', width: 1200, height: 150, waveformBarWidth: 2 }
+{ type: 'waveform', width: 1200, height: 150, waveformBarWidth: 2, waveformSource: 'audible' }
 ```
 
-- Fields: `width?`, `height?`, `waveformBarWidth?`, `style?`, `seekMarginLeft?`, `seekMarginRight?`
+- Fields: `width?`, `height?`, `waveformBarWidth?`, `waveformSource?`, `style?`, `seekMarginLeft?`, `seekMarginRight?`
 - Defaults: `width: 1200`, `height: 150`, `waveformBarWidth: 1`
 - Invalid `waveformBarWidth` values are normalized to `1`
+- `waveformSource` controls what gets visualized:
+  - `'audible'` (default): render the current audible mix based on mute/solo state
+  - non-negative integer: render that specific track index waveform regardless of mute/solo
 - If at least one waveform UI element is configured, waveform rendering is enabled
 
 ## Player Features

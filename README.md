@@ -62,6 +62,7 @@ document.addEventListener('DOMContentLoaded', function () {
         type: 'waveform',
         width: 1200,
         height: 150,
+        waveformSource: 'audible', // or a track index (e.g. 1) for a fixed track waveform
       },
     ],
     features: {

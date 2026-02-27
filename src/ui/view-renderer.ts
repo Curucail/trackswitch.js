@@ -34,6 +34,20 @@ function parseWaveformBarWidth(value: string | null, fallback: number): number {
     return Math.max(1, Math.floor(parsed));
 }
 
+function parseWaveformSource(value: string | null): 'audible' | number {
+    const raw = typeof value === 'string' ? value.trim() : '';
+    if (!raw || raw === 'audible') {
+        return 'audible';
+    }
+
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+        return 'audible';
+    }
+
+    return Math.floor(parsed);
+}
+
 export class ViewRenderer {
     private readonly root: HTMLElement;
     private readonly features: TrackSwitchFeatures;
@@ -44,6 +58,7 @@ export class ViewRenderer {
     private readonly waveformContexts: Array<CanvasRenderingContext2D | null> = [];
     private readonly waveformOriginalHeight: number[] = [];
     private readonly waveformCanvasBarWidths: number[] = [];
+    private readonly waveformCanvasSources: Array<'audible' | number> = [];
 
     constructor(root: HTMLElement, features: TrackSwitchFeatures, presetNames: string[]) {
         this.root = root;
@@ -242,6 +257,9 @@ export class ViewRenderer {
             this.waveformCanvasBarWidths.push(
                 parseWaveformBarWidth(canvasElement.getAttribute('data-waveform-bar-width'), 1)
             );
+            this.waveformCanvasSources.push(
+                parseWaveformSource(canvasElement.getAttribute('data-waveform-source'))
+            );
 
             const wrapper = document.createElement('div');
             wrapper.className = 'waveform-wrap';
@@ -317,7 +335,9 @@ export class ViewRenderer {
             }
 
             const peakCount = Math.max(1, Math.floor(canvas.width / barWidth));
-            const mixed = waveformEngine.calculateMixedWaveform(runtimes, peakCount, barWidth, safeTimelineDuration);
+            const waveformSource = this.waveformCanvasSources[i] ?? 'audible';
+            const sourceRuntimes = this.getWaveformSourceRuntimes(runtimes, waveformSource);
+            const mixed = waveformEngine.calculateMixedWaveform(sourceRuntimes, peakCount, barWidth, safeTimelineDuration);
 
             if (!mixed) {
                 waveformEngine.drawPlaceholder(canvas, context, barWidth, 0.3);
@@ -326,6 +346,28 @@ export class ViewRenderer {
 
             waveformEngine.drawWaveform(canvas, context, mixed, barWidth);
         }
+    }
+
+    private getWaveformSourceRuntimes(
+        runtimes: TrackRuntime[],
+        waveformSource: 'audible' | number
+    ): TrackRuntime[] {
+        if (waveformSource === 'audible') {
+            return runtimes;
+        }
+
+        const selected = runtimes[waveformSource];
+        if (!selected) {
+            return runtimes;
+        }
+
+        return [{
+            ...selected,
+            state: {
+                mute: false,
+                solo: false,
+            },
+        }];
     }
 
     updateMainControls(state: TrackSwitchUiState): void {

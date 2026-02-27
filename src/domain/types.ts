@@ -64,6 +64,7 @@ export interface TrackSwitchWaveformConfig {
     width?: number;
     height?: number;
     waveformBarWidth?: number;
+    waveformSource?: 'audible' | number;
     style?: string;
     seekMarginLeft?: number;
     seekMarginRight?: number;

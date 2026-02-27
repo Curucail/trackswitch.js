@@ -26,10 +26,23 @@ function normalizeWaveformBarWidth(value: number | undefined): number {
     return Math.max(1, Math.floor(value));
 }
 
+function normalizeWaveformSource(value: 'audible' | number | undefined): 'audible' | number {
+    if (value === 'audible' || value === undefined) {
+        return 'audible';
+    }
+
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+        return 'audible';
+    }
+
+    return Math.floor(value);
+}
+
 function normalizeWaveformConfig<T extends TrackSwitchWaveformConfig>(waveform: T): T {
     return {
         ...waveform,
         waveformBarWidth: normalizeWaveformBarWidth(waveform.waveformBarWidth),
+        waveformSource: normalizeWaveformSource(waveform.waveformSource),
     };
 }
 
@@ -70,6 +83,7 @@ function injectWaveform(root: HTMLElement, waveform: TrackSwitchWaveformConfig):
     canvas.width = toCanvasSize(waveform.width, 1200);
     canvas.height = toCanvasSize(waveform.height, 150);
     canvas.setAttribute('data-waveform-bar-width', String(normalizeWaveformBarWidth(waveform.waveformBarWidth)));
+    canvas.setAttribute('data-waveform-source', String(normalizeWaveformSource(waveform.waveformSource)));
 
     if (typeof waveform.style === 'string') {
         canvas.setAttribute('data-waveform-style', waveform.style);

@@ -738,6 +738,82 @@ test('ui waveform element injects default canvas dimensions', () => {
     controller.destroy();
 });
 
+test('ui waveform elements normalize and inject waveformSource', () => {
+    const controller = createController({
+        features: { waveform: true, keyboard: false, looping: false },
+        tracks: [
+            { title: 'A', sources: [{ src: 'a.mp3' }] },
+            { title: 'B', sources: [{ src: 'b.mp3' }] },
+        ],
+        ui: [
+            { type: 'waveform', waveformSource: 1 },
+            { type: 'waveform', waveformSource: -5 },
+        ],
+    });
+
+    const canvases = document.querySelectorAll('canvas.waveform');
+    assert.equal(canvases.length, 2);
+    assert.equal(canvases[0].getAttribute('data-waveform-source'), '1');
+    assert.equal(canvases[1].getAttribute('data-waveform-source'), 'audible');
+
+    controller.destroy();
+});
+
+test('waveformSource track index renders selected track independent of mute and solo state', () => {
+    const originalGetContext = global.HTMLCanvasElement.prototype.getContext;
+    const originalCalculateMixedWaveform = WaveformEngine.prototype.calculateMixedWaveform;
+    const seenRuntimeSnapshots = [];
+    const fakeContext = {
+        clearRect() {},
+        fillRect() {},
+        fillStyle: '#000',
+        globalAlpha: 1,
+    };
+
+    global.HTMLCanvasElement.prototype.getContext = function() {
+        return fakeContext;
+    };
+
+    WaveformEngine.prototype.calculateMixedWaveform = function(runtimes, peakCount, barWidth, timelineDuration) {
+        seenRuntimeSnapshots.push(runtimes.map(function(runtime) {
+            return {
+                title: runtime.definition.title,
+                mute: runtime.state.mute,
+                solo: runtime.state.solo,
+            };
+        }));
+        return originalCalculateMixedWaveform.call(this, runtimes, peakCount, barWidth, timelineDuration);
+    };
+
+    let controller;
+    try {
+        controller = createController({
+            features: { waveform: true, keyboard: false, looping: false, presets: false },
+            tracks: [
+                { title: 'A', sources: [{ src: 'a.mp3' }] },
+                { title: 'B', sources: [{ src: 'b.mp3' }] },
+            ],
+            ui: [{ type: 'waveform', width: 400, height: 80, waveformSource: 1 }],
+        });
+
+        controller.toggleMute(1);
+        controller.toggleSolo(0);
+
+        const lastSnapshot = seenRuntimeSnapshots[seenRuntimeSnapshots.length - 1];
+        assert.ok(lastSnapshot);
+        assert.equal(lastSnapshot.length, 1);
+        assert.equal(lastSnapshot[0].title, 'B');
+        assert.equal(lastSnapshot[0].mute, false);
+        assert.equal(lastSnapshot[0].solo, false);
+    } finally {
+        if (controller) {
+            controller.destroy();
+        }
+        WaveformEngine.prototype.calculateMixedWaveform = originalCalculateMixedWaveform;
+        global.HTMLCanvasElement.prototype.getContext = originalGetContext;
+    }
+});
+
 test('ui element ordering supports mixed image and waveform entries', () => {
     const controller = createController({
         features: { waveform: false, keyboard: false, looping: false },
