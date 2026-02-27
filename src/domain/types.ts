@@ -1,4 +1,17 @@
 export type LoopMarker = 'A' | 'B';
+export type TrackSwitchMode = 'default' | 'alignment_solo' | 'alignment_multi';
+export type AlignmentOutOfRangeMode = 'clamp' | 'linear';
+
+export interface TrackAlignmentMapping {
+    trackIndex: number;
+    column: string;
+}
+
+export interface TrackAlignmentConfig {
+    csv: string;
+    mappings: TrackAlignmentMapping[];
+    outOfRange?: AlignmentOutOfRangeMode;
+}
 
 export interface TrackSourceDefinition {
     src: string;
@@ -21,6 +34,7 @@ export interface TrackDefinition {
 }
 
 export interface TrackSwitchFeatures {
+    mode: TrackSwitchMode;
     mute: boolean;
     solo: boolean;
     globalsolo: boolean;
@@ -70,6 +84,7 @@ export interface TrackSwitchConfig {
     tracks: TrackDefinition[];
     presetNames?: string[];
     features?: Partial<TrackSwitchFeatures>;
+    alignment?: TrackAlignmentConfig;
     ui?: TrackSwitchUiConfig;
 }
 
@@ -77,6 +92,7 @@ export interface TrackSwitchInit {
     tracks: TrackDefinition[];
     presetNames?: string[];
     features?: Partial<TrackSwitchFeatures>;
+    alignment?: TrackAlignmentConfig;
     ui?: TrackSwitchUiConfig;
 }
 

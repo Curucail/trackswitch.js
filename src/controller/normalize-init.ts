@@ -25,6 +25,7 @@ export function normalizeInit(root: HTMLElement, init: TrackSwitchInit | undefin
         tracks: resolvedInit.tracks,
         presetNames: resolvedInit.presetNames,
         features: resolvedFeatures,
+        alignment: resolvedInit.alignment,
         ui: resolvedUi,
     };
 }

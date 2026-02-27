@@ -1,4 +1,7 @@
-import { TrackRuntime, TrackSwitchFeatures } from '../domain/types';
+import {
+    TrackRuntime,
+    TrackSwitchFeatures,
+} from '../domain/types';
 import { calculateTrackTiming, inferSourceMimeType } from '../shared/audio';
 import { getAudioContext } from './audio-context';
 
@@ -356,7 +359,11 @@ export class AudioEngine {
         });
     }
 
-    start(runtimes: TrackRuntime[], position: number, snippetDuration?: number): { startTime: number } | null {
+    start(
+        runtimes: TrackRuntime[],
+        position: number,
+        snippetDuration?: number
+    ): { startTime: number } | null {
         if (!this.context || !this.gainNodeMaster || !this.canUseAudioGraph()) {
             return null;
         }

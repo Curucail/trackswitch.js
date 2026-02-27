@@ -13,6 +13,9 @@ export { WaveformEngine };
 export { inferSourceMimeType, formatSecondsToHHMMSSmmm, parsePresetIndices };
 
 export type {
+    AlignmentOutOfRangeMode,
+    TrackAlignmentConfig,
+    TrackAlignmentMapping,
     LoopMarker,
     PlayerState,
     TrackDefinition,
@@ -32,4 +35,5 @@ export type {
     TrackSwitchUiElement,
     TrackSwitchWaveformConfig,
     TrackSwitchWaveformUiElement,
+    TrackSwitchMode,
 } from './domain/types';

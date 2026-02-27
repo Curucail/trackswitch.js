@@ -65,6 +65,7 @@ document.addEventListener('DOMContentLoaded', function () {
       },
     ],
     features: {
+      mode: 'default',
       globalvolume: true,
       looping: true,
       presets: true,
@@ -99,6 +100,30 @@ Events:
 `getState()` returns player loading/playback state, feature flags, and per-track `mute`/`solo` state.
 
 When `features.globalsolo` is enabled, starting playback in one player pauses other players on the page.
+
+Alignment Modes
+---------------
+
+`features.mode` supports:
+
+- `default` (existing behavior)
+- `alignment_solo` (reference timeline + one active solo track at a time)
+- `alignment_multi` (normal multitrack playback; tracks are expected to be pre-synchronized externally)
+
+`alignment_solo` requires:
+
+- `features.onlyradiosolo: true`
+- `alignment` config with:
+  - `csv: string`
+  - `mappings: Array<{ trackIndex: number; column: string }>` (must cover all tracks)
+  - `outOfRange?: 'clamp' | 'linear'` (default `clamp`)
+
+Alignment mode behavior:
+
+- In `alignment_solo`, the longest track is used as the reference timeline axis
+- `seekTo`/seekbar/timer/`position` events stay on reference time in `alignment_solo`
+- `alignment_solo`: switching solo track remaps position and restarts playback on the newly active track timeline
+- `alignment_multi`: playback behavior is the same as `default`; no alignment CSV mapping or in-engine stretching/pitch shifting is applied
 
 Examples
 --------

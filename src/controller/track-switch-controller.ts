@@ -1,6 +1,8 @@
 import {
+    AlignmentOutOfRangeMode,
     LoopMarker,
     PlayerState,
+    TrackAlignmentConfig,
     TrackRuntime,
     TrackSwitchConfig,
     TrackSwitchController,
@@ -22,6 +24,13 @@ import { eventTargetAsElement } from '../shared/dom';
 import { clamp } from '../shared/math';
 import { derivePresetNames, parseStrictNonNegativeInt } from '../shared/preset';
 import { ControllerPointerEvent, getSeekMetrics, isPrimaryInput } from '../shared/seek';
+import {
+    buildColumnTimeMapping,
+    loadNumericCsv,
+    mapTime,
+    resolveAlignmentOutOfRangeMode,
+    TimeMappingSeries,
+} from '../shared/alignment';
 import {
     allocateInstanceId,
     isKeyboardControllerActive,
@@ -45,6 +54,17 @@ function closestInRoot(root: HTMLElement, target: EventTarget | null | undefined
     return matched as HTMLElement;
 }
 
+interface TrackAlignmentConverter {
+    referenceToTrack: TimeMappingSeries;
+    trackToReference: TimeMappingSeries;
+}
+
+interface AlignmentContext {
+    referenceTrackIndex: number;
+    outOfRange: AlignmentOutOfRangeMode;
+    converters: Map<number, TrackAlignmentConverter>;
+}
+
 export class TrackSwitchControllerImpl implements TrackSwitchController, InputController {
     private readonly root: HTMLElement;
     private readonly features: TrackSwitchFeatures;
@@ -52,6 +72,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     private readonly waveformEngine: WaveformEngine;
     private readonly renderer: ViewRenderer;
     private readonly inputBinder: InputBinder;
+    private readonly alignmentConfig: TrackAlignmentConfig | undefined;
 
     private state: PlayerState;
     private longestDuration = 0;
@@ -71,6 +92,8 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     private readonly loopMinDistance = 0.1;
 
     private iOSPlaybackUnlocked = false;
+    private alignmentContext: AlignmentContext | null = null;
+    private alignmentPlaybackTrackIndex: number | null = null;
 
     private readonly listeners: Record<TrackSwitchEventName, Set<(payload: unknown) => void>> = {
         loaded: new Set(),
@@ -85,6 +108,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
     constructor(rootElement: HTMLElement, config: TrackSwitchConfig) {
         this.root = rootElement;
+        this.alignmentConfig = config.alignment;
 
         this.features = normalizeFeatures(config.features);
         this.state = createInitialPlayerState(this.features.repeat);
@@ -184,6 +208,21 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         }
 
         this.longestDuration = this.findLongestDuration();
+        this.alignmentContext = null;
+        this.alignmentPlaybackTrackIndex = null;
+
+        if (this.features.mode === 'alignment_solo') {
+            const alignmentError = await this.initializeAlignmentSolo();
+            if (alignmentError) {
+                this.handleError(alignmentError);
+                return;
+            }
+        }
+
+        if (this.isDestroyed) {
+            return;
+        }
+
         this.isLoaded = true;
         this.renderer.hideOverlayOnLoaded();
 
@@ -267,9 +306,9 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             return;
         }
 
+        const position = this.currentPlaybackReferencePosition();
         this.stopAudio();
 
-        const position = this.audioEngine.currentTime - this.state.startTime;
         this.dispatch({ type: 'set-position', position: position });
         this.dispatch({ type: 'set-playing', playing: false });
 
@@ -454,6 +493,8 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             return;
         }
 
+        const previousActiveTrackIndex = this.getActiveSoloTrackIndex();
+
         const currentState = runtime.state.solo;
 
         if (exclusive || this.features.radiosolo) {
@@ -469,6 +510,16 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         }
 
         this.applyTrackProperties();
+
+        const nextActiveTrackIndex = this.getActiveSoloTrackIndex();
+        if (
+            this.features.mode === 'alignment_solo'
+            && this.alignmentContext
+            && previousActiveTrackIndex !== nextActiveTrackIndex
+            && nextActiveTrackIndex >= 0
+        ) {
+            this.handleAlignmentSoloTrackSwitch(nextActiveTrackIndex);
+        }
     }
 
     applyPreset(presetIndex: number): void {
@@ -1118,14 +1169,33 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     }
 
     private startAudio(newPosition?: number, snippetDuration?: number): void {
-        const position = typeof newPosition === 'number' ? newPosition : this.state.position;
+        const requestedPosition = typeof newPosition === 'number' ? newPosition : this.state.position;
+        let enginePosition = requestedPosition;
+        let nextReferencePosition = requestedPosition;
 
-        const startResult = this.audioEngine.start(this.runtimes, position, snippetDuration);
+        if (this.features.mode === 'alignment_solo' && this.alignmentContext) {
+            const activeTrackIndex = this.getActiveSoloTrackIndex();
+            if (activeTrackIndex < 0) {
+                return;
+            }
+
+            enginePosition = this.referenceToTrackTime(activeTrackIndex, requestedPosition);
+            nextReferencePosition = this.trackToReferenceTime(activeTrackIndex, enginePosition);
+            this.alignmentPlaybackTrackIndex = activeTrackIndex;
+        } else {
+            this.alignmentPlaybackTrackIndex = null;
+        }
+
+        const startResult = this.audioEngine.start(this.runtimes, enginePosition, snippetDuration);
         if (!startResult) {
+            this.alignmentPlaybackTrackIndex = null;
             return;
         }
 
-        this.dispatch({ type: 'set-position', position: position });
+        this.dispatch({
+            type: 'set-position',
+            position: clamp(nextReferencePosition, 0, this.longestDuration),
+        });
         this.dispatch({ type: 'set-start-time', startTime: startResult.startTime });
 
         if (this.timerMonitorPosition) {
@@ -1139,6 +1209,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
     private stopAudio(): void {
         this.audioEngine.stop(this.runtimes);
+        this.alignmentPlaybackTrackIndex = null;
         if (this.timerMonitorPosition) {
             clearInterval(this.timerMonitorPosition);
             this.timerMonitorPosition = null;
@@ -1151,7 +1222,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         }
 
         if (this.state.playing && !this.state.currentlySeeking) {
-            const currentPosition = this.audioEngine.currentTime - this.state.startTime;
+            const currentPosition = this.currentPlaybackReferencePosition();
             this.dispatch({ type: 'set-position', position: currentPosition });
         }
 
@@ -1208,9 +1279,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         let longest = 0;
 
         this.runtimes.forEach(function(runtime) {
-            const duration = runtime.timing
-                ? runtime.timing.effectiveDuration
-                : (runtime.buffer ? runtime.buffer.duration : 0);
+            const duration = TrackSwitchControllerImpl.getRuntimeDuration(runtime);
 
             if (duration > longest) {
                 longest = duration;
@@ -1218,6 +1287,226 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         });
 
         return longest;
+    }
+
+    private findLongestTrackIndex(): number {
+        let longest = -1;
+        let longestTrackIndex = 0;
+
+        this.runtimes.forEach(function(runtime, index) {
+            const duration = TrackSwitchControllerImpl.getRuntimeDuration(runtime);
+            if (duration > longest) {
+                longest = duration;
+                longestTrackIndex = index;
+            }
+        });
+
+        return longestTrackIndex;
+    }
+
+    private static getRuntimeDuration(runtime: TrackRuntime): number {
+        return runtime.timing
+            ? runtime.timing.effectiveDuration
+            : (runtime.buffer ? runtime.buffer.duration : 0);
+    }
+
+    private async initializeAlignmentSolo(): Promise<string | null> {
+        if (!this.features.onlyradiosolo) {
+            return 'Alignment mode "alignment_solo" requires features.onlyradiosolo to be true.';
+        }
+
+        const alignmentContextResult = await this.buildAlignmentContext();
+        if (typeof alignmentContextResult === 'string') {
+            return alignmentContextResult;
+        }
+
+        this.alignmentContext = alignmentContextResult;
+        this.longestDuration = TrackSwitchControllerImpl.getRuntimeDuration(this.runtimes[this.alignmentContext.referenceTrackIndex]);
+
+        const activeTrackIndex = this.getActiveSoloTrackIndex();
+        if (activeTrackIndex >= 0) {
+            const mappedTrackTime = this.referenceToTrackTime(activeTrackIndex, this.state.position);
+            const mappedReferenceTime = this.trackToReferenceTime(activeTrackIndex, mappedTrackTime);
+            this.dispatch({
+                type: 'set-position',
+                position: clamp(mappedReferenceTime, 0, this.longestDuration),
+            });
+        }
+
+        return null;
+    }
+
+    private async buildAlignmentContext(): Promise<AlignmentContext | string> {
+        if (!this.alignmentConfig) {
+            return 'Alignment mode requires init.alignment configuration.';
+        }
+
+        if (!this.alignmentConfig.csv || typeof this.alignmentConfig.csv !== 'string') {
+            return 'Alignment configuration requires a non-empty alignment.csv URL.';
+        }
+
+        const mappingByTrack = this.validateAndBuildAlignmentMappings(this.alignmentConfig);
+        if (typeof mappingByTrack === 'string') {
+            return mappingByTrack;
+        }
+
+        const referenceTrackIndex = this.findLongestTrackIndex();
+        const referenceColumn = mappingByTrack.get(referenceTrackIndex);
+        if (!referenceColumn) {
+            return 'Alignment mappings must include the reference track column.';
+        }
+
+        let parsedCsv;
+        try {
+            parsedCsv = await loadNumericCsv(this.alignmentConfig.csv);
+        } catch (error) {
+            return error instanceof Error
+                ? error.message
+                : 'Failed to load alignment CSV.';
+        }
+
+        const availableColumns = new Set(parsedCsv.headers);
+        for (const [, column] of mappingByTrack) {
+            if (!availableColumns.has(column)) {
+                return 'Alignment CSV is missing configured column: ' + column;
+            }
+        }
+
+        const converters = new Map<number, TrackAlignmentConverter>();
+        for (const [trackIndex, column] of mappingByTrack) {
+            try {
+                converters.set(trackIndex, {
+                    referenceToTrack: buildColumnTimeMapping(parsedCsv.rows, referenceColumn, column),
+                    trackToReference: buildColumnTimeMapping(parsedCsv.rows, column, referenceColumn),
+                });
+            } catch (error) {
+                return error instanceof Error
+                    ? error.message
+                    : 'Failed to build alignment mappings.';
+            }
+        }
+
+        return {
+            referenceTrackIndex: referenceTrackIndex,
+            outOfRange: resolveAlignmentOutOfRangeMode(this.alignmentConfig.outOfRange),
+            converters: converters,
+        };
+    }
+
+    private validateAndBuildAlignmentMappings(config: TrackAlignmentConfig): Map<number, string> | string {
+        if (!Array.isArray(config.mappings) || config.mappings.length === 0) {
+            return 'Alignment configuration requires alignment.mappings with one entry per track.';
+        }
+
+        if (config.mappings.length !== this.runtimes.length) {
+            return 'Alignment mappings must include exactly one mapping per track.';
+        }
+
+        const mappingByTrack = new Map<number, string>();
+
+        for (const entry of config.mappings) {
+            if (!entry || !Number.isInteger(entry.trackIndex)) {
+                return 'Alignment mapping entries require an integer trackIndex.';
+            }
+
+            if (entry.trackIndex < 0 || entry.trackIndex >= this.runtimes.length) {
+                return 'Alignment mapping trackIndex is out of range: ' + entry.trackIndex;
+            }
+
+            const column = typeof entry.column === 'string' ? entry.column.trim() : '';
+            if (!column) {
+                return 'Alignment mapping entries require a non-empty column name.';
+            }
+
+            if (mappingByTrack.has(entry.trackIndex)) {
+                return 'Alignment mappings contain duplicate trackIndex: ' + entry.trackIndex;
+            }
+
+            mappingByTrack.set(entry.trackIndex, column);
+        }
+
+        for (let index = 0; index < this.runtimes.length; index += 1) {
+            if (!mappingByTrack.has(index)) {
+                return 'Alignment mappings must cover all tracks. Missing trackIndex ' + index + '.';
+            }
+        }
+
+        return mappingByTrack;
+    }
+
+    private getActiveSoloTrackIndex(): number {
+        for (let index = 0; index < this.runtimes.length; index += 1) {
+            if (this.runtimes[index].state.solo) {
+                return index;
+            }
+        }
+
+        return this.runtimes.length > 0 ? 0 : -1;
+    }
+
+    private currentPlaybackReferencePosition(): number {
+        const rawPlaybackPosition = this.audioEngine.currentTime - this.state.startTime;
+        if (
+            this.features.mode !== 'alignment_solo'
+            || !this.alignmentContext
+            || this.alignmentPlaybackTrackIndex === null
+        ) {
+            return rawPlaybackPosition;
+        }
+
+        return this.trackToReferenceTime(this.alignmentPlaybackTrackIndex, rawPlaybackPosition);
+    }
+
+    private referenceToTrackTime(trackIndex: number, referenceTime: number): number {
+        if (!this.alignmentContext) {
+            return referenceTime;
+        }
+
+        const converter = this.alignmentContext.converters.get(trackIndex);
+        if (!converter) {
+            return referenceTime;
+        }
+
+        return mapTime(converter.referenceToTrack, referenceTime, this.alignmentContext.outOfRange);
+    }
+
+    private trackToReferenceTime(trackIndex: number, trackTime: number): number {
+        if (!this.alignmentContext) {
+            return trackTime;
+        }
+
+        const converter = this.alignmentContext.converters.get(trackIndex);
+        if (!converter) {
+            return trackTime;
+        }
+
+        return mapTime(converter.trackToReference, trackTime, 'linear');
+    }
+
+    private handleAlignmentSoloTrackSwitch(nextActiveTrackIndex: number): void {
+        if (!this.alignmentContext || nextActiveTrackIndex < 0) {
+            return;
+        }
+
+        const referenceAtSwitch = this.state.playing
+            ? this.currentPlaybackReferencePosition()
+            : this.state.position;
+        const mappedTrackTime = this.referenceToTrackTime(nextActiveTrackIndex, referenceAtSwitch);
+        const mappedReferenceTime = clamp(
+            this.trackToReferenceTime(nextActiveTrackIndex, mappedTrackTime),
+            0,
+            this.longestDuration
+        );
+
+        if (this.state.playing) {
+            this.stopAudio();
+            this.dispatch({ type: 'set-position', position: mappedReferenceTime });
+            this.startAudio(mappedReferenceTime);
+        } else {
+            this.dispatch({ type: 'set-position', position: mappedReferenceTime });
+        }
+
+        this.updateMainControls();
     }
 
     private emit<K extends TrackSwitchEventName>(eventName: K, payload: TrackSwitchEventMap[K]): void {
@@ -1229,6 +1518,8 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     private handleError(message: string): void {
         this.isLoaded = false;
         this.isLoading = false;
+        this.alignmentContext = null;
+        this.alignmentPlaybackTrackIndex = null;
 
         this.stopAudio();
 

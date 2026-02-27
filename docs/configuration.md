@@ -8,6 +8,7 @@ title: trackswitch.js
   - [Presets](#presets)
   - [UI Elements](#ui-elements)
   - [Player Features](#player-features)
+  - [Alignment](#alignment)
   - [Keyboard Shortcuts](#keyboard-shortcuts)
   - [Looping](#looping)
   - [Programmatic API](#programmatic-api)
@@ -43,7 +44,16 @@ TrackSwitch.createTrackSwitch(rootElement, {
     { type: 'image', src: 'cover.jpg', seekable: true },
     { type: 'waveform', width: 1200, height: 150 },
   ],
+  alignment: {
+    csv: 'dtw_alignment.csv',
+    mappings: [
+      { trackIndex: 0, column: 't1_sec' },
+      { trackIndex: 1, column: 't2_sec' },
+    ],
+    outOfRange: 'clamp',
+  },
   features: {
+    mode: 'default',
     globalvolume: true,
     looping: true,
   },
@@ -127,6 +137,7 @@ Waveform element:
 
 Feature defaults:
 
+- `mode: 'default'`
 - `mute: true`
 - `solo: true`
 - `globalsolo: true`
@@ -149,6 +160,38 @@ Normalization rules:
 - `onlyradiosolo: true` forces `mute: false` and `radiosolo: true`
 - `radiosolo` or `onlyradiosolo` forces `presets: false`
 - A configured waveform UI element forces `waveform: true`
+
+`mode` values:
+
+- `default` - existing timeline behavior
+- `alignment_solo` - reference timeline behavior with CSV mapping
+- `alignment_multi` - normal multitrack playback for externally pre-synchronized files
+
+## Alignment
+
+Alignment config lives at `init.alignment`.
+
+- `csv: string` - URL/path to a numeric CSV file with header row
+- `mappings: Array<{ trackIndex: number; column: string }>` - must map every track exactly once
+- `outOfRange?: 'clamp' | 'linear'` - defaults to `clamp`
+
+`alignment_solo` requirements:
+
+- `features.mode` must be `alignment_solo`
+- `features.onlyradiosolo` must be `true`
+- `alignment` must be present and valid
+
+`alignment_multi` requirements:
+
+- `features.mode` must be `alignment_multi`
+- no `alignment` config is required
+
+Behavior:
+
+- `alignment_solo` uses the longest track as the reference axis
+- Public timing (`seekTo`, seekbar, timer, `position` event) stays on reference time in `alignment_solo`
+- `alignment_solo`: switching active solo track remaps playback position via CSV and restarts from the mapped position
+- `alignment_multi`: playback is the same as `default`; no CSV-driven remapping, time stretching, or pitch shifting is applied
 
 Cross-player behavior:
 
