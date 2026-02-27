@@ -6,12 +6,14 @@ trackswitch.js
 Installation
 ------------
 
-This tool can be installed using
+Install from npm:
 
     npm install trackswitch
 
-alternatively you can manually download and include [`dist/css/trackswitch.min.css`](https://raw.githubusercontent.com/audiolabs/trackswitch.js/gh-pages/dist/css/trackswitch.min.css) and
-[`dist/js/trackswitch.min.js`](https://raw.githubusercontent.com/audiolabs/trackswitch.js/gh-pages/dist/js/trackswitch.min.js).
+For manual usage, include:
+
+- `dist/css/trackswitch.min.css`
+- `dist/js/trackswitch.min.js`
 
 Initialization
 --------------
@@ -62,37 +64,92 @@ document.addEventListener('DOMContentLoaded', function () {
         height: 150,
       },
     ],
+    features: {
+      globalvolume: true,
+      looping: true,
+      presets: true,
+    },
   });
 });
 </script>
 ```
 
-Breaking migration notes:
+Programmatic API
+----------------
 
-- Old jQuery plugin initialization: `$('.player').trackSwitch()` becomes `TrackSwitch.createTrackSwitch(playerElement, init)`.
-- Declarative `<ts-track>`, `<ts-source>`, and `preset-names` markup are no longer supported.
-- `init.tracks` is required and must contain at least one track.
+`TrackSwitch.createTrackSwitch(rootElement, init)` returns a controller.
 
-Errors thrown by the JS-only migration:
+Main methods:
 
-```text
-TrackSwitch JS-only mode requires init.tracks with at least one track.
-```
+- `load`, `destroy`
+- `togglePlay`, `play`, `pause`, `stop`
+- `seekTo`, `seekRelative`
+- `setRepeat`, `setVolume`
+- `setLoopPoint`, `toggleLoop`, `clearLoop`
+- `toggleMute`, `toggleSolo`, `applyPreset`
+- `getState`, `on`, `off`
 
-```text
-Declarative markup has been removed. Remove `preset-names`, `<ts-track>`, and `<ts-source>` markup and pass all track data via TrackSwitch.createTrackSwitch(rootElement, init).
-```
+Events:
 
+- `loaded` -> `{ longestDuration }`
+- `error` -> `{ message }`
+- `position` -> `{ position, duration }`
+- `trackState` -> `{ index, state: { mute, solo } }`
 
-## Whats included
+`getState()` returns player loading/playback state, feature flags, and per-track `mute`/`solo` state.
+
+When `features.globalsolo` is enabled, starting playback in one player pauses other players on the page.
+
+Examples
+--------
+
+### Configuration
+
+See [configuration examples](https://audiolabs.github.io/trackswitch.js/configuration.html).
+
+### Usage scenarios
+
+See [examples](https://audiolabs.github.io/trackswitch.js/examples.html).
+
+Keyboard Shortcuts
+------------------
+
+- `Space` - Play / Pause
+- `Escape` - Stop and reset position
+- `R` - Toggle repeat
+- `← / →` - Seek backward / forward 2 seconds
+- `Shift + ← / →` - Seek backward / forward 5 seconds
+- `Home` - Jump to start
+- `↑ / ↓` - Increase / decrease volume by 10% (when `globalvolume` is enabled)
+- `A` - Set loop point A (when `looping` is enabled)
+- `B` - Set loop point B (when `looping` is enabled)
+- `L` - Toggle loop (when `looping` is enabled)
+- `C` - Clear loop points (when `looping` is enabled)
+
+When multiple players exist on a page, the last-clicked player receives keyboard input.
+
+Whats included
+--------------
 
     dist/
     ├── css/
-    │   ├── trackswitch.min.css
+    │   └── trackswitch.min.css
     └── js/
         ├── trackswitch.js
         └── trackswitch.min.js
 
+Development
+-----------
+
+    npm install
+    npm run build
+
+Build scripts:
+
+- `npm run build` - Full build (clean, compile, minify)
+- `npm run build:css` - Compile and minify CSS only
+- `npm run build:js` - Bundle and minify JS only
+- `npm run clean` - Remove `dist/` folder
 
 Citation
 --------
@@ -108,52 +165,3 @@ Werner, Nils, et al. **"trackswitch.js: A Versatile Web-Based Audio Player for P
       year={2017},
       organization={Citeseer}
     }
-
-
-Examples
---------
-
-### Configuration
-
-See [configuration examples](https://audiolabs.github.io/trackswitch.js/configuration.html).
-
-### Usage scenarios
-
-See [examples](https://audiolabs.github.io/trackswitch.js/examples.html).
-
-
-Keyboard Shortcuts
-------------------
-
-trackswitch.js includes comprehensive keyboard shortcuts for controlling playback.
-
-### Playback Controls
-- **Space** - Play / Pause
-- **Escape** - Stop playback and reset to beginning
-- **R** - Toggle repeat mode
-
-### Seeking
-- **← / →** - Seek backward/forward 2 seconds
-- **Shift + ← / →** - Seek backward/forward 5 seconds
-- **Home** - Jump to start
-
-### Volume
-- **↑ / ↓** - Increase/decrease volume by 10% (when `globalvolume` is enabled)
-
-When multiple players exist on a page, the last-clicked player receives keyboard input.
-
-
-Development
------------
-
-    npm install
-    npm run build
-
-This will bundle TypeScript and minify CSS/JS into the `dist/` folder.
-
-### Build Scripts
-
-- `npm run build` - Full build (clean, compile, minify)
-- `npm run build:css` - Compile and minify CSS only
-- `npm run build:js` - Bundle and minify JS only
-- `npm run clean` - Remove `dist/` folder

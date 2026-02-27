@@ -7,12 +7,15 @@ title: trackswitch.js
 Install from npm:
 
 ```shell
-npm install trackswitch --save
+npm install trackswitch
 ```
 
-Alternatively, download and include [`trackswitch.min.css`](https://github.com/audiolabs/trackswitch.js/releases/download/v0.1.0/trackswitch.min.css) and [`trackswitch.min.js`](https://github.com/audiolabs/trackswitch.js/releases/download/v0.1.0/trackswitch.min.js).
+Or include the bundled files from a build/package:
 
-## Example
+- `trackswitch.min.css`
+- `trackswitch.min.js`
+
+## Quickstart
 
 <div class="player" data-ts-demo="default" style="margin-top: 30px; margin-bottom: 60px;"></div>
 
@@ -59,10 +62,10 @@ document.addEventListener('DOMContentLoaded', function () {
             },
         ],
         features: {
-            onlyradiosolo: true,
             looping: true,
             repeat: true,
             globalvolume: true,
+            presets: true,
         },
     });
 });
@@ -71,7 +74,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 ## Configuration
 
-See the [configuration guide](configuration.md) for the full option reference.
+See the [configuration guide](configuration.md).
 
 ## Usage scenarios
 
