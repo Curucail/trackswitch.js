@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap');
+
 kbd
 {
     -moz-border-radius:3px;
@@ -34,4 +36,404 @@ h1 a:hover,
 h1 a:visited {
     color: #ffffff;
     text-decoration: none;
+}
+
+.project-version {
+    color: rgba(230, 235, 239, 0.72);
+    font-size: 0.52em;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    vertical-align: middle;
+    margin-left: 0.2em;
+}
+
+#ts-dynamic-quickstart {
+    color: #1f2937;
+}
+
+#ts-dynamic-quickstart .ts-code-tag {
+    color: #0b7285;
+}
+
+#ts-dynamic-quickstart .ts-code-attr {
+    color: #5f3dc4;
+}
+
+#ts-dynamic-quickstart .ts-code-string {
+    color: #b02a37;
+}
+
+#ts-dynamic-quickstart .ts-code-keyword {
+    color: #0f766e;
+    font-weight: 600;
+}
+
+#ts-dynamic-quickstart .ts-code-key {
+    color: #1d4ed8;
+}
+
+#ts-dynamic-quickstart .ts-code-bool {
+    color: #7c2d12;
+    font-weight: 600;
+}
+
+.ts-snippet-wrap {
+    position: relative;
+}
+
+.ts-snippet-wrap .highlight {
+    margin-top: 0;
+}
+
+.ts-snippet-wrap pre.highlight {
+    max-height: none;
+    overflow: visible;
+    padding-right: 4.8rem;
+}
+
+.ts-copy-btn {
+    position: absolute;
+    top: 0.7rem;
+    right: 0.7rem;
+    z-index: 3;
+    border: 1px solid #c3d1df;
+    background: #f7fbff;
+    color: #2b4258;
+    border-radius: 6px;
+    padding: 0.25rem 0.65rem;
+    font-size: 0.78rem;
+    line-height: 1.2;
+    cursor: pointer;
+}
+
+.ts-copy-btn:hover {
+    background: #ecf5ff;
+}
+
+:root {
+    --ts-showcase-bg-a: transparent;
+    --ts-showcase-bg-b: transparent;
+    --ts-showcase-border: rgba(40, 72, 106, 0.18);
+    --ts-panel-bg: rgba(255, 255, 255, 0.82);
+    --ts-player-bg: rgba(255, 255, 255, 0.7);
+    --ts-shadow-strong: 0 30px 64px rgba(12, 31, 49, 0.28);
+    --ts-shadow-soft: 0 18px 38px rgba(18, 43, 67, 0.18);
+    --ts-accent: #0f7aa8;
+    --ts-accent-soft: #dff2fb;
+    --ts-text-main: #10202f;
+    --ts-text-muted: #496177;
+}
+
+.ts-showcase {
+    font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+    color: var(--ts-text-main);
+    position: relative;
+    margin: 1rem 0 1.5rem;
+    padding: 0;
+    border-radius: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+}
+
+.ts-showcase__layout {
+    min-height: 58vh;
+    display: grid;
+    grid-template-columns: 320px minmax(680px, 1020px) 320px;
+    gap: 1.2rem;
+    padding-top: 2rem;
+    align-items: center;
+    justify-content: center;
+}
+
+.ts-showcase__player-shell {
+    grid-column: 2;
+    width: 100%;
+    margin: 0;
+    border-radius: 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.ts-showcase__code-row {
+    width: min(1460px, 100%);
+    margin: 5.1rem auto 0;
+    display: flex;
+    justify-content: center;
+}
+
+.ts-showcase__code-callout {
+    position: relative;
+    padding: 1rem;
+    width: min(1000px, 100%);
+    margin: 0.65rem 0 0.45rem;
+    border-radius: 16px;
+    border: 1px solid rgba(42, 79, 112, 0.18);
+    background: var(--ts-panel-bg);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 14px 24px rgba(19, 45, 71, 0.13);
+}
+
+.ts-showcase__code-title {
+    position: relative;
+    margin-top: 40px;
+    font-family: "Space Grotesk", "Avenir Next", sans-serif;
+    font-size: 1.03rem;
+    color: #2f4558;
+}
+
+.ts-showcase__guide-arrow {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.ts-showcase__guide-arrow svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+.ts-showcase__guide-path {
+    fill: none;
+    stroke: rgba(47, 69, 88, 0.55);
+    stroke-width: 2;
+    stroke-dasharray: 6 5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.ts-showcase__code-callout p {
+    margin: 0 0 0.55rem;
+    font-size: 0.9rem;
+    color: #395366;
+}
+
+.ts-showcase__code-callout .ts-showcase__install-label {
+    margin-top: 0.65rem;
+}
+
+.ts-showcase__code-callout pre {
+    margin: 0 0 0.6rem;
+}
+
+.ts-showcase__code-callout ul {
+    margin: 0.1rem 0 0;
+    padding-left: 1.2rem;
+}
+
+#ts-showcase-player .trackswitch {
+    margin: 0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: none;
+}
+
+#ts-showcase-player {
+    filter: drop-shadow(0 26px 56px rgba(12, 31, 49, 0.34));
+}
+
+#ts-showcase-player .trackswitch .overlay {
+    transition: background-color 0.2s ease;
+}
+
+.ts-control-panel {
+    grid-column: 3;
+    position: static;
+    width: 320px;
+    max-width: 100%;
+    border-radius: 16px;
+    border: 1px solid rgba(42, 79, 112, 0.18);
+    background: var(--ts-panel-bg);
+    backdrop-filter: blur(8px);
+    padding: 1rem;
+    box-shadow: 0 14px 24px rgba(19, 45, 71, 0.13);
+}
+
+.ts-control-panel h4 {
+    margin: 0 0 0.65rem;
+    font-family: "Space Grotesk", "Avenir Next", sans-serif;
+    font-size: 1.04rem;
+    letter-spacing: -0.01em;
+}
+
+.ts-control-group {
+    margin-bottom: 0.85rem;
+    padding: 0.7rem 0.75rem;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(63, 93, 121, 0.11);
+}
+
+.ts-control-group:last-of-type {
+    margin-bottom: 0;
+}
+
+.ts-control-group h5 {
+    margin: 0 0 0.5rem;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ts-text-muted);
+}
+
+.ts-control-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-size: 0.88rem;
+    line-height: 1.3;
+    margin-bottom: 0.4rem;
+}
+
+.ts-control-row:last-child {
+    margin-bottom: 0;
+}
+
+.ts-control-row input[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    accent-color: var(--ts-accent);
+    cursor: pointer;
+}
+
+.ts-control-row.is-disabled {
+    opacity: 0.55;
+}
+
+.ts-control-note {
+    margin: 0.75rem 0 0;
+    font-size: 0.78rem;
+    line-height: 1.4;
+    color: #235775;
+    background: var(--ts-accent-soft);
+    border-radius: 8px;
+    padding: 0.45rem 0.55rem;
+    border: 1px solid rgba(15, 122, 168, 0.23);
+    display: none;
+}
+
+.ts-control-note.is-visible {
+    display: block;
+}
+
+.home-page .page-header {
+    padding: 1rem 1rem 0.7rem;
+}
+
+.home-page .project-name {
+    margin-top: 0;
+    margin-bottom: 0.2rem;
+    font-size: 2.35rem;
+}
+
+.home-page .project-tagline {
+    margin-bottom: 0.4rem;
+    font-size: 1.1rem;
+}
+
+.home-page .main-content {
+    padding-top: 0 !important;
+}
+
+@media screen and (min-width: 64em) {
+    .home-page .main-content {
+        max-width: 66rem;
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }
+}
+
+@media (max-width: 980px) {
+    .ts-showcase {
+        padding: 0;
+    }
+
+    .ts-showcase__layout {
+        min-height: auto;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .ts-control-panel {
+        position: static;
+        width: 100%;
+        order: -1;
+    }
+
+    .ts-showcase__code-row {
+        margin-top: 0.8rem;
+        width: 100%;
+    }
+
+    .ts-showcase__guide-arrow {
+        display: none;
+    }
+
+    .ts-showcase__player-shell {
+        width: 100%;
+        padding: 0;
+    }
+}
+
+@media (max-width: 1360px) {
+    .ts-showcase__layout {
+        grid-template-columns: minmax(0, 1fr);
+        min-height: auto;
+        gap: 1rem;
+    }
+
+    .ts-showcase__player-shell,
+    .ts-control-panel {
+        grid-column: 1;
+    }
+
+    .ts-showcase__guide-arrow {
+        display: none;
+    }
+
+    .ts-showcase__code-row {
+        margin-top: 1rem;
+        width: 100%;
+    }
+
+    .ts-showcase__code-callout {
+        width: 100%;
+    }
+
+    .ts-control-panel {
+        order: -1;
+        width: 100%;
+    }
+}
+
+@media (max-width: 640px) {
+    .ts-showcase {
+        border-radius: 16px;
+        padding: 1rem;
+    }
+
+    .ts-showcase__player-shell {
+        padding: 0;
+    }
+
+    .home-page .page-header {
+        padding: 0.85rem 1rem 0.65rem;
+    }
+
+    .home-page .project-name {
+        font-size: 1.85rem;
+        margin-bottom: 0.2rem;
+    }
+
+    .home-page .project-tagline {
+        font-size: 0.92rem;
+        margin-bottom: 0.35rem;
+    }
 }

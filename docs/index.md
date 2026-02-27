@@ -2,75 +2,103 @@
 title: trackswitch.js
 ---
 
-## Installation
+<section class="ts-showcase">
+  <div class="ts-showcase__layout">
+    <div class="ts-showcase__player-shell">
+      <div id="ts-showcase-player" data-ts-base="{{ '/data/multitracks' | relative_url }}"></div>
+    </div>
 
-Install from npm:
+    <aside id="ts-showcase-controls" class="ts-control-panel" aria-label="TrackSwitch feature controls">
+      <h4>Features</h4>
 
-```shell
-npm install trackswitch
-```
+      <div class="ts-control-group">
+        <h5>Playback and UI</h5>
+        <label class="ts-control-row">
+          <span>Looping Controls</span>
+          <input type="checkbox" name="looping" checked />
+        </label>
+        <label class="ts-control-row">
+          <span>Global Volume</span>
+          <input type="checkbox" name="globalvolume" checked />
+        </label>
+        <label class="ts-control-row">
+          <span>Presets</span>
+          <input type="checkbox" name="presets" checked />
+        </label>
+        <label class="ts-control-row">
+          <span>Seekbar</span>
+          <input type="checkbox" name="seekbar" checked />
+        </label>
+        <label class="ts-control-row">
+          <span>Timer</span>
+          <input type="checkbox" name="timer" checked />
+        </label>
+        <label class="ts-control-row">
+          <span>Keyboard Shortcuts</span>
+          <input type="checkbox" name="keyboard" checked />
+        </label>
+        <label class="ts-control-row">
+          <span>Waveform</span>
+          <input type="checkbox" name="waveform" checked />
+        </label>
+        <label class="ts-control-row">
+          <span>Custom Cover Image</span>
+          <input type="checkbox" name="customImage" />
+        </label>
+      </div>
 
-Or include the bundled files from a build/package:
+      <div class="ts-control-group">
+        <h5>Track Behavior</h5>
+        <label class="ts-control-row">
+          <span>Mute Buttons</span>
+          <input type="checkbox" name="mute" checked />
+        </label>
+        <label class="ts-control-row">
+          <span>Solo Buttons</span>
+          <input type="checkbox" name="solo" checked />
+        </label>
+        <label class="ts-control-row">
+          <span>Tab View</span>
+          <input type="checkbox" name="tabview" />
+        </label>
+        <label class="ts-control-row">
+          <span>Radio Solo</span>
+          <input type="checkbox" name="radiosolo" />
+        </label>
+      </div>
 
-- `trackswitch.min.css`
-- `trackswitch.min.js`
+      <div class="ts-control-group">
+        <h5>State</h5>
+        <label class="ts-control-row">
+          <span>Repeat Enabled</span>
+          <input type="checkbox" name="repeatEnabled" />
+        </label>
+      </div>
 
-## Quickstart
+      <p id="ts-showcase-note" class="ts-control-note" role="status" aria-live="polite"></p>
+    </aside>
+  </div>
 
-<div class="player" data-ts-demo="default" style="margin-top: 30px; margin-bottom: 60px;"></div>
+  <div class="ts-showcase__guide-arrow" aria-hidden="true"></div>
 
-```html
-<div id="player"></div>
-
-<script src="trackswitch.min.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    TrackSwitch.createTrackSwitch(document.getElementById('player'), {
-        presetNames: ['All Tracks', 'Violins & Synths', 'Drums & Bass', 'Drums Only'],
-        tracks: [
-            {
-                title: 'Violins',
-                presets: [0, 1],
-                image: 'violins.png',
-                sources: [{ src: 'violins.mp3' }],
-            },
-            {
-                title: 'Synths',
-                presets: [0, 1],
-                image: 'synth.png',
-                sources: [{ src: 'synth.mp3' }],
-            },
-            {
-                title: 'Bass',
-                presets: [0, 2],
-                image: 'bass.png',
-                sources: [{ src: 'bass.mp3' }],
-            },
-            {
-                title: 'Drums',
-                presets: [0, 2, 3],
-                image: 'drums.png',
-                sources: [{ src: 'drums.mp3' }],
-            },
-        ],
-        ui: [
-            {
-                type: 'waveform',
-                width: 1200,
-                height: 150,
-                style: 'margin: 20px auto;',
-            },
-        ],
-        features: {
-            looping: true,
-            repeat: true,
-            globalvolume: true,
-            presets: true,
-        },
-    });
-});
-</script>
-```
+  <div class="ts-showcase__code-row">
+    <aside class="ts-showcase__code-callout" aria-label="Player configuration preview">
+      <h4 class="ts-showcase__code-title">Add this player configuration to your website!</h4>
+      <p>Simply copy-paste the following code snippet into your website:</p>
+      <div class="ts-snippet-wrap">
+        <button id="ts-copy-quickstart" class="ts-copy-btn" type="button">Copy code</button>
+        <div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code id="ts-dynamic-quickstart" class="language-html"></code></pre></div></div>
+      </div>
+      <p class="ts-showcase__install-label">And install trackswitch.js from npm:</p>
+      <pre><code class="language-shell">npm install trackswitch</code></pre>
+      <p class="ts-showcase__install-label">Or include the files from the build/package in your website:</p>
+      <ul>
+        <li><code>trackswitch.min.css</code></li>
+        <li><code>trackswitch.min.js</code></li>
+      </ul>
+    </aside>
+  </div>
+</section>
 
 ## Configuration
 

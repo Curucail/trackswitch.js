@@ -16,11 +16,11 @@
   <link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}" />
 </head>
 
-<body>
+<body{% if page.url == '/' %} class="home-page"{% endif %}>
   <section class="page-header">
     <h1 class="project-name">
       <a href="{{ '/' | relative_url }}">
-        {{ site.title | default: site.github.repository_name }}
+        {{ site.title | default: site.github.repository_name }} <span class="project-version">v2</span>
       </a>
     </h1>
     <h2 class="project-tagline">{{ site.description | default: site.github.project_tagline }}</h2>
@@ -49,67 +49,10 @@
     </footer>
   </section>
 
-  <script src="js/trackswitch.min.js"></script>
-  <script type="text/javascript">
-    document.addEventListener('DOMContentLoaded', function () {
-      function buildTracks(basePath) {
-        return [
-          {
-            title: 'Violins',
-            image: basePath + '/violins.png',
-            presets: [0, 1],
-            sources: [{ src: basePath + '/violins.mp3' }],
-          },
-          {
-            title: 'Synths',
-            image: basePath + '/synth.png',
-            presets: [0, 1],
-            sources: [{ src: basePath + '/synth.mp3' }],
-          },
-          {
-            title: 'Bass',
-            image: basePath + '/bass.png',
-            presets: [0, 2],
-            sources: [{ src: basePath + '/bass.mp3' }],
-          },
-          {
-            title: 'Drums',
-            image: basePath + '/drums.png',
-            presets: [0, 2, 3],
-            sources: [{ src: basePath + '/drums.mp3' }],
-          },
-        ];
-      }
-
-      function createDemoInit(type, basePath) {
-        var init = {
-          presetNames: ['All Tracks', 'Violins & Synths', 'Drums & Bass', 'Drums Only'],
-          tracks: buildTracks(basePath),
-          ui: [
-            {
-              type: 'waveform',
-              width: 1200,
-              height: 150,
-              style: 'margin: 20px auto;',
-            }],
-          features: {
-            looping: true,
-            repeat: true,
-            globalvolume: true,
-            presets: true,
-          },
-        };
-
-        return init;
-      }
-
-      document.querySelectorAll('[data-ts-demo]').forEach(function (player) {
-        var type = player.getAttribute('data-ts-demo') || 'default';
-        var basePath = player.getAttribute('data-ts-base') || 'data/multitracks';
-        TrackSwitch.createTrackSwitch(player, createDemoInit(type, basePath));
-      });
-    });
-  </script>
+  <script src="{{ '/js/trackswitch.min.js' | relative_url }}"></script>
+  {% if page.url == '/' %}
+  <script src="{{ '/assets/homepage-demo.js' | relative_url }}"></script>
+  {% endif %}
 </body>
 
 </html>
