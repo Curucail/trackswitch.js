@@ -104,7 +104,7 @@
       return;
     }
 
-    basePath = playerRoot.getAttribute('data-ts-base') || 'data/multitracks';
+    basePath = playerRoot.getAttribute('data-ts-base') || 'assets/multitracks';
 
     function getControl(name) {
       return controlsRoot.querySelector('input[name="' + name + '"]');

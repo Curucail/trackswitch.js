@@ -5,7 +5,7 @@ title: trackswitch.js
 <section class="ts-showcase">
   <div class="ts-showcase__layout">
     <div class="ts-showcase__player-shell">
-      <div id="ts-showcase-player" data-ts-base="{{ '/data/multitracks' | relative_url }}"></div>
+      <div id="ts-showcase-player" data-ts-base="{{ '/assets/multitracks' | relative_url }}"></div>
     </div>
 
     <aside id="ts-showcase-controls" class="ts-control-panel" aria-label="TrackSwitch feature controls">
