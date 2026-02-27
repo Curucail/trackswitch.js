@@ -233,7 +233,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             longestDuration: this.longestDuration,
         });
 
-        this.renderer.renderWaveforms(this.waveformEngine, this.runtimes);
+        this.renderer.renderWaveforms(this.waveformEngine, this.runtimes, this.longestDuration);
     }
 
     destroy(): void {
@@ -1105,7 +1105,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         }
 
         this.resizeDebounceTimer = setTimeout(() => {
-            this.renderer.renderWaveforms(this.waveformEngine, this.runtimes);
+            this.renderer.renderWaveforms(this.waveformEngine, this.runtimes, this.longestDuration);
         }, 300);
     }
 
@@ -1122,7 +1122,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         this.renderer.updateTrackControls(this.runtimes);
         this.audioEngine.applyTrackStateGains(this.runtimes);
         this.renderer.switchPosterImage(this.runtimes);
-        this.renderer.renderWaveforms(this.waveformEngine, this.runtimes);
+        this.renderer.renderWaveforms(this.waveformEngine, this.runtimes, this.longestDuration);
 
         this.runtimes.forEach((runtime, index) => {
             this.emit('trackState', {

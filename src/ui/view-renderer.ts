@@ -291,10 +291,12 @@ export class ViewRenderer {
         }
     }
 
-    renderWaveforms(waveformEngine: WaveformEngine, runtimes: TrackRuntime[]): void {
+    renderWaveforms(waveformEngine: WaveformEngine, runtimes: TrackRuntime[], timelineDuration: number): void {
         if (!this.features.waveform || this.waveformCanvases.length === 0) {
             return;
         }
+
+        const safeTimelineDuration = Number.isFinite(timelineDuration) && timelineDuration > 0 ? timelineDuration : 0;
 
         for (let i = 0; i < this.waveformCanvases.length; i += 1) {
             const canvas = this.waveformCanvases[i];
@@ -315,7 +317,7 @@ export class ViewRenderer {
             }
 
             const peakCount = Math.max(1, Math.floor(canvas.width / barWidth));
-            const mixed = waveformEngine.calculateMixedWaveform(runtimes, peakCount, barWidth);
+            const mixed = waveformEngine.calculateMixedWaveform(runtimes, peakCount, barWidth, safeTimelineDuration);
 
             if (!mixed) {
                 waveformEngine.drawPlaceholder(canvas, context, barWidth, 0.3);

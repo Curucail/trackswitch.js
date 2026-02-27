@@ -317,6 +317,83 @@ test('waveform cache keeps separate peak widths per track', () => {
     assert.equal(runtime.waveformCache.size, 2, 'cache should keep separate entries per width');
 });
 
+test('mixed waveform keeps silence after shorter track ends on longer timeline', () => {
+    const engine = new WaveformEngine();
+
+    const shortData = new Float32Array(5000).fill(0.8);
+    const longSilentData = new Float32Array(10000);
+
+    const shortRuntime = {
+        state: { mute: false, solo: false },
+        buffer: {
+            duration: 5,
+            sampleRate: 1000,
+            getChannelData() {
+                return shortData;
+            },
+        },
+        timing: {
+            trimStart: 0,
+            padStart: 0,
+            audioDuration: 5,
+            effectiveDuration: 5,
+        },
+        waveformCache: new Map(),
+    };
+
+    const longSilentRuntime = {
+        state: { mute: false, solo: false },
+        buffer: {
+            duration: 10,
+            sampleRate: 1000,
+            getChannelData() {
+                return longSilentData;
+            },
+        },
+        timing: {
+            trimStart: 0,
+            padStart: 0,
+            audioDuration: 10,
+            effectiveDuration: 10,
+        },
+        waveformCache: new Map(),
+    };
+
+    const mixed = engine.calculateMixedWaveform([shortRuntime, longSilentRuntime], 100, 1, 10);
+    assert.ok(mixed);
+    assert.ok(mixed.slice(0, 45).some((value) => value > 0), 'early timeline should contain waveform data');
+    assert.ok(mixed.slice(55).every((value) => value === 0), 'late timeline should be silent after short track ends');
+});
+
+test('waveform mapping respects padStart offsets on the shared timeline', () => {
+    const engine = new WaveformEngine();
+
+    const delayedData = new Float32Array(4000).fill(0.9);
+    const delayedRuntime = {
+        state: { mute: false, solo: false },
+        buffer: {
+            duration: 4,
+            sampleRate: 1000,
+            getChannelData() {
+                return delayedData;
+            },
+        },
+        timing: {
+            trimStart: 0,
+            padStart: 2,
+            audioDuration: 4,
+            effectiveDuration: 6,
+        },
+        waveformCache: new Map(),
+    };
+
+    const mapped = engine.calculateMixedWaveform([delayedRuntime], 100, 1, 10);
+    assert.ok(mapped);
+    assert.ok(mapped.slice(0, 15).every((value) => value === 0), 'timeline should be silent before padStart');
+    assert.ok(mapped.slice(20, 55).some((value) => value > 0), 'timeline should contain waveform data after padStart');
+    assert.ok(mapped.slice(65).every((value) => value === 0), 'timeline should return to silence after audioDuration');
+});
+
 test('player state reducer handles repeat and loop transitions', () => {
     let state = createInitialPlayerState(false);
 
