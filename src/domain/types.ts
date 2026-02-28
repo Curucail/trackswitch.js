@@ -206,5 +206,7 @@ export interface TrackSwitchUiState {
     repeat: boolean;
     position: number;
     longestDuration: number;
+    syncEnabled: boolean;
+    syncAvailable: boolean;
     loop: LoopState;
 }

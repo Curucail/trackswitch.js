@@ -1148,7 +1148,13 @@ test('alignment_multi seek and loop restarts use normal track offsets', async ()
     controller.destroy();
 });
 
-test('alignment_solo mode requires onlyradiosolo', async () => {
+test('alignment_solo mode auto-enforces onlyradiosolo behavior', async () => {
+    setMockTextResponse('data/alignment.csv', [
+        't1_sec',
+        '0',
+        '5',
+    ].join('\n'));
+
     const controller = createController({
         features: { waveform: false, keyboard: false, looping: false, mode: 'alignment_solo' },
         tracks: [{ title: 'A', sources: [{ src: 'a.mp3' }], alignment: { column: 't1_sec' } }],
@@ -1157,14 +1163,10 @@ test('alignment_solo mode requires onlyradiosolo', async () => {
         },
     });
 
-    let errorMessage = '';
-    controller.on('error', function(payload) {
-        errorMessage = payload.message;
-    });
-
     await controller.load();
-    assert.equal(controller.getState().isLoaded, false);
-    assert.match(errorMessage, /onlyradiosolo/);
+    assert.equal(controller.getState().isLoaded, true);
+    assert.equal(controller.getState().features.onlyradiosolo, true);
+    assert.equal(controller.getState().tracks[0].solo, true);
 
     controller.destroy();
 });
@@ -1279,7 +1281,6 @@ test('alignment_solo waveform maps track timeline to reference axis', async () =
                 keyboard: false,
                 looping: false,
                 mode: 'alignment_solo',
-                onlyradiosolo: true,
             },
             tracks: [
                 { title: 'A', sources: [{ src: 'a.mp3' }], alignment: { column: 't1_sec' } },
@@ -1310,14 +1311,13 @@ test('alignment_solo waveform maps track timeline to reference axis', async () =
     }
 });
 
-test('alignment sync switch renders only for tracks with synchronized sources in alignment_solo', () => {
+test('global alignment sync button renders only in alignment_solo when synchronized sources exist', () => {
     const controllerAlignmentSolo = createController({
         features: {
             waveform: false,
             keyboard: false,
             looping: false,
             mode: 'alignment_solo',
-            onlyradiosolo: true,
         },
         tracks: [
             { title: 'A', sources: [{ src: 'a.mp3' }], alignment: { column: 't1_sec' } },
@@ -1330,11 +1330,26 @@ test('alignment sync switch renders only for tracks with synchronized sources in
         alignment: { csv: 'data/alignment.csv' },
     });
 
-    const rowOneSync = document.querySelector('.track_list li.track:nth-child(1) .alignment-sync');
-    const rowTwoSync = document.querySelector('.track_list li.track:nth-child(2) .alignment-sync');
-    assert.equal(rowOneSync, null);
-    assert.ok(rowTwoSync);
+    const globalSync = document.querySelector('.main-control .sync-global');
+    assert.ok(globalSync);
     controllerAlignmentSolo.destroy();
+
+    const controllerAlignmentSoloNoSynced = createController({
+        features: {
+            waveform: false,
+            keyboard: false,
+            looping: false,
+            mode: 'alignment_solo',
+        },
+        tracks: [
+            { title: 'A', sources: [{ src: 'a.mp3' }], alignment: { column: 't1_sec' } },
+            { title: 'B', sources: [{ src: 'b.mp3' }], alignment: { column: 't2_sec' } },
+        ],
+        alignment: { csv: 'data/alignment.csv' },
+    });
+
+    assert.equal(document.querySelector('.main-control .sync-global'), null);
+    controllerAlignmentSoloNoSynced.destroy();
 
     const controllerDefault = createController({
         features: { waveform: false, keyboard: false, looping: false, mode: 'default' },
@@ -1347,11 +1362,11 @@ test('alignment sync switch renders only for tracks with synchronized sources in
         ],
     });
 
-    assert.equal(document.querySelector('.track_list .alignment-sync'), null);
+    assert.equal(document.querySelector('.main-control .sync-global'), null);
     controllerDefault.destroy();
 });
 
-test('alignment_solo sync toggle restarts playback at same public position with synchronized source timeline', async () => {
+test('alignment_solo global sync toggle restarts playback at same public position and locks non-synced tracks', async () => {
     setMockTextResponse('data/alignment.csv', [
         't1_sec,t2_sec',
         '0,0',
@@ -1364,7 +1379,6 @@ test('alignment_solo sync toggle restarts playback at same public position with 
             keyboard: false,
             looping: false,
             mode: 'alignment_solo',
-            onlyradiosolo: true,
         },
         tracks: [
             { title: 'A', sources: [{ src: 'a.mp3' }], alignment: { column: 't1_sec' } },
@@ -1381,14 +1395,13 @@ test('alignment_solo sync toggle restarts playback at same public position with 
     });
 
     await controller.load();
-    controller.toggleSolo(1);
     controller.seekTo(4);
     controller.play();
 
     const unsyncedStart = mockSourceInstances.slice(-2);
-    assert.equal(unsyncedStart[1].startArgs[1], 2);
+    assert.equal(unsyncedStart[0].startArgs[1], 4);
 
-    const syncToggle = document.querySelector('.track_list li.track:nth-child(2) .alignment-sync');
+    const syncToggle = document.querySelector('.main-control .sync-global');
     assert.ok(syncToggle);
     assert.equal(syncToggle.classList.contains('checked'), false);
 
@@ -1398,6 +1411,106 @@ test('alignment_solo sync toggle restarts playback at same public position with 
     assert.equal(syncToggle.classList.contains('checked'), true);
     assert.equal(syncedStart[1].startArgs[1], 4);
     assert.ok(Math.abs(controller.getState().state.position - 4) < 1e-6);
+    assert.equal(controller.getState().tracks[0].mute, true);
+    assert.equal(controller.getState().tracks[0].solo, false);
+    assert.equal(controller.getState().tracks[1].mute, false);
+    assert.equal(controller.getState().tracks[1].solo, true);
+
+    controller.destroy();
+});
+
+test('alignment_solo global sync ignores mute and solo interactions on locked tracks', async () => {
+    setMockTextResponse('data/alignment.csv', [
+        't1_sec,t2_sec',
+        '0,0',
+        '5,2.5',
+    ].join('\n'));
+
+    const controller = createController({
+        features: {
+            waveform: false,
+            keyboard: false,
+            looping: false,
+            mode: 'alignment_solo',
+        },
+        tracks: [
+            { title: 'A', sources: [{ src: 'a.mp3' }], alignment: { column: 't1_sec' } },
+            {
+                title: 'B',
+                sources: [{ src: 'b.mp3' }],
+                alignment: { column: 't2_sec', sources: [{ src: 'b_synced.mp3' }] },
+            },
+        ],
+        alignment: { csv: 'data/alignment.csv' },
+    });
+
+    await controller.load();
+
+    const syncToggle = document.querySelector('.main-control .sync-global');
+    assert.ok(syncToggle);
+    dispatchMouse(syncToggle, 'mousedown', { button: 0 });
+
+    const before = controller.getState();
+    controller.toggleMute(0);
+    controller.toggleSolo(0);
+    const after = controller.getState();
+
+    assert.equal(before.tracks[0].mute, true);
+    assert.equal(before.tracks[0].solo, false);
+    assert.equal(after.tracks[0].mute, true);
+    assert.equal(after.tracks[0].solo, false);
+
+    const mutedButton = document.querySelector('.track_list li.track:nth-child(1) .mute');
+    const soloButton = document.querySelector('.track_list li.track:nth-child(1) .solo');
+    assert.ok(mutedButton);
+    assert.ok(soloButton);
+    assert.equal(mutedButton.classList.contains('disabled'), true);
+    assert.equal(soloButton.classList.contains('disabled'), true);
+
+    controller.destroy();
+});
+
+test('alignment_solo global sync off restores previously selected solo track', async () => {
+    setMockTextResponse('data/alignment.csv', [
+        't1_sec,t2_sec',
+        '0,0',
+        '5,2.5',
+    ].join('\n'));
+
+    const controller = createController({
+        features: {
+            waveform: false,
+            keyboard: false,
+            looping: false,
+            mode: 'alignment_solo',
+        },
+        tracks: [
+            { title: 'A', sources: [{ src: 'a.mp3' }], alignment: { column: 't1_sec' } },
+            {
+                title: 'B',
+                sources: [{ src: 'b.mp3' }],
+                alignment: { column: 't2_sec', sources: [{ src: 'b_synced.mp3' }] },
+            },
+        ],
+        alignment: { csv: 'data/alignment.csv' },
+    });
+
+    await controller.load();
+    controller.toggleSolo(1);
+    assert.equal(controller.getState().tracks[1].solo, true);
+
+    const syncToggle = document.querySelector('.main-control .sync-global');
+    assert.ok(syncToggle);
+
+    dispatchMouse(syncToggle, 'mousedown', { button: 0 });
+    assert.equal(syncToggle.classList.contains('checked'), true);
+
+    dispatchMouse(syncToggle, 'mousedown', { button: 0 });
+    assert.equal(syncToggle.classList.contains('checked'), false);
+    assert.equal(controller.getState().tracks[0].solo, false);
+    assert.equal(controller.getState().tracks[1].solo, true);
+    assert.equal(controller.getState().tracks[0].mute, false);
+    assert.equal(controller.getState().tracks[1].mute, false);
 
     controller.destroy();
 });
@@ -1468,7 +1581,7 @@ test('alignment_solo waveform projector bypasses mapping when synchronized sourc
         const unsyncedMapped = capturedProjector(capturedRuntimes[0], 2.5);
         assert.ok(Math.abs(unsyncedMapped - 5) < 1e-6);
 
-        const syncToggle = document.querySelector('.track_list li.track:nth-child(2) .alignment-sync');
+        const syncToggle = document.querySelector('.main-control .sync-global');
         assert.ok(syncToggle);
         dispatchMouse(syncToggle, 'mousedown', { button: 0 });
 

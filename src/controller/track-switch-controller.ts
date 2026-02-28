@@ -95,6 +95,10 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     private iOSPlaybackUnlocked = false;
     private alignmentContext: AlignmentContext | null = null;
     private alignmentPlaybackTrackIndex: number | null = null;
+    private globalSyncEnabled = false;
+    private effectiveOnlyRadioSolo = false;
+    private readonly syncLockedTrackIndexes = new Set<number>();
+    private preSyncSoloTrackIndex: number | null = null;
 
     private readonly listeners: Record<TrackSwitchEventName, Set<(payload: unknown) => void>> = {
         loaded: new Set(),
@@ -112,6 +116,15 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         this.alignmentConfig = config.alignment;
 
         this.features = normalizeFeatures(config.features);
+        if (this.features.mode === 'alignment_solo') {
+            this.features.onlyradiosolo = true;
+            this.features.radiosolo = true;
+            this.features.mute = false;
+            this.features.presets = false;
+        }
+        this.effectiveOnlyRadioSolo = this.features.mode === 'alignment_solo'
+            ? true
+            : this.features.onlyradiosolo;
         this.state = createInitialPlayerState(this.features.repeat);
 
         this.runtimes = config.tracks.map(function(track, index) {
@@ -179,6 +192,13 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             this.iOSPlaybackUnlocked = true;
             await this.audioEngine.unlockIOSPlayback();
         }
+
+        this.globalSyncEnabled = false;
+        this.syncLockedTrackIndexes.clear();
+        this.preSyncSoloTrackIndex = null;
+        this.effectiveOnlyRadioSolo = this.isAlignmentSoloMode()
+            ? true
+            : this.features.onlyradiosolo;
 
         this.runtimes.forEach(function(runtime) {
             runtime.successful = false;
@@ -497,6 +517,10 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             return;
         }
 
+        if (this.isTrackSyncLocked(trackIndex)) {
+            return;
+        }
+
         runtime.state.mute = !runtime.state.mute;
         this.applyTrackProperties();
     }
@@ -507,17 +531,21 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             return;
         }
 
+        if (this.isTrackSyncLocked(trackIndex)) {
+            return;
+        }
+
         const previousActiveTrackIndex = this.getActiveSoloTrackIndex();
 
         const currentState = runtime.state.solo;
 
-        if (exclusive || this.features.radiosolo) {
+        if (exclusive || this.effectiveOnlyRadioSolo) {
             this.runtimes.forEach(function(entry) {
                 entry.state.solo = false;
             });
         }
 
-        if ((exclusive || this.features.radiosolo) && currentState) {
+        if ((exclusive || this.effectiveOnlyRadioSolo) && currentState) {
             runtime.state.solo = true;
         } else {
             runtime.state.solo = !currentState;
@@ -527,8 +555,9 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
         const nextActiveTrackIndex = this.getActiveSoloTrackIndex();
         if (
-            this.features.mode === 'alignment_solo'
+            this.isAlignmentSoloMode()
             && this.alignmentContext
+            && this.effectiveOnlyRadioSolo
             && previousActiveTrackIndex !== nextActiveTrackIndex
             && nextActiveTrackIndex >= 0
         ) {
@@ -891,10 +920,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         }
 
         event.preventDefault();
-        const index = this.trackIndexFromTarget(event.target ?? null);
-        if (index >= 0) {
-            this.toggleAlignmentSync(index);
-        }
+        this.toggleGlobalSync();
         event.stopPropagation();
     }
 
@@ -1150,31 +1176,114 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         return Array.from(track.parentElement.children).indexOf(track);
     }
 
-    private toggleAlignmentSync(trackIndex: number): void {
-        if (this.features.mode !== 'alignment_solo') {
+    private isAlignmentSoloMode(): boolean {
+        return this.features.mode === 'alignment_solo';
+    }
+
+    private hasSyncedVariant(runtime: TrackRuntime): boolean {
+        return !!runtime.syncedSource && !!runtime.syncedSource.buffer;
+    }
+
+    private isTrackSyncLocked(trackIndex: number): boolean {
+        return this.globalSyncEnabled && this.syncLockedTrackIndexes.has(trackIndex);
+    }
+
+    private setEffectiveSoloMode(onlyRadio: boolean): void {
+        this.effectiveOnlyRadioSolo = onlyRadio;
+
+        if (!onlyRadio || this.runtimes.length === 0) {
             return;
         }
 
-        const runtime = this.runtimes[trackIndex];
-        if (!runtime || !runtime.syncedSource || !runtime.syncedSource.buffer) {
+        this.runtimes.forEach(function(runtime) {
+            runtime.state.mute = false;
+        });
+
+        const previousSoloIndex = this.getActiveSoloTrackIndex();
+        const targetSoloIndex = previousSoloIndex >= 0 ? previousSoloIndex : 0;
+
+        this.runtimes.forEach(function(runtime, index) {
+            runtime.state.solo = index === targetSoloIndex;
+        });
+    }
+
+    private toggleGlobalSync(): void {
+        if (!this.isAlignmentSoloMode()) {
             return;
         }
 
-        const nextVariant: TrackSourceVariant = runtime.activeVariant === 'synced' ? 'base' : 'synced';
-        if (!this.setRuntimeActiveVariant(runtime, nextVariant)) {
+        const hasAnySyncedTrack = this.runtimes.some((runtime) => this.hasSyncedVariant(runtime));
+        if (!hasAnySyncedTrack) {
             return;
+        }
+
+        this.applyGlobalSyncState(!this.globalSyncEnabled);
+    }
+
+    private applyGlobalSyncState(syncOn: boolean): void {
+        if (!this.isAlignmentSoloMode()) {
+            return;
+        }
+
+        const restartPosition = this.state.playing
+            ? clamp(this.currentPlaybackReferencePosition(), 0, this.longestDuration)
+            : clamp(this.state.position, 0, this.longestDuration);
+
+        if (syncOn) {
+            this.preSyncSoloTrackIndex = this.getActiveSoloTrackIndex();
+            this.globalSyncEnabled = true;
+            this.syncLockedTrackIndexes.clear();
+            this.setEffectiveSoloMode(false);
+
+            this.runtimes.forEach((runtime, index) => {
+                if (this.hasSyncedVariant(runtime)) {
+                    this.setRuntimeActiveVariant(runtime, 'synced');
+                    runtime.state.mute = false;
+                    runtime.state.solo = true;
+                    return;
+                }
+
+                this.setRuntimeActiveVariant(runtime, 'base');
+                runtime.state.mute = true;
+                runtime.state.solo = false;
+                this.syncLockedTrackIndexes.add(index);
+            });
+        } else {
+            this.globalSyncEnabled = false;
+            this.syncLockedTrackIndexes.clear();
+
+            this.runtimes.forEach((runtime) => {
+                this.setRuntimeActiveVariant(runtime, 'base');
+                runtime.state.mute = false;
+                runtime.state.solo = false;
+            });
+
+            this.setEffectiveSoloMode(true);
+
+            const fallbackIndex = this.runtimes.length > 0 ? 0 : -1;
+            const restoreIndex = this.preSyncSoloTrackIndex !== null
+                && this.preSyncSoloTrackIndex >= 0
+                && this.preSyncSoloTrackIndex < this.runtimes.length
+                ? this.preSyncSoloTrackIndex
+                : fallbackIndex;
+
+            if (restoreIndex >= 0) {
+                this.runtimes.forEach(function(runtime, index) {
+                    runtime.state.solo = index === restoreIndex;
+                });
+            }
+
+            this.preSyncSoloTrackIndex = null;
         }
 
         this.applyTrackProperties();
+        this.dispatch({ type: 'set-position', position: restartPosition });
 
-        if (!this.state.playing || this.getActiveSoloTrackIndex() !== trackIndex) {
-            return;
+        if (this.state.playing) {
+            this.stopAudio();
+            this.startAudio(restartPosition);
         }
 
-        const referencePosition = clamp(this.currentPlaybackReferencePosition(), 0, this.longestDuration);
-        this.stopAudio();
-        this.dispatch({ type: 'set-position', position: referencePosition });
-        this.startAudio(referencePosition);
         this.updateMainControls();
     }
 
@@ -1198,7 +1307,11 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     }
 
     private applyTrackProperties(): void {
-        this.renderer.updateTrackControls(this.runtimes);
+        this.renderer.updateTrackControls(
+            this.runtimes,
+            this.syncLockedTrackIndexes,
+            this.effectiveOnlyRadioSolo
+        );
         this.audioEngine.applyTrackStateGains(this.runtimes);
         this.renderer.switchPosterImage(this.runtimes);
         this.renderer.renderWaveforms(
@@ -1225,6 +1338,9 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             repeat: this.state.repeat,
             position: this.state.position,
             longestDuration: this.longestDuration,
+            syncEnabled: this.globalSyncEnabled,
+            syncAvailable: this.isAlignmentSoloMode()
+                && this.runtimes.some((runtime) => this.hasSyncedVariant(runtime)),
             loop: {
                 pointA: this.state.loop.pointA,
                 pointB: this.state.loop.pointB,
@@ -1395,14 +1511,15 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     }
 
     private async initializeAlignmentSolo(): Promise<string | null> {
-        if (!this.features.onlyradiosolo) {
-            return 'Alignment mode "alignment_solo" requires features.onlyradiosolo to be true.';
-        }
-
         const alignmentContextResult = await this.buildAlignmentContext();
         if (typeof alignmentContextResult === 'string') {
             return alignmentContextResult;
         }
+
+        this.globalSyncEnabled = false;
+        this.syncLockedTrackIndexes.clear();
+        this.preSyncSoloTrackIndex = null;
+        this.setEffectiveSoloMode(true);
 
         this.alignmentContext = alignmentContextResult;
         this.longestDuration = TrackSwitchControllerImpl.getRuntimeDuration(this.runtimes[this.alignmentContext.referenceTrackIndex]);
@@ -1673,6 +1790,10 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         this.isLoading = false;
         this.alignmentContext = null;
         this.alignmentPlaybackTrackIndex = null;
+        this.globalSyncEnabled = false;
+        this.syncLockedTrackIndexes.clear();
+        this.preSyncSoloTrackIndex = null;
+        this.effectiveOnlyRadioSolo = this.isAlignmentSoloMode() ? true : this.features.onlyradiosolo;
 
         this.stopAudio();
 

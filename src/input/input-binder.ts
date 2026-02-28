@@ -200,10 +200,10 @@ export class InputBinder {
             this.controller.onSolo(event);
         });
 
-        this.addDelegatedListener('touchstart', '.alignment-sync', (event) => {
+        this.addDelegatedListener('touchstart', '.sync-global', (event) => {
             this.controller.onAlignmentSync(event);
         });
-        this.addDelegatedListener('mousedown', '.alignment-sync', (event) => {
+        this.addDelegatedListener('mousedown', '.sync-global', (event) => {
             this.controller.onAlignmentSync(event);
         });
 

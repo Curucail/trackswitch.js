@@ -78,7 +78,7 @@ export class ViewRenderer {
         this.root.classList.add('trackswitch');
 
         if (!this.query('.main-control')) {
-            this.root.insertAdjacentHTML('afterbegin', this.buildMainControlHtml());
+            this.root.insertAdjacentHTML('afterbegin', this.buildMainControlHtml(runtimes));
         }
 
         this.wrapSeekableImages();
@@ -95,7 +95,7 @@ export class ViewRenderer {
         this.updateVolumeIcon(1);
     }
 
-    private buildMainControlHtml(): string {
+    private buildMainControlHtml(runtimes: TrackRuntime[]): string {
         let presetDropdownHtml = '';
         if (this.features.presets && this.presetNames.length >= 2) {
             presetDropdownHtml += '<li class="preset-selector-wrap"><select class="preset-selector" title="Select Preset">';
@@ -123,6 +123,9 @@ export class ViewRenderer {
             + '<li class="playpause button" title="Play/Pause (Spacebar)">Play</li>'
             + '<li class="stop button" title="Stop (Esc)">Stop</li>'
             + '<li class="repeat button" title="Repeat (R)">Repeat</li>'
+            + (this.shouldRenderGlobalSync(runtimes)
+                ? '<li class="sync-global button" title="Use synchronized version">SYNC</li>'
+                : '')
             + '</ul>'
             + '</li>'
             + (this.features.globalvolume
@@ -153,6 +156,17 @@ export class ViewRenderer {
                 : '')
             + '</ul>'
             + '</div>';
+    }
+
+    private shouldRenderGlobalSync(runtimes: TrackRuntime[]): boolean {
+        if (this.features.mode !== 'alignment_solo') {
+            return false;
+        }
+
+        return runtimes.some(function(runtime) {
+            const sources = runtime.definition.alignment?.sources;
+            return Array.isArray(sources) && sources.length > 0;
+        });
     }
 
     private renderTrackList(runtimes: TrackRuntime[]): void {
@@ -192,28 +206,11 @@ export class ViewRenderer {
                 controls.appendChild(solo);
             }
 
-            if (this.shouldRenderAlignmentSync(runtime)) {
-                const alignmentSync = document.createElement('li');
-                alignmentSync.className = 'alignment-sync button';
-                alignmentSync.title = 'Use synchronized source';
-                alignmentSync.textContent = 'Sync';
-                controls.appendChild(alignmentSync);
-            }
-
             track.appendChild(controls);
             list.appendChild(track);
         });
 
         this.root.appendChild(list);
-    }
-
-    private shouldRenderAlignmentSync(runtime: TrackRuntime): boolean {
-        if (this.features.mode !== 'alignment_solo') {
-            return false;
-        }
-
-        const sources = runtime.definition.alignment?.sources;
-        return Array.isArray(sources) && sources.length > 0;
     }
 
     private wrapSeekableImages(): void {
@@ -399,12 +396,19 @@ export class ViewRenderer {
     }
 
     updateMainControls(state: TrackSwitchUiState): void {
+        this.root.classList.toggle('sync-enabled', state.syncEnabled);
+
         this.queryAll('.playpause').forEach(function(element) {
             element.classList.toggle('checked', state.playing);
         });
 
         this.queryAll('.repeat').forEach(function(element) {
             element.classList.toggle('checked', state.repeat);
+        });
+
+        this.queryAll('.sync-global').forEach(function(element) {
+            element.classList.toggle('checked', state.syncEnabled);
+            element.classList.toggle('disabled', !state.syncAvailable);
         });
 
         const timePerc = state.longestDuration > 0
@@ -480,7 +484,11 @@ export class ViewRenderer {
         }
     }
 
-    updateTrackControls(runtimes: TrackRuntime[]): void {
+    updateTrackControls(
+        runtimes: TrackRuntime[],
+        syncLockedTrackIndexes?: ReadonlySet<number>,
+        effectiveOnlyRadioSolo = this.features.onlyradiosolo
+    ): void {
         runtimes.forEach((runtime, index) => {
             const row = this.query('.track_list li.track:nth-child(' + (index + 1) + ')');
             if (!row) {
@@ -489,18 +497,19 @@ export class ViewRenderer {
 
             const mute = row.querySelector('.mute');
             const solo = row.querySelector('.solo');
-            const alignmentSync = row.querySelector('.alignment-sync');
+            const isLocked = !!syncLockedTrackIndexes && syncLockedTrackIndexes.has(index);
+
+            row.classList.toggle('solo', effectiveOnlyRadioSolo);
 
             if (mute) {
                 mute.classList.toggle('checked', runtime.state.mute);
+                mute.classList.toggle('disabled', isLocked);
             }
 
             if (solo) {
                 solo.classList.toggle('checked', runtime.state.solo);
-            }
-
-            if (alignmentSync) {
-                alignmentSync.classList.toggle('checked', runtime.activeVariant === 'synced');
+                solo.classList.toggle('disabled', isLocked);
+                solo.classList.toggle('radio', effectiveOnlyRadioSolo);
             }
         });
     }

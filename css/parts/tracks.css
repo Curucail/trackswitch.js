@@ -56,7 +56,7 @@
     text-align: center;
 }
 
-.trackswitch .control li.button {
+.trackswitch .control li.button:not(.sync-global) {
     position: relative;
     text-indent: -9999px;
     line-height: 0;
@@ -186,4 +186,15 @@
 .trackswitch .control li.solo.radio.checked:after {
     content: "\f192";
     /* fa-dot-circle-o */
+}
+
+.trackswitch.sync-enabled .control li.solo.radio.checked:after {
+    content: "\f05d";
+    /* fa-check-circle-o */
+}
+
+.trackswitch li.track .control li.button.disabled {
+    opacity: 0.35;
+    cursor: default;
+    pointer-events: none;
 }
