@@ -46,6 +46,7 @@ TrackSwitch.createTrackSwitch(rootElement, {
   ui: [
     { type: 'image', src: 'cover.jpg', seekable: true },
     { type: 'waveform', width: 1200, height: 150 },
+    { type: 'sheetmusic', src: 'score.musicxml', measureCsv: 'score_measures.csv' },
   ],
   alignment: {
     csv: 'dtw_alignment.csv',
@@ -138,6 +139,26 @@ Waveform element:
 - If at least one waveform UI element is configured, waveform rendering is enabled
 - Each waveform container supports independent zoom (desktop wheel and mobile pinch) when `features.waveformzoom` is enabled
 
+Sheet music element:
+
+```javascript
+{
+  type: 'sheetmusic',
+  src: 'score.musicxml',
+  measureCsv: 'score_measures.csv',
+  style: 'margin: 12px 0;',
+  cursorColor: '#999999',
+  cursorAlpha: 0.1,
+}
+```
+
+- Fields: `src` (MusicXML URL), `measureCsv` (time-to-measure map CSV URL), `style?`, `cursorColor?`, `cursorAlpha?`
+- `cursorAlpha` is normalized to `[0, 1]` and defaults to `0.1`
+- Measure map CSV requires `start` and `measure` columns (comma or semicolon delimiter)
+- Measure highlighting is intended for `alignment` mode and uses reference timeline position
+- If MusicXML fails to load, only the sheet music panel fails (audio player continues)
+- If measure CSV fails, score rendering still works but measure highlighting is disabled
+
 ## Player Features
 
 Feature defaults:
@@ -206,6 +227,7 @@ Behavior:
 - `alignment`: with `SYNC` off, fixed-track waveforms (`waveformSource: <trackIndex>`) render on native track time and their waveform seek overlays (playhead + loop markers/region) use that local axis
 - `alignment`: with `SYNC` on, fixed-track waveforms return to shared reference-axis behavior; synced tracks bypass CSV mapping (identity)
 - `alignment`: waveform containers render a top-right timer badge in `current / duration` format; fixed-track waveforms use local track time while `SYNC` is off
+- `alignment`: sheet-music UI elements (`type: 'sheetmusic'`) highlight the currently mapped measure from `measureCsv` on the reference axis
 
 Cross-player behavior:
 

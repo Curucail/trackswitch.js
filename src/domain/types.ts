@@ -78,6 +78,14 @@ export interface TrackSwitchWaveformConfig {
     seekMarginRight?: number;
 }
 
+export interface TrackSwitchSheetMusicConfig {
+    src: string;
+    measureCsv: string;
+    style?: string;
+    cursorColor?: string;
+    cursorAlpha?: number;
+}
+
 export interface TrackSwitchImageUiElement extends TrackSwitchImageConfig {
     type: 'image';
 }
@@ -86,7 +94,14 @@ export interface TrackSwitchWaveformUiElement extends TrackSwitchWaveformConfig 
     type: 'waveform';
 }
 
-export type TrackSwitchUiElement = TrackSwitchImageUiElement | TrackSwitchWaveformUiElement;
+export interface TrackSwitchSheetMusicUiElement extends TrackSwitchSheetMusicConfig {
+    type: 'sheetmusic';
+}
+
+export type TrackSwitchUiElement =
+    | TrackSwitchImageUiElement
+    | TrackSwitchWaveformUiElement
+    | TrackSwitchSheetMusicUiElement;
 export type TrackSwitchUiConfig = TrackSwitchUiElement[];
 
 export interface TrackSwitchConfig {

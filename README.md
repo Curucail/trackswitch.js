@@ -64,6 +64,13 @@ document.addEventListener('DOMContentLoaded', function () {
         height: 150,
         waveformSource: 'audible', // or a track index (e.g. 1) for a fixed track waveform
       },
+      {
+        type: 'sheetmusic',
+        src: 'score.musicxml',
+        measureCsv: 'score_measures.csv',
+        cursorColor: '#999999',
+        cursorAlpha: 0.1,
+      },
     ],
     features: {
       mode: 'default',
@@ -130,6 +137,7 @@ Alignment mode behavior:
 - `alignment`: with `SYNC` off, fixed waveforms (`waveformSource: <trackIndex>`) render on their native track timeline and their waveform seek overlays (playhead + loop markers/region) use that same local axis; interactions are converted to reference time internally
 - `alignment`: with `SYNC` on, synced-track timeline mapping is bypassed (identity) and fixed waveforms return to shared reference-axis behavior
 - `alignment`: waveform containers show a top-right timer badge in `current / duration` format; fixed-source waveforms use the track-local axis when `SYNC` is off
+- `alignment`: optional `sheetmusic` UI entries render MusicXML via OpenSheetMusicDisplay and highlight the currently mapped measure using a measure-cursor overlay
 - `features.waveformzoom` defaults to `true`: desktop wheel over a waveform and mobile pinch on waveform seek surfaces zoom each waveform independently
 
 Legacy note:

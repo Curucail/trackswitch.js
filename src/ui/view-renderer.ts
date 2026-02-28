@@ -10,6 +10,14 @@ export interface WaveformTimelineContext {
     getTrackDuration(trackIndex: number): number;
 }
 
+export interface SheetMusicHostConfig {
+    host: HTMLElement;
+    source: string;
+    measureCsv: string;
+    cursorColor: string;
+    cursorAlpha: number;
+}
+
 interface WaveformSeekSurfaceMetadata {
     wrapper: HTMLElement;
     scrollContainer: HTMLElement;
@@ -97,6 +105,36 @@ function parseWaveformSource(value: string | null): 'audible' | number {
     return Math.floor(parsed);
 }
 
+function parseSheetMusicString(value: string | null): string {
+    return typeof value === 'string' ? value.trim() : '';
+}
+
+function parseSheetMusicCursorColor(value: string | null): string {
+    const raw = parseSheetMusicString(value);
+    return raw || '#999999';
+}
+
+function parseSheetMusicCursorAlpha(value: string | null): number {
+    if (value === null) {
+        return 0.1;
+    }
+
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+        return 0.1;
+    }
+
+    if (parsed < 0) {
+        return 0;
+    }
+
+    if (parsed > 1) {
+        return 1;
+    }
+
+    return parsed;
+}
+
 function clampWaveformZoom(zoom: number): number {
     if (!Number.isFinite(zoom)) {
         return MIN_WAVEFORM_ZOOM;
@@ -112,6 +150,7 @@ export class ViewRenderer {
 
     private originalImage = '';
     private readonly waveformSeekSurfaces: WaveformSeekSurfaceMetadata[] = [];
+    private readonly sheetMusicHosts: SheetMusicHostConfig[] = [];
 
     constructor(root: HTMLElement, features: TrackSwitchFeatures, presetNames: string[]) {
         this.root = root;
@@ -145,6 +184,7 @@ export class ViewRenderer {
 
         this.wrapSeekableImages();
         this.wrapWaveformCanvases();
+        this.wrapSheetMusicContainers();
         this.reflowWaveforms();
         this.renderTrackList(runtimes);
 
@@ -383,6 +423,64 @@ export class ViewRenderer {
                     timingNode: timingNode,
                 });
             }
+        });
+    }
+
+    private wrapSheetMusicContainers(): void {
+        this.sheetMusicHosts.length = 0;
+
+        const hosts = this.root.querySelectorAll('.sheetmusic');
+        hosts.forEach((hostElement) => {
+            if (!(hostElement instanceof HTMLElement)) {
+                return;
+            }
+
+            if (!hostElement.closest('.sheetmusic-wrap')) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'sheetmusic-wrap';
+                wrapper.setAttribute(
+                    'style',
+                    sanitizeInlineStyle(hostElement.getAttribute('data-sheetmusic-style')) + '; display: block;'
+                );
+
+                const scrollContainer = document.createElement('div');
+                scrollContainer.className = 'sheetmusic-scroll';
+
+                const parent = hostElement.parentElement;
+                if (!parent) {
+                    return;
+                }
+
+                parent.insertBefore(wrapper, hostElement);
+                wrapper.appendChild(scrollContainer);
+                scrollContainer.appendChild(hostElement);
+            }
+
+            const source = parseSheetMusicString(hostElement.getAttribute('data-sheetmusic-src'));
+            const measureCsv = parseSheetMusicString(hostElement.getAttribute('data-sheetmusic-measure-csv'));
+            if (!source || !measureCsv) {
+                return;
+            }
+
+            this.sheetMusicHosts.push({
+                host: hostElement,
+                source: source,
+                measureCsv: measureCsv,
+                cursorColor: parseSheetMusicCursorColor(hostElement.getAttribute('data-sheetmusic-cursor-color')),
+                cursorAlpha: parseSheetMusicCursorAlpha(hostElement.getAttribute('data-sheetmusic-cursor-alpha')),
+            });
+        });
+    }
+
+    getPreparedSheetMusicHosts(): SheetMusicHostConfig[] {
+        return this.sheetMusicHosts.map((entry) => {
+            return {
+                host: entry.host,
+                source: entry.source,
+                measureCsv: entry.measureCsv,
+                cursorColor: entry.cursorColor,
+                cursorAlpha: entry.cursorAlpha,
+            };
         });
     }
 
@@ -978,6 +1076,8 @@ export class ViewRenderer {
         this.queryAll('.track_list').forEach(function(trackList) {
             trackList.remove();
         });
+
+        this.sheetMusicHosts.length = 0;
     }
 
     getPresetCount(): number {

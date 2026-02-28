@@ -34,6 +34,8 @@ export type {
     TrackSwitchImageConfig,
     TrackSwitchImageUiElement,
     TrackSwitchSnapshot,
+    TrackSwitchSheetMusicConfig,
+    TrackSwitchSheetMusicUiElement,
     TrackSwitchUiConfig,
     TrackSwitchUiElement,
     TrackSwitchWaveformConfig,

@@ -1,5 +1,6 @@
 import {
     TrackSwitchImageConfig,
+    TrackSwitchSheetMusicConfig,
     TrackSwitchUiConfig,
     TrackSwitchUiElement,
     TrackSwitchWaveformConfig,
@@ -46,9 +47,36 @@ function normalizeWaveformConfig<T extends TrackSwitchWaveformConfig>(waveform: 
     };
 }
 
+function normalizeCursorAlpha(value: number | undefined): number {
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+        return 0.1;
+    }
+
+    if (value < 0) {
+        return 0;
+    }
+
+    if (value > 1) {
+        return 1;
+    }
+
+    return value;
+}
+
+function normalizeSheetMusicConfig<T extends TrackSwitchSheetMusicConfig>(sheetmusic: T): T {
+    return {
+        ...sheetmusic,
+        cursorAlpha: normalizeCursorAlpha(sheetmusic.cursorAlpha),
+    };
+}
+
 export function normalizeUiElement(element: TrackSwitchUiElement): TrackSwitchUiElement {
     if (element.type === 'waveform') {
         return normalizeWaveformConfig(element);
+    }
+
+    if (element.type === 'sheetmusic') {
+        return normalizeSheetMusicConfig(element);
     }
 
     return element;
@@ -100,6 +128,24 @@ function injectWaveform(root: HTMLElement, waveform: TrackSwitchWaveformConfig):
     root.appendChild(canvas);
 }
 
+function injectSheetMusic(root: HTMLElement, sheetmusic: TrackSwitchSheetMusicConfig): void {
+    const container = document.createElement('div');
+    container.className = 'sheetmusic';
+    container.setAttribute('data-sheetmusic-src', String(sheetmusic.src || ''));
+    container.setAttribute('data-sheetmusic-measure-csv', String(sheetmusic.measureCsv || ''));
+    container.setAttribute('data-sheetmusic-cursor-alpha', String(normalizeCursorAlpha(sheetmusic.cursorAlpha)));
+
+    if (typeof sheetmusic.style === 'string') {
+        container.setAttribute('data-sheetmusic-style', sheetmusic.style);
+    }
+
+    if (typeof sheetmusic.cursorColor === 'string') {
+        container.setAttribute('data-sheetmusic-cursor-color', sheetmusic.cursorColor);
+    }
+
+    root.appendChild(container);
+}
+
 export function injectConfiguredUiElements(root: HTMLElement, uiElements: TrackSwitchUiConfig | undefined): void {
     if (!uiElements) {
         return;
@@ -121,6 +167,11 @@ export function injectConfiguredUiElements(root: HTMLElement, uiElements: TrackS
 
         if (entry.type === 'waveform') {
             injectWaveform(root, entry);
+            return;
+        }
+
+        if (entry.type === 'sheetmusic') {
+            injectSheetMusic(root, entry);
         }
     });
 }

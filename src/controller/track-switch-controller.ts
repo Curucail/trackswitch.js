@@ -18,6 +18,7 @@ import { normalizeFeatures } from '../domain/options';
 import { createInitialPlayerState, playerStateReducer, PlayerAction } from '../domain/state';
 import { createTrackRuntime } from '../domain/runtime';
 import { AudioEngine } from '../engine/audio-engine';
+import { SheetMusicEngine } from '../engine/sheet-music-engine';
 import { TrackTimelineProjector, WaveformEngine } from '../engine/waveform-engine';
 import { ViewRenderer, WaveformTimelineContext } from '../ui/view-renderer';
 import { InputBinder, InputController } from '../input/input-binder';
@@ -88,6 +89,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     private readonly features: TrackSwitchFeatures;
     private readonly audioEngine: AudioEngine;
     private readonly waveformEngine: WaveformEngine;
+    private readonly sheetMusicEngine: SheetMusicEngine;
     private readonly renderer: ViewRenderer;
     private readonly inputBinder: InputBinder;
     private readonly alignmentConfig: TrackAlignmentConfig | undefined;
@@ -167,6 +169,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
         this.audioEngine = new AudioEngine(this.features, this.state.volume);
         this.waveformEngine = new WaveformEngine();
+        this.sheetMusicEngine = new SheetMusicEngine();
         this.renderer = new ViewRenderer(this.root, this.features, presetNames);
 
         this.instanceId = allocateInstanceId();
@@ -273,6 +276,12 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             return;
         }
 
+        await this.initializeSheetMusic();
+
+        if (this.isDestroyed) {
+            return;
+        }
+
         this.isLoaded = true;
         this.renderer.hideOverlayOnLoaded();
 
@@ -316,6 +325,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         }
 
         this.inputBinder.unbind();
+        this.sheetMusicEngine.destroy();
         this.renderer.destroy();
         this.audioEngine.disconnect();
 
@@ -1295,6 +1305,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
                 this.getWaveformTimelineProjector(),
                 this.getWaveformTimelineContext()
             );
+            this.sheetMusicEngine.resize();
         }, 300);
     }
 
@@ -1716,11 +1727,28 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         };
 
         this.renderer.updateMainControls(uiState, this.getWaveformTimelineContext());
+        if (this.isAlignmentMode()) {
+            this.sheetMusicEngine.updatePosition(this.state.position);
+        }
 
         this.emit('position', {
             position: this.state.position,
             duration: this.longestDuration,
         });
+    }
+
+    private async initializeSheetMusic(): Promise<void> {
+        const hosts = this.renderer.getPreparedSheetMusicHosts();
+        if (hosts.length === 0) {
+            this.sheetMusicEngine.destroy();
+            return;
+        }
+
+        await this.sheetMusicEngine.initialize(hosts);
+
+        if (this.isAlignmentMode()) {
+            this.sheetMusicEngine.updatePosition(this.state.position);
+        }
     }
 
     private dispatch(action: PlayerAction): void {
@@ -2301,6 +2329,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             this.waveformRenderFrameId = null;
         }
         this.pinchZoomState = null;
+        this.sheetMusicEngine.destroy();
 
         this.renderer.showError(message, this.runtimes);
         this.emit('error', { message: message });

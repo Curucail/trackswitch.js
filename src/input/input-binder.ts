@@ -315,6 +315,8 @@ export class InputBinder {
             });
         }
 
+        const hasSheetMusicUi = !!this.root.querySelector('.sheetmusic, .sheetmusic-wrap');
+
         if (this.features.waveform) {
             if (this.features.waveformzoom) {
                 this.addDelegatedListener(
@@ -328,6 +330,9 @@ export class InputBinder {
                 );
             }
 
+        }
+
+        if (this.features.waveform || hasSheetMusicUi) {
             this.addListener(window, 'resize', () => {
                 this.controller.onResize();
             });
