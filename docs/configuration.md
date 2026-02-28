@@ -83,7 +83,7 @@ Source fields:
 - `endOffsetMs?: number` (positive trims end, negative pads end)
 
 Note: when a track has multiple `sources`, the first playable source is used.
-In `alignment_solo`, `alignment.sources` enables the global `SYNC` button in the main control bar.
+In `alignment`, `alignment.sources` enables the global `SYNC` button in the main control bar.
 
 ## Presets
 
@@ -164,13 +164,12 @@ Normalization rules:
 - `onlyradiosolo: true` forces `mute: false` and `radiosolo: true`
 - `radiosolo` or `onlyradiosolo` forces `presets: false`
 - A configured waveform UI element forces `waveform: true`
-- In `alignment_solo`, single-track solo behavior is enforced automatically at startup
+- In `alignment`, single-track solo behavior is enforced automatically at startup
 
 `mode` values:
 
 - `default` - existing timeline behavior
-- `alignment_solo` - reference timeline behavior with CSV mapping
-- `alignment_multi` - normal multitrack playback for externally pre-synchronized files
+- `alignment` - reference timeline behavior with CSV mapping
 
 ## Alignment
 
@@ -189,26 +188,20 @@ Legacy fallback:
 
 - `alignment.mappings` is still accepted when no track defines `alignment.column`
 
-`alignment_solo` requirements:
+`alignment` requirements:
 
-- `features.mode` must be `alignment_solo`
+- `features.mode` must be `alignment`
 - `alignment` must be present and valid
 - preferred mapping style: every track defines `tracks[*].alignment.column`
 
-`alignment_multi` requirements:
-
-- `features.mode` must be `alignment_multi`
-- no `alignment` config is required
-
 Behavior:
 
-- `alignment_solo` uses the longest track as the reference axis
-- Public timing (`seekTo`, seekbar, timer, `position` event) stays on reference time in `alignment_solo`
-- `alignment_solo` starts with `SYNC` disabled and single-track solo mode enforced
-- `alignment_solo`: switching active solo track remaps playback position via CSV and restarts from the mapped position
-- `alignment_solo`: enabling global `SYNC` switches synced tracks to synchronized sources, re-enables multi-track listening, and locks non-synced tracks muted
-- `alignment_solo`: synced tracks bypass CSV mapping (identity), while non-synced fixed-track waveforms still render mapped base timelines
-- `alignment_multi`: playback is the same as `default`; no CSV-driven remapping, time stretching, or pitch shifting is applied
+- `alignment` uses the longest track as the reference axis
+- Public timing (`seekTo`, seekbar, timer, `position` event) stays on reference time in `alignment`
+- `alignment` starts with `SYNC` disabled and single-track solo mode enforced
+- `alignment`: switching active solo track remaps playback position via CSV and restarts from the mapped position
+- `alignment`: enabling global `SYNC` switches synced tracks to synchronized sources, re-enables multi-track listening, and locks non-synced tracks muted
+- `alignment`: synced tracks bypass CSV mapping (identity), while non-synced fixed-track waveforms still render mapped base timelines
 
 Cross-player behavior:
 

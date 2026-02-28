@@ -108,10 +108,9 @@ Alignment Modes
 `features.mode` supports:
 
 - `default` (existing behavior)
-- `alignment_solo` (reference timeline + one active solo track at a time)
-- `alignment_multi` (normal multitrack playback; tracks are expected to be pre-synchronized externally)
+- `alignment` (reference timeline + one active solo track at a time)
 
-`alignment_solo` requires:
+`alignment` requires:
 
 - `alignment` config with:
   - `csv: string`
@@ -122,13 +121,12 @@ Alignment Modes
 
 Alignment mode behavior:
 
-- In `alignment_solo`, the longest track is used as the reference timeline axis
-- `seekTo`/seekbar/timer/`position` events stay on reference time in `alignment_solo`
-- `alignment_solo` starts with `SYNC` off and single-track solo behavior enforced automatically
-- `alignment_solo`: switching solo track remaps position and restarts playback on the newly active track timeline
-- `alignment_solo`: enabling global `SYNC` allows multi-track listening again, switches synced tracks to synchronized sources, and locks non-synced tracks muted
-- `alignment_solo`: in `SYNC` mode, synced-track timeline mapping is bypassed (identity), while non-synced fixed waveforms still render mapped base timelines
-- `alignment_multi`: playback behavior is the same as `default`; no alignment CSV mapping or in-engine stretching/pitch shifting is applied
+- In `alignment`, the longest track is used as the reference timeline axis
+- `seekTo`/seekbar/timer/`position` events stay on reference time in `alignment`
+- `alignment` starts with `SYNC` off and single-track solo behavior enforced automatically
+- `alignment`: switching solo track remaps position and restarts playback on the newly active track timeline
+- `alignment`: enabling global `SYNC` allows multi-track listening again, switches synced tracks to synchronized sources, and locks non-synced tracks muted
+- `alignment`: in `SYNC` mode, synced-track timeline mapping is bypassed (identity), while non-synced fixed waveforms still render mapped base timelines
 
 Legacy note:
 

@@ -1012,9 +1012,9 @@ test('mode defaults to default and normalizes unknown values', () => {
     controllerUnknown.destroy();
 });
 
-test('alignment_multi mode loads with normal playback behavior', async () => {
+test('default mode loads with normal playback behavior', async () => {
     const controller = createController({
-        features: { waveform: false, keyboard: false, looping: false, mode: 'alignment_multi' },
+        features: { waveform: false, keyboard: false, looping: false, mode: 'default' },
         tracks: [
             { title: 'A', sources: [{ src: 'a.mp3' }] },
             { title: 'B', sources: [{ src: 'b.mp3' }] },
@@ -1036,14 +1036,14 @@ test('alignment_multi mode loads with normal playback behavior', async () => {
     controller.destroy();
 });
 
-test('alignment_multi mode works when AudioWorklet is unsupported', async () => {
+test('default mode works when AudioWorklet is unsupported', async () => {
     mockAudioWorkletUnsupported = true;
     if (MockAudioContext.latestInstance) {
         MockAudioContext.latestInstance.audioWorklet = undefined;
     }
 
     const controller = createController({
-        features: { waveform: false, keyboard: false, looping: false, mode: 'alignment_multi' },
+        features: { waveform: false, keyboard: false, looping: false, mode: 'default' },
         tracks: [
             { title: 'A', sources: [{ src: 'a.mp3' }] },
             { title: 'B', sources: [{ src: 'b.mp3' }] },
@@ -1062,9 +1062,9 @@ test('alignment_multi mode works when AudioWorklet is unsupported', async () => 
     controller.destroy();
 });
 
-test('alignment_multi keeps public position on normal timeline during playback', async () => {
+test('default keeps public position on normal timeline during playback', async () => {
     const controller = createController({
-        features: { waveform: false, keyboard: false, looping: false, mode: 'alignment_multi' },
+        features: { waveform: false, keyboard: false, looping: false, mode: 'default' },
         tracks: [
             { title: 'A', sources: [{ src: 'a.mp3' }] },
             { title: 'B', sources: [{ src: 'b.mp3' }] },
@@ -1085,9 +1085,9 @@ test('alignment_multi keeps public position on normal timeline during playback',
     controller.destroy();
 });
 
-test('alignment_multi mute and solo toggles do not jump playhead', async () => {
+test('default mute and solo toggles do not jump playhead', async () => {
     const controller = createController({
-        features: { waveform: false, keyboard: false, looping: false, mode: 'alignment_multi' },
+        features: { waveform: false, keyboard: false, looping: false, mode: 'default' },
         tracks: [
             { title: 'A', sources: [{ src: 'a.mp3' }] },
             { title: 'B', sources: [{ src: 'b.mp3' }] },
@@ -1111,9 +1111,9 @@ test('alignment_multi mute and solo toggles do not jump playhead', async () => {
     controller.destroy();
 });
 
-test('alignment_multi seek and loop restarts use normal track offsets', async () => {
+test('default seek and loop restarts use normal track offsets', async () => {
     const controller = createController({
-        features: { waveform: false, keyboard: false, looping: true, mode: 'alignment_multi' },
+        features: { waveform: false, keyboard: false, looping: true, mode: 'default' },
         tracks: [
             { title: 'A', sources: [{ src: 'a.mp3' }] },
             { title: 'B', sources: [{ src: 'b.mp3' }] },
@@ -1148,7 +1148,7 @@ test('alignment_multi seek and loop restarts use normal track offsets', async ()
     controller.destroy();
 });
 
-test('alignment_solo mode auto-enforces onlyradiosolo behavior', async () => {
+test('alignment mode auto-enforces onlyradiosolo behavior', async () => {
     setMockTextResponse('data/alignment.csv', [
         't1_sec',
         '0',
@@ -1156,7 +1156,7 @@ test('alignment_solo mode auto-enforces onlyradiosolo behavior', async () => {
     ].join('\n'));
 
     const controller = createController({
-        features: { waveform: false, keyboard: false, looping: false, mode: 'alignment_solo' },
+        features: { waveform: false, keyboard: false, looping: false, mode: 'alignment' },
         tracks: [{ title: 'A', sources: [{ src: 'a.mp3' }], alignment: { column: 't1_sec' } }],
         alignment: {
             csv: 'data/alignment.csv',
@@ -1171,9 +1171,9 @@ test('alignment_solo mode auto-enforces onlyradiosolo behavior', async () => {
     controller.destroy();
 });
 
-test('alignment_solo mode requires alignment config and complete per-track column coverage', async () => {
+test('alignment mode requires alignment config and complete per-track column coverage', async () => {
     const controllerMissingAlignment = createController({
-        features: { waveform: false, keyboard: false, looping: false, mode: 'alignment_solo', onlyradiosolo: true },
+        features: { waveform: false, keyboard: false, looping: false, mode: 'alignment', onlyradiosolo: true },
         tracks: [{ title: 'A', sources: [{ src: 'a.mp3' }], alignment: { column: 't1_sec' } }],
     });
 
@@ -1188,7 +1188,7 @@ test('alignment_solo mode requires alignment config and complete per-track colum
     controllerMissingAlignment.destroy();
 
     const controllerMissingTrackColumn = createController({
-        features: { waveform: false, keyboard: false, looping: false, mode: 'alignment_solo', onlyradiosolo: true },
+        features: { waveform: false, keyboard: false, looping: false, mode: 'alignment', onlyradiosolo: true },
         tracks: [
             { title: 'A', sources: [{ src: 'a.mp3' }], alignment: { column: 't1_sec' } },
             { title: 'B', sources: [{ src: 'b.mp3' }] },
@@ -1210,7 +1210,7 @@ test('alignment_solo mode requires alignment config and complete per-track colum
     controllerMissingTrackColumn.destroy();
 });
 
-test('alignment_solo falls back to legacy alignment.mappings when per-track columns are absent', async () => {
+test('alignment falls back to legacy alignment.mappings when per-track columns are absent', async () => {
     setMockTextResponse('data/alignment.csv', [
         't1_sec,t2_sec',
         '0,0',
@@ -1218,7 +1218,7 @@ test('alignment_solo falls back to legacy alignment.mappings when per-track colu
     ].join('\n'));
 
     const controller = createController({
-        features: { waveform: false, keyboard: false, looping: false, mode: 'alignment_solo', onlyradiosolo: true },
+        features: { waveform: false, keyboard: false, looping: false, mode: 'alignment', onlyradiosolo: true },
         tracks: [
             { title: 'A', sources: [{ src: 'a.mp3' }] },
             { title: 'B', sources: [{ src: 'b.mp3' }] },
@@ -1237,7 +1237,7 @@ test('alignment_solo falls back to legacy alignment.mappings when per-track colu
     controller.destroy();
 });
 
-test('alignment_solo rejects unknown alignment.referenceColumn', async () => {
+test('alignment rejects unknown alignment.referenceColumn', async () => {
     setMockTextResponse('data/alignment.csv', [
         't1_sec,t2_sec',
         '0,0',
@@ -1245,7 +1245,7 @@ test('alignment_solo rejects unknown alignment.referenceColumn', async () => {
     ].join('\n'));
 
     const controller = createController({
-        features: { waveform: false, keyboard: false, looping: false, mode: 'alignment_solo' },
+        features: { waveform: false, keyboard: false, looping: false, mode: 'alignment' },
         tracks: [
             { title: 'A', sources: [{ src: 'a.mp3' }], alignment: { column: 't1_sec' } },
             { title: 'B', sources: [{ src: 'b.mp3' }], alignment: { column: 't2_sec' } },
@@ -1267,7 +1267,7 @@ test('alignment_solo rejects unknown alignment.referenceColumn', async () => {
     controller.destroy();
 });
 
-test('alignment_solo waveform maps track timeline to reference axis', async () => {
+test('alignment waveform maps track timeline to reference axis', async () => {
     setMockTextResponse('data/alignment.csv', [
         't1_sec,t2_sec',
         '0,0',
@@ -1310,7 +1310,7 @@ test('alignment_solo waveform maps track timeline to reference axis', async () =
                 waveform: true,
                 keyboard: false,
                 looping: false,
-                mode: 'alignment_solo',
+                mode: 'alignment',
             },
             tracks: [
                 { title: 'A', sources: [{ src: 'a.mp3' }], alignment: { column: 't1_sec' } },
@@ -1341,7 +1341,7 @@ test('alignment_solo waveform maps track timeline to reference axis', async () =
     }
 });
 
-test('alignment_solo respects alignment.referenceColumn for reference time axis', async () => {
+test('alignment respects alignment.referenceColumn for reference time axis', async () => {
     setMockTextResponse('data/alignment.csv', [
         't1_sec,t2_sec',
         '0,0',
@@ -1353,7 +1353,7 @@ test('alignment_solo respects alignment.referenceColumn for reference time axis'
             waveform: false,
             keyboard: false,
             looping: false,
-            mode: 'alignment_solo',
+            mode: 'alignment',
             onlyradiosolo: true,
         },
         tracks: [
@@ -1380,13 +1380,13 @@ test('alignment_solo respects alignment.referenceColumn for reference time axis'
     controller.destroy();
 });
 
-test('global alignment sync button renders only in alignment_solo when synchronized sources exist', () => {
+test('global alignment sync button renders only in alignment when synchronized sources exist', () => {
     const controllerAlignmentSolo = createController({
         features: {
             waveform: false,
             keyboard: false,
             looping: false,
-            mode: 'alignment_solo',
+            mode: 'alignment',
         },
         tracks: [
             { title: 'A', sources: [{ src: 'a.mp3' }], alignment: { column: 't1_sec' } },
@@ -1408,7 +1408,7 @@ test('global alignment sync button renders only in alignment_solo when synchroni
             waveform: false,
             keyboard: false,
             looping: false,
-            mode: 'alignment_solo',
+            mode: 'alignment',
         },
         tracks: [
             { title: 'A', sources: [{ src: 'a.mp3' }], alignment: { column: 't1_sec' } },
@@ -1435,7 +1435,7 @@ test('global alignment sync button renders only in alignment_solo when synchroni
     controllerDefault.destroy();
 });
 
-test('alignment_solo global sync toggle restarts playback at same public position and locks non-synced tracks', async () => {
+test('alignment global sync toggle restarts playback at same public position and locks non-synced tracks', async () => {
     setMockTextResponse('data/alignment.csv', [
         't1_sec,t2_sec',
         '0,0',
@@ -1447,7 +1447,7 @@ test('alignment_solo global sync toggle restarts playback at same public positio
             waveform: false,
             keyboard: false,
             looping: false,
-            mode: 'alignment_solo',
+            mode: 'alignment',
         },
         tracks: [
             { title: 'A', sources: [{ src: 'a.mp3' }], alignment: { column: 't1_sec' } },
@@ -1488,7 +1488,7 @@ test('alignment_solo global sync toggle restarts playback at same public positio
     controller.destroy();
 });
 
-test('alignment_solo global sync ignores mute and solo interactions on locked tracks', async () => {
+test('alignment global sync ignores mute and solo interactions on locked tracks', async () => {
     setMockTextResponse('data/alignment.csv', [
         't1_sec,t2_sec',
         '0,0',
@@ -1500,7 +1500,7 @@ test('alignment_solo global sync ignores mute and solo interactions on locked tr
             waveform: false,
             keyboard: false,
             looping: false,
-            mode: 'alignment_solo',
+            mode: 'alignment',
         },
         tracks: [
             { title: 'A', sources: [{ src: 'a.mp3' }], alignment: { column: 't1_sec' } },
@@ -1539,7 +1539,7 @@ test('alignment_solo global sync ignores mute and solo interactions on locked tr
     controller.destroy();
 });
 
-test('alignment_solo global sync off restores previously selected solo track', async () => {
+test('alignment global sync off restores previously selected solo track', async () => {
     setMockTextResponse('data/alignment.csv', [
         't1_sec,t2_sec',
         '0,0',
@@ -1551,7 +1551,7 @@ test('alignment_solo global sync off restores previously selected solo track', a
             waveform: false,
             keyboard: false,
             looping: false,
-            mode: 'alignment_solo',
+            mode: 'alignment',
         },
         tracks: [
             { title: 'A', sources: [{ src: 'a.mp3' }], alignment: { column: 't1_sec' } },
@@ -1584,7 +1584,7 @@ test('alignment_solo global sync off restores previously selected solo track', a
     controller.destroy();
 });
 
-test('alignment_solo waveform projector bypasses mapping when synchronized source is active', async () => {
+test('alignment waveform projector bypasses mapping when synchronized source is active', async () => {
     setMockTextResponse('data/alignment.csv', [
         't1_sec,t2_sec',
         '0,0',
@@ -1627,7 +1627,7 @@ test('alignment_solo waveform projector bypasses mapping when synchronized sourc
                 waveform: true,
                 keyboard: false,
                 looping: false,
-                mode: 'alignment_solo',
+                mode: 'alignment',
                 onlyradiosolo: true,
             },
             tracks: [
@@ -1665,7 +1665,7 @@ test('alignment_solo waveform projector bypasses mapping when synchronized sourc
     }
 });
 
-test('alignment_solo track switch remaps reference position with clamp out-of-range', async () => {
+test('alignment track switch remaps reference position with clamp out-of-range', async () => {
     setMockTextResponse('data/alignment.csv', [
         't1_sec,t2_sec',
         '0,0',
@@ -1677,7 +1677,7 @@ test('alignment_solo track switch remaps reference position with clamp out-of-ra
             waveform: false,
             keyboard: false,
             looping: false,
-            mode: 'alignment_solo',
+            mode: 'alignment',
             onlyradiosolo: true,
         },
         tracks: [
@@ -1703,7 +1703,7 @@ test('alignment_solo track switch remaps reference position with clamp out-of-ra
     controller.destroy();
 });
 
-test('alignment_solo outOfRange linear preserves switched reference position', async () => {
+test('alignment outOfRange linear preserves switched reference position', async () => {
     setMockTextResponse('data/alignment.csv', [
         't1_sec,t2_sec',
         '0,0',
@@ -1715,7 +1715,7 @@ test('alignment_solo outOfRange linear preserves switched reference position', a
             waveform: false,
             keyboard: false,
             looping: false,
-            mode: 'alignment_solo',
+            mode: 'alignment',
             onlyradiosolo: true,
         },
         tracks: [
@@ -1737,7 +1737,7 @@ test('alignment_solo outOfRange linear preserves switched reference position', a
     controller.destroy();
 });
 
-test('alignment_solo fails load when synchronized sources are configured but unavailable', async () => {
+test('alignment fails load when synchronized sources are configured but unavailable', async () => {
     setMockTextResponse('data/alignment.csv', [
         't1_sec',
         '0',
@@ -1757,7 +1757,7 @@ test('alignment_solo fails load when synchronized sources are configured but una
             waveform: false,
             keyboard: false,
             looping: false,
-            mode: 'alignment_solo',
+            mode: 'alignment',
             onlyradiosolo: true,
         },
         tracks: [

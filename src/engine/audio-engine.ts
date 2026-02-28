@@ -264,7 +264,7 @@ export class AudioEngine {
         runtime.sourceIndex = runtime.baseSource.sourceIndex;
 
         const alignmentSources = runtime.definition.alignment?.sources;
-        const shouldLoadSyncedSources = this.features.mode === 'alignment_solo'
+        const shouldLoadSyncedSources = this.features.mode === 'alignment'
             && Array.isArray(alignmentSources)
             && alignmentSources.length > 0;
 

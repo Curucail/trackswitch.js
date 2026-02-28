@@ -159,7 +159,7 @@ export class ViewRenderer {
     }
 
     private shouldRenderGlobalSync(runtimes: TrackRuntime[]): boolean {
-        if (this.features.mode !== 'alignment_solo') {
+        if (this.features.mode !== 'alignment') {
             return false;
         }
 

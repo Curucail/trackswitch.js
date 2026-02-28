@@ -1,5 +1,5 @@
 export type LoopMarker = 'A' | 'B';
-export type TrackSwitchMode = 'default' | 'alignment_solo' | 'alignment_multi';
+export type TrackSwitchMode = 'default' | 'alignment';
 export type AlignmentOutOfRangeMode = 'clamp' | 'linear';
 
 export interface TrackAlignmentMapping {

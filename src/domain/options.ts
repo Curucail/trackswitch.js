@@ -27,8 +27,7 @@ export function normalizeFeatures(features: Partial<TrackSwitchFeatures> | undef
 
     if (
         normalized.mode !== 'default'
-        && normalized.mode !== 'alignment_solo'
-        && normalized.mode !== 'alignment_multi'
+        && normalized.mode !== 'alignment'
     ) {
         normalized.mode = 'default';
     }

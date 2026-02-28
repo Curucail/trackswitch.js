@@ -116,13 +116,13 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         this.alignmentConfig = config.alignment;
 
         this.features = normalizeFeatures(config.features);
-        if (this.features.mode === 'alignment_solo') {
+        if (this.features.mode === 'alignment') {
             this.features.onlyradiosolo = true;
             this.features.radiosolo = true;
             this.features.mute = false;
             this.features.presets = false;
         }
-        this.effectiveOnlyRadioSolo = this.features.mode === 'alignment_solo'
+        this.effectiveOnlyRadioSolo = this.features.mode === 'alignment'
             ? true
             : this.features.onlyradiosolo;
         this.state = createInitialPlayerState(this.features.repeat);
@@ -196,7 +196,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         this.globalSyncEnabled = false;
         this.syncLockedTrackIndexes.clear();
         this.preSyncSoloTrackIndex = null;
-        this.effectiveOnlyRadioSolo = this.isAlignmentSoloMode()
+        this.effectiveOnlyRadioSolo = this.isAlignmentMode()
             ? true
             : this.features.onlyradiosolo;
 
@@ -240,8 +240,8 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         this.alignmentContext = null;
         this.alignmentPlaybackTrackIndex = null;
 
-        if (this.features.mode === 'alignment_solo') {
-            const alignmentError = await this.initializeAlignmentSolo();
+        if (this.features.mode === 'alignment') {
+            const alignmentError = await this.initializeAlignmentMode();
             if (alignmentError) {
                 this.handleError(alignmentError);
                 return;
@@ -555,13 +555,13 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
         const nextActiveTrackIndex = this.getActiveSoloTrackIndex();
         if (
-            this.isAlignmentSoloMode()
+            this.isAlignmentMode()
             && this.alignmentContext
             && this.effectiveOnlyRadioSolo
             && previousActiveTrackIndex !== nextActiveTrackIndex
             && nextActiveTrackIndex >= 0
         ) {
-            this.handleAlignmentSoloTrackSwitch(nextActiveTrackIndex);
+            this.handleAlignmentTrackSwitch(nextActiveTrackIndex);
         }
     }
 
@@ -1176,8 +1176,8 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         return Array.from(track.parentElement.children).indexOf(track);
     }
 
-    private isAlignmentSoloMode(): boolean {
-        return this.features.mode === 'alignment_solo';
+    private isAlignmentMode(): boolean {
+        return this.features.mode === 'alignment';
     }
 
     private hasSyncedVariant(runtime: TrackRuntime): boolean {
@@ -1208,7 +1208,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     }
 
     private toggleGlobalSync(): void {
-        if (!this.isAlignmentSoloMode()) {
+        if (!this.isAlignmentMode()) {
             return;
         }
 
@@ -1221,7 +1221,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     }
 
     private applyGlobalSyncState(syncOn: boolean): void {
-        if (!this.isAlignmentSoloMode()) {
+        if (!this.isAlignmentMode()) {
             return;
         }
 
@@ -1339,7 +1339,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             position: this.state.position,
             longestDuration: this.longestDuration,
             syncEnabled: this.globalSyncEnabled,
-            syncAvailable: this.isAlignmentSoloMode()
+            syncAvailable: this.isAlignmentMode()
                 && this.runtimes.some((runtime) => this.hasSyncedVariant(runtime)),
             loop: {
                 pointA: this.state.loop.pointA,
@@ -1373,7 +1373,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         let enginePosition = requestedPosition;
         let nextReferencePosition = requestedPosition;
 
-        if (this.features.mode === 'alignment_solo' && this.alignmentContext) {
+        if (this.features.mode === 'alignment' && this.alignmentContext) {
             const activeTrackIndex = this.getActiveSoloTrackIndex();
             if (activeTrackIndex < 0) {
                 return;
@@ -1510,7 +1510,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             : (runtime.buffer ? runtime.buffer.duration : 0);
     }
 
-    private async initializeAlignmentSolo(): Promise<string | null> {
+    private async initializeAlignmentMode(): Promise<string | null> {
         const alignmentContextResult = await this.buildAlignmentContext();
         if (typeof alignmentContextResult === 'string') {
             return alignmentContextResult;
@@ -1719,7 +1719,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     private currentPlaybackReferencePosition(): number {
         const rawPlaybackPosition = this.audioEngine.currentTime - this.state.startTime;
         if (
-            this.features.mode !== 'alignment_solo'
+            this.features.mode !== 'alignment'
             || !this.alignmentContext
             || this.alignmentPlaybackTrackIndex === null
         ) {
@@ -1730,7 +1730,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     }
 
     private getWaveformTimelineProjector(): TrackTimelineProjector | undefined {
-        if (this.features.mode !== 'alignment_solo' || !this.alignmentContext) {
+        if (this.features.mode !== 'alignment' || !this.alignmentContext) {
             return undefined;
         }
 
@@ -1798,7 +1798,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         return mapTime(converter.trackToReference, trackTime, 'linear');
     }
 
-    private handleAlignmentSoloTrackSwitch(nextActiveTrackIndex: number): void {
+    private handleAlignmentTrackSwitch(nextActiveTrackIndex: number): void {
         if (!this.alignmentContext || nextActiveTrackIndex < 0) {
             return;
         }
@@ -1838,7 +1838,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         this.globalSyncEnabled = false;
         this.syncLockedTrackIndexes.clear();
         this.preSyncSoloTrackIndex = null;
-        this.effectiveOnlyRadioSolo = this.isAlignmentSoloMode() ? true : this.features.onlyradiosolo;
+        this.effectiveOnlyRadioSolo = this.isAlignmentMode() ? true : this.features.onlyradiosolo;
 
         this.stopAudio();
 
