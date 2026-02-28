@@ -19,7 +19,7 @@ import { createInitialPlayerState, playerStateReducer, PlayerAction } from '../d
 import { createTrackRuntime } from '../domain/runtime';
 import { AudioEngine } from '../engine/audio-engine';
 import { TrackTimelineProjector, WaveformEngine } from '../engine/waveform-engine';
-import { ViewRenderer } from '../ui/view-renderer';
+import { ViewRenderer, WaveformTimelineContext } from '../ui/view-renderer';
 import { InputBinder, InputController } from '../input/input-binder';
 import { eventTargetAsElement } from '../shared/dom';
 import { clamp } from '../shared/math';
@@ -64,6 +64,12 @@ interface AlignmentContext {
     referenceTrackIndex: number;
     outOfRange: AlignmentOutOfRangeMode;
     converters: Map<number, TrackAlignmentConverter>;
+}
+
+interface SeekTimelineContext {
+    duration: number;
+    toReferenceTime(timelineTime: number): number;
+    fromReferenceTime(referenceTime: number): number;
 }
 
 export class TrackSwitchControllerImpl implements TrackSwitchController, InputController {
@@ -266,7 +272,8 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             this.waveformEngine,
             this.runtimes,
             this.longestDuration,
-            this.getWaveformTimelineProjector()
+            this.getWaveformTimelineProjector(),
+            this.getWaveformTimelineContext()
         );
     }
 
@@ -676,20 +683,22 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
             this.rightClickDragging = true;
             this.seekingElement = closestInRoot(this.root, event.target, '.seekwrap');
+            const seekTimelineContext = this.getSeekTimelineContext(this.seekingElement);
 
-            const seekMetrics = getSeekMetrics(this.seekingElement, event, this.longestDuration);
+            const seekMetrics = getSeekMetrics(this.seekingElement, event, seekTimelineContext.duration);
             if (!seekMetrics) {
                 this.rightClickDragging = false;
                 return;
             }
 
             this.loopDragStart = seekMetrics.time;
+            const loopStartReference = seekTimelineContext.toReferenceTime(seekMetrics.time);
             this.state = {
                 ...this.state,
                 loop: {
                     ...this.state.loop,
-                    pointA: seekMetrics.time,
-                    pointB: seekMetrics.time,
+                    pointA: loopStartReference,
+                    pointB: loopStartReference,
                     enabled: false,
                 },
             };
@@ -737,34 +746,41 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
         if (this.draggingMarker !== null) {
             event.preventDefault();
-            const metrics = getSeekMetrics(this.seekingElement, event, this.longestDuration);
+            const seekTimelineContext = this.getSeekTimelineContext(this.seekingElement);
+            const metrics = getSeekMetrics(this.seekingElement, event, seekTimelineContext.duration);
             if (!metrics) {
                 return;
             }
 
             let newTime = metrics.time;
             if (this.draggingMarker === 'A') {
-                if (this.state.loop.pointB !== null) {
-                    newTime = Math.min(newTime, this.state.loop.pointB - this.loopMinDistance);
+                const loopPointB = this.state.loop.pointB === null
+                    ? null
+                    : seekTimelineContext.fromReferenceTime(this.state.loop.pointB);
+                if (loopPointB !== null) {
+                    newTime = Math.min(newTime, loopPointB - this.loopMinDistance);
                 }
                 newTime = Math.max(0, newTime);
                 this.state = {
                     ...this.state,
                     loop: {
                         ...this.state.loop,
-                        pointA: newTime,
+                        pointA: seekTimelineContext.toReferenceTime(newTime),
                     },
                 };
             } else {
-                if (this.state.loop.pointA !== null) {
-                    newTime = Math.max(newTime, this.state.loop.pointA + this.loopMinDistance);
+                const loopPointA = this.state.loop.pointA === null
+                    ? null
+                    : seekTimelineContext.fromReferenceTime(this.state.loop.pointA);
+                if (loopPointA !== null) {
+                    newTime = Math.max(newTime, loopPointA + this.loopMinDistance);
                 }
-                newTime = Math.min(this.longestDuration, newTime);
+                newTime = Math.min(seekTimelineContext.duration, newTime);
                 this.state = {
                     ...this.state,
                     loop: {
                         ...this.state.loop,
-                        pointB: newTime,
+                        pointB: seekTimelineContext.toReferenceTime(newTime),
                     },
                 };
             }
@@ -776,28 +792,40 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         if (this.features.looping && this.rightClickDragging) {
             event.preventDefault();
 
-            const metrics = getSeekMetrics(this.seekingElement, event, this.longestDuration);
+            const seekTimelineContext = this.getSeekTimelineContext(this.seekingElement);
+            const metrics = getSeekMetrics(this.seekingElement, event, seekTimelineContext.duration);
             if (!metrics || this.loopDragStart === null) {
                 return;
             }
 
             if (metrics.time >= this.loopDragStart) {
+                const loopStart = this.loopDragStart;
+                const loopEnd = Math.min(
+                    seekTimelineContext.duration,
+                    Math.max(metrics.time, this.loopDragStart + this.loopMinDistance)
+                );
+                const mappedStart = seekTimelineContext.toReferenceTime(loopStart);
+                const mappedEnd = seekTimelineContext.toReferenceTime(loopEnd);
                 this.state = {
                     ...this.state,
                     loop: {
                         ...this.state.loop,
-                        pointA: this.loopDragStart,
-                        pointB: Math.max(metrics.time, this.loopDragStart + this.loopMinDistance),
+                        pointA: Math.min(mappedStart, mappedEnd),
+                        pointB: Math.max(mappedStart, mappedEnd),
                         enabled: false,
                     },
                 };
             } else {
+                const loopStart = this.loopDragStart;
+                const loopEnd = Math.max(0, Math.min(metrics.time, this.loopDragStart - this.loopMinDistance));
+                const mappedStart = seekTimelineContext.toReferenceTime(loopEnd);
+                const mappedEnd = seekTimelineContext.toReferenceTime(loopStart);
                 this.state = {
                     ...this.state,
                     loop: {
                         ...this.state.loop,
-                        pointA: Math.min(metrics.time, this.loopDragStart - this.loopMinDistance),
-                        pointB: this.loopDragStart,
+                        pointA: Math.min(mappedStart, mappedEnd),
+                        pointB: Math.max(mappedStart, mappedEnd),
                         enabled: false,
                     },
                 };
@@ -830,6 +858,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         if (this.rightClickDragging) {
             this.rightClickDragging = false;
             this.loopDragStart = null;
+            const seekTimelineContext = this.getSeekTimelineContext(this.seekingElement);
 
             if (this.state.loop.pointA !== null && this.state.loop.pointB !== null) {
                 let loopA = this.state.loop.pointA;
@@ -850,7 +879,9 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
                     loopB = swappedB;
                 }
 
-                if (Math.abs(loopB - loopA) >= this.loopMinDistance) {
+                const localLoopA = seekTimelineContext.fromReferenceTime(loopA);
+                const localLoopB = seekTimelineContext.fromReferenceTime(loopB);
+                if (Math.abs(localLoopB - localLoopA) >= this.loopMinDistance) {
                     this.state = {
                         ...this.state,
                         loop: {
@@ -1162,7 +1193,8 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
                 this.waveformEngine,
                 this.runtimes,
                 this.longestDuration,
-                this.getWaveformTimelineProjector()
+                this.getWaveformTimelineProjector(),
+                this.getWaveformTimelineContext()
             );
         }, 300);
     }
@@ -1318,7 +1350,8 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             this.waveformEngine,
             this.runtimes,
             this.longestDuration,
-            this.getWaveformTimelineProjector()
+            this.getWaveformTimelineProjector(),
+            this.getWaveformTimelineContext()
         );
 
         this.runtimes.forEach((runtime, index) => {
@@ -1348,7 +1381,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             },
         };
 
-        this.renderer.updateMainControls(uiState);
+        this.renderer.updateMainControls(uiState, this.getWaveformTimelineContext());
 
         this.emit('position', {
             position: this.state.position,
@@ -1454,12 +1487,13 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     }
 
     private seekFromEvent(event: ControllerPointerEvent): void {
-        const metrics = getSeekMetrics(this.seekingElement, event, this.longestDuration);
+        const seekTimelineContext = this.getSeekTimelineContext(this.seekingElement);
+        const metrics = getSeekMetrics(this.seekingElement, event, seekTimelineContext.duration);
         if (!metrics) {
             return;
         }
 
-        const newPosition = metrics.time;
+        const newPosition = seekTimelineContext.toReferenceTime(metrics.time);
 
         if (metrics.posXRel >= 0 && metrics.posXRel <= metrics.seekWidth) {
             if (this.state.playing) {
@@ -1727,6 +1761,88 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         }
 
         return this.trackToReferenceTime(this.alignmentPlaybackTrackIndex, rawPlaybackPosition);
+    }
+
+    private isFixedWaveformLocalAxisEnabled(): boolean {
+        return this.isAlignmentMode() && !!this.alignmentContext && !this.globalSyncEnabled;
+    }
+
+    private getSeekTimelineContext(seekingElement: HTMLElement | null): SeekTimelineContext {
+        const referenceContext: SeekTimelineContext = {
+            duration: this.longestDuration,
+            toReferenceTime: (timelineTime: number): number => clamp(timelineTime, 0, this.longestDuration),
+            fromReferenceTime: (referenceTime: number): number => clamp(referenceTime, 0, this.longestDuration),
+        };
+
+        if (!seekingElement || !this.isFixedWaveformLocalAxisEnabled()) {
+            return referenceContext;
+        }
+
+        const waveformSource = seekingElement.getAttribute('data-waveform-source');
+        if (!waveformSource || waveformSource === 'audible') {
+            return referenceContext;
+        }
+
+        const parsedSource = Number(waveformSource);
+        if (!Number.isFinite(parsedSource) || parsedSource < 0) {
+            return referenceContext;
+        }
+
+        const trackIndex = Math.floor(parsedSource);
+        const runtime = this.runtimes[trackIndex];
+        if (!runtime) {
+            return referenceContext;
+        }
+
+        const trackDuration = TrackSwitchControllerImpl.getRuntimeDuration(runtime);
+        if (!Number.isFinite(trackDuration) || trackDuration <= 0) {
+            return referenceContext;
+        }
+
+        return {
+            duration: trackDuration,
+            toReferenceTime: (timelineTime: number): number => {
+                const clampedTimelineTime = clamp(timelineTime, 0, trackDuration);
+                return clamp(this.trackToReferenceTime(trackIndex, clampedTimelineTime), 0, this.longestDuration);
+            },
+            fromReferenceTime: (referenceTime: number): number => {
+                const clampedReferenceTime = clamp(referenceTime, 0, this.longestDuration);
+                return clamp(this.referenceToTrackTime(trackIndex, clampedReferenceTime), 0, trackDuration);
+            },
+        };
+    }
+
+    private getWaveformTimelineContext(): WaveformTimelineContext {
+        return {
+            enabled: this.isFixedWaveformLocalAxisEnabled(),
+            referenceToTrackTime: (trackIndex: number, referenceTime: number): number => {
+                const runtime = this.runtimes[trackIndex];
+                if (!runtime) {
+                    return 0;
+                }
+
+                const trackDuration = TrackSwitchControllerImpl.getRuntimeDuration(runtime);
+                if (!Number.isFinite(trackDuration) || trackDuration <= 0) {
+                    return 0;
+                }
+
+                const clampedReferenceTime = clamp(referenceTime, 0, this.longestDuration);
+                return clamp(this.referenceToTrackTime(trackIndex, clampedReferenceTime), 0, trackDuration);
+            },
+            getTrackDuration: (trackIndex: number): number => {
+                const runtime = this.runtimes[trackIndex];
+                if (!runtime) {
+                    return 0;
+                }
+
+                const duration = TrackSwitchControllerImpl.getRuntimeDuration(runtime);
+                if (!Number.isFinite(duration) || duration <= 0) {
+                    return 0;
+                }
+
+                return duration;
+            },
+        };
     }
 
     private getWaveformTimelineProjector(): TrackTimelineProjector | undefined {

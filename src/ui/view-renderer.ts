@@ -4,6 +4,17 @@ import { formatSecondsToHHMMSSmmm } from '../shared/format';
 import { clampPercent } from '../shared/math';
 import { TrackTimelineProjector, WaveformEngine } from '../engine/waveform-engine';
 
+export interface WaveformTimelineContext {
+    enabled: boolean;
+    referenceToTrackTime(trackIndex: number, referenceTime: number): number;
+    getTrackDuration(trackIndex: number): number;
+}
+
+interface WaveformSeekSurfaceMetadata {
+    seekWrap: HTMLElement;
+    waveformSource: 'audible' | number;
+}
+
 function buildSeekWrap(leftPercent: number, rightPercent: number): string {
     return '<div class="seekwrap" style="left: ' + leftPercent + '%; right: ' + rightPercent + '%;">'
         + '<div class="loop-region"></div>'
@@ -23,6 +34,30 @@ function setLeftPercent(element: Element, value: number): void {
 
 function setWidthPercent(element: Element, value: number): void {
     (element as HTMLElement).style.width = value + '%';
+}
+
+function clampTime(value: number, minimum: number, maximum: number): number {
+    if (!Number.isFinite(value)) {
+        return minimum;
+    }
+
+    if (value < minimum) {
+        return minimum;
+    }
+
+    if (value > maximum) {
+        return maximum;
+    }
+
+    return value;
+}
+
+function sanitizeDuration(value: number): number {
+    if (!Number.isFinite(value) || value <= 0) {
+        return 0;
+    }
+
+    return value;
 }
 
 function parseWaveformBarWidth(value: string | null, fallback: number): number {
@@ -59,6 +94,7 @@ export class ViewRenderer {
     private readonly waveformOriginalHeight: number[] = [];
     private readonly waveformCanvasBarWidths: number[] = [];
     private readonly waveformCanvasSources: Array<'audible' | number> = [];
+    private readonly waveformSeekSurfaces: WaveformSeekSurfaceMetadata[] = [];
 
     constructor(root: HTMLElement, features: TrackSwitchFeatures, presetNames: string[]) {
         this.root = root;
@@ -271,9 +307,8 @@ export class ViewRenderer {
             this.waveformCanvasBarWidths.push(
                 parseWaveformBarWidth(canvasElement.getAttribute('data-waveform-bar-width'), 1)
             );
-            this.waveformCanvasSources.push(
-                parseWaveformSource(canvasElement.getAttribute('data-waveform-source'))
-            );
+            const waveformSource = parseWaveformSource(canvasElement.getAttribute('data-waveform-source'));
+            this.waveformCanvasSources.push(waveformSource);
 
             const wrapper = document.createElement('div');
             wrapper.className = 'waveform-wrap';
@@ -293,6 +328,16 @@ export class ViewRenderer {
                     clampPercent(canvasElement.getAttribute('data-seek-margin-right'))
                 )
             );
+
+            const seekWrap = wrapper.querySelector('.seekwrap');
+            if (seekWrap instanceof HTMLElement) {
+                seekWrap.setAttribute('data-seek-surface', 'waveform');
+                seekWrap.setAttribute('data-waveform-source', String(waveformSource));
+                this.waveformSeekSurfaces.push({
+                    seekWrap: seekWrap,
+                    waveformSource: waveformSource,
+                });
+            }
         });
     }
 
@@ -327,7 +372,8 @@ export class ViewRenderer {
         waveformEngine: WaveformEngine,
         runtimes: TrackRuntime[],
         timelineDuration: number,
-        trackTimelineProjector?: TrackTimelineProjector
+        trackTimelineProjector?: TrackTimelineProjector,
+        waveformTimelineContext?: WaveformTimelineContext
     ): void {
         if (!this.features.waveform || this.waveformCanvases.length === 0) {
             return;
@@ -356,12 +402,20 @@ export class ViewRenderer {
             const peakCount = Math.max(1, Math.floor(canvas.width / barWidth));
             const waveformSource = this.waveformCanvasSources[i] ?? 'audible';
             const sourceRuntimes = this.getWaveformSourceRuntimes(runtimes, waveformSource);
+            const fixedWaveformTrackIndex = this.resolveWaveformTrackIndex(runtimes, waveformSource);
+            const localTrackDuration = fixedWaveformTrackIndex === null || !waveformTimelineContext
+                ? 0
+                : sanitizeDuration(waveformTimelineContext.getTrackDuration(fixedWaveformTrackIndex));
+            const useLocalAxis = !!waveformTimelineContext
+                && waveformTimelineContext.enabled
+                && fixedWaveformTrackIndex !== null
+                && localTrackDuration > 0;
             const mixed = waveformEngine.calculateMixedWaveform(
                 sourceRuntimes,
                 peakCount,
                 barWidth,
-                safeTimelineDuration,
-                trackTimelineProjector
+                useLocalAxis ? localTrackDuration : safeTimelineDuration,
+                useLocalAxis ? undefined : trackTimelineProjector
             );
 
             if (!mixed) {
@@ -377,14 +431,12 @@ export class ViewRenderer {
         runtimes: TrackRuntime[],
         waveformSource: 'audible' | number
     ): TrackRuntime[] {
-        if (waveformSource === 'audible') {
+        const trackIndex = this.resolveWaveformTrackIndex(runtimes, waveformSource);
+        if (trackIndex === null) {
             return runtimes;
         }
 
-        const selected = runtimes[waveformSource];
-        if (!selected) {
-            return runtimes;
-        }
+        const selected = runtimes[trackIndex];
 
         return [{
             ...selected,
@@ -395,7 +447,22 @@ export class ViewRenderer {
         }];
     }
 
-    updateMainControls(state: TrackSwitchUiState): void {
+    private resolveWaveformTrackIndex(
+        runtimes: TrackRuntime[],
+        waveformSource: 'audible' | number
+    ): number | null {
+        if (waveformSource === 'audible') {
+            return null;
+        }
+
+        if (!Number.isFinite(waveformSource) || waveformSource < 0 || waveformSource >= runtimes.length) {
+            return null;
+        }
+
+        return Math.floor(waveformSource);
+    }
+
+    updateMainControls(state: TrackSwitchUiState, waveformTimelineContext?: WaveformTimelineContext): void {
         this.root.classList.toggle('sync-enabled', state.syncEnabled);
 
         this.queryAll('.playpause').forEach(function(element) {
@@ -411,13 +478,12 @@ export class ViewRenderer {
             element.classList.toggle('disabled', !state.syncAvailable);
         });
 
-        const timePerc = state.longestDuration > 0
-            ? (state.position / state.longestDuration) * 100
-            : 0;
-
-        this.queryAll('.seekhead').forEach(function(seekhead) {
-            setLeftPercent(seekhead, timePerc);
+        const seekWraps = this.queryAll('.seekwrap');
+        seekWraps.forEach((seekWrap) => {
+            this.updateSeekWrapVisuals(seekWrap, state.position, state.longestDuration, state.loop);
         });
+
+        this.applyFixedWaveformLocalSeekVisuals(state, waveformTimelineContext);
 
         if (this.features.timer) {
             this.updateTiming(state.position, state.longestDuration);
@@ -441,46 +507,114 @@ export class ViewRenderer {
             element.classList.toggle('checked', state.loop.enabled);
         });
 
-        if (state.loop.pointA !== null && state.longestDuration > 0) {
-            const pointAPerc = (state.loop.pointA / state.longestDuration) * 100;
-            this.queryAll('.loop-marker.marker-a').forEach(function(marker) {
-                setLeftPercent(marker, pointAPerc);
-                setDisplay(marker, 'block');
-            });
-        } else {
-            this.queryAll('.loop-marker.marker-a').forEach(function(marker) {
-                setDisplay(marker, 'none');
-            });
+    }
+
+    private applyFixedWaveformLocalSeekVisuals(
+        state: TrackSwitchUiState,
+        waveformTimelineContext?: WaveformTimelineContext
+    ): void {
+        if (!waveformTimelineContext || !waveformTimelineContext.enabled) {
+            return;
         }
 
-        if (state.loop.pointB !== null && state.longestDuration > 0) {
-            const pointBPerc = (state.loop.pointB / state.longestDuration) * 100;
-            this.queryAll('.loop-marker.marker-b').forEach(function(marker) {
-                setLeftPercent(marker, pointBPerc);
-                setDisplay(marker, 'block');
+        this.waveformSeekSurfaces.forEach((surface) => {
+            if (surface.waveformSource === 'audible') {
+                return;
+            }
+
+            const trackIndex = surface.waveformSource;
+            const trackDuration = sanitizeDuration(waveformTimelineContext.getTrackDuration(trackIndex));
+            if (trackDuration <= 0) {
+                return;
+            }
+
+            const localPosition = clampTime(
+                waveformTimelineContext.referenceToTrackTime(trackIndex, state.position),
+                0,
+                trackDuration
+            );
+            const localPointA = state.loop.pointA === null
+                ? null
+                : clampTime(waveformTimelineContext.referenceToTrackTime(trackIndex, state.loop.pointA), 0, trackDuration);
+            const localPointB = state.loop.pointB === null
+                ? null
+                : clampTime(waveformTimelineContext.referenceToTrackTime(trackIndex, state.loop.pointB), 0, trackDuration);
+
+            let orderedPointA = localPointA;
+            let orderedPointB = localPointB;
+            if (orderedPointA !== null && orderedPointB !== null && orderedPointA > orderedPointB) {
+                const previousA = orderedPointA;
+                orderedPointA = orderedPointB;
+                orderedPointB = previousA;
+            }
+
+            this.updateSeekWrapVisuals(surface.seekWrap, localPosition, trackDuration, {
+                pointA: orderedPointA,
+                pointB: orderedPointB,
+                enabled: state.loop.enabled,
             });
-        } else {
-            this.queryAll('.loop-marker.marker-b').forEach(function(marker) {
-                setDisplay(marker, 'none');
-            });
+        });
+    }
+
+    private updateSeekWrapVisuals(
+        seekWrap: Element,
+        position: number,
+        duration: number,
+        loop: { pointA: number | null; pointB: number | null; enabled: boolean }
+    ): void {
+        const safeDuration = sanitizeDuration(duration);
+        const safePosition = safeDuration > 0
+            ? clampTime(position, 0, safeDuration)
+            : 0;
+        const seekhead = seekWrap.querySelector('.seekhead');
+        if (seekhead) {
+            const seekPercent = safeDuration > 0
+                ? clampPercent((safePosition / safeDuration) * 100)
+                : 0;
+            setLeftPercent(seekhead, seekPercent);
         }
 
-        if (state.loop.pointA !== null && state.loop.pointB !== null && state.longestDuration > 0) {
-            const pointAPerc = (state.loop.pointA / state.longestDuration) * 100;
-            const pointBPerc = (state.loop.pointB / state.longestDuration) * 100;
-            const widthPerc = pointBPerc - pointAPerc;
+        if (!this.features.looping) {
+            return;
+        }
 
-            this.queryAll('.loop-region').forEach(function(region) {
-                setLeftPercent(region, pointAPerc);
-                setWidthPercent(region, widthPerc);
-                setDisplay(region, 'block');
-                region.classList.toggle('active', state.loop.enabled);
-            });
-        } else {
-            this.queryAll('.loop-region').forEach(function(region) {
-                setDisplay(region, 'none');
-                region.classList.remove('active');
-            });
+        const markerA = seekWrap.querySelector('.loop-marker.marker-a');
+        if (markerA && loop.pointA !== null && safeDuration > 0) {
+            const pointAPerc = clampPercent((clampTime(loop.pointA, 0, safeDuration) / safeDuration) * 100);
+            setLeftPercent(markerA, pointAPerc);
+            setDisplay(markerA, 'block');
+        } else if (markerA) {
+            setDisplay(markerA, 'none');
+        }
+
+        const markerB = seekWrap.querySelector('.loop-marker.marker-b');
+        if (markerB && loop.pointB !== null && safeDuration > 0) {
+            const pointBPerc = clampPercent((clampTime(loop.pointB, 0, safeDuration) / safeDuration) * 100);
+            setLeftPercent(markerB, pointBPerc);
+            setDisplay(markerB, 'block');
+        } else if (markerB) {
+            setDisplay(markerB, 'none');
+        }
+
+        const loopRegion = seekWrap.querySelector('.loop-region');
+        if (
+            loopRegion
+            && loop.pointA !== null
+            && loop.pointB !== null
+            && safeDuration > 0
+        ) {
+            const orderedPointA = Math.min(loop.pointA, loop.pointB);
+            const orderedPointB = Math.max(loop.pointA, loop.pointB);
+            const pointAPerc = clampPercent((clampTime(orderedPointA, 0, safeDuration) / safeDuration) * 100);
+            const pointBPerc = clampPercent((clampTime(orderedPointB, 0, safeDuration) / safeDuration) * 100);
+
+            setLeftPercent(loopRegion, pointAPerc);
+            setWidthPercent(loopRegion, Math.max(0, pointBPerc - pointAPerc));
+            setDisplay(loopRegion, 'block');
+            loopRegion.classList.toggle('active', loop.enabled);
+        } else if (loopRegion) {
+            setDisplay(loopRegion, 'none');
+            loopRegion.classList.remove('active');
         }
     }
 

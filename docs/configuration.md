@@ -201,7 +201,8 @@ Behavior:
 - `alignment` starts with `SYNC` disabled and single-track solo mode enforced
 - `alignment`: switching active solo track remaps playback position via CSV and restarts from the mapped position
 - `alignment`: enabling global `SYNC` switches synced tracks to synchronized sources, re-enables multi-track listening, and locks non-synced tracks muted
-- `alignment`: synced tracks bypass CSV mapping (identity), while non-synced fixed-track waveforms still render mapped base timelines
+- `alignment`: with `SYNC` off, fixed-track waveforms (`waveformSource: <trackIndex>`) render on native track time and their waveform seek overlays (playhead + loop markers/region) use that local axis
+- `alignment`: with `SYNC` on, fixed-track waveforms return to shared reference-axis behavior; synced tracks bypass CSV mapping (identity)
 
 Cross-player behavior:
 

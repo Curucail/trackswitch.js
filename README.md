@@ -126,7 +126,8 @@ Alignment mode behavior:
 - `alignment` starts with `SYNC` off and single-track solo behavior enforced automatically
 - `alignment`: switching solo track remaps position and restarts playback on the newly active track timeline
 - `alignment`: enabling global `SYNC` allows multi-track listening again, switches synced tracks to synchronized sources, and locks non-synced tracks muted
-- `alignment`: in `SYNC` mode, synced-track timeline mapping is bypassed (identity), while non-synced fixed waveforms still render mapped base timelines
+- `alignment`: with `SYNC` off, fixed waveforms (`waveformSource: <trackIndex>`) render on their native track timeline and their waveform seek overlays (playhead + loop markers/region) use that same local axis; interactions are converted to reference time internally
+- `alignment`: with `SYNC` on, synced-track timeline mapping is bypassed (identity) and fixed waveforms return to shared reference-axis behavior
 
 Legacy note:
 
