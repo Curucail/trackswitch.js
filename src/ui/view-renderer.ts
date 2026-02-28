@@ -12,6 +12,8 @@ export interface WaveformTimelineContext {
 
 interface WaveformSeekSurfaceMetadata {
     wrapper: HTMLElement;
+    scrollContainer: HTMLElement;
+    overlay: HTMLElement;
     surface: HTMLElement;
     canvas: HTMLCanvasElement;
     context: CanvasRenderingContext2D | null;
@@ -324,6 +326,10 @@ export class ViewRenderer {
             const wrapper = document.createElement('div');
             wrapper.className = 'waveform-wrap';
             wrapper.setAttribute('style', sanitizeInlineStyle(canvasElement.getAttribute('data-waveform-style')) + '; display: block;');
+            const scrollContainer = document.createElement('div');
+            scrollContainer.className = 'waveform-scroll';
+            const overlay = document.createElement('div');
+            overlay.className = 'waveform-overlay';
             const surface = document.createElement('div');
             surface.className = 'waveform-surface';
 
@@ -333,7 +339,9 @@ export class ViewRenderer {
             }
 
             parent.insertBefore(wrapper, canvasElement);
-            wrapper.appendChild(surface);
+            wrapper.appendChild(scrollContainer);
+            wrapper.appendChild(overlay);
+            scrollContainer.appendChild(surface);
             surface.appendChild(canvasElement);
             surface.insertAdjacentHTML(
                 'beforeend',
@@ -348,10 +356,12 @@ export class ViewRenderer {
                 seekWrap.setAttribute('data-seek-surface', 'waveform');
                 seekWrap.setAttribute('data-waveform-source', String(waveformSource));
                 const timingNode = this.features.mode === 'alignment'
-                    ? this.createWaveformTimingNode(wrapper)
+                    ? this.createWaveformTimingNode(overlay)
                     : null;
                 this.waveformSeekSurfaces.push({
                     wrapper: wrapper,
+                    scrollContainer: scrollContainer,
+                    overlay: overlay,
                     surface: surface,
                     canvas: canvasElement,
                     context: canvasElement.getContext('2d'),
@@ -359,7 +369,7 @@ export class ViewRenderer {
                     waveformSource: waveformSource,
                     originalHeight: originalHeight,
                     barWidth: barWidth,
-                    baseWidth: this.resolveWaveformBaseWidth(wrapper, canvasElement.width),
+                    baseWidth: this.resolveWaveformBaseWidth(scrollContainer, canvasElement.width),
                     zoom: MIN_WAVEFORM_ZOOM,
                     timingNode: timingNode,
                 });
@@ -367,18 +377,18 @@ export class ViewRenderer {
         });
     }
 
-    private createWaveformTimingNode(wrapper: HTMLElement): HTMLElement {
+    private createWaveformTimingNode(overlay: HTMLElement): HTMLElement {
         const timing = document.createElement('div');
         timing.className = 'waveform-timing';
         timing.textContent = '--:--:--:--- / --:--:--:---';
-        wrapper.appendChild(timing);
+        overlay.appendChild(timing);
         return timing;
     }
 
-    private resolveWaveformBaseWidth(wrapper: HTMLElement, fallback: number): number {
-        const wrapperWidth = wrapper.clientWidth;
-        if (Number.isFinite(wrapperWidth) && wrapperWidth > 0) {
-            return Math.max(1, Math.round(wrapperWidth));
+    private resolveWaveformBaseWidth(scrollContainer: HTMLElement, fallback: number): number {
+        const scrollWidth = scrollContainer.clientWidth;
+        if (Number.isFinite(scrollWidth) && scrollWidth > 0) {
+            return Math.max(1, Math.round(scrollWidth));
         }
 
         if (Number.isFinite(fallback) && fallback > 0) {
@@ -416,21 +426,24 @@ export class ViewRenderer {
                 1,
                 Math.round(surfaceMetadata.baseWidth * surfaceMetadata.zoom)
             );
-            const viewportCenter = surfaceMetadata.wrapper.clientWidth / 2;
+            const viewportCenter = surfaceMetadata.scrollContainer.clientWidth / 2;
             const centerRatio = previousSurfaceWidth > 0
-                ? (surfaceMetadata.wrapper.scrollLeft + viewportCenter) / previousSurfaceWidth
+                ? (surfaceMetadata.scrollContainer.scrollLeft + viewportCenter) / previousSurfaceWidth
                 : 0;
 
-            surfaceMetadata.baseWidth = this.resolveWaveformBaseWidth(surfaceMetadata.wrapper, surfaceMetadata.baseWidth);
+            surfaceMetadata.baseWidth = this.resolveWaveformBaseWidth(
+                surfaceMetadata.scrollContainer,
+                surfaceMetadata.baseWidth
+            );
             this.setWaveformSurfaceWidth(surfaceMetadata);
 
             const nextSurfaceWidth = Math.max(
                 1,
                 Math.round(surfaceMetadata.baseWidth * surfaceMetadata.zoom)
             );
-            const maxScrollLeft = Math.max(0, nextSurfaceWidth - surfaceMetadata.wrapper.clientWidth);
+            const maxScrollLeft = Math.max(0, nextSurfaceWidth - surfaceMetadata.scrollContainer.clientWidth);
             const nextScrollLeft = (centerRatio * nextSurfaceWidth) - viewportCenter;
-            surfaceMetadata.wrapper.scrollLeft = clampTime(nextScrollLeft, 0, maxScrollLeft);
+            surfaceMetadata.scrollContainer.scrollLeft = clampTime(nextScrollLeft, 0, maxScrollLeft);
         });
     }
 
@@ -458,13 +471,13 @@ export class ViewRenderer {
             1,
             Math.round(surfaceMetadata.baseWidth * surfaceMetadata.zoom)
         );
-        const wrapperRect = surfaceMetadata.wrapper.getBoundingClientRect();
-        const wrapperWidth = Math.max(1, surfaceMetadata.wrapper.clientWidth);
+        const wrapperRect = surfaceMetadata.scrollContainer.getBoundingClientRect();
+        const wrapperWidth = Math.max(1, surfaceMetadata.scrollContainer.clientWidth);
         const anchorWithinWrapper = Number.isFinite(anchorPageX)
             ? clampTime((anchorPageX as number) - (wrapperRect.left + window.scrollX), 0, wrapperWidth)
             : (wrapperWidth / 2);
         const anchorRatio = previousSurfaceWidth > 0
-            ? (surfaceMetadata.wrapper.scrollLeft + anchorWithinWrapper) / previousSurfaceWidth
+            ? (surfaceMetadata.scrollContainer.scrollLeft + anchorWithinWrapper) / previousSurfaceWidth
             : 0;
 
         surfaceMetadata.zoom = nextZoom;
@@ -474,9 +487,9 @@ export class ViewRenderer {
             1,
             Math.round(surfaceMetadata.baseWidth * surfaceMetadata.zoom)
         );
-        const maxScrollLeft = Math.max(0, nextSurfaceWidth - surfaceMetadata.wrapper.clientWidth);
+        const maxScrollLeft = Math.max(0, nextSurfaceWidth - surfaceMetadata.scrollContainer.clientWidth);
         const nextScrollLeft = (anchorRatio * nextSurfaceWidth) - anchorWithinWrapper;
-        surfaceMetadata.wrapper.scrollLeft = clampTime(nextScrollLeft, 0, maxScrollLeft);
+        surfaceMetadata.scrollContainer.scrollLeft = clampTime(nextScrollLeft, 0, maxScrollLeft);
         return true;
     }
 
