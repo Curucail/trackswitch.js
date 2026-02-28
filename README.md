@@ -115,6 +115,7 @@ Alignment Modes
 
 - `alignment` config with:
   - `csv: string`
+  - `referenceColumn?: string` (optional CSV column to use as the reference time axis)
   - `outOfRange?: 'clamp' | 'linear'` (default `clamp`)
 - per-track alignment columns on `tracks[*].alignment.column`
   - optional `tracks[*].alignment.sources` enables the global `SYNC` control in the main bar

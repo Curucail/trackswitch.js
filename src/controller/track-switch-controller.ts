@@ -1551,11 +1551,13 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             return mappingByTrack;
         }
 
-        const referenceTrackIndex = this.findLongestTrackIndex();
-        const referenceColumn = mappingByTrack.get(referenceTrackIndex);
-        if (!referenceColumn) {
-            return 'Alignment mappings must include the reference track column.';
+        const referenceConfig = this.resolveReferenceTrackAndColumn(this.alignmentConfig, mappingByTrack);
+        if (typeof referenceConfig === 'string') {
+            return referenceConfig;
         }
+
+        const referenceTrackIndex = referenceConfig.referenceTrackIndex;
+        const referenceColumn = referenceConfig.referenceColumn;
 
         let parsedCsv;
         try {
@@ -1591,6 +1593,49 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             referenceTrackIndex: referenceTrackIndex,
             outOfRange: resolveAlignmentOutOfRangeMode(this.alignmentConfig.outOfRange),
             converters: converters,
+        };
+    }
+
+    private resolveReferenceTrackAndColumn(
+        config: TrackAlignmentConfig,
+        mappingByTrack: Map<number, string>
+    ): { referenceTrackIndex: number; referenceColumn: string } | string {
+        const configuredReferenceColumn = typeof config.referenceColumn === 'string'
+            ? config.referenceColumn.trim()
+            : '';
+
+        if (!configuredReferenceColumn) {
+            const fallbackTrackIndex = this.findLongestTrackIndex();
+            const fallbackReferenceColumn = mappingByTrack.get(fallbackTrackIndex);
+            if (!fallbackReferenceColumn) {
+                return 'Alignment mappings must include the reference track column.';
+            }
+
+            return {
+                referenceTrackIndex: fallbackTrackIndex,
+                referenceColumn: fallbackReferenceColumn,
+            };
+        }
+
+        const matchingTrackIndexes: number[] = [];
+        for (const [trackIndex, column] of mappingByTrack) {
+            if (column === configuredReferenceColumn) {
+                matchingTrackIndexes.push(trackIndex);
+            }
+        }
+
+        if (matchingTrackIndexes.length === 0) {
+            return 'Alignment referenceColumn must match one configured track alignment column: '
+                + configuredReferenceColumn;
+        }
+
+        if (matchingTrackIndexes.length > 1) {
+            return 'Alignment referenceColumn is ambiguous across multiple tracks: ' + configuredReferenceColumn;
+        }
+
+        return {
+            referenceTrackIndex: matchingTrackIndexes[0],
+            referenceColumn: configuredReferenceColumn,
         };
     }
 

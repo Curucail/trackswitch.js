@@ -1237,6 +1237,36 @@ test('alignment_solo falls back to legacy alignment.mappings when per-track colu
     controller.destroy();
 });
 
+test('alignment_solo rejects unknown alignment.referenceColumn', async () => {
+    setMockTextResponse('data/alignment.csv', [
+        't1_sec,t2_sec',
+        '0,0',
+        '5,2.5',
+    ].join('\n'));
+
+    const controller = createController({
+        features: { waveform: false, keyboard: false, looping: false, mode: 'alignment_solo' },
+        tracks: [
+            { title: 'A', sources: [{ src: 'a.mp3' }], alignment: { column: 't1_sec' } },
+            { title: 'B', sources: [{ src: 'b.mp3' }], alignment: { column: 't2_sec' } },
+        ],
+        alignment: {
+            csv: 'data/alignment.csv',
+            referenceColumn: 'missing_col',
+        },
+    });
+
+    let errorMessage = '';
+    controller.on('error', function(payload) {
+        errorMessage = payload.message;
+    });
+
+    await controller.load();
+    assert.equal(controller.getState().isLoaded, false);
+    assert.match(errorMessage, /referenceColumn/i);
+    controller.destroy();
+});
+
 test('alignment_solo waveform maps track timeline to reference axis', async () => {
     setMockTextResponse('data/alignment.csv', [
         't1_sec,t2_sec',
@@ -1309,6 +1339,45 @@ test('alignment_solo waveform maps track timeline to reference axis', async () =
         WaveformEngine.prototype.calculateMixedWaveform = originalCalculateMixedWaveform;
         global.HTMLCanvasElement.prototype.getContext = originalGetContext;
     }
+});
+
+test('alignment_solo respects alignment.referenceColumn for reference time axis', async () => {
+    setMockTextResponse('data/alignment.csv', [
+        't1_sec,t2_sec',
+        '0,0',
+        '10,5',
+    ].join('\n'));
+
+    const controller = createController({
+        features: {
+            waveform: false,
+            keyboard: false,
+            looping: false,
+            mode: 'alignment_solo',
+            onlyradiosolo: true,
+        },
+        tracks: [
+            { title: 'A', sources: [{ src: 'a.mp3' }], alignment: { column: 't1_sec' } },
+            { title: 'B', sources: [{ src: 'b.mp3' }], alignment: { column: 't2_sec' } },
+        ],
+        alignment: {
+            csv: 'data/alignment.csv',
+            referenceColumn: 't2_sec',
+            outOfRange: 'clamp',
+        },
+    });
+
+    await controller.load();
+    assert.equal(controller.getState().isLoaded, true);
+
+    controller.seekTo(4);
+    controller.play();
+
+    const startedSources = mockSourceInstances.slice(-2);
+    assert.equal(startedSources[0].startArgs[1], 8);
+    assert.equal(startedSources[1].startArgs[1], 4);
+
+    controller.destroy();
 });
 
 test('global alignment sync button renders only in alignment_solo when synchronized sources exist', () => {

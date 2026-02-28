@@ -10,6 +10,7 @@ export interface TrackAlignmentMapping {
 export interface TrackAlignmentConfig {
     csv: string;
     mappings?: TrackAlignmentMapping[];
+    referenceColumn?: string;
     outOfRange?: AlignmentOutOfRangeMode;
 }
 

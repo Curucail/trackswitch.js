@@ -177,6 +177,7 @@ Normalization rules:
 Alignment config lives at `init.alignment`.
 
 - `csv: string` - URL/path to a numeric CSV file with header row
+- `referenceColumn?: string` - optional CSV column used as the reference timeline axis
 - `outOfRange?: 'clamp' | 'linear'` - defaults to `clamp`
 
 Per-track alignment fields live on `tracks[*].alignment`:
