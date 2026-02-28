@@ -46,7 +46,7 @@ TrackSwitch.createTrackSwitch(rootElement, {
   ui: [
     { type: 'image', src: 'cover.jpg', seekable: true },
     { type: 'waveform', width: 1200, height: 150 },
-    { type: 'sheetmusic', src: 'score.musicxml', measureCsv: 'score_measures.csv' },
+    { type: 'sheetmusic', src: 'score.musicxml', measureCsv: 'score_measures.csv', width: 960, renderScale: 0.75, maxHeight: 360 },
   ],
   alignment: {
     csv: 'dtw_alignment.csv',
@@ -146,13 +146,20 @@ Sheet music element:
   type: 'sheetmusic',
   src: 'score.musicxml',
   measureCsv: 'score_measures.csv',
+  width: 960,
+  renderScale: 0.75,
+  maxHeight: 360,
   style: 'margin: 12px 0;',
   cursorColor: '#999999',
   cursorAlpha: 0.1,
 }
 ```
 
-- Fields: `src` (MusicXML URL), `measureCsv` (time-to-measure map CSV URL), `style?`, `cursorColor?`, `cursorAlpha?`
+- Fields: `src` (MusicXML URL), `measureCsv` (time-to-measure map CSV URL), `width?` (container width in px), `renderScale?` (OSMD zoom factor), `maxHeight?` (viewport max height in px), `style?`, `cursorColor?`, `cursorAlpha?`
+- `width` accepts finite numbers, is rounded to an integer, and values `< 1` are ignored
+- `renderScale` accepts finite numbers `> 0`; values `< 1` render smaller notation, values `> 1` render larger notation
+- `maxHeight` accepts finite numbers, is rounded to an integer, and values `< 1` are ignored
+- When `maxHeight` is set, the sheet-music viewport becomes internally scrollable (vertical + horizontal as needed)
 - `cursorAlpha` is normalized to `[0, 1]` and defaults to `0.1`
 - Measure map CSV requires `start` and `measure` columns (comma or semicolon delimiter)
 - Measure highlighting is intended for `alignment` mode and uses reference timeline position

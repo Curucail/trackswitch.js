@@ -63,9 +63,28 @@ function normalizeCursorAlpha(value: number | undefined): number {
     return value;
 }
 
+function normalizeSheetMusicDimension(value: number | undefined): number | undefined {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 1) {
+        return undefined;
+    }
+
+    return Math.max(1, Math.round(value));
+}
+
+function normalizeSheetMusicRenderScale(value: number | undefined): number | undefined {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+        return undefined;
+    }
+
+    return value;
+}
+
 function normalizeSheetMusicConfig<T extends TrackSwitchSheetMusicConfig>(sheetmusic: T): T {
     return {
         ...sheetmusic,
+        width: normalizeSheetMusicDimension(sheetmusic.width),
+        maxHeight: normalizeSheetMusicDimension(sheetmusic.maxHeight),
+        renderScale: normalizeSheetMusicRenderScale(sheetmusic.renderScale),
         cursorAlpha: normalizeCursorAlpha(sheetmusic.cursorAlpha),
     };
 }
@@ -134,6 +153,21 @@ function injectSheetMusic(root: HTMLElement, sheetmusic: TrackSwitchSheetMusicCo
     container.setAttribute('data-sheetmusic-src', String(sheetmusic.src || ''));
     container.setAttribute('data-sheetmusic-measure-csv', String(sheetmusic.measureCsv || ''));
     container.setAttribute('data-sheetmusic-cursor-alpha', String(normalizeCursorAlpha(sheetmusic.cursorAlpha)));
+
+    const width = normalizeSheetMusicDimension(sheetmusic.width);
+    if (width !== undefined) {
+        container.setAttribute('data-sheetmusic-width', String(width));
+    }
+
+    const maxHeight = normalizeSheetMusicDimension(sheetmusic.maxHeight);
+    if (maxHeight !== undefined) {
+        container.setAttribute('data-sheetmusic-max-height', String(maxHeight));
+    }
+
+    const renderScale = normalizeSheetMusicRenderScale(sheetmusic.renderScale);
+    if (renderScale !== undefined) {
+        container.setAttribute('data-sheetmusic-render-scale', String(renderScale));
+    }
 
     if (typeof sheetmusic.style === 'string') {
         container.setAttribute('data-sheetmusic-style', sheetmusic.style);

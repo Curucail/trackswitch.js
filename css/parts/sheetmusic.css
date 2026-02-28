@@ -9,12 +9,21 @@
     border: 1px solid rgba(0, 0, 0, 0.12);
 }
 
+.trackswitch .sheetmusic-wrap[data-sheetmusic-width-applied='true'] {
+    margin-left: auto;
+    margin-right: auto;
+}
+
 .trackswitch .sheetmusic-wrap .sheetmusic-scroll {
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
     position: relative;
     padding: 8px;
+}
+
+.trackswitch .sheetmusic-wrap.sheetmusic-scrollable .sheetmusic-scroll {
+    overflow-y: auto;
 }
 
 .trackswitch .sheetmusic {

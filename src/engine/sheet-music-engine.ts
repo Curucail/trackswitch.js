@@ -10,6 +10,7 @@ export interface SheetMusicHostConfig {
     host: HTMLElement;
     source: string;
     measureCsv: string;
+    renderScale: number | null;
     cursorColor: string;
     cursorAlpha: number;
 }
@@ -18,6 +19,7 @@ interface SheetMusicEntry {
     host: HTMLElement;
     source: string;
     measureCsv: string;
+    renderScale: number | null;
     cursorColor: string;
     cursorAlpha: number;
     osmd: OpenSheetMusicDisplay | null;
@@ -43,6 +45,8 @@ interface SheetMusicEntry {
 const DEFAULT_CURSOR_COLOR = '#999999';
 const DEFAULT_CURSOR_ALPHA = 0.1;
 const DEFAULT_GRAPHICAL_MEASURE_CLASS_NAME = 'GraphicalMeasure';
+const MIN_OSMD_ZOOM = 0.05;
+const MAX_OSMD_ZOOM = 8;
 
 function sanitizeCursorAlpha(value: number): number {
     if (!Number.isFinite(value)) {
@@ -63,6 +67,14 @@ function sanitizeCursorAlpha(value: number): number {
 function sanitizePlaybackPosition(value: number): number {
     if (!Number.isFinite(value) || value < 0) {
         return 0;
+    }
+
+    return value;
+}
+
+function sanitizeRenderScale(value: number | null | undefined): number | null {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+        return null;
     }
 
     return value;
@@ -89,6 +101,7 @@ export class SheetMusicEngine {
                 host: host.host,
                 source: host.source,
                 measureCsv: host.measureCsv,
+                renderScale: sanitizeRenderScale(host.renderScale),
                 cursorColor: host.cursorColor || DEFAULT_CURSOR_COLOR,
                 cursorAlpha: sanitizeCursorAlpha(host.cursorAlpha),
                 osmd: null,
@@ -135,6 +148,7 @@ export class SheetMusicEngine {
             }
 
             try {
+                this.applyConfiguredRenderScale(entry);
                 entry.osmd.render();
             } catch (error) {
                 console.warn(
@@ -193,6 +207,8 @@ export class SheetMusicEngine {
                 return;
             }
 
+            entry.osmd = osmd;
+            this.applyConfiguredRenderScale(entry);
             osmd.render();
             osmd.enableOrDisableCursors(true);
 
@@ -204,7 +220,6 @@ export class SheetMusicEngine {
                 cursor.show();
             }
 
-            entry.osmd = osmd;
             entry.measureCursor = cursor || null;
             entry.availableMeasures = this.collectAvailableMeasures(osmd);
             entry.availableMeasureSet = new Set(entry.availableMeasures);
@@ -250,6 +265,22 @@ export class SheetMusicEngine {
             entry.clickListener = clickListener;
             entry.host.addEventListener('click', clickListener);
         }
+    }
+
+    private applyConfiguredRenderScale(entry: SheetMusicEntry): void {
+        if (!entry.osmd) {
+            return;
+        }
+
+        if (entry.renderScale === null) {
+            entry.osmd.Zoom = 1;
+            return;
+        }
+
+        entry.osmd.Zoom = Math.max(
+            MIN_OSMD_ZOOM,
+            Math.min(MAX_OSMD_ZOOM, entry.renderScale)
+        );
     }
 
     private disposeEntry(entry: SheetMusicEntry): void {

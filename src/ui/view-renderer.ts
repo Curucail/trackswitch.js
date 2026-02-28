@@ -14,6 +14,7 @@ export interface SheetMusicHostConfig {
     host: HTMLElement;
     source: string;
     measureCsv: string;
+    renderScale: number | null;
     cursorColor: string;
     cursorAlpha: number;
 }
@@ -130,6 +131,45 @@ function parseSheetMusicCursorAlpha(value: string | null): number {
 
     if (parsed > 1) {
         return 1;
+    }
+
+    return parsed;
+}
+
+function parseSheetMusicMaxHeight(value: string | null): number | null {
+    if (value === null) {
+        return null;
+    }
+
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed < 1) {
+        return null;
+    }
+
+    return Math.max(1, Math.round(parsed));
+}
+
+function parseSheetMusicWidth(value: string | null): number | null {
+    if (value === null) {
+        return null;
+    }
+
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed < 1) {
+        return null;
+    }
+
+    return Math.max(1, Math.round(parsed));
+}
+
+function parseSheetMusicRenderScale(value: string | null): number | null {
+    if (value === null) {
+        return null;
+    }
+
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+        return null;
     }
 
     return parsed;
@@ -435,15 +475,18 @@ export class ViewRenderer {
                 return;
             }
 
-            if (!hostElement.closest('.sheetmusic-wrap')) {
-                const wrapper = document.createElement('div');
+            let wrapper: HTMLElement | null = hostElement.closest('.sheetmusic-wrap') as HTMLElement | null;
+            let scrollContainer: HTMLElement | null = null;
+
+            if (!wrapper) {
+                wrapper = document.createElement('div');
                 wrapper.className = 'sheetmusic-wrap';
                 wrapper.setAttribute(
                     'style',
                     sanitizeInlineStyle(hostElement.getAttribute('data-sheetmusic-style')) + '; display: block;'
                 );
 
-                const scrollContainer = document.createElement('div');
+                scrollContainer = document.createElement('div');
                 scrollContainer.className = 'sheetmusic-scroll';
 
                 const parent = hostElement.parentElement;
@@ -454,6 +497,30 @@ export class ViewRenderer {
                 parent.insertBefore(wrapper, hostElement);
                 wrapper.appendChild(scrollContainer);
                 scrollContainer.appendChild(hostElement);
+            } else {
+                scrollContainer = wrapper.querySelector('.sheetmusic-scroll');
+            }
+
+            if (!(wrapper instanceof HTMLElement) || !(scrollContainer instanceof HTMLElement)) {
+                return;
+            }
+
+            const width = parseSheetMusicWidth(hostElement.getAttribute('data-sheetmusic-width'));
+            if (width !== null) {
+                wrapper.style.width = width + 'px';
+                wrapper.setAttribute('data-sheetmusic-width-applied', 'true');
+            } else if (wrapper.getAttribute('data-sheetmusic-width-applied') === 'true') {
+                wrapper.style.removeProperty('width');
+                wrapper.removeAttribute('data-sheetmusic-width-applied');
+            }
+
+            const maxHeight = parseSheetMusicMaxHeight(hostElement.getAttribute('data-sheetmusic-max-height'));
+            if (maxHeight !== null) {
+                scrollContainer.style.maxHeight = maxHeight + 'px';
+                wrapper.classList.add('sheetmusic-scrollable');
+            } else {
+                scrollContainer.style.removeProperty('max-height');
+                wrapper.classList.remove('sheetmusic-scrollable');
             }
 
             const source = parseSheetMusicString(hostElement.getAttribute('data-sheetmusic-src'));
@@ -466,6 +533,7 @@ export class ViewRenderer {
                 host: hostElement,
                 source: source,
                 measureCsv: measureCsv,
+                renderScale: parseSheetMusicRenderScale(hostElement.getAttribute('data-sheetmusic-render-scale')),
                 cursorColor: parseSheetMusicCursorColor(hostElement.getAttribute('data-sheetmusic-cursor-color')),
                 cursorAlpha: parseSheetMusicCursorAlpha(hostElement.getAttribute('data-sheetmusic-cursor-alpha')),
             });
@@ -478,6 +546,7 @@ export class ViewRenderer {
                 host: entry.host,
                 source: entry.source,
                 measureCsv: entry.measureCsv,
+                renderScale: entry.renderScale,
                 cursorColor: entry.cursorColor,
                 cursorAlpha: entry.cursorAlpha,
             };

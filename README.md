@@ -68,6 +68,9 @@ document.addEventListener('DOMContentLoaded', function () {
         type: 'sheetmusic',
         src: 'score.musicxml',
         measureCsv: 'score_measures.csv',
+        width: 960,
+        renderScale: 0.75,
+        maxHeight: 360,
         cursorColor: '#999999',
         cursorAlpha: 0.1,
       },
@@ -139,6 +142,7 @@ Alignment mode behavior:
 - `alignment`: waveform containers show a top-right timer badge in `current / duration` format; fixed-source waveforms use the track-local axis when `SYNC` is off
 - `alignment`: optional `sheetmusic` UI entries render MusicXML via OpenSheetMusicDisplay and highlight the currently mapped measure using a measure-cursor overlay
 - `alignment`: clicking a rendered sheet-music measure seeks playback to that measure start on the reference timeline (resolved from `measureCsv`)
+- `alignment`: `sheetmusic` supports optional `width` (container px), `renderScale` (OSMD zoom), and `maxHeight` (px) for internal score scrolling
 - `features.waveformzoom` defaults to `true`: desktop wheel over a waveform and mobile pinch on waveform seek surfaces zoom each waveform independently
 
 Legacy note:

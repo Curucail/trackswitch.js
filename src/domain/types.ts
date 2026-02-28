@@ -81,6 +81,9 @@ export interface TrackSwitchWaveformConfig {
 export interface TrackSwitchSheetMusicConfig {
     src: string;
     measureCsv: string;
+    width?: number;
+    maxHeight?: number;
+    renderScale?: number;
     style?: string;
     cursorColor?: string;
     cursorAlpha?: number;
