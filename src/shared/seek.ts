@@ -16,8 +16,8 @@ export interface ControllerPointerEvent {
 }
 
 function getPointerPageX(event: ControllerPointerEvent): number | null {
-    if (event.type.indexOf('mouse') >= 0) {
-        return typeof event.pageX === 'number' ? event.pageX : null;
+    if (typeof event.pageX === 'number') {
+        return event.pageX;
     }
 
     const touchEvent = event.originalEvent;
@@ -25,6 +25,12 @@ function getPointerPageX(event: ControllerPointerEvent): number | null {
     if (touches && touches.length > 0) {
         const firstTouch = touches[0];
         return typeof firstTouch?.pageX === 'number' ? firstTouch.pageX : null;
+    }
+
+    const changedTouches = touchEvent?.changedTouches;
+    if (changedTouches && changedTouches.length > 0) {
+        const firstChangedTouch = changedTouches[0];
+        return typeof firstChangedTouch?.pageX === 'number' ? firstChangedTouch.pageX : null;
     }
 
     return null;

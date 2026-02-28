@@ -78,6 +78,11 @@ interface PinchZoomState {
     initialZoom: number;
 }
 
+interface PendingWaveformTouchSeek {
+    seekWrap: HTMLElement;
+    startPageX: number;
+}
+
 export class TrackSwitchControllerImpl implements TrackSwitchController, InputController {
     private readonly root: HTMLElement;
     private readonly features: TrackSwitchFeatures;
@@ -103,8 +108,10 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     private loopDragStart: number | null = null;
     private draggingMarker: LoopMarker | null = null;
     private pinchZoomState: PinchZoomState | null = null;
+    private pendingWaveformTouchSeek: PendingWaveformTouchSeek | null = null;
     private waveformRenderFrameId: number | null = null;
     private readonly loopMinDistance = 0.1;
+    private readonly touchSeekMoveThresholdPx = 10;
 
     private iOSPlaybackUnlocked = false;
     private alignmentContext: AlignmentContext | null = null;
@@ -698,6 +705,12 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             return;
         }
 
+        if (this.tryStartPendingWaveformTouchSeek(event, targetSeekWrap)) {
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+        }
+
         if (this.features.looping && event.type === 'mousedown' && event.which === 3) {
             event.preventDefault();
 
@@ -733,34 +746,24 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         }
 
         event.preventDefault();
-        this.seekingElement = targetSeekWrap;
-        if (!this.seekingElement) {
+        if (!targetSeekWrap) {
             return;
         }
 
-        this.seekFromEvent(event);
-        this.dispatch({ type: 'set-seeking', seeking: true });
-
-        if (
-            this.state.loop.enabled
-            && this.state.loop.pointA !== null
-            && this.state.loop.pointB !== null
-            && (this.state.position < this.state.loop.pointA || this.state.position > this.state.loop.pointB)
-        ) {
-            this.state = {
-                ...this.state,
-                loop: {
-                    ...this.state.loop,
-                    enabled: false,
-                },
-            };
-        }
+        this.startInteractiveSeek(event, targetSeekWrap);
 
         event.stopPropagation();
     }
 
     onSeekMove(event: ControllerPointerEvent): void {
         if (!this.isLoaded) {
+            return;
+        }
+
+        if (this.pendingWaveformTouchSeek) {
+            if (this.tryActivatePendingWaveformTouchSeek(event)) {
+                event.preventDefault();
+            }
             return;
         }
 
@@ -870,6 +873,19 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
     onSeekEnd(event: ControllerPointerEvent): void {
         if (!this.isLoaded) {
+            return;
+        }
+
+        if (this.pendingWaveformTouchSeek) {
+            if (event.type === 'touchend' && this.getActiveTouchCount(event) === 0) {
+                this.applyPendingWaveformTouchSeekTap(event);
+            } else {
+                this.pendingWaveformTouchSeek = null;
+            }
+
+            this.seekingElement = null;
+            event.preventDefault();
+            event.stopPropagation();
             return;
         }
 
@@ -1299,6 +1315,95 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         });
     }
 
+    private isWaveformSeekSurface(seekWrap: HTMLElement | null): boolean {
+        return !!seekWrap && seekWrap.getAttribute('data-seek-surface') === 'waveform';
+    }
+
+    private startInteractiveSeek(event: ControllerPointerEvent, seekWrap: HTMLElement): void {
+        this.seekingElement = seekWrap;
+        this.seekFromEvent(event, true);
+        this.dispatch({ type: 'set-seeking', seeking: true });
+        this.disableLoopWhenSeekOutsideRegion();
+    }
+
+    private disableLoopWhenSeekOutsideRegion(): void {
+        if (
+            this.state.loop.enabled
+            && this.state.loop.pointA !== null
+            && this.state.loop.pointB !== null
+            && (this.state.position < this.state.loop.pointA || this.state.position > this.state.loop.pointB)
+        ) {
+            this.state = {
+                ...this.state,
+                loop: {
+                    ...this.state.loop,
+                    enabled: false,
+                },
+            };
+        }
+    }
+
+    private tryStartPendingWaveformTouchSeek(
+        event: ControllerPointerEvent,
+        seekWrap: HTMLElement | null
+    ): boolean {
+        if (
+            event.type !== 'touchstart'
+            || !this.features.waveform
+            || !this.features.waveformzoom
+            || !this.isWaveformSeekSurface(seekWrap)
+            || this.getActiveTouchCount(event) !== 1
+            || !seekWrap
+        ) {
+            return false;
+        }
+
+        if (!Number.isFinite(event.pageX)) {
+            return false;
+        }
+
+        this.pendingWaveformTouchSeek = {
+            seekWrap: seekWrap,
+            startPageX: event.pageX as number,
+        };
+        this.seekingElement = seekWrap;
+        return true;
+    }
+
+    private tryActivatePendingWaveformTouchSeek(event: ControllerPointerEvent): boolean {
+        if (!this.pendingWaveformTouchSeek) {
+            return false;
+        }
+
+        if (this.getActiveTouchCount(event) >= 2) {
+            return false;
+        }
+
+        if (!Number.isFinite(event.pageX)) {
+            return false;
+        }
+
+        const deltaX = Math.abs((event.pageX as number) - this.pendingWaveformTouchSeek.startPageX);
+        if (deltaX < this.touchSeekMoveThresholdPx) {
+            return false;
+        }
+
+        const seekWrap = this.pendingWaveformTouchSeek.seekWrap;
+        this.pendingWaveformTouchSeek = null;
+        this.startInteractiveSeek(event, seekWrap);
+        return true;
+    }
+
+    private applyPendingWaveformTouchSeekTap(event: ControllerPointerEvent): void {
+        if (!this.pendingWaveformTouchSeek) {
+            return;
+        }
+
+        this.seekingElement = this.pendingWaveformTouchSeek.seekWrap;
+        this.pendingWaveformTouchSeek = null;
+        this.seekFromEvent(event, false);
+    }
+
     private getTouchPair(event: ControllerPointerEvent): [Touch, Touch] | null {
         const touchEvent = event.originalEvent as TouchEvent | undefined;
         const touches = touchEvent?.touches;
@@ -1380,6 +1485,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             initialDistance: initialDistance,
             initialZoom: initialZoom,
         };
+        this.pendingWaveformTouchSeek = null;
 
         if (this.state.currentlySeeking) {
             this.dispatch({ type: 'set-seeking', seeking: false });
@@ -1423,6 +1529,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         if (this.state.currentlySeeking) {
             this.dispatch({ type: 'set-seeking', seeking: false });
         }
+        this.pendingWaveformTouchSeek = null;
         this.seekingElement = null;
     }
 
@@ -1713,7 +1820,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         this.updateMainControls();
     }
 
-    private seekFromEvent(event: ControllerPointerEvent): void {
+    private seekFromEvent(event: ControllerPointerEvent, usePreviewSnippet = true): void {
         const seekTimelineContext = this.getSeekTimelineContext(this.seekingElement);
         const metrics = getSeekMetrics(this.seekingElement, event, seekTimelineContext.duration);
         if (!metrics) {
@@ -1725,7 +1832,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         if (metrics.posXRel >= 0 && metrics.posXRel <= metrics.seekWidth) {
             if (this.state.playing) {
                 this.stopAudio();
-                this.startAudio(newPosition, 0.03);
+                this.startAudio(newPosition, usePreviewSnippet ? 0.03 : undefined);
             } else {
                 this.dispatch({ type: 'set-position', position: newPosition });
             }

@@ -127,6 +127,15 @@ export class ViewRenderer {
         return Array.from(this.root.querySelectorAll(selector)) as HTMLElement[];
     }
 
+    private getCanvasPixelRatio(): number {
+        const ratio = window.devicePixelRatio;
+        if (!Number.isFinite(ratio) || ratio < 1) {
+            return 1;
+        }
+
+        return ratio;
+    }
+
     initialize(runtimes: TrackRuntime[]): void {
         this.root.classList.add('trackswitch');
 
@@ -500,6 +509,8 @@ export class ViewRenderer {
 
         this.reflowWaveforms();
 
+        const pixelRatio = this.getCanvasPixelRatio();
+
         for (let i = 0; i < this.waveformSeekSurfaces.length; i += 1) {
             const surfaceMetadata = this.waveformSeekSurfaces[i];
             const canvas = surfaceMetadata.canvas;
@@ -511,15 +522,18 @@ export class ViewRenderer {
 
             const displayWidth = canvas.clientWidth || canvas.width;
             const originalHeight = surfaceMetadata.originalHeight || canvas.height;
+            const renderWidth = Math.max(1, Math.round(displayWidth * pixelRatio));
+            const renderHeight = Math.max(1, Math.round(originalHeight * pixelRatio));
+            const renderBarWidth = Math.max(1, Math.round(barWidth * pixelRatio));
 
-            if (canvas.width !== displayWidth) {
-                canvas.width = displayWidth;
+            if (canvas.width !== renderWidth) {
+                canvas.width = renderWidth;
             }
-            if (canvas.height !== originalHeight) {
-                canvas.height = originalHeight;
+            if (canvas.height !== renderHeight) {
+                canvas.height = renderHeight;
             }
 
-            waveformEngine.drawPlaceholder(canvas, context, barWidth, 0.3);
+            waveformEngine.drawPlaceholder(canvas, context, renderBarWidth, 0.3);
         }
     }
 
@@ -536,6 +550,7 @@ export class ViewRenderer {
 
         this.reflowWaveforms();
 
+        const pixelRatio = this.getCanvasPixelRatio();
         const safeTimelineDuration = Number.isFinite(timelineDuration) && timelineDuration > 0 ? timelineDuration : 0;
 
         for (let i = 0; i < this.waveformSeekSurfaces.length; i += 1) {
@@ -549,15 +564,18 @@ export class ViewRenderer {
 
             const displayWidth = canvas.clientWidth || canvas.width;
             const originalHeight = surfaceMetadata.originalHeight || canvas.height;
+            const renderWidth = Math.max(1, Math.round(displayWidth * pixelRatio));
+            const renderHeight = Math.max(1, Math.round(originalHeight * pixelRatio));
+            const renderBarWidth = Math.max(1, Math.round(barWidth * pixelRatio));
 
-            if (canvas.width !== displayWidth) {
-                canvas.width = displayWidth;
+            if (canvas.width !== renderWidth) {
+                canvas.width = renderWidth;
             }
-            if (canvas.height !== originalHeight) {
-                canvas.height = originalHeight;
+            if (canvas.height !== renderHeight) {
+                canvas.height = renderHeight;
             }
 
-            const peakCount = Math.max(1, Math.floor(canvas.width / barWidth));
+            const peakCount = Math.max(1, Math.floor(canvas.width / renderBarWidth));
             const waveformSource = surfaceMetadata.waveformSource;
             const sourceRuntimes = this.getWaveformSourceRuntimes(runtimes, waveformSource);
             const fixedWaveformTrackIndex = this.resolveWaveformTrackIndex(runtimes, waveformSource);
@@ -571,17 +589,17 @@ export class ViewRenderer {
             const mixed = waveformEngine.calculateMixedWaveform(
                 sourceRuntimes,
                 peakCount,
-                barWidth,
+                renderBarWidth,
                 useLocalAxis ? localTrackDuration : safeTimelineDuration,
                 useLocalAxis ? undefined : trackTimelineProjector
             );
 
             if (!mixed) {
-                waveformEngine.drawPlaceholder(canvas, context, barWidth, 0.3);
+                waveformEngine.drawPlaceholder(canvas, context, renderBarWidth, 0.3);
                 continue;
             }
 
-            waveformEngine.drawWaveform(canvas, context, mixed, barWidth);
+            waveformEngine.drawWaveform(canvas, context, mixed, renderBarWidth);
         }
     }
 

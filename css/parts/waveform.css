@@ -56,7 +56,6 @@
     bottom: 0;
     width: 2px;
     background-color: rgba(0, 0, 0, 0.8);
-    box-shadow: 1px 0 2px rgba(0, 0, 0, 0.3);
     z-index: 3;
 }
 
