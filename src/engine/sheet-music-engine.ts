@@ -1,6 +1,8 @@
 import {
     CursorType,
+    GraphicalMeasure,
     OpenSheetMusicDisplay,
+    PointF2D,
 } from 'opensheetmusicdisplay';
 import { loadMeasureMapCsv, MeasureMapPoint } from '../shared/measure-map';
 
@@ -35,10 +37,12 @@ interface SheetMusicEntry {
     availableMeasureSet: Set<number>;
     syncEnabled: boolean;
     targetMeasure: number | null;
+    clickListener: ((event: MouseEvent) => void) | null;
 }
 
 const DEFAULT_CURSOR_COLOR = '#999999';
 const DEFAULT_CURSOR_ALPHA = 0.1;
+const DEFAULT_GRAPHICAL_MEASURE_CLASS_NAME = 'GraphicalMeasure';
 
 function sanitizeCursorAlpha(value: number): number {
     if (!Number.isFinite(value)) {
@@ -65,9 +69,16 @@ function sanitizePlaybackPosition(value: number): number {
 }
 
 export class SheetMusicEngine {
+    private readonly onSeekReferenceTime: ((referenceTime: number) => void) | null;
     private entries: SheetMusicEntry[] = [];
     private destroyed = false;
     private lastPosition = 0;
+
+    constructor(onSeekReferenceTime?: (referenceTime: number) => void) {
+        this.onSeekReferenceTime = typeof onSeekReferenceTime === 'function'
+            ? onSeekReferenceTime
+            : null;
+    }
 
     async initialize(hosts: SheetMusicHostConfig[]): Promise<void> {
         this.destroy();
@@ -87,6 +98,7 @@ export class SheetMusicEngine {
                 availableMeasureSet: new Set<number>(),
                 syncEnabled: false,
                 targetMeasure: null,
+                clickListener: null,
             };
         });
 
@@ -230,9 +242,22 @@ export class SheetMusicEngine {
         entry.host.classList.remove('sheetmusic-loading');
         entry.host.classList.toggle('sheetmusic-ready', Boolean(entry.osmd));
         entry.host.classList.toggle('sheetmusic-error', !entry.osmd);
+
+        if (entry.osmd) {
+            const clickListener = (event: MouseEvent) => {
+                this.handleHostClick(entry, event);
+            };
+            entry.clickListener = clickListener;
+            entry.host.addEventListener('click', clickListener);
+        }
     }
 
     private disposeEntry(entry: SheetMusicEntry): void {
+        if (entry.clickListener) {
+            entry.host.removeEventListener('click', entry.clickListener);
+            entry.clickListener = null;
+        }
+
         const osmd = entry.osmd;
         if (!osmd) {
             return;
@@ -259,6 +284,26 @@ export class SheetMusicEngine {
         entry.osmd = null;
         entry.measureCursor = null;
         entry.syncEnabled = false;
+    }
+
+    private handleHostClick(entry: SheetMusicEntry, event: MouseEvent): void {
+        if (!this.onSeekReferenceTime || !entry.measureMap || entry.measureMap.length === 0) {
+            return;
+        }
+
+        const clickedMeasure = this.resolveClickedMeasure(entry, event);
+        if (clickedMeasure === null) {
+            return;
+        }
+
+        const referenceTime = this.resolveReferenceTimeForMeasure(entry.measureMap, clickedMeasure);
+        if (!Number.isFinite(referenceTime)) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        this.onSeekReferenceTime(Math.max(0, referenceTime));
     }
 
     private resolveMappedMeasure(measureMap: MeasureMapPoint[], position: number): number | null {
@@ -374,5 +419,258 @@ export class SheetMusicEngine {
         return Array.from(unique).sort(function(a, b) {
             return a - b;
         });
+    }
+
+    private resolveClickedMeasure(entry: SheetMusicEntry, event: MouseEvent): number | null {
+        const graphicSheet = entry.osmd?.GraphicSheet as {
+            domToSvg?: (point: PointF2D) => PointF2D;
+            svgToOsmd?: (point: PointF2D) => PointF2D;
+            GetNearestObject?: (point: PointF2D, className: string) => unknown;
+            GetNearestStaffEntry?: (point: PointF2D) => unknown;
+            MeasureList?: unknown;
+        } | undefined;
+        if (!graphicSheet) {
+            return null;
+        }
+
+        const runtimeMeasureClassName = this.resolveGraphicalMeasureClassName();
+
+        const attemptFromPoint = (x: number | undefined, y: number | undefined): number | null => {
+            if (!Number.isFinite(x) || !Number.isFinite(y)) {
+                return null;
+            }
+
+            try {
+                const domPoint = new PointF2D(x as number, y as number);
+                const svgPoint = typeof graphicSheet.domToSvg === 'function'
+                    ? graphicSheet.domToSvg(domPoint)
+                    : domPoint;
+                const osmdPoint = typeof graphicSheet.svgToOsmd === 'function'
+                    ? graphicSheet.svgToOsmd(svgPoint)
+                    : svgPoint;
+                const nearestMeasure = this.findNearestMeasureObject(
+                    graphicSheet,
+                    osmdPoint,
+                    runtimeMeasureClassName
+                );
+                const fromNearestMeasure = this.extractMeasureNumber(nearestMeasure);
+                if (fromNearestMeasure !== null) {
+                    return fromNearestMeasure;
+                }
+
+                const nearestStaffEntry = typeof graphicSheet.GetNearestStaffEntry === 'function'
+                    ? graphicSheet.GetNearestStaffEntry(osmdPoint)
+                    : null;
+                const fromNearestStaffEntry = this.extractMeasureNumber(
+                    this.extractParentMeasureFromStaffEntry(nearestStaffEntry)
+                );
+                if (fromNearestStaffEntry !== null) {
+                    return fromNearestStaffEntry;
+                }
+
+                return this.resolveMeasureFromMeasureList(graphicSheet.MeasureList, osmdPoint);
+            } catch (_error) {
+                return null;
+            }
+        };
+
+        return attemptFromPoint(event.clientX, event.clientY)
+            ?? attemptFromPoint(event.pageX, event.pageY);
+    }
+
+    private resolveGraphicalMeasureClassName(): string {
+        const className = typeof GraphicalMeasure === 'function'
+            ? String(GraphicalMeasure.name || '')
+            : '';
+        return className || DEFAULT_GRAPHICAL_MEASURE_CLASS_NAME;
+    }
+
+    private findNearestMeasureObject(
+        graphicSheet: {
+            GetNearestObject?: (point: PointF2D, className: string) => unknown;
+        },
+        point: PointF2D,
+        runtimeMeasureClassName: string
+    ): unknown {
+        if (typeof graphicSheet.GetNearestObject !== 'function') {
+            return null;
+        }
+
+        const classNames = [runtimeMeasureClassName, DEFAULT_GRAPHICAL_MEASURE_CLASS_NAME]
+            .filter((className, index, all) => Boolean(className) && all.indexOf(className) === index);
+
+        for (let index = 0; index < classNames.length; index += 1) {
+            const candidate = graphicSheet.GetNearestObject(point, classNames[index]);
+            if (candidate) {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private extractParentMeasureFromStaffEntry(staffEntry: unknown): unknown {
+        if (!staffEntry || typeof staffEntry !== 'object') {
+            return null;
+        }
+
+        const candidate = staffEntry as {
+            parentMeasure?: unknown;
+            ParentMeasure?: unknown;
+        };
+
+        return candidate.parentMeasure ?? candidate.ParentMeasure ?? null;
+    }
+
+    private resolveMeasureFromMeasureList(measureListRaw: unknown, point: PointF2D): number | null {
+        if (!Array.isArray(measureListRaw)) {
+            return null;
+        }
+
+        let bestMeasure: unknown = null;
+        let bestDistance = Number.POSITIVE_INFINITY;
+
+        for (let columnIndex = 0; columnIndex < measureListRaw.length; columnIndex += 1) {
+            const column = measureListRaw[columnIndex];
+            if (!Array.isArray(column)) {
+                continue;
+            }
+
+            for (let rowIndex = 0; rowIndex < column.length; rowIndex += 1) {
+                const measure = column[rowIndex];
+                const boundingBox = this.extractMeasureBoundingBox(measure);
+                if (!boundingBox) {
+                    continue;
+                }
+
+                if (typeof boundingBox.pointLiesInsideBorders === 'function') {
+                    try {
+                        if (boundingBox.pointLiesInsideBorders(point)) {
+                            const exactMatch = this.extractMeasureNumber(measure);
+                            if (exactMatch !== null) {
+                                return exactMatch;
+                            }
+                        }
+                    } catch (_error) {
+                        // Ignore malformed bounding boxes and continue scanning.
+                    }
+                }
+
+                const center = this.extractBoundingBoxCenter(boundingBox);
+                if (!center) {
+                    continue;
+                }
+
+                const dx = center.x - point.x;
+                const dy = center.y - point.y;
+                const distance = (dx * dx) + (dy * dy);
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    bestMeasure = measure;
+                }
+            }
+        }
+
+        return this.extractMeasureNumber(bestMeasure);
+    }
+
+    private extractMeasureBoundingBox(measure: unknown): {
+        pointLiesInsideBorders?: (position: PointF2D) => boolean;
+        Center?: unknown;
+        center?: unknown;
+    } | null {
+        if (!measure || typeof measure !== 'object') {
+            return null;
+        }
+
+        const candidate = measure as {
+            PositionAndShape?: unknown;
+            positionAndShape?: unknown;
+        };
+
+        const box = candidate.PositionAndShape ?? candidate.positionAndShape;
+        if (!box || typeof box !== 'object') {
+            return null;
+        }
+
+        return box as {
+            pointLiesInsideBorders?: (position: PointF2D) => boolean;
+            Center?: unknown;
+            center?: unknown;
+        };
+    }
+
+    private extractBoundingBoxCenter(box: { Center?: unknown; center?: unknown }): PointF2D | null {
+        const centerCandidate = box.Center ?? box.center;
+        if (!centerCandidate || typeof centerCandidate !== 'object') {
+            return null;
+        }
+
+        const pointCandidate = centerCandidate as { x?: number; y?: number };
+        if (!Number.isFinite(pointCandidate.x) || !Number.isFinite(pointCandidate.y)) {
+            return null;
+        }
+
+        return new PointF2D(pointCandidate.x as number, pointCandidate.y as number);
+    }
+
+    private extractMeasureNumber(measureObject: unknown): number | null {
+        if (!measureObject || typeof measureObject !== 'object') {
+            return null;
+        }
+
+        const candidate = measureObject as {
+            ParentSourceMeasure?: { MeasureNumber?: number };
+            parentSourceMeasure?: { MeasureNumber?: number };
+            MeasureNumber?: number;
+            measureNumber?: number;
+        };
+
+        const rawValues: Array<number | undefined> = [
+            candidate.ParentSourceMeasure?.MeasureNumber,
+            candidate.parentSourceMeasure?.MeasureNumber,
+            candidate.MeasureNumber,
+            candidate.measureNumber,
+        ];
+
+        for (let index = 0; index < rawValues.length; index += 1) {
+            const raw = rawValues[index];
+            if (Number.isFinite(raw)) {
+                return Math.floor(raw as number);
+            }
+        }
+
+        return null;
+    }
+
+    private resolveReferenceTimeForMeasure(measureMap: MeasureMapPoint[], clickedMeasure: number): number {
+        let firstExactStart: number | null = null;
+        let lastLowerStart: number | null = null;
+
+        for (let index = 0; index < measureMap.length; index += 1) {
+            const point = measureMap[index];
+            const mappedMeasure = Math.floor(point.measure);
+
+            if (mappedMeasure === clickedMeasure) {
+                if (firstExactStart === null) {
+                    firstExactStart = point.start;
+                }
+                continue;
+            }
+
+            if (mappedMeasure < clickedMeasure) {
+                lastLowerStart = point.start;
+            }
+        }
+
+        if (firstExactStart !== null) {
+            return firstExactStart;
+        }
+
+        if (lastLowerStart !== null) {
+            return lastLowerStart;
+        }
+
+        return measureMap[0].start;
     }
 }

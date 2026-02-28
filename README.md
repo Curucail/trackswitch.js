@@ -138,6 +138,7 @@ Alignment mode behavior:
 - `alignment`: with `SYNC` on, synced-track timeline mapping is bypassed (identity) and fixed waveforms return to shared reference-axis behavior
 - `alignment`: waveform containers show a top-right timer badge in `current / duration` format; fixed-source waveforms use the track-local axis when `SYNC` is off
 - `alignment`: optional `sheetmusic` UI entries render MusicXML via OpenSheetMusicDisplay and highlight the currently mapped measure using a measure-cursor overlay
+- `alignment`: clicking a rendered sheet-music measure seeks playback to that measure start on the reference timeline (resolved from `measureCsv`)
 - `features.waveformzoom` defaults to `true`: desktop wheel over a waveform and mobile pinch on waveform seek surfaces zoom each waveform independently
 
 Legacy note:

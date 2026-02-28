@@ -156,6 +156,7 @@ Sheet music element:
 - `cursorAlpha` is normalized to `[0, 1]` and defaults to `0.1`
 - Measure map CSV requires `start` and `measure` columns (comma or semicolon delimiter)
 - Measure highlighting is intended for `alignment` mode and uses reference timeline position
+- Clicking a measure in the rendered sheet seeks to that measure's mapped reference start time from `measureCsv`
 - If MusicXML fails to load, only the sheet music panel fails (audio player continues)
 - If measure CSV fails, score rendering still works but measure highlighting is disabled
 

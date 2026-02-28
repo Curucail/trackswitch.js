@@ -169,7 +169,9 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
         this.audioEngine = new AudioEngine(this.features, this.state.volume);
         this.waveformEngine = new WaveformEngine();
-        this.sheetMusicEngine = new SheetMusicEngine();
+        this.sheetMusicEngine = new SheetMusicEngine((referenceTime) => {
+            this.seekTo(referenceTime);
+        });
         this.renderer = new ViewRenderer(this.root, this.features, presetNames);
 
         this.instanceId = allocateInstanceId();
