@@ -9,7 +9,7 @@ export interface TrackAlignmentMapping {
 
 export interface TrackAlignmentConfig {
     csv: string;
-    mappings: TrackAlignmentMapping[];
+    mappings?: TrackAlignmentMapping[];
     outOfRange?: AlignmentOutOfRangeMode;
 }
 
@@ -18,6 +18,11 @@ export interface TrackSourceDefinition {
     type?: string;
     startOffsetMs?: number;
     endOffsetMs?: number;
+}
+
+export interface TrackDefinitionAlignment {
+    column?: string;
+    sources?: TrackSourceDefinition[];
 }
 
 export interface TrackDefinition {
@@ -31,6 +36,7 @@ export interface TrackDefinition {
     seekMarginLeft?: number;
     seekMarginRight?: number;
     sources: TrackSourceDefinition[];
+    alignment?: TrackDefinitionAlignment;
 }
 
 export interface TrackSwitchFeatures {
@@ -109,6 +115,14 @@ export interface TrackState {
     solo: boolean;
 }
 
+export type TrackSourceVariant = 'base' | 'synced';
+
+export interface TrackLoadedSource {
+    buffer: AudioBuffer | null;
+    timing: TrackTiming | null;
+    sourceIndex: number;
+}
+
 export interface TrackRuntime {
     id: string;
     definition: TrackDefinition;
@@ -118,6 +132,9 @@ export interface TrackRuntime {
     timing: TrackTiming | null;
     activeSource: AudioBufferSourceNode | null;
     sourceIndex: number;
+    activeVariant: TrackSourceVariant;
+    baseSource: TrackLoadedSource;
+    syncedSource: TrackLoadedSource | null;
     successful: boolean;
     errored: boolean;
     waveformCache: Map<string, Float32Array>;

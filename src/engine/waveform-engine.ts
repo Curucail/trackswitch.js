@@ -1,5 +1,7 @@
 import { TrackRuntime, TrackTiming } from '../domain/types';
 
+export type TrackTimelineProjector = (runtime: TrackRuntime, trackTimelineTimeSeconds: number) => number;
+
 export class WaveformEngine {
     calculateWaveformPeaks(
         buffer: AudioBuffer,
@@ -107,7 +109,8 @@ export class WaveformEngine {
         runtimes: TrackRuntime[],
         peakCount: number,
         barWidth: number,
-        timelineDuration?: number
+        timelineDuration?: number,
+        trackTimelineProjector?: TrackTimelineProjector
     ): Float32Array | null {
         if (!runtimes.length || peakCount <= 0) {
             return null;
@@ -137,7 +140,13 @@ export class WaveformEngine {
         }
 
         const mappedPeaks = audible
-            .map((runtime) => this.getTrackTimelinePeaks(runtime, count, barWidth, safeTimelineDuration))
+            .map((runtime) => this.getTrackTimelinePeaks(
+                runtime,
+                count,
+                barWidth,
+                safeTimelineDuration,
+                trackTimelineProjector
+            ))
             .filter(function(peaks): peaks is Float32Array {
                 return !!peaks;
             });
@@ -166,7 +175,8 @@ export class WaveformEngine {
         runtime: TrackRuntime,
         peakCount: number,
         barWidth: number,
-        timelineDuration: number
+        timelineDuration: number,
+        trackTimelineProjector?: TrackTimelineProjector
     ): Float32Array | null {
         if (!runtime.buffer) {
             return null;
@@ -184,7 +194,6 @@ export class WaveformEngine {
             return timelinePeaks;
         }
 
-        const waveformStart = Math.round((padStart / timelineDuration) * safePeakCount);
         const waveformLength = Math.max(1, Math.round((audioDuration / timelineDuration) * safePeakCount));
         const trackPeaks = this.getTrackPeaks(runtime, waveformLength, barWidth, trimStart, audioDuration);
 
@@ -192,18 +201,71 @@ export class WaveformEngine {
             return null;
         }
 
+        if (!trackTimelineProjector) {
+            const waveformStart = Math.round((padStart / timelineDuration) * safePeakCount);
+
+            for (let x = 0; x < trackPeaks.length; x += 1) {
+                const targetIndex = waveformStart + x;
+                if (targetIndex < 0) {
+                    continue;
+                }
+                if (targetIndex >= safePeakCount) {
+                    break;
+                }
+                timelinePeaks[targetIndex] = trackPeaks[x];
+            }
+
+            return timelinePeaks;
+        }
+
+        let previousTargetIndex: number | null = null;
+        let previousPeak = 0;
+
         for (let x = 0; x < trackPeaks.length; x += 1) {
-            const targetIndex = waveformStart + x;
-            if (targetIndex < 0) {
+            const peak = trackPeaks[x];
+            if (peak <= 0) {
                 continue;
             }
-            if (targetIndex >= safePeakCount) {
-                break;
+
+            const fraction = trackPeaks.length <= 1 ? 0 : (x / (trackPeaks.length - 1));
+            const trackTimelineTime = padStart + (fraction * audioDuration);
+            const mappedTimelineTime = trackTimelineProjector(runtime, trackTimelineTime);
+
+            if (!Number.isFinite(mappedTimelineTime) || mappedTimelineTime < 0 || mappedTimelineTime > timelineDuration) {
+                previousTargetIndex = null;
+                continue;
             }
-            timelinePeaks[targetIndex] = trackPeaks[x];
+
+            const targetIndex = Math.min(
+                safePeakCount - 1,
+                Math.floor((mappedTimelineTime / timelineDuration) * safePeakCount)
+            );
+            this.mergeTimelinePeak(timelinePeaks, targetIndex, peak);
+
+            if (previousTargetIndex !== null && previousTargetIndex !== targetIndex) {
+                const distance = targetIndex - previousTargetIndex;
+                const step = distance > 0 ? 1 : -1;
+                for (let cursor: number = previousTargetIndex + step; cursor !== targetIndex; cursor += step) {
+                    const t = Math.abs((cursor - previousTargetIndex) / distance);
+                    const interpolatedPeak = previousPeak + ((peak - previousPeak) * t);
+                    this.mergeTimelinePeak(timelinePeaks, cursor, interpolatedPeak);
+                }
+            }
+
+            previousTargetIndex = targetIndex;
+            previousPeak = peak;
         }
 
         return timelinePeaks;
+    }
+
+    private mergeTimelinePeak(target: Float32Array, index: number, peak: number): void {
+        if (index < 0 || index >= target.length || !Number.isFinite(peak)) {
+            return;
+        }
+        if (peak > target[index]) {
+            target[index] = peak;
+        }
     }
 
     private static normalizeTiming(runtime: TrackRuntime): TrackTiming | null {

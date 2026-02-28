@@ -1151,10 +1151,9 @@ test('alignment_multi seek and loop restarts use normal track offsets', async ()
 test('alignment_solo mode requires onlyradiosolo', async () => {
     const controller = createController({
         features: { waveform: false, keyboard: false, looping: false, mode: 'alignment_solo' },
-        tracks: [{ title: 'A', sources: [{ src: 'a.mp3' }] }],
+        tracks: [{ title: 'A', sources: [{ src: 'a.mp3' }], alignment: { column: 't1_sec' } }],
         alignment: {
             csv: 'data/alignment.csv',
-            mappings: [{ trackIndex: 0, column: 't1_sec' }],
         },
     });
 
@@ -1170,10 +1169,10 @@ test('alignment_solo mode requires onlyradiosolo', async () => {
     controller.destroy();
 });
 
-test('alignment_solo mode requires alignment config and full mapping coverage', async () => {
+test('alignment_solo mode requires alignment config and complete per-track column coverage', async () => {
     const controllerMissingAlignment = createController({
         features: { waveform: false, keyboard: false, looping: false, mode: 'alignment_solo', onlyradiosolo: true },
-        tracks: [{ title: 'A', sources: [{ src: 'a.mp3' }] }],
+        tracks: [{ title: 'A', sources: [{ src: 'a.mp3' }], alignment: { column: 't1_sec' } }],
     });
 
     let missingAlignmentError = '';
@@ -1186,10 +1185,10 @@ test('alignment_solo mode requires alignment config and full mapping coverage', 
     assert.match(missingAlignmentError, /init\.alignment/);
     controllerMissingAlignment.destroy();
 
-    const controllerMissingMapping = createController({
+    const controllerMissingTrackColumn = createController({
         features: { waveform: false, keyboard: false, looping: false, mode: 'alignment_solo', onlyradiosolo: true },
         tracks: [
-            { title: 'A', sources: [{ src: 'a.mp3' }] },
+            { title: 'A', sources: [{ src: 'a.mp3' }], alignment: { column: 't1_sec' } },
             { title: 'B', sources: [{ src: 'b.mp3' }] },
         ],
         alignment: {
@@ -1198,15 +1197,290 @@ test('alignment_solo mode requires alignment config and full mapping coverage', 
         },
     });
 
-    let missingMappingError = '';
-    controllerMissingMapping.on('error', function(payload) {
-        missingMappingError = payload.message;
+    let missingTrackColumnError = '';
+    controllerMissingTrackColumn.on('error', function(payload) {
+        missingTrackColumnError = payload.message;
     });
 
-    await controllerMissingMapping.load();
-    assert.equal(controllerMissingMapping.getState().isLoaded, false);
-    assert.match(missingMappingError, /exactly one mapping per track|cover all tracks/);
-    controllerMissingMapping.destroy();
+    await controllerMissingTrackColumn.load();
+    assert.equal(controllerMissingTrackColumn.getState().isLoaded, false);
+    assert.match(missingTrackColumnError, /every track requires alignment\.column|Missing trackIndex/);
+    controllerMissingTrackColumn.destroy();
+});
+
+test('alignment_solo falls back to legacy alignment.mappings when per-track columns are absent', async () => {
+    setMockTextResponse('data/alignment.csv', [
+        't1_sec,t2_sec',
+        '0,0',
+        '5,2.5',
+    ].join('\n'));
+
+    const controller = createController({
+        features: { waveform: false, keyboard: false, looping: false, mode: 'alignment_solo', onlyradiosolo: true },
+        tracks: [
+            { title: 'A', sources: [{ src: 'a.mp3' }] },
+            { title: 'B', sources: [{ src: 'b.mp3' }] },
+        ],
+        alignment: {
+            csv: 'data/alignment.csv',
+            mappings: [
+                { trackIndex: 0, column: 't1_sec' },
+                { trackIndex: 1, column: 't2_sec' },
+            ],
+        },
+    });
+
+    await controller.load();
+    assert.equal(controller.getState().isLoaded, true);
+    controller.destroy();
+});
+
+test('alignment_solo waveform maps track timeline to reference axis', async () => {
+    setMockTextResponse('data/alignment.csv', [
+        't1_sec,t2_sec',
+        '0,0',
+        '5,2.5',
+        '10,5',
+    ].join('\n'));
+
+    const originalGetContext = global.HTMLCanvasElement.prototype.getContext;
+    const originalCalculateMixedWaveform = WaveformEngine.prototype.calculateMixedWaveform;
+    const fakeContext = {
+        clearRect() {},
+        fillRect() {},
+        fillStyle: '#000',
+        globalAlpha: 1,
+    };
+
+    let capturedProjector;
+    let capturedRuntimes;
+
+    global.HTMLCanvasElement.prototype.getContext = function() {
+        return fakeContext;
+    };
+
+    WaveformEngine.prototype.calculateMixedWaveform = function(
+        runtimes,
+        peakCount,
+        barWidth,
+        timelineDuration,
+        trackTimelineProjector
+    ) {
+        capturedRuntimes = runtimes;
+        capturedProjector = trackTimelineProjector;
+        return originalCalculateMixedWaveform.call(this, runtimes, peakCount, barWidth, timelineDuration, trackTimelineProjector);
+    };
+
+    let controller;
+    try {
+        controller = createController({
+            features: {
+                waveform: true,
+                keyboard: false,
+                looping: false,
+                mode: 'alignment_solo',
+                onlyradiosolo: true,
+            },
+            tracks: [
+                { title: 'A', sources: [{ src: 'a.mp3' }], alignment: { column: 't1_sec' } },
+                { title: 'B', sources: [{ src: 'b.mp3' }], alignment: { column: 't2_sec' } },
+            ],
+            ui: [{ type: 'waveform', width: 400, height: 80, waveformSource: 1 }],
+            alignment: {
+                csv: 'data/alignment.csv',
+                outOfRange: 'clamp',
+            },
+        });
+
+        await controller.load();
+        assert.equal(controller.getState().isLoaded, true);
+        assert.equal(typeof capturedProjector, 'function');
+        assert.ok(Array.isArray(capturedRuntimes));
+        assert.equal(capturedRuntimes.length, 1);
+        assert.equal(capturedRuntimes[0].definition.title, 'B');
+
+        const mapped = capturedProjector(capturedRuntimes[0], 2.5);
+        assert.ok(Math.abs(mapped - 5) < 1e-6);
+    } finally {
+        if (controller) {
+            controller.destroy();
+        }
+        WaveformEngine.prototype.calculateMixedWaveform = originalCalculateMixedWaveform;
+        global.HTMLCanvasElement.prototype.getContext = originalGetContext;
+    }
+});
+
+test('alignment sync switch renders only for tracks with synchronized sources in alignment_solo', () => {
+    const controllerAlignmentSolo = createController({
+        features: {
+            waveform: false,
+            keyboard: false,
+            looping: false,
+            mode: 'alignment_solo',
+            onlyradiosolo: true,
+        },
+        tracks: [
+            { title: 'A', sources: [{ src: 'a.mp3' }], alignment: { column: 't1_sec' } },
+            {
+                title: 'B',
+                sources: [{ src: 'b.mp3' }],
+                alignment: { column: 't2_sec', sources: [{ src: 'b_synced.mp3' }] },
+            },
+        ],
+        alignment: { csv: 'data/alignment.csv' },
+    });
+
+    const rowOneSync = document.querySelector('.track_list li.track:nth-child(1) .alignment-sync');
+    const rowTwoSync = document.querySelector('.track_list li.track:nth-child(2) .alignment-sync');
+    assert.equal(rowOneSync, null);
+    assert.ok(rowTwoSync);
+    controllerAlignmentSolo.destroy();
+
+    const controllerDefault = createController({
+        features: { waveform: false, keyboard: false, looping: false, mode: 'default' },
+        tracks: [
+            {
+                title: 'A',
+                sources: [{ src: 'a.mp3' }],
+                alignment: { column: 't1_sec', sources: [{ src: 'a_synced.mp3' }] },
+            },
+        ],
+    });
+
+    assert.equal(document.querySelector('.track_list .alignment-sync'), null);
+    controllerDefault.destroy();
+});
+
+test('alignment_solo sync toggle restarts playback at same public position with synchronized source timeline', async () => {
+    setMockTextResponse('data/alignment.csv', [
+        't1_sec,t2_sec',
+        '0,0',
+        '10,5',
+    ].join('\n'));
+
+    const controller = createController({
+        features: {
+            waveform: false,
+            keyboard: false,
+            looping: false,
+            mode: 'alignment_solo',
+            onlyradiosolo: true,
+        },
+        tracks: [
+            { title: 'A', sources: [{ src: 'a.mp3' }], alignment: { column: 't1_sec' } },
+            {
+                title: 'B',
+                sources: [{ src: 'b.mp3' }],
+                alignment: { column: 't2_sec', sources: [{ src: 'b_synced.mp3' }] },
+            },
+        ],
+        alignment: {
+            csv: 'data/alignment.csv',
+            outOfRange: 'clamp',
+        },
+    });
+
+    await controller.load();
+    controller.toggleSolo(1);
+    controller.seekTo(4);
+    controller.play();
+
+    const unsyncedStart = mockSourceInstances.slice(-2);
+    assert.equal(unsyncedStart[1].startArgs[1], 2);
+
+    const syncToggle = document.querySelector('.track_list li.track:nth-child(2) .alignment-sync');
+    assert.ok(syncToggle);
+    assert.equal(syncToggle.classList.contains('checked'), false);
+
+    dispatchMouse(syncToggle, 'mousedown', { button: 0 });
+
+    const syncedStart = mockSourceInstances.slice(-2);
+    assert.equal(syncToggle.classList.contains('checked'), true);
+    assert.equal(syncedStart[1].startArgs[1], 4);
+    assert.ok(Math.abs(controller.getState().state.position - 4) < 1e-6);
+
+    controller.destroy();
+});
+
+test('alignment_solo waveform projector bypasses mapping when synchronized source is active', async () => {
+    setMockTextResponse('data/alignment.csv', [
+        't1_sec,t2_sec',
+        '0,0',
+        '5,2.5',
+        '10,5',
+    ].join('\n'));
+
+    const originalGetContext = global.HTMLCanvasElement.prototype.getContext;
+    const originalCalculateMixedWaveform = WaveformEngine.prototype.calculateMixedWaveform;
+    const fakeContext = {
+        clearRect() {},
+        fillRect() {},
+        fillStyle: '#000',
+        globalAlpha: 1,
+    };
+
+    let capturedProjector;
+    let capturedRuntimes;
+
+    global.HTMLCanvasElement.prototype.getContext = function() {
+        return fakeContext;
+    };
+
+    WaveformEngine.prototype.calculateMixedWaveform = function(
+        runtimes,
+        peakCount,
+        barWidth,
+        timelineDuration,
+        trackTimelineProjector
+    ) {
+        capturedRuntimes = runtimes;
+        capturedProjector = trackTimelineProjector;
+        return originalCalculateMixedWaveform.call(this, runtimes, peakCount, barWidth, timelineDuration, trackTimelineProjector);
+    };
+
+    let controller;
+    try {
+        controller = createController({
+            features: {
+                waveform: true,
+                keyboard: false,
+                looping: false,
+                mode: 'alignment_solo',
+                onlyradiosolo: true,
+            },
+            tracks: [
+                { title: 'A', sources: [{ src: 'a.mp3' }], alignment: { column: 't1_sec' } },
+                {
+                    title: 'B',
+                    sources: [{ src: 'b.mp3' }],
+                    alignment: { column: 't2_sec', sources: [{ src: 'b_synced.mp3' }] },
+                },
+            ],
+            ui: [{ type: 'waveform', width: 400, height: 80, waveformSource: 1 }],
+            alignment: { csv: 'data/alignment.csv' },
+        });
+
+        await controller.load();
+        assert.equal(controller.getState().isLoaded, true);
+        assert.equal(typeof capturedProjector, 'function');
+        assert.ok(Array.isArray(capturedRuntimes));
+
+        const unsyncedMapped = capturedProjector(capturedRuntimes[0], 2.5);
+        assert.ok(Math.abs(unsyncedMapped - 5) < 1e-6);
+
+        const syncToggle = document.querySelector('.track_list li.track:nth-child(2) .alignment-sync');
+        assert.ok(syncToggle);
+        dispatchMouse(syncToggle, 'mousedown', { button: 0 });
+
+        const syncedMapped = capturedProjector(capturedRuntimes[0], 2.5);
+        assert.ok(Math.abs(syncedMapped - 2.5) < 1e-6);
+    } finally {
+        if (controller) {
+            controller.destroy();
+        }
+        WaveformEngine.prototype.calculateMixedWaveform = originalCalculateMixedWaveform;
+        global.HTMLCanvasElement.prototype.getContext = originalGetContext;
+    }
 });
 
 test('alignment_solo track switch remaps reference position with clamp out-of-range', async () => {
@@ -1225,15 +1499,11 @@ test('alignment_solo track switch remaps reference position with clamp out-of-ra
             onlyradiosolo: true,
         },
         tracks: [
-            { title: 'A', sources: [{ src: 'a.mp3' }] },
-            { title: 'B', sources: [{ src: 'b.mp3' }] },
+            { title: 'A', sources: [{ src: 'a.mp3' }], alignment: { column: 't1_sec' } },
+            { title: 'B', sources: [{ src: 'b.mp3' }], alignment: { column: 't2_sec' } },
         ],
         alignment: {
             csv: 'data/alignment.csv',
-            mappings: [
-                { trackIndex: 0, column: 't1_sec' },
-                { trackIndex: 1, column: 't2_sec' },
-            ],
             outOfRange: 'clamp',
         },
     });
@@ -1267,15 +1537,11 @@ test('alignment_solo outOfRange linear preserves switched reference position', a
             onlyradiosolo: true,
         },
         tracks: [
-            { title: 'A', sources: [{ src: 'a.mp3' }] },
-            { title: 'B', sources: [{ src: 'b.mp3' }] },
+            { title: 'A', sources: [{ src: 'a.mp3' }], alignment: { column: 't1_sec' } },
+            { title: 'B', sources: [{ src: 'b.mp3' }], alignment: { column: 't2_sec' } },
         ],
         alignment: {
             csv: 'data/alignment.csv',
-            mappings: [
-                { trackIndex: 0, column: 't1_sec' },
-                { trackIndex: 1, column: 't2_sec' },
-            ],
             outOfRange: 'linear',
         },
     });
@@ -1287,6 +1553,57 @@ test('alignment_solo outOfRange linear preserves switched reference position', a
 
     assert.ok(Math.abs(controller.getState().state.position - 8) < 1e-6);
     controller.destroy();
+});
+
+test('alignment_solo fails load when synchronized sources are configured but unavailable', async () => {
+    setMockTextResponse('data/alignment.csv', [
+        't1_sec',
+        '0',
+        '5',
+    ].join('\n'));
+
+    const originalCanPlayType = dom.window.HTMLMediaElement.prototype.canPlayType;
+    dom.window.HTMLMediaElement.prototype.canPlayType = function(mime) {
+        if (String(mime || '').includes('audio/not-real')) {
+            return '';
+        }
+        return 'probably';
+    };
+
+    const controller = createController({
+        features: {
+            waveform: false,
+            keyboard: false,
+            looping: false,
+            mode: 'alignment_solo',
+            onlyradiosolo: true,
+        },
+        tracks: [
+            {
+                title: 'A',
+                sources: [{ src: 'a.mp3' }],
+                alignment: {
+                    column: 't1_sec',
+                    sources: [{ src: 'a_synced.invalid', type: 'audio/not-real' }],
+                },
+            },
+        ],
+        alignment: { csv: 'data/alignment.csv' },
+    });
+
+    let errorMessage = '';
+    controller.on('error', function(payload) {
+        errorMessage = payload.message;
+    });
+
+    try {
+        await controller.load();
+        assert.equal(controller.getState().isLoaded, false);
+        assert.match(errorMessage, /audio files failed to load/i);
+    } finally {
+        dom.window.HTMLMediaElement.prototype.canPlayType = originalCanPlayType;
+        controller.destroy();
+    }
 });
 
 test('utility exports remain available as named exports', () => {

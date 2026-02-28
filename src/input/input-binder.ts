@@ -16,6 +16,7 @@ export interface InputController {
     onSeekEnd(event: ControllerPointerEvent): void;
     onMute(event: ControllerPointerEvent): void;
     onSolo(event: ControllerPointerEvent): void;
+    onAlignmentSync(event: ControllerPointerEvent): void;
     onVolume(event: ControllerPointerEvent): void;
     onPreset(event: ControllerPointerEvent): void;
     onPresetScroll(event: ControllerPointerEvent): void;
@@ -197,6 +198,13 @@ export class InputBinder {
         });
         this.addDelegatedListener('mousedown', '.solo', (event) => {
             this.controller.onSolo(event);
+        });
+
+        this.addDelegatedListener('touchstart', '.alignment-sync', (event) => {
+            this.controller.onAlignmentSync(event);
+        });
+        this.addDelegatedListener('mousedown', '.alignment-sync', (event) => {
+            this.controller.onAlignmentSync(event);
         });
 
         if (this.features.globalvolume) {

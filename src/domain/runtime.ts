@@ -13,6 +13,13 @@ export function createTrackRuntime(definition: TrackDefinition, index: number): 
         timing: null,
         activeSource: null,
         sourceIndex: -1,
+        activeVariant: 'base',
+        baseSource: {
+            buffer: null,
+            timing: null,
+            sourceIndex: -1,
+        },
+        syncedSource: null,
         successful: false,
         errored: false,
         waveformCache: new Map<string, Float32Array>(),

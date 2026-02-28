@@ -1,6 +1,8 @@
 import {
     TrackRuntime,
+    TrackSourceDefinition,
     TrackSwitchFeatures,
+    TrackTiming,
 } from '../domain/types';
 import { calculateTrackTiming, inferSourceMimeType } from '../shared/audio';
 import { getAudioContext } from './audio-context';
@@ -26,6 +28,18 @@ const MIME_TYPE_TABLE: Record<string, string> = {
 
 interface LoadTrackResult {
     success: boolean;
+    error: string | null;
+}
+
+interface LoadedSourceSelection {
+    buffer: AudioBuffer;
+    timing: TrackTiming;
+    sourceIndex: number;
+}
+
+interface LoadSourceSelectionResult {
+    success: boolean;
+    selection: LoadedSourceSelection | null;
     error: string | null;
 }
 
@@ -225,9 +239,69 @@ export class AudioEngine {
             };
         }
 
-        const availableSources = runtime.definition.sources || [];
-        for (let sourceIndex = 0; sourceIndex < availableSources.length; sourceIndex += 1) {
-            const source = availableSources[sourceIndex];
+        if (!runtime.gainNode) {
+            runtime.gainNode = this.context.createGain();
+            runtime.gainNode.connect(this.gainNodeMaster);
+        }
+
+        const baseSelectionResult = await this.loadSourceSelection(runtime.definition.sources || [], audioElement);
+        if (!baseSelectionResult.success || !baseSelectionResult.selection) {
+            return {
+                success: false,
+                error: baseSelectionResult.error || 'No playable source found',
+            };
+        }
+
+        runtime.baseSource = {
+            buffer: baseSelectionResult.selection.buffer,
+            timing: baseSelectionResult.selection.timing,
+            sourceIndex: baseSelectionResult.selection.sourceIndex,
+        };
+
+        runtime.activeVariant = 'base';
+        runtime.buffer = runtime.baseSource.buffer;
+        runtime.timing = runtime.baseSource.timing;
+        runtime.sourceIndex = runtime.baseSource.sourceIndex;
+
+        const alignmentSources = runtime.definition.alignment?.sources;
+        const shouldLoadSyncedSources = this.features.mode === 'alignment_solo'
+            && Array.isArray(alignmentSources)
+            && alignmentSources.length > 0;
+
+        if (shouldLoadSyncedSources) {
+            const syncedSelectionResult = await this.loadSourceSelection(alignmentSources || [], audioElement);
+            if (!syncedSelectionResult.success || !syncedSelectionResult.selection) {
+                return {
+                    success: false,
+                    error: syncedSelectionResult.error || 'No playable synchronized source found',
+                };
+            }
+
+            runtime.syncedSource = {
+                buffer: syncedSelectionResult.selection.buffer,
+                timing: syncedSelectionResult.selection.timing,
+                sourceIndex: syncedSelectionResult.selection.sourceIndex,
+            };
+        } else {
+            runtime.syncedSource = null;
+        }
+
+        runtime.waveformCache.clear();
+        runtime.errored = false;
+        runtime.successful = true;
+
+        return {
+            success: true,
+            error: null,
+        };
+    }
+
+    private async loadSourceSelection(
+        sources: TrackSourceDefinition[],
+        audioElement: HTMLAudioElement
+    ): Promise<LoadSourceSelectionResult> {
+        for (let sourceIndex = 0; sourceIndex < sources.length; sourceIndex += 1) {
+            const source = sources[sourceIndex];
             if (!source || !source.src) {
                 continue;
             }
@@ -242,21 +316,13 @@ export class AudioEngine {
                 const arrayBuffer = await this.requestArrayBuffer(source.src);
                 const decodedBuffer = await this.decodeAudioData(arrayBuffer);
 
-                runtime.buffer = decodedBuffer;
-                runtime.sourceIndex = sourceIndex;
-                runtime.timing = calculateTrackTiming(source, decodedBuffer.duration);
-                runtime.errored = false;
-                runtime.successful = true;
-
-                if (!runtime.gainNode) {
-                    runtime.gainNode = this.context.createGain();
-                    runtime.gainNode.connect(this.gainNodeMaster);
-                }
-
-                runtime.waveformCache.clear();
-
                 return {
                     success: true,
+                    selection: {
+                        buffer: decodedBuffer,
+                        timing: calculateTrackTiming(source, decodedBuffer.duration),
+                        sourceIndex: sourceIndex,
+                    },
                     error: null,
                 };
             } catch (_error) {
@@ -266,6 +332,7 @@ export class AudioEngine {
 
         return {
             success: false,
+            selection: null,
             error: 'No playable source found',
         };
     }

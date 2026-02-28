@@ -3,6 +3,7 @@ import {
     LoopMarker,
     PlayerState,
     TrackAlignmentConfig,
+    TrackSourceVariant,
     TrackRuntime,
     TrackSwitchConfig,
     TrackSwitchController,
@@ -17,7 +18,7 @@ import { normalizeFeatures } from '../domain/options';
 import { createInitialPlayerState, playerStateReducer, PlayerAction } from '../domain/state';
 import { createTrackRuntime } from '../domain/runtime';
 import { AudioEngine } from '../engine/audio-engine';
-import { WaveformEngine } from '../engine/waveform-engine';
+import { TrackTimelineProjector, WaveformEngine } from '../engine/waveform-engine';
 import { ViewRenderer } from '../ui/view-renderer';
 import { InputBinder, InputController } from '../input/input-binder';
 import { eventTargetAsElement } from '../shared/dom';
@@ -186,6 +187,14 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             runtime.gainNode = null;
             runtime.timing = null;
             runtime.activeSource = null;
+            runtime.sourceIndex = -1;
+            runtime.activeVariant = 'base';
+            runtime.baseSource = {
+                buffer: null,
+                timing: null,
+                sourceIndex: -1,
+            };
+            runtime.syncedSource = null;
             runtime.waveformCache.clear();
         });
 
@@ -233,7 +242,12 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             longestDuration: this.longestDuration,
         });
 
-        this.renderer.renderWaveforms(this.waveformEngine, this.runtimes, this.longestDuration);
+        this.renderer.renderWaveforms(
+            this.waveformEngine,
+            this.runtimes,
+            this.longestDuration,
+            this.getWaveformTimelineProjector()
+        );
     }
 
     destroy(): void {
@@ -871,6 +885,19 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         }
     }
 
+    onAlignmentSync(event: ControllerPointerEvent): void {
+        if (!isPrimaryInput(event)) {
+            return;
+        }
+
+        event.preventDefault();
+        const index = this.trackIndexFromTarget(event.target ?? null);
+        if (index >= 0) {
+            this.toggleAlignmentSync(index);
+        }
+        event.stopPropagation();
+    }
+
     onVolume(event: ControllerPointerEvent): void {
         const target = eventTargetAsElement(event.target ?? null);
         if (!(target instanceof HTMLInputElement)) {
@@ -1105,7 +1132,12 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         }
 
         this.resizeDebounceTimer = setTimeout(() => {
-            this.renderer.renderWaveforms(this.waveformEngine, this.runtimes, this.longestDuration);
+            this.renderer.renderWaveforms(
+                this.waveformEngine,
+                this.runtimes,
+                this.longestDuration,
+                this.getWaveformTimelineProjector()
+            );
         }, 300);
     }
 
@@ -1118,11 +1150,63 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         return Array.from(track.parentElement.children).indexOf(track);
     }
 
+    private toggleAlignmentSync(trackIndex: number): void {
+        if (this.features.mode !== 'alignment_solo') {
+            return;
+        }
+
+        const runtime = this.runtimes[trackIndex];
+        if (!runtime || !runtime.syncedSource || !runtime.syncedSource.buffer) {
+            return;
+        }
+
+        const nextVariant: TrackSourceVariant = runtime.activeVariant === 'synced' ? 'base' : 'synced';
+        if (!this.setRuntimeActiveVariant(runtime, nextVariant)) {
+            return;
+        }
+
+        this.applyTrackProperties();
+
+        if (!this.state.playing || this.getActiveSoloTrackIndex() !== trackIndex) {
+            return;
+        }
+
+        const referencePosition = clamp(this.currentPlaybackReferencePosition(), 0, this.longestDuration);
+        this.stopAudio();
+        this.dispatch({ type: 'set-position', position: referencePosition });
+        this.startAudio(referencePosition);
+        this.updateMainControls();
+    }
+
+    private setRuntimeActiveVariant(runtime: TrackRuntime, variant: TrackSourceVariant): boolean {
+        const source = variant === 'synced' ? runtime.syncedSource : runtime.baseSource;
+        if (!source || !source.buffer) {
+            return false;
+        }
+
+        runtime.activeVariant = variant;
+        runtime.buffer = source.buffer;
+        runtime.timing = source.timing;
+        runtime.sourceIndex = source.sourceIndex;
+        runtime.waveformCache.clear();
+        return true;
+    }
+
+    private shouldBypassAlignmentMapping(trackIndex: number): boolean {
+        const runtime = this.runtimes[trackIndex];
+        return !!runtime && runtime.activeVariant === 'synced' && !!runtime.syncedSource;
+    }
+
     private applyTrackProperties(): void {
         this.renderer.updateTrackControls(this.runtimes);
         this.audioEngine.applyTrackStateGains(this.runtimes);
         this.renderer.switchPosterImage(this.runtimes);
-        this.renderer.renderWaveforms(this.waveformEngine, this.runtimes, this.longestDuration);
+        this.renderer.renderWaveforms(
+            this.waveformEngine,
+            this.runtimes,
+            this.longestDuration,
+            this.getWaveformTimelineProjector()
+        );
 
         this.runtimes.forEach((runtime, index) => {
             this.emit('trackState', {
@@ -1345,7 +1429,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             return 'Alignment configuration requires a non-empty alignment.csv URL.';
         }
 
-        const mappingByTrack = this.validateAndBuildAlignmentMappings(this.alignmentConfig);
+        const mappingByTrack = this.resolveAlignmentMappingsByTrack(this.alignmentConfig);
         if (typeof mappingByTrack === 'string') {
             return mappingByTrack;
         }
@@ -1393,7 +1477,33 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         };
     }
 
-    private validateAndBuildAlignmentMappings(config: TrackAlignmentConfig): Map<number, string> | string {
+    private resolveAlignmentMappingsByTrack(config: TrackAlignmentConfig): Map<number, string> | string {
+        const hasAnyTrackColumn = this.runtimes.some(function(runtime) {
+            return runtime.definition.alignment
+                && Object.prototype.hasOwnProperty.call(runtime.definition.alignment, 'column');
+        });
+
+        if (!hasAnyTrackColumn) {
+            return this.validateAndBuildLegacyAlignmentMappings(config);
+        }
+
+        const mappingByTrack = new Map<number, string>();
+
+        for (let index = 0; index < this.runtimes.length; index += 1) {
+            const rawColumn = this.runtimes[index].definition.alignment?.column;
+            const column = typeof rawColumn === 'string' ? rawColumn.trim() : '';
+            if (!column) {
+                return 'Per-track alignment columns are enabled, so every track requires alignment.column. Missing trackIndex '
+                    + index + '.';
+            }
+
+            mappingByTrack.set(index, column);
+        }
+
+        return mappingByTrack;
+    }
+
+    private validateAndBuildLegacyAlignmentMappings(config: TrackAlignmentConfig): Map<number, string> | string {
         if (!Array.isArray(config.mappings) || config.mappings.length === 0) {
             return 'Alignment configuration requires alignment.mappings with one entry per track.';
         }
@@ -1457,8 +1567,47 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         return this.trackToReferenceTime(this.alignmentPlaybackTrackIndex, rawPlaybackPosition);
     }
 
+    private getWaveformTimelineProjector(): TrackTimelineProjector | undefined {
+        if (this.features.mode !== 'alignment_solo' || !this.alignmentContext) {
+            return undefined;
+        }
+
+        const trackIndexByRuntime = new Map<TrackRuntime, number>();
+        const trackIndexById = new Map<string, number>();
+        const trackIndexByDefinition = new Map<object, number>();
+
+        this.runtimes.forEach(function(runtime, index) {
+            trackIndexByRuntime.set(runtime, index);
+            trackIndexById.set(runtime.id, index);
+            trackIndexByDefinition.set(runtime.definition, index);
+        });
+
+        return (runtime: TrackRuntime, trackTimelineTime: number): number => {
+            const directIndex = trackIndexByRuntime.get(runtime);
+            if (directIndex !== undefined) {
+                return this.trackToReferenceTime(directIndex, trackTimelineTime);
+            }
+
+            const definitionIndex = trackIndexByDefinition.get(runtime.definition);
+            if (definitionIndex !== undefined) {
+                return this.trackToReferenceTime(definitionIndex, trackTimelineTime);
+            }
+
+            const idIndex = trackIndexById.get(runtime.id);
+            if (idIndex !== undefined) {
+                return this.trackToReferenceTime(idIndex, trackTimelineTime);
+            }
+
+            return trackTimelineTime;
+        };
+    }
+
     private referenceToTrackTime(trackIndex: number, referenceTime: number): number {
         if (!this.alignmentContext) {
+            return referenceTime;
+        }
+
+        if (this.shouldBypassAlignmentMapping(trackIndex)) {
             return referenceTime;
         }
 
@@ -1472,6 +1621,10 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
     private trackToReferenceTime(trackIndex: number, trackTime: number): number {
         if (!this.alignmentContext) {
+            return trackTime;
+        }
+
+        if (this.shouldBypassAlignmentMapping(trackIndex)) {
             return trackTime;
         }
 

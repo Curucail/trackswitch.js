@@ -37,6 +37,9 @@ TrackSwitch.createTrackSwitch(rootElement, {
     {
       title: 'Drums',
       sources: [{ src: 'drums.mp3' }],
+      alignment: {
+        column: 't1_sec',
+      },
     },
   ],
   presetNames: ['All Tracks'],
@@ -46,10 +49,6 @@ TrackSwitch.createTrackSwitch(rootElement, {
   ],
   alignment: {
     csv: 'dtw_alignment.csv',
-    mappings: [
-      { trackIndex: 0, column: 't1_sec' },
-      { trackIndex: 1, column: 't2_sec' },
-    ],
     outOfRange: 'clamp',
   },
   features: {
@@ -74,6 +73,7 @@ Track fields:
 - `style?: string`
 - `presets?: number[]`
 - `sources: TrackSourceDefinition[]` (required)
+- `alignment?: { column?: string; sources?: TrackSourceDefinition[] }`
 
 Source fields:
 
@@ -83,6 +83,7 @@ Source fields:
 - `endOffsetMs?: number` (positive trims end, negative pads end)
 
 Note: when a track has multiple `sources`, the first playable source is used.
+In `alignment_solo`, `alignment.sources` can provide a synchronized alternative source set for that track.
 
 ## Presets
 
@@ -175,14 +176,23 @@ Normalization rules:
 Alignment config lives at `init.alignment`.
 
 - `csv: string` - URL/path to a numeric CSV file with header row
-- `mappings: Array<{ trackIndex: number; column: string }>` - must map every track exactly once
 - `outOfRange?: 'clamp' | 'linear'` - defaults to `clamp`
+
+Per-track alignment fields live on `tracks[*].alignment`:
+
+- `column: string` - CSV column name for that track timeline
+- `sources?: TrackSourceDefinition[]` - optional synchronized source set for the per-track sync toggle
+
+Legacy fallback:
+
+- `alignment.mappings` is still accepted when no track defines `alignment.column`
 
 `alignment_solo` requirements:
 
 - `features.mode` must be `alignment_solo`
 - `features.onlyradiosolo` must be `true`
 - `alignment` must be present and valid
+- preferred mapping style: every track defines `tracks[*].alignment.column`
 
 `alignment_multi` requirements:
 
@@ -194,6 +204,7 @@ Behavior:
 - `alignment_solo` uses the longest track as the reference axis
 - Public timing (`seekTo`, seekbar, timer, `position` event) stays on reference time in `alignment_solo`
 - `alignment_solo`: switching active solo track remaps playback position via CSV and restarts from the mapped position
+- `alignment_solo`: if a track sync toggle is enabled, playback + waveform switch to that track's synchronized source and timeline mapping is bypassed for that track
 - `alignment_multi`: playback is the same as `default`; no CSV-driven remapping, time stretching, or pitch shifting is applied
 
 Cross-player behavior:

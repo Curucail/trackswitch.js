@@ -2,7 +2,7 @@ import { TrackRuntime, TrackSwitchFeatures, TrackSwitchUiState } from '../domain
 import { escapeHtml, sanitizeInlineStyle } from '../shared/dom';
 import { formatSecondsToHHMMSSmmm } from '../shared/format';
 import { clampPercent } from '../shared/math';
-import { WaveformEngine } from '../engine/waveform-engine';
+import { TrackTimelineProjector, WaveformEngine } from '../engine/waveform-engine';
 
 function buildSeekWrap(leftPercent: number, rightPercent: number): string {
     return '<div class="seekwrap" style="left: ' + leftPercent + '%; right: ' + rightPercent + '%;">'
@@ -192,11 +192,28 @@ export class ViewRenderer {
                 controls.appendChild(solo);
             }
 
+            if (this.shouldRenderAlignmentSync(runtime)) {
+                const alignmentSync = document.createElement('li');
+                alignmentSync.className = 'alignment-sync button';
+                alignmentSync.title = 'Use synchronized source';
+                alignmentSync.textContent = 'Sync';
+                controls.appendChild(alignmentSync);
+            }
+
             track.appendChild(controls);
             list.appendChild(track);
         });
 
         this.root.appendChild(list);
+    }
+
+    private shouldRenderAlignmentSync(runtime: TrackRuntime): boolean {
+        if (this.features.mode !== 'alignment_solo') {
+            return false;
+        }
+
+        const sources = runtime.definition.alignment?.sources;
+        return Array.isArray(sources) && sources.length > 0;
     }
 
     private wrapSeekableImages(): void {
@@ -309,7 +326,12 @@ export class ViewRenderer {
         }
     }
 
-    renderWaveforms(waveformEngine: WaveformEngine, runtimes: TrackRuntime[], timelineDuration: number): void {
+    renderWaveforms(
+        waveformEngine: WaveformEngine,
+        runtimes: TrackRuntime[],
+        timelineDuration: number,
+        trackTimelineProjector?: TrackTimelineProjector
+    ): void {
         if (!this.features.waveform || this.waveformCanvases.length === 0) {
             return;
         }
@@ -337,7 +359,13 @@ export class ViewRenderer {
             const peakCount = Math.max(1, Math.floor(canvas.width / barWidth));
             const waveformSource = this.waveformCanvasSources[i] ?? 'audible';
             const sourceRuntimes = this.getWaveformSourceRuntimes(runtimes, waveformSource);
-            const mixed = waveformEngine.calculateMixedWaveform(sourceRuntimes, peakCount, barWidth, safeTimelineDuration);
+            const mixed = waveformEngine.calculateMixedWaveform(
+                sourceRuntimes,
+                peakCount,
+                barWidth,
+                safeTimelineDuration,
+                trackTimelineProjector
+            );
 
             if (!mixed) {
                 waveformEngine.drawPlaceholder(canvas, context, barWidth, 0.3);
@@ -461,6 +489,7 @@ export class ViewRenderer {
 
             const mute = row.querySelector('.mute');
             const solo = row.querySelector('.solo');
+            const alignmentSync = row.querySelector('.alignment-sync');
 
             if (mute) {
                 mute.classList.toggle('checked', runtime.state.mute);
@@ -468,6 +497,10 @@ export class ViewRenderer {
 
             if (solo) {
                 solo.classList.toggle('checked', runtime.state.solo);
+            }
+
+            if (alignmentSync) {
+                alignmentSync.classList.toggle('checked', runtime.activeVariant === 'synced');
             }
         });
     }

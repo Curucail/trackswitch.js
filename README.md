@@ -116,15 +116,21 @@ Alignment Modes
 - `features.onlyradiosolo: true`
 - `alignment` config with:
   - `csv: string`
-  - `mappings: Array<{ trackIndex: number; column: string }>` (must cover all tracks)
   - `outOfRange?: 'clamp' | 'linear'` (default `clamp`)
+- per-track alignment columns on `tracks[*].alignment.column`
+  - optional `tracks[*].alignment.sources` enables a per-track synchronized-source switch in the UI
 
 Alignment mode behavior:
 
 - In `alignment_solo`, the longest track is used as the reference timeline axis
 - `seekTo`/seekbar/timer/`position` events stay on reference time in `alignment_solo`
 - `alignment_solo`: switching solo track remaps position and restarts playback on the newly active track timeline
+- `alignment_solo`: if a track's synchronized source switch is enabled, playback + waveform use the synchronized source and that track bypasses CSV timeline mapping
 - `alignment_multi`: playback behavior is the same as `default`; no alignment CSV mapping or in-engine stretching/pitch shifting is applied
+
+Legacy note:
+
+- `alignment.mappings` is still accepted when no track provides `alignment.column`
 
 Examples
 --------
