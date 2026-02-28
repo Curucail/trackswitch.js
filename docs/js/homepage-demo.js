@@ -1,6 +1,9 @@
 (function () {
   'use strict';
 
+  var MODE_DEFAULT = 'default';
+  var MODE_ALIGNMENT = 'alignment';
+
   function createBaseTracks(basePath) {
     return [
       {
@@ -26,6 +29,27 @@
         image: basePath + '/drums.png',
         presets: [0, 2, 3],
         sources: [{ src: basePath + '/drums.mp3' }],
+      },
+    ];
+  }
+
+  function createAlignmentTracks(basePath) {
+    return [
+      {
+        title: 'Schubert Winterreise - HU33',
+        sources: [{ src: basePath + '/Schubert_D911-03_HU33.wav' }],
+        alignment: {
+          column: 't1_sec',
+          sources: [{ src: basePath + '/Schubert_D911-03_HU33.wav' }],
+        },
+      },
+      {
+        title: 'Schubert Winterreise - SC06',
+        sources: [{ src: basePath + '/Schubert_D911-03_SC06.wav' }],
+        alignment: {
+          column: 't2_sec',
+          sources: [{ src: basePath + '/Schubert_D911-03_SC06_syncronized.wav' }],
+        },
       },
     ];
   }
@@ -61,6 +85,11 @@
     'radiosolo',
   ];
 
+  var MODE_DISABLED_CONTROLS = {
+    default: [],
+    alignment: ['customImage', 'presets', 'mute', 'solo', 'radiosolo'],
+  };
+
   var DEFAULT_MODEL = {
     looping: true,
     globalvolume: true,
@@ -77,6 +106,12 @@
     repeatEnabled: false,
   };
 
+  var ALIGNMENT_DEFAULT_MODEL = Object.assign({}, DEFAULT_MODEL, {
+    presets: false,
+    customImage: false,
+    radiosolo: false,
+  });
+
   document.addEventListener('DOMContentLoaded', function () {
     var SVG_NS = 'http://www.w3.org/2000/svg';
     var showcaseRoot = document.querySelector('.ts-showcase');
@@ -87,7 +122,11 @@
     var noteElement = document.getElementById('ts-showcase-note');
     var quickstartElement = document.getElementById('ts-dynamic-quickstart');
     var copyQuickstartButton = document.getElementById('ts-copy-quickstart');
-    var basePath;
+    var modeButtons = [];
+    var defaultBasePath;
+    var alignmentBasePath;
+    var currentMode = MODE_DEFAULT;
+    var modelByMode;
     var controller = null;
     var rebuildDebounceTimer = null;
     var rebuildToken = 0;
@@ -104,10 +143,57 @@
       return;
     }
 
-    basePath = playerRoot.getAttribute('data-ts-base') || 'assets/multitracks';
+    defaultBasePath =
+      playerRoot.getAttribute('data-ts-default-base') ||
+      playerRoot.getAttribute('data-ts-base') ||
+      'assets/multitracks';
+    alignmentBasePath =
+      playerRoot.getAttribute('data-ts-alignment-base') || 'assets/alignment';
+
+    modeButtons = Array.prototype.slice.call(
+      controlsRoot.querySelectorAll('[data-ts-mode-button]')
+    );
+
+    modelByMode = {
+      default: Object.assign({}, DEFAULT_MODEL),
+      alignment: Object.assign({}, ALIGNMENT_DEFAULT_MODEL),
+    };
+
+    function isAlignmentMode(mode) {
+      return mode === MODE_ALIGNMENT;
+    }
+
+    function getBasePathForMode(mode) {
+      return isAlignmentMode(mode) ? alignmentBasePath : defaultBasePath;
+    }
 
     function getControl(name) {
       return controlsRoot.querySelector('input[name="' + name + '"]');
+    }
+
+    function getModeDisabledControlNames(mode) {
+      return MODE_DISABLED_CONTROLS[mode] || [];
+    }
+
+    function isControlDisabled(name, model, mode) {
+      if (getModeDisabledControlNames(mode).indexOf(name) !== -1) {
+        return true;
+      }
+
+      if (name === 'presets' && Boolean(model.radiosolo)) {
+        return true;
+      }
+
+      return false;
+    }
+
+    function syncModeTabs() {
+      modeButtons.forEach(function (button) {
+        var modeName = button.getAttribute('data-ts-mode') || MODE_DEFAULT;
+        var isActive = modeName === currentMode;
+        button.classList.toggle('is-active', isActive);
+        button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      });
     }
 
     function setNote(messages) {
@@ -249,34 +335,53 @@
     function syncControlUi(model) {
       CONTROL_NAMES.forEach(function (name) {
         var control = getControl(name);
+        var row;
+        var disabled;
         if (!control) {
           return;
         }
-        control.checked = Boolean(model[name]);
-      });
 
-      var presetsControl = getControl('presets');
-      var presetsRow = presetsControl ? presetsControl.closest('.ts-control-row') : null;
-      if (presetsControl) {
-        presetsControl.disabled = Boolean(model.radiosolo);
-      }
-      if (presetsRow) {
-        presetsRow.classList.toggle('is-disabled', Boolean(model.radiosolo));
-      }
+        control.checked = Boolean(model[name]);
+        disabled = isControlDisabled(name, model, currentMode);
+        control.disabled = disabled;
+
+        row = control.closest('.ts-control-row');
+        if (row) {
+          row.classList.toggle('is-disabled', disabled);
+        }
+      });
     }
 
     function readControls() {
+      var fallbackModel = modelByMode[currentMode] || DEFAULT_MODEL;
       var model = {};
       CONTROL_NAMES.forEach(function (name) {
         var control = getControl(name);
-        model[name] = control ? control.checked : Boolean(DEFAULT_MODEL[name]);
+        model[name] = control ? control.checked : Boolean(fallbackModel[name]);
       });
       return model;
     }
 
-    function normalizeControlState(model) {
+    function normalizeControlState(model, mode) {
       var normalized = Object.assign({}, model);
       var notes = [];
+
+      if (isAlignmentMode(mode)) {
+        if (normalized.customImage) {
+          normalized.customImage = false;
+          notes.push('Custom cover image is unavailable in alignment mode.');
+        }
+
+        if (normalized.presets) {
+          normalized.presets = false;
+          notes.push('Presets are unavailable in alignment mode.');
+        }
+
+        if (normalized.radiosolo) {
+          normalized.radiosolo = false;
+          notes.push('Radio Solo is unavailable in alignment mode.');
+        }
+      }
 
       if (normalized.radiosolo && normalized.presets) {
         normalized.presets = false;
@@ -294,20 +399,21 @@
       };
     }
 
-    function normalizeAndSyncControls() {
-      var result = normalizeControlState(readControls());
-      syncControlUi(result.model);
-      setNote(result.notes);
-      renderQuickstartSnippet(result.model);
-      return result.model;
-    }
-
-    function renderQuickstartSnippet(model) {
-      var snippetLines;
-      var snippetText;
+    function renderQuickstartSnippet(model, mode) {
       if (!quickstartElement) {
         return;
       }
+
+      if (isAlignmentMode(mode)) {
+        renderAlignmentQuickstartSnippet(model);
+      } else {
+        renderDefaultQuickstartSnippet(model);
+      }
+    }
+
+    function renderDefaultQuickstartSnippet(model) {
+      var snippetLines;
+      var snippetText;
 
       snippetLines = [
         '<div id="player"></div>',
@@ -341,6 +447,7 @@
       snippetLines = snippetLines.concat([
         '    ],',
         '    features: {',
+        "      mode: 'default',",
         '      looping: ' + Boolean(model.looping) + ',',
         '      repeat: ' + Boolean(model.repeatEnabled) + ',',
         '      globalvolume: ' + Boolean(model.globalvolume) + ',',
@@ -363,6 +470,95 @@
       quickstartElement.innerHTML = highlightSnippet(snippetText);
       quickstartElement.className = 'language-html';
       quickstartText = snippetText;
+    }
+
+    function renderAlignmentQuickstartSnippet(model) {
+      var snippetLines;
+      var snippetText;
+
+      snippetLines = [
+        '<div id="player"></div>',
+        '',
+        '<script src="trackswitch.min.js"></script>',
+        '<script>',
+        "document.addEventListener('DOMContentLoaded', function () {",
+        "  TrackSwitch.createTrackSwitch(document.getElementById('player'), {",
+        '    tracks: [',
+        '      {',
+        "        title: 'SC06',",
+        "        sources: [{ src: 'Schubert_D911-03_SC06.wav' }],",
+        '        alignment: {',
+        "          column: 't1_sec',",
+        "          sources: [{ src: 'Schubert_D911-03_SC06_syncronized.wav' }],",
+        '        },',
+        '      },',
+        '      {',
+        "        title: 'HU33',",
+        "        sources: [{ src: 'Schubert_D911-03_HU33.wav' }],",
+        "        alignment: { column: 't2_sec' },",
+        '      },',
+        '    ],',
+        '    alignment: {',
+        "      csv: 'dtw_alignment.csv',",
+        "      outOfRange: 'clamp',",
+        '    },',
+        '    ui: [',
+      ];
+
+      if (model.waveform) {
+        snippetLines.push(
+          "      { type: 'waveform', width: 1200, height: 120, waveformSource: 0, style: 'margin: 12px auto 8px;' },"
+        );
+        snippetLines.push(
+          "      { type: 'waveform', width: 1200, height: 120, waveformSource: 1, style: 'margin: 8px auto 20px;' },"
+        );
+      }
+
+      snippetLines = snippetLines.concat([
+        '    ],',
+        '    features: {',
+        "      mode: 'alignment',",
+        '      looping: ' + Boolean(model.looping) + ',',
+        '      repeat: ' + Boolean(model.repeatEnabled) + ',',
+        '      globalvolume: ' + Boolean(model.globalvolume) + ',',
+        '      presets: ' + Boolean(model.presets) + ',',
+        '      seekbar: ' + Boolean(model.seekbar) + ',',
+        '      timer: ' + Boolean(model.timer) + ',',
+        '      keyboard: ' + Boolean(model.keyboard) + ',',
+        '      waveform: ' + Boolean(model.waveform) + ',',
+        '      mute: ' + Boolean(model.mute) + ',',
+        '      solo: ' + Boolean(model.solo) + ',',
+        '      tabview: ' + Boolean(model.tabview) + ',',
+        '      radiosolo: ' + Boolean(model.radiosolo) + ',',
+        '    },',
+        '  });',
+        '});',
+        '</script>',
+      ]);
+
+      snippetText = snippetLines.join('\n');
+      quickstartElement.innerHTML = highlightSnippet(snippetText);
+      quickstartElement.className = 'language-html';
+      quickstartText = snippetText;
+    }
+
+    function applyModeModel(mode) {
+      var sourceModel = modelByMode[mode] || DEFAULT_MODEL;
+      var result = normalizeControlState(sourceModel, mode);
+      modelByMode[mode] = result.model;
+      syncControlUi(result.model);
+      setNote(result.notes);
+      renderQuickstartSnippet(result.model, mode);
+    }
+
+    function normalizeAndSyncControls() {
+      var result = normalizeControlState(readControls(), currentMode);
+      modelByMode[currentMode] = result.model;
+      syncControlUi(result.model);
+      syncModeTabs();
+      setNote(result.notes);
+      renderQuickstartSnippet(result.model, currentMode);
+      return result.model;
     }
 
     function escapeHtml(value) {
@@ -451,8 +647,11 @@
     }
 
     function buildInitFromModel(model) {
+      var basePath = getBasePathForMode(currentMode);
       var uiConfig = [];
-      if (model.customImage) {
+      var init;
+
+      if (model.customImage && !isAlignmentMode(currentMode)) {
         uiConfig.push({
           type: 'image',
           src: basePath + '/cover.jpg',
@@ -462,19 +661,38 @@
       }
 
       if (model.waveform) {
-        uiConfig.push({
-          type: 'waveform',
-          width: 1200,
-          height: 150,
-          style: 'margin: 20px auto;',
-        });
+        if (isAlignmentMode(currentMode)) {
+          uiConfig.push({
+            type: 'waveform',
+            width: 1200,
+            height: 120,
+            waveformSource: 0,
+            style: 'margin: 12px auto 8px;',
+          });
+          uiConfig.push({
+            type: 'waveform',
+            width: 1200,
+            height: 120,
+            waveformSource: 1,
+            style: 'margin: 8px auto 20px;',
+          });
+        } else {
+          uiConfig.push({
+            type: 'waveform',
+            width: 1200,
+            height: 150,
+            style: 'margin: 20px auto;',
+          });
+        }
       }
 
-      return {
-        presetNames: ['All Tracks', 'Violins & Synths', 'Drums & Bass', 'Drums Only'],
-        tracks: createBaseTracks(basePath),
+      init = {
+        tracks: isAlignmentMode(currentMode)
+          ? createAlignmentTracks(basePath)
+          : createBaseTracks(basePath),
         ui: uiConfig,
         features: {
+          mode: currentMode,
           looping: model.looping,
           repeat: model.repeatEnabled,
           globalvolume: model.globalvolume,
@@ -489,6 +707,18 @@
           radiosolo: model.radiosolo,
         },
       };
+
+      if (isAlignmentMode(currentMode)) {
+        init.alignment = {
+          csv: basePath + '/dtw_alignment.csv',
+          referenceColumn: 't1_sec',
+          outOfRange: 'clamp',
+        };
+      } else {
+        init.presetNames = ['All Tracks', 'Violins & Synths', 'Drums & Bass', 'Drums Only'];
+      }
+
+      return init;
     }
 
     function snapshotControllerState(activeController) {
@@ -502,7 +732,8 @@
       return {
         isLoaded: Boolean(snapshot && snapshot.isLoaded),
         playing: Boolean(playbackState.playing),
-        position: typeof playbackState.position === 'number' ? playbackState.position : 0,
+        position:
+          typeof playbackState.position === 'number' ? playbackState.position : 0,
         volume: typeof playbackState.volume === 'number' ? playbackState.volume : 1,
         repeat: Boolean(playbackState.repeat),
       };
@@ -548,7 +779,10 @@
       }
 
       playerRoot.innerHTML = '';
-      controller = window.TrackSwitch.createTrackSwitch(playerRoot, buildInitFromModel(model));
+      controller = window.TrackSwitch.createTrackSwitch(
+        playerRoot,
+        buildInitFromModel(model)
+      );
       controller.setRepeat(Boolean(model.repeatEnabled));
       scheduleGuideArrowUpdate();
 
@@ -587,6 +821,30 @@
       }, 100);
     }
 
+    function bindModeTabs() {
+      modeButtons.forEach(function (button) {
+        button.addEventListener('click', function () {
+          var nextMode = button.getAttribute('data-ts-mode') || MODE_DEFAULT;
+          if (nextMode !== MODE_DEFAULT && nextMode !== MODE_ALIGNMENT) {
+            return;
+          }
+          if (nextMode === currentMode) {
+            return;
+          }
+
+          modelByMode[currentMode] = normalizeControlState(
+            readControls(),
+            currentMode
+          ).model;
+
+          currentMode = nextMode;
+          syncModeTabs();
+          applyModeModel(currentMode);
+          rebuildPlayer({ preserveState: false });
+        });
+      });
+    }
+
     function bindControlEvents() {
       REBUILD_TOGGLE_NAMES.forEach(function (name) {
         var control = getControl(name);
@@ -610,16 +868,10 @@
       }
     }
 
-    CONTROL_NAMES.forEach(function (name) {
-      var control = getControl(name);
-      if (!control) {
-        return;
-      }
-      control.checked = Boolean(DEFAULT_MODEL[name]);
-    });
-
-    normalizeAndSyncControls();
+    syncModeTabs();
+    applyModeModel(currentMode);
     bindCopyButton();
+    bindModeTabs();
     bindControlEvents();
     rebuildPlayer({ preserveState: false });
     scheduleGuideArrowUpdate();

@@ -5,11 +5,37 @@ title: trackswitch.js
 <section class="ts-showcase">
   <div class="ts-showcase__layout">
     <div class="ts-showcase__player-shell">
-      <div id="ts-showcase-player" data-ts-base="{{ '/assets/multitracks' | relative_url }}"></div>
+      <div
+        id="ts-showcase-player"
+        data-ts-default-base="{{ '/assets/multitracks' | relative_url }}"
+        data-ts-alignment-base="{{ '/assets/alignment' | relative_url }}"
+      ></div>
     </div>
 
     <aside id="ts-showcase-controls" class="ts-control-panel" aria-label="TrackSwitch feature controls">
       <h4>Features</h4>
+      <div class="ts-control-mode-tabs" role="tablist" aria-label="Showcase mode">
+        <button
+          type="button"
+          class="ts-mode-tab is-active"
+          data-ts-mode-button
+          data-ts-mode="default"
+          role="tab"
+          aria-selected="true"
+        >
+          Default
+        </button>
+        <button
+          type="button"
+          class="ts-mode-tab"
+          data-ts-mode-button
+          data-ts-mode="alignment"
+          role="tab"
+          aria-selected="false"
+        >
+          Alignment
+        </button>
+      </div>
 
       <div class="ts-control-group">
         <h5>Playback and UI</h5>

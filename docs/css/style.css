@@ -260,6 +260,43 @@ h1 a:visited {
     letter-spacing: -0.01em;
 }
 
+.ts-control-mode-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.35rem;
+    margin-bottom: 0.85rem;
+}
+
+.ts-mode-tab {
+    border: 1px solid rgba(52, 90, 122, 0.22);
+    background: rgba(255, 255, 255, 0.7);
+    color: #2d495f;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    line-height: 1.2;
+    padding: 0.42rem 0.55rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ts-mode-tab:hover {
+    background: rgba(227, 242, 252, 0.9);
+}
+
+.ts-mode-tab:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(15, 122, 168, 0.35);
+    border-color: rgba(15, 122, 168, 0.55);
+}
+
+.ts-mode-tab.is-active {
+    background: var(--ts-accent);
+    color: #f7fcff;
+    border-color: rgba(11, 91, 126, 0.95);
+    box-shadow: 0 8px 16px rgba(13, 75, 108, 0.24);
+}
+
 .ts-control-group {
     margin-bottom: 0.85rem;
     padding: 0.7rem 0.75rem;
@@ -300,6 +337,11 @@ h1 a:visited {
     margin: 0;
     accent-color: var(--ts-accent);
     cursor: pointer;
+}
+
+.ts-control-row input[type="checkbox"]:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
 }
 
 .ts-control-row.is-disabled {
