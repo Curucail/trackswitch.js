@@ -8,7 +8,8 @@ export interface ControllerPointerEvent {
     target?: EventTarget | null;
     originalEvent?: Event & {
         deltaY?: number;
-        touches?: ArrayLike<{ pageX: number }>;
+        touches?: ArrayLike<{ pageX: number; pageY: number }>;
+        changedTouches?: ArrayLike<{ pageX: number; pageY: number }>;
     };
     preventDefault(): void;
     stopPropagation(): void;

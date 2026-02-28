@@ -72,6 +72,12 @@ interface SeekTimelineContext {
     fromReferenceTime(referenceTime: number): number;
 }
 
+interface PinchZoomState {
+    seekWrap: HTMLElement;
+    initialDistance: number;
+    initialZoom: number;
+}
+
 export class TrackSwitchControllerImpl implements TrackSwitchController, InputController {
     private readonly root: HTMLElement;
     private readonly features: TrackSwitchFeatures;
@@ -96,6 +102,8 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     private rightClickDragging = false;
     private loopDragStart: number | null = null;
     private draggingMarker: LoopMarker | null = null;
+    private pinchZoomState: PinchZoomState | null = null;
+    private waveformRenderFrameId: number | null = null;
     private readonly loopMinDistance = 0.1;
 
     private iOSPlaybackUnlocked = false;
@@ -290,6 +298,10 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         if (this.resizeDebounceTimer) {
             clearTimeout(this.resizeDebounceTimer);
             this.resizeDebounceTimer = null;
+        }
+        if (this.waveformRenderFrameId !== null) {
+            cancelAnimationFrame(this.waveformRenderFrameId);
+            this.waveformRenderFrameId = null;
         }
 
         if (this.state.playing) {
@@ -678,11 +690,19 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             return;
         }
 
+        const targetSeekWrap = closestInRoot(this.root, event.target, '.seekwrap');
+
+        if (this.tryStartPinchZoom(event, targetSeekWrap)) {
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+        }
+
         if (this.features.looping && event.type === 'mousedown' && event.which === 3) {
             event.preventDefault();
 
             this.rightClickDragging = true;
-            this.seekingElement = closestInRoot(this.root, event.target, '.seekwrap');
+            this.seekingElement = targetSeekWrap;
             const seekTimelineContext = this.getSeekTimelineContext(this.seekingElement);
 
             const seekMetrics = getSeekMetrics(this.seekingElement, event, seekTimelineContext.duration);
@@ -713,7 +733,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         }
 
         event.preventDefault();
-        this.seekingElement = closestInRoot(this.root, event.target, '.seekwrap');
+        this.seekingElement = targetSeekWrap;
         if (!this.seekingElement) {
             return;
         }
@@ -741,6 +761,13 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
     onSeekMove(event: ControllerPointerEvent): void {
         if (!this.isLoaded) {
+            return;
+        }
+
+        if (this.pinchZoomState) {
+            if (this.updatePinchZoom(event)) {
+                event.preventDefault();
+            }
             return;
         }
 
@@ -843,6 +870,18 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
     onSeekEnd(event: ControllerPointerEvent): void {
         if (!this.isLoaded) {
+            return;
+        }
+
+        if (this.pinchZoomState) {
+            if (this.getActiveTouchCount(event) >= 2) {
+                event.preventDefault();
+                return;
+            }
+
+            this.endPinchZoom();
+            event.preventDefault();
+            event.stopPropagation();
             return;
         }
 
@@ -1007,6 +1046,49 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         selector.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
+    onWaveformZoomWheel(event: ControllerPointerEvent): void {
+        if (!this.features.waveform || !this.features.waveformzoom) {
+            return;
+        }
+
+        const wheelEvent = event.originalEvent as WheelEvent | undefined;
+        const deltaY = wheelEvent?.deltaY;
+        if (typeof deltaY !== 'number' || !Number.isFinite(deltaY) || deltaY === 0) {
+            return;
+        }
+
+        const wrapper = closestInRoot(this.root, event.target, '.waveform-wrap');
+        if (!wrapper) {
+            return;
+        }
+
+        const seekWrap = wrapper.querySelector('.seekwrap[data-seek-surface="waveform"]');
+        if (!(seekWrap instanceof HTMLElement)) {
+            return;
+        }
+
+        const currentZoom = this.renderer.getWaveformZoom(seekWrap);
+        if (currentZoom === null) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const zoomFactor = Math.exp((-1 * deltaY) * 0.002);
+        const nextZoom = currentZoom * zoomFactor;
+        const changed = this.renderer.setWaveformZoom(
+            seekWrap,
+            nextZoom,
+            Number.isFinite(event.pageX) ? event.pageX : undefined
+        );
+
+        if (changed) {
+            this.requestWaveformRender();
+            this.updateMainControls();
+        }
+    }
+
     onSetLoopA(event: ControllerPointerEvent): void {
         if (!isPrimaryInput(event)) {
             return;
@@ -1044,7 +1126,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     }
 
     onMarkerDragStart(event: ControllerPointerEvent): void {
-        if (!this.features.looping || !isPrimaryInput(event)) {
+        if (!this.features.looping || !isPrimaryInput(event) || this.pinchZoomState) {
             return;
         }
 
@@ -1189,6 +1271,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         }
 
         this.resizeDebounceTimer = setTimeout(() => {
+            this.renderer.reflowWaveforms();
             this.renderer.renderWaveforms(
                 this.waveformEngine,
                 this.runtimes,
@@ -1197,6 +1280,150 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
                 this.getWaveformTimelineContext()
             );
         }, 300);
+    }
+
+    private requestWaveformRender(): void {
+        if (this.waveformRenderFrameId !== null) {
+            return;
+        }
+
+        this.waveformRenderFrameId = requestAnimationFrame(() => {
+            this.waveformRenderFrameId = null;
+            this.renderer.renderWaveforms(
+                this.waveformEngine,
+                this.runtimes,
+                this.longestDuration,
+                this.getWaveformTimelineProjector(),
+                this.getWaveformTimelineContext()
+            );
+        });
+    }
+
+    private getTouchPair(event: ControllerPointerEvent): [Touch, Touch] | null {
+        const touchEvent = event.originalEvent as TouchEvent | undefined;
+        const touches = touchEvent?.touches;
+        if (!touches || touches.length < 2) {
+            return null;
+        }
+
+        const first = touches[0];
+        const second = touches[1];
+        if (!first || !second) {
+            return null;
+        }
+
+        return [first, second];
+    }
+
+    private getTouchDistance(event: ControllerPointerEvent): number | null {
+        const touchPair = this.getTouchPair(event);
+        if (!touchPair) {
+            return null;
+        }
+
+        const [first, second] = touchPair;
+        const distance = Math.hypot(
+            first.pageX - second.pageX,
+            first.pageY - second.pageY
+        );
+        if (!Number.isFinite(distance) || distance <= 0) {
+            return null;
+        }
+
+        return distance;
+    }
+
+    private getTouchCenterPageX(event: ControllerPointerEvent): number | null {
+        const touchPair = this.getTouchPair(event);
+        if (!touchPair) {
+            return null;
+        }
+
+        const [first, second] = touchPair;
+        return (first.pageX + second.pageX) / 2;
+    }
+
+    private getActiveTouchCount(event: ControllerPointerEvent): number {
+        const touchEvent = event.originalEvent as TouchEvent | undefined;
+        if (!touchEvent?.touches) {
+            return 0;
+        }
+
+        return touchEvent.touches.length;
+    }
+
+    private tryStartPinchZoom(event: ControllerPointerEvent, seekWrap: HTMLElement | null): boolean {
+        if (!this.features.waveform || !this.features.waveformzoom || event.type !== 'touchstart') {
+            return false;
+        }
+
+        if (this.pinchZoomState) {
+            return true;
+        }
+
+        if (!seekWrap || seekWrap.getAttribute('data-seek-surface') !== 'waveform') {
+            return false;
+        }
+
+        const initialDistance = this.getTouchDistance(event);
+        if (initialDistance === null) {
+            return false;
+        }
+
+        const initialZoom = this.renderer.getWaveformZoom(seekWrap);
+        if (initialZoom === null) {
+            return false;
+        }
+
+        this.pinchZoomState = {
+            seekWrap: seekWrap,
+            initialDistance: initialDistance,
+            initialZoom: initialZoom,
+        };
+
+        if (this.state.currentlySeeking) {
+            this.dispatch({ type: 'set-seeking', seeking: false });
+        }
+        this.seekingElement = seekWrap;
+        this.rightClickDragging = false;
+        this.loopDragStart = null;
+        this.draggingMarker = null;
+        return true;
+    }
+
+    private updatePinchZoom(event: ControllerPointerEvent): boolean {
+        if (!this.pinchZoomState) {
+            return false;
+        }
+
+        const distance = this.getTouchDistance(event);
+        if (distance === null) {
+            this.endPinchZoom();
+            return false;
+        }
+
+        const anchorPageX = this.getTouchCenterPageX(event);
+        const scale = distance / this.pinchZoomState.initialDistance;
+        const changed = this.renderer.setWaveformZoom(
+            this.pinchZoomState.seekWrap,
+            this.pinchZoomState.initialZoom * scale,
+            anchorPageX === null ? undefined : anchorPageX
+        );
+
+        if (changed) {
+            this.requestWaveformRender();
+            this.updateMainControls();
+        }
+
+        return true;
+    }
+
+    private endPinchZoom(): void {
+        this.pinchZoomState = null;
+        if (this.state.currentlySeeking) {
+            this.dispatch({ type: 'set-seeking', seeking: false });
+        }
+        this.seekingElement = null;
     }
 
     private trackIndexFromTarget(target: EventTarget | null): number {
@@ -1962,6 +2189,11 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             clearTimeout(this.resizeDebounceTimer);
             this.resizeDebounceTimer = null;
         }
+        if (this.waveformRenderFrameId !== null) {
+            cancelAnimationFrame(this.waveformRenderFrameId);
+            this.waveformRenderFrameId = null;
+        }
+        this.pinchZoomState = null;
 
         this.renderer.showError(message, this.runtimes);
         this.emit('error', { message: message });

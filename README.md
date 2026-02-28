@@ -70,6 +70,7 @@ document.addEventListener('DOMContentLoaded', function () {
       globalvolume: true,
       looping: true,
       presets: true,
+      waveformzoom: true, // default: enable wheel + pinch zoom on waveform containers
     },
   });
 });
@@ -128,6 +129,8 @@ Alignment mode behavior:
 - `alignment`: enabling global `SYNC` allows multi-track listening again, switches synced tracks to synchronized sources, and locks non-synced tracks muted
 - `alignment`: with `SYNC` off, fixed waveforms (`waveformSource: <trackIndex>`) render on their native track timeline and their waveform seek overlays (playhead + loop markers/region) use that same local axis; interactions are converted to reference time internally
 - `alignment`: with `SYNC` on, synced-track timeline mapping is bypassed (identity) and fixed waveforms return to shared reference-axis behavior
+- `alignment`: waveform containers show a top-right timer badge in `current / duration` format; fixed-source waveforms use the track-local axis when `SYNC` is off
+- `features.waveformzoom` defaults to `true`: desktop wheel over a waveform and mobile pinch on waveform seek surfaces zoom each waveform independently
 
 Legacy note:
 

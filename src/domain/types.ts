@@ -57,6 +57,7 @@ export interface TrackSwitchFeatures {
     timer: boolean;
     presets: boolean;
     waveform: boolean;
+    waveformzoom: boolean;
 }
 
 export interface TrackSwitchImageConfig {

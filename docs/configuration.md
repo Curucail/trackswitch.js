@@ -136,6 +136,7 @@ Waveform element:
   - `'audible'` (default): render the current audible mix based on mute/solo state
   - non-negative integer: render that specific track index waveform regardless of mute/solo
 - If at least one waveform UI element is configured, waveform rendering is enabled
+- Each waveform container supports independent zoom (desktop wheel and mobile pinch) when `features.waveformzoom` is enabled
 
 ## Player Features
 
@@ -157,6 +158,7 @@ Feature defaults:
 - `timer: true`
 - `presets: true`
 - `waveform: true`
+- `waveformzoom: true`
 
 Normalization rules:
 
@@ -203,6 +205,7 @@ Behavior:
 - `alignment`: enabling global `SYNC` switches synced tracks to synchronized sources, re-enables multi-track listening, and locks non-synced tracks muted
 - `alignment`: with `SYNC` off, fixed-track waveforms (`waveformSource: <trackIndex>`) render on native track time and their waveform seek overlays (playhead + loop markers/region) use that local axis
 - `alignment`: with `SYNC` on, fixed-track waveforms return to shared reference-axis behavior; synced tracks bypass CSV mapping (identity)
+- `alignment`: waveform containers render a top-right timer badge in `current / duration` format; fixed-track waveforms use local track time while `SYNC` is off
 
 Cross-player behavior:
 

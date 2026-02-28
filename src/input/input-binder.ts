@@ -20,6 +20,7 @@ export interface InputController {
     onVolume(event: ControllerPointerEvent): void;
     onPreset(event: ControllerPointerEvent): void;
     onPresetScroll(event: ControllerPointerEvent): void;
+    onWaveformZoomWheel(event: ControllerPointerEvent): void;
     onSetLoopA(event: ControllerPointerEvent): void;
     onSetLoopB(event: ControllerPointerEvent): void;
     onToggleLoop(event: ControllerPointerEvent): void;
@@ -64,7 +65,8 @@ function eventToPointerEvent(event: Event): ControllerPointerEvent {
         target: event.target,
         originalEvent: event as Event & {
             deltaY?: number;
-            touches?: ArrayLike<{ pageX: number }>;
+            touches?: ArrayLike<{ pageX: number; pageY: number }>;
+            changedTouches?: ArrayLike<{ pageX: number; pageY: number }>;
         },
         preventDefault: function() {
             event.preventDefault();
@@ -98,7 +100,8 @@ export class InputBinder {
         type: string,
         selector: string,
         callback: (event: ControllerPointerEvent, matchedElement: Element) => void,
-        target?: EventTarget
+        target?: EventTarget,
+        options?: AddEventListenerOptions
     ): void {
         const eventTarget = target || this.root;
 
@@ -120,7 +123,7 @@ export class InputBinder {
             callback(eventToPointerEvent(event), matched);
         };
 
-        this.addListener(eventTarget, type, listener as EventListener);
+        this.addListener(eventTarget, type, listener as EventListener, options);
     }
 
     bind(): void {
@@ -236,9 +239,15 @@ export class InputBinder {
                 this.controller.onPreset(event);
             });
 
-            this.addDelegatedListener('wheel', '.preset-selector', (event) => {
-                this.controller.onPresetScroll(event);
-            });
+            this.addDelegatedListener(
+                'wheel',
+                '.preset-selector',
+                (event) => {
+                    this.controller.onPresetScroll(event);
+                },
+                undefined,
+                { passive: false }
+            );
 
             const stopPresetPropagation = (event: Event) => {
                 const eventElement = eventTargetAsElement(event.target);
@@ -307,6 +316,18 @@ export class InputBinder {
         }
 
         if (this.features.waveform) {
+            if (this.features.waveformzoom) {
+                this.addDelegatedListener(
+                    'wheel',
+                    '.waveform-wrap',
+                    (event) => {
+                        this.controller.onWaveformZoomWheel(event);
+                    },
+                    undefined,
+                    { passive: false }
+                );
+            }
+
             this.addListener(window, 'resize', () => {
                 this.controller.onResize();
             });

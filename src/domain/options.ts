@@ -17,6 +17,7 @@ export const defaultFeatures: Readonly<TrackSwitchFeatures> = {
     timer: true,
     presets: true,
     waveform: true,
+    waveformzoom: true,
 };
 
 export function normalizeFeatures(features: Partial<TrackSwitchFeatures> | undefined): TrackSwitchFeatures {
