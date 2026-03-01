@@ -11,7 +11,15 @@
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
     position: relative;
+}
+
+.trackswitch .waveform-wrap .waveform-scroll::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
 }
 
 .trackswitch .waveform-wrap .waveform-surface {
