@@ -677,16 +677,26 @@ export class SheetMusicEngine {
             return;
         }
 
-        cursor.reset();
         if (cursor.show) {
             cursor.show();
         }
 
-        const maxSteps = Math.max(1, entry.availableMeasures.length + 5);
         let currentMeasure = this.readCursorMeasure(cursor);
         if (currentMeasure === null) {
-            currentMeasure = entry.availableMeasures[0] ?? null;
+            cursor.reset();
+            if (cursor.show) {
+                cursor.show();
+            }
+            currentMeasure = this.readCursorMeasure(cursor);
+            if (currentMeasure === null) {
+                currentMeasure = entry.availableMeasures[0] ?? null;
+            }
         }
+
+        const estimatedDistance = currentMeasure === null
+            ? entry.availableMeasures.length
+            : Math.abs(targetMeasure - currentMeasure);
+        const maxSteps = Math.max(1, Math.min(entry.availableMeasures.length + 5, estimatedDistance + 8));
 
         let steps = 0;
         while (
@@ -707,6 +717,42 @@ export class SheetMusicEngine {
 
             currentMeasure = nextMeasure;
             steps += 1;
+        }
+
+        if (currentMeasure !== targetMeasure && cursor.reset) {
+            cursor.reset();
+            if (cursor.show) {
+                cursor.show();
+            }
+
+            let fallbackMeasure = this.readCursorMeasure(cursor);
+            if (fallbackMeasure === null) {
+                fallbackMeasure = entry.availableMeasures[0] ?? null;
+            }
+
+            let fallbackSteps = 0;
+            const fallbackMaxSteps = Math.max(1, entry.availableMeasures.length + 5);
+            while (
+                fallbackMeasure !== null
+                && fallbackMeasure !== targetMeasure
+                && fallbackSteps < fallbackMaxSteps
+            ) {
+                if (fallbackMeasure < targetMeasure) {
+                    cursor.nextMeasure();
+                } else {
+                    cursor.previousMeasure();
+                }
+
+                const nextMeasure = this.readCursorMeasure(cursor);
+                if (nextMeasure === null || nextMeasure === fallbackMeasure) {
+                    break;
+                }
+
+                fallbackMeasure = nextMeasure;
+                fallbackSteps += 1;
+            }
+
+            currentMeasure = fallbackMeasure;
         }
 
         entry.targetMeasure = this.resolveAvailableMeasure(

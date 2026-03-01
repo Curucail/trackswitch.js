@@ -36,7 +36,9 @@ interface WaveformSeekSurfaceMetadata {
     zoom: number;
     timingNode: HTMLElement | null;
     zoomNode: HTMLElement;
-    tiles: Map<number, HTMLCanvasElement>;
+    tiles: Map<number, { canvas: HTMLCanvasElement; lastDrawKey: string | null }>;
+    normalizationPeak: number;
+    normalizationCacheKey: string | null;
 }
 
 interface LatestWaveformRenderInput {
@@ -537,7 +539,9 @@ export class ViewRenderer {
                     zoom: MIN_WAVEFORM_ZOOM,
                     timingNode: timingNode,
                     zoomNode: zoomNode,
-                    tiles: new Map<number, HTMLCanvasElement>(),
+                    tiles: new Map<number, { canvas: HTMLCanvasElement; lastDrawKey: string | null }>(),
+                    normalizationPeak: 1,
+                    normalizationCacheKey: null,
                 });
 
                 scrollContainer.addEventListener('scroll', () => {
@@ -691,6 +695,8 @@ export class ViewRenderer {
             canvas: HTMLCanvasElement;
             context: CanvasRenderingContext2D;
             renderBarWidth: number;
+            isNew: boolean;
+            record: { canvas: HTMLCanvasElement; lastDrawKey: string | null };
         }) => void
     ): void {
         const surfaceWidth = Math.max(1, Math.round(surfaceMetadata.baseWidth * surfaceMetadata.zoom));
@@ -711,16 +717,21 @@ export class ViewRenderer {
             }
 
             const tileCssWidth = Math.max(1, Math.min(tileWidth, surfaceWidth - tileStartPx));
-            let tileCanvas = surfaceMetadata.tiles.get(tileIndex);
-            if (!tileCanvas) {
-                tileCanvas = document.createElement('canvas');
+            let tileRecord = surfaceMetadata.tiles.get(tileIndex);
+            let isNew = false;
+            if (!tileRecord) {
+                const tileCanvas = document.createElement('canvas');
                 tileCanvas.className = 'waveform waveform-tile';
                 tileCanvas.style.position = 'absolute';
                 tileCanvas.style.top = '0';
                 tileCanvas.style.display = 'block';
                 surfaceMetadata.tileLayer.appendChild(tileCanvas);
-                surfaceMetadata.tiles.set(tileIndex, tileCanvas);
+                tileRecord = { canvas: tileCanvas, lastDrawKey: null };
+                surfaceMetadata.tiles.set(tileIndex, tileRecord);
+                isNew = true;
             }
+
+            const tileCanvas = tileRecord.canvas;
 
             tileCanvas.style.left = tileStartPx + 'px';
             tileCanvas.style.width = tileCssWidth + 'px';
@@ -749,6 +760,8 @@ export class ViewRenderer {
                 canvas: tileCanvas,
                 context,
                 renderBarWidth,
+                isNew,
+                record: tileRecord,
             });
             needed.add(tileIndex);
         }
@@ -758,9 +771,9 @@ export class ViewRenderer {
                 return;
             }
 
-            const tileCanvas = surfaceMetadata.tiles.get(tileIndex);
-            if (tileCanvas) {
-                tileCanvas.remove();
+            const tileRecord = surfaceMetadata.tiles.get(tileIndex);
+            if (tileRecord) {
+                tileRecord.canvas.remove();
             }
             surfaceMetadata.tiles.delete(tileIndex);
         });
@@ -789,6 +802,7 @@ export class ViewRenderer {
             latestInput.timelineDuration,
             latestInput.trackTimelineProjector,
             latestInput.waveformTimelineContext,
+            false,
             false
         );
     }
@@ -825,6 +839,48 @@ export class ViewRenderer {
         }
 
         return maxPeak > 0 ? maxPeak : 1;
+    }
+
+    private buildWaveformNormalizationCacheKey(
+        surfaceMetadata: WaveformSeekSurfaceMetadata,
+        runtimes: TrackRuntime[],
+        sourceRuntimes: TrackRuntime[],
+        fullDuration: number,
+        renderBarWidth: number,
+        useLocalAxis: boolean,
+        hasTimelineProjector: boolean
+    ): string {
+        const sourceKey = surfaceMetadata.waveformSource === 'audible'
+            ? runtimes.map((runtime, index) => {
+                const duration = runtime.buffer ? runtime.buffer.duration : 0;
+                const timingDuration = runtime.timing ? runtime.timing.effectiveDuration : 0;
+                return [
+                    index,
+                    runtime.state.mute ? 1 : 0,
+                    runtime.state.solo ? 1 : 0,
+                    Math.round(duration * 1000),
+                    Math.round(timingDuration * 1000),
+                ].join(':');
+            }).join('|')
+            : sourceRuntimes.map((runtime, index) => {
+                const duration = runtime.buffer ? runtime.buffer.duration : 0;
+                const timingDuration = runtime.timing ? runtime.timing.effectiveDuration : 0;
+                return [
+                    index,
+                    Math.round(duration * 1000),
+                    Math.round(timingDuration * 1000),
+                ].join(':');
+            }).join('|');
+
+        return [
+            String(surfaceMetadata.waveformSource),
+            useLocalAxis ? 'local' : 'reference',
+            hasTimelineProjector ? 'projector' : 'identity',
+            Math.round(fullDuration * 1000),
+            renderBarWidth,
+            Math.round(surfaceMetadata.baseWidth),
+            sourceKey,
+        ].join('#');
     }
 
     private findWaveformSurface(
@@ -965,7 +1021,8 @@ export class ViewRenderer {
         timelineDuration: number,
         trackTimelineProjector?: TrackTimelineProjector,
         waveformTimelineContext?: WaveformTimelineContext,
-        performReflow = true
+        performReflow = true,
+        forceRedrawVisibleTiles = true
     ): void {
         if (!this.features.waveform || this.waveformSeekSurfaces.length === 0) {
             return;
@@ -996,19 +1053,48 @@ export class ViewRenderer {
                 : (trackTimelineProjector || ((_runtime, trackTimelineTimeSeconds) => trackTimelineTimeSeconds));
 
             const surfaceRenderBarWidth = Math.max(1, Math.round(surfaceMetadata.barWidth * pixelRatio));
-            const normalizationPeak = this.computeNormalizationPeak(
-                waveformEngine,
+            const normalizationCacheKey = this.buildWaveformNormalizationCacheKey(
+                surfaceMetadata,
+                runtimes,
                 sourceRuntimes,
-                surfaceRenderBarWidth,
                 fullDuration,
-                baseProjector,
-                surfaceMetadata.baseWidth
+                surfaceRenderBarWidth,
+                useLocalAxis,
+                !useLocalAxis && !!trackTimelineProjector
             );
 
+            if (surfaceMetadata.normalizationCacheKey !== normalizationCacheKey) {
+                surfaceMetadata.normalizationPeak = this.computeNormalizationPeak(
+                    waveformEngine,
+                    sourceRuntimes,
+                    surfaceRenderBarWidth,
+                    fullDuration,
+                    baseProjector,
+                    surfaceMetadata.baseWidth
+                );
+                surfaceMetadata.normalizationCacheKey = normalizationCacheKey;
+            }
+
+            const normalizationPeak = surfaceMetadata.normalizationPeak;
+
             this.forEachVisibleWaveformTile(surfaceMetadata, pixelRatio, (tile) => {
+                const tileDrawKey = [
+                    normalizationCacheKey,
+                    Math.round(tile.tileStartPx),
+                    Math.round(tile.tileCssWidth),
+                    tile.canvas.width,
+                    tile.canvas.height,
+                    tile.renderBarWidth,
+                ].join('#');
+
+                if (!forceRedrawVisibleTiles && !tile.isNew && tile.record.lastDrawKey === tileDrawKey) {
+                    return;
+                }
+
                 const peakCount = Math.max(1, Math.floor(tile.canvas.width / tile.renderBarWidth));
                 if (fullDuration <= 0) {
                     waveformEngine.drawPlaceholder(tile.canvas, tile.context, tile.renderBarWidth, 0.3);
+                    tile.record.lastDrawKey = tileDrawKey;
                     return;
                 }
 
@@ -1016,6 +1102,7 @@ export class ViewRenderer {
                 const tileDuration = fullDuration * (tile.tileCssWidth / tile.surfaceWidth);
                 if (!Number.isFinite(tileDuration) || tileDuration <= 0) {
                     waveformEngine.drawPlaceholder(tile.canvas, tile.context, tile.renderBarWidth, 0.3);
+                    tile.record.lastDrawKey = tileDrawKey;
                     return;
                 }
 
@@ -1037,6 +1124,7 @@ export class ViewRenderer {
 
                 if (!mixed) {
                     waveformEngine.drawPlaceholder(tile.canvas, tile.context, tile.renderBarWidth, 0.3);
+                    tile.record.lastDrawKey = tileDrawKey;
                     return;
                 }
 
@@ -1047,6 +1135,7 @@ export class ViewRenderer {
                     tile.renderBarWidth,
                     normalizationPeak
                 );
+                tile.record.lastDrawKey = tileDrawKey;
             });
         }
     }
