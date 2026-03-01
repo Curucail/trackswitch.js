@@ -62,6 +62,7 @@
     'timer',
     'keyboard',
     'waveform',
+    'sheetNotePreview',
     'customImage',
     'radiosolo',
     'tabView',
@@ -76,13 +77,14 @@
     'timer',
     'keyboard',
     'waveform',
+    'sheetNotePreview',
     'customImage',
     'radiosolo',
     'tabView',
   ];
 
   var MODE_DISABLED_CONTROLS = {
-    default: [],
+    default: ['sheetNotePreview'],
     alignment: ['customImage', 'presets', 'radiosolo'],
   };
 
@@ -94,6 +96,7 @@
     timer: true,
     keyboard: true,
     waveform: true,
+    sheetNotePreview: false,
     customImage: false,
     radiosolo: false,
     tabView: false,
@@ -103,6 +106,7 @@
   var ALIGNMENT_DEFAULT_MODEL = Object.assign({}, DEFAULT_MODEL, {
     presets: false,
     customImage: false,
+    sheetNotePreview: true,
     radiosolo: true,
   });
 
@@ -371,6 +375,8 @@
           normalized.radiosolo = true;
           notes.push('Single solo mode is enforced in alignment mode.');
         }
+      } else if (normalized.sheetNotePreview) {
+        normalized.sheetNotePreview = false;
       }
 
       if (normalized.radiosolo && normalized.presets) {
@@ -479,18 +485,23 @@
         "      outOfRange: 'clamp',",
         '    },',
         '    ui: [',
-        '      {',
-        "        type: 'sheetmusic',",
-        "        src: 'Schubert_D911-03.xml',",
-        "        measureCsv: 'Schubert_D911-03_HU33_measures.csv',",
-        '        maxHeight: 380,',
-        '        renderScale: 0.65,',
-        '        followPlayback: true,',
-        '        cursorColor: \'#999999\',',
-        '        cursorAlpha: 0.4,',
-        "        style: 'margin: 0px;',",
-        '      },',
       ];
+
+      if (model.sheetNotePreview) {
+        snippetLines.push(
+          '      {',
+          "        type: 'sheetmusic',",
+          "        src: 'Schubert_D911-03.xml',",
+          "        measureCsv: 'Schubert_D911-03_HU33_measures.csv',",
+          '        maxHeight: 380,',
+          '        renderScale: 0.65,',
+          '        followPlayback: true,',
+          '        cursorColor: \'#999999\',',
+          '        cursorAlpha: 0.4,',
+          "        style: 'margin: 0px;',",
+          '      },'
+        );
+      }
 
       if (model.waveform) {
         snippetLines.push(
@@ -667,7 +678,7 @@
         });
       }
 
-      if (isAlignmentMode(currentMode)) {
+      if (isAlignmentMode(currentMode) && model.sheetNotePreview) {
         uiConfig.push({
           type: 'sheetmusic',
           src: basePath + '/Schubert_D911-03.xml',

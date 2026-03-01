@@ -68,6 +68,10 @@ title: trackswitch.js
           <input type="checkbox" name="waveform" checked />
         </label>
         <label class="ts-control-row">
+          <span>Sheet Note Preview (Alignment)</span>
+          <input type="checkbox" name="sheetNotePreview" checked />
+        </label>
+        <label class="ts-control-row">
           <span>Custom Cover Image</span>
           <input type="checkbox" name="customImage" />
         </label>
