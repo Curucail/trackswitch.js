@@ -4,7 +4,8 @@
     display: block;
     position: relative;
     width: 100%;
-    margin: 10px 0;
+    margin: 0;
+    border-top: 1px solid rgba(124, 124, 124, 1.0);
 }
 
 .trackswitch .waveform-wrap .waveform-scroll {
@@ -54,7 +55,7 @@
 .trackswitch canvas.waveform {
     display: block;
     width: 100%;
-    background-color: rgba(0, 0, 0, 0.05);
+    background-color: rgb(238, 238, 238);
     /* Subtle background */
     --waveform-color: #ED8C01;
     /* CSS custom property for waveform color (orange) */

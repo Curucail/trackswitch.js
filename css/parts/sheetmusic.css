@@ -4,12 +4,11 @@
     display: block;
     position: relative;
     width: 100%;
-    margin: 10px 0;
+    margin: 0;
     background: #FFFFFF;
-    border: 1px solid rgba(0, 0, 0, 0.12);
 }
 
-.trackswitch .sheetmusic-wrap[data-sheetmusic-width-applied='true'] {
+.trackswitch .sheetmusic-wrap[data-sheetmusic-max-width-applied='true'] {
     margin-left: auto;
     margin-right: auto;
 }
