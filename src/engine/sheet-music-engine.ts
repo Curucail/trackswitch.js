@@ -366,11 +366,12 @@ export class SheetMusicEngine {
         const visibleTop = viewportTop + padding;
         const visibleBottom = viewportBottom - padding;
 
+        const cursorCenter = cursorTop + ((cursorBottom - cursorTop) / 2);
         let nextScrollTop = viewportTop;
         if (cursorTop < visibleTop) {
-            nextScrollTop = cursorTop - padding;
+            nextScrollTop = cursorCenter;
         } else if (cursorBottom > visibleBottom) {
-            nextScrollTop = cursorBottom + padding - clientHeight;
+            nextScrollTop = cursorCenter;
         } else {
             return;
         }

@@ -508,9 +508,11 @@
         "        src: 'Schubert_D911-03.xml',",
         "        measureCsv: 'Schubert_D911-03_HU33_measures.csv',",
         '        maxHeight: 380,',
-        '        renderScale: 0.5,',
+        '        renderScale: 0.65,',
         '        followPlayback: true,',
-        "        style: 'margin: 12px auto;',",
+        '        cursorColor: \'#999999\',',
+        '        cursorAlpha: 0.4,',
+        "        style: 'margin: 0px;',",
         '      },',
       ];
 
@@ -675,10 +677,11 @@
           src: basePath + '/Schubert_D911-03.xml',
           measureCsv: basePath + '/Schubert_D911-03_HU33_measures.csv',
           maxHeight: 380,
-          renderScale: 0.7,
+          renderScale: 0.65,
           followPlayback: true,
           cursorColor: '#999999',
           cursorAlpha: 0.4,
+          style: 'margin: 0px;',
         });
       }
 
@@ -689,14 +692,14 @@
             width: 1200,
             height: 120,
             waveformSource: 0,
-            style: 'margin: 12px auto 8px;',
+            // style: 'margin: 12px auto 8px;',
           });
           uiConfig.push({
             type: 'waveform',
             width: 1200,
             height: 120,
             waveformSource: 1,
-            style: 'margin: 8px auto 20px;',
+            // style: 'margin: 8px auto 20px;',
           });
         } else {
           uiConfig.push({
