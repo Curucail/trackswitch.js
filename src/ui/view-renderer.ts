@@ -35,6 +35,7 @@ interface WaveformSeekSurfaceMetadata {
     baseWidth: number;
     zoom: number;
     timingNode: HTMLElement | null;
+    zoomNode: HTMLElement;
 }
 
 const MIN_WAVEFORM_ZOOM = 1;
@@ -469,6 +470,7 @@ export class ViewRenderer {
                 const timingNode = timerEnabled
                     ? this.createWaveformTimingNode(overlay)
                     : null;
+                const zoomNode = this.createWaveformZoomNode(overlay);
                 this.waveformSeekSurfaces.push({
                     wrapper: wrapper,
                     scrollContainer: scrollContainer,
@@ -483,6 +485,7 @@ export class ViewRenderer {
                     baseWidth: this.resolveWaveformBaseWidth(scrollContainer, canvasElement.width),
                     zoom: MIN_WAVEFORM_ZOOM,
                     timingNode: timingNode,
+                    zoomNode: zoomNode,
                 });
             }
         });
@@ -590,6 +593,15 @@ export class ViewRenderer {
         timing.textContent = '--:--:--:--- / --:--:--:---';
         overlay.appendChild(timing);
         return timing;
+    }
+
+    private createWaveformZoomNode(overlay: HTMLElement): HTMLElement {
+        const zoom = document.createElement('div');
+        zoom.className = 'waveform-zoom';
+        zoom.textContent = 'Zoom: 100%';
+        zoom.style.display = 'none';
+        overlay.appendChild(zoom);
+        return zoom;
     }
 
     private resolveWaveformBaseWidth(scrollContainer: HTMLElement, fallback: number): number {
@@ -864,6 +876,7 @@ export class ViewRenderer {
         }
 
         this.updateWaveformTiming(state, runtimes, waveformTimelineContext);
+        this.updateWaveformZoomIndicators();
 
         if (!this.features.looping) {
             return;
@@ -883,6 +896,19 @@ export class ViewRenderer {
             element.classList.toggle('checked', state.loop.enabled);
         });
 
+    }
+
+    private updateWaveformZoomIndicators(): void {
+        this.waveformSeekSurfaces.forEach((surface) => {
+            const zoomPercent = Math.round(clampWaveformZoom(surface.zoom) * 100);
+            if (zoomPercent === 100) {
+                surface.zoomNode.style.display = 'none';
+                return;
+            }
+
+            surface.zoomNode.textContent = 'Zoom: ' + zoomPercent + '%';
+            surface.zoomNode.style.display = 'block';
+        });
     }
 
     private applyFixedWaveformLocalSeekVisuals(

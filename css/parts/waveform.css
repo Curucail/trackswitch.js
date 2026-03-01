@@ -102,10 +102,10 @@
     /* Brighter orange when looping is active */
 }
 
-.trackswitch .waveform-wrap .waveform-timing {
+.trackswitch .waveform-wrap .waveform-timing,
+.trackswitch .waveform-wrap .waveform-zoom {
     position: absolute;
     top: 8px;
-    right: 8px;
     width: max-content;
     z-index: 1;
     padding: 4px 6px;
@@ -116,4 +116,12 @@
     background: rgba(0, 0, 0, 0.55);
     pointer-events: none;
     user-select: none;
+}
+
+.trackswitch .waveform-wrap .waveform-timing {
+    right: 8px;
+}
+
+.trackswitch .waveform-wrap .waveform-zoom {
+    left: 8px;
 }
