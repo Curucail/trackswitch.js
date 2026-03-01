@@ -82,6 +82,7 @@ interface PinchZoomState {
 interface PendingWaveformTouchSeek {
     seekWrap: HTMLElement;
     startPageX: number;
+    startPageY: number;
 }
 
 export class TrackSwitchControllerImpl implements TrackSwitchController, InputController {
@@ -718,8 +719,6 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         }
 
         if (this.tryStartPendingWaveformTouchSeek(event, targetSeekWrap)) {
-            event.preventDefault();
-            event.stopPropagation();
             return;
         }
 
@@ -775,6 +774,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         if (this.pendingWaveformTouchSeek) {
             if (this.tryActivatePendingWaveformTouchSeek(event)) {
                 event.preventDefault();
+                event.stopPropagation();
             }
             return;
         }
@@ -1375,9 +1375,14 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             return false;
         }
 
+        if (!Number.isFinite(event.pageY)) {
+            return false;
+        }
+
         this.pendingWaveformTouchSeek = {
             seekWrap: seekWrap,
             startPageX: event.pageX as number,
+            startPageY: event.pageY as number,
         };
         this.seekingElement = seekWrap;
         return true;
@@ -1396,8 +1401,20 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             return false;
         }
 
+        if (!Number.isFinite(event.pageY)) {
+            return false;
+        }
+
         const deltaX = Math.abs((event.pageX as number) - this.pendingWaveformTouchSeek.startPageX);
-        if (deltaX < this.touchSeekMoveThresholdPx) {
+        const deltaY = Math.abs((event.pageY as number) - this.pendingWaveformTouchSeek.startPageY);
+
+        if (deltaY >= this.touchSeekMoveThresholdPx && deltaY > deltaX) {
+            this.pendingWaveformTouchSeek = null;
+            this.seekingElement = null;
+            return false;
+        }
+
+        if (deltaX < this.touchSeekMoveThresholdPx || deltaX < deltaY) {
             return false;
         }
 
@@ -1410,6 +1427,16 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     private applyPendingWaveformTouchSeekTap(event: ControllerPointerEvent): void {
         if (!this.pendingWaveformTouchSeek) {
             return;
+        }
+
+        if (Number.isFinite(event.pageX) && Number.isFinite(event.pageY)) {
+            const deltaX = Math.abs((event.pageX as number) - this.pendingWaveformTouchSeek.startPageX);
+            const deltaY = Math.abs((event.pageY as number) - this.pendingWaveformTouchSeek.startPageY);
+            if (deltaX >= this.touchSeekMoveThresholdPx || deltaY >= this.touchSeekMoveThresholdPx) {
+                this.pendingWaveformTouchSeek = null;
+                this.seekingElement = null;
+                return;
+            }
         }
 
         this.seekingElement = this.pendingWaveformTouchSeek.seekWrap;

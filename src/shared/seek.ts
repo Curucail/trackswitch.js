@@ -2,6 +2,7 @@ export interface ControllerPointerEvent {
     type: string;
     which?: number;
     pageX?: number;
+    pageY?: number;
     key?: string;
     code?: string;
     shiftKey?: boolean;

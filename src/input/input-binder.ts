@@ -36,12 +36,16 @@ function eventToPointerEvent(event: Event): ControllerPointerEvent {
     const touchEvent = event as TouchEvent;
 
     let pageX: number | undefined;
+    let pageY: number | undefined;
     if (typeof mouseEvent.pageX === 'number') {
         pageX = mouseEvent.pageX;
+        pageY = typeof mouseEvent.pageY === 'number' ? mouseEvent.pageY : undefined;
     } else if (touchEvent.touches && touchEvent.touches.length > 0) {
         pageX = touchEvent.touches[0].pageX;
+        pageY = touchEvent.touches[0].pageY;
     } else if (touchEvent.changedTouches && touchEvent.changedTouches.length > 0) {
         pageX = touchEvent.changedTouches[0].pageX;
+        pageY = touchEvent.changedTouches[0].pageY;
     }
 
     let which = (mouseEvent as unknown as { which?: number }).which;
@@ -59,6 +63,7 @@ function eventToPointerEvent(event: Event): ControllerPointerEvent {
         type: event.type,
         which: which,
         pageX: pageX,
+        pageY: pageY,
         key: keyboardEvent.key,
         code: keyboardEvent.code,
         shiftKey: keyboardEvent.shiftKey,

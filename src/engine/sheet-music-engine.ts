@@ -45,7 +45,15 @@ interface SheetMusicEntry {
     syncEnabled: boolean;
     targetMeasure: number | null;
     clickListener: ((event: MouseEvent) => void) | null;
+    touchStartListener: ((event: TouchEvent) => void) | null;
+    touchMoveListener: ((event: TouchEvent) => void) | null;
     touchListener: ((event: TouchEvent) => void) | null;
+    touchTapState: {
+        identifier: number;
+        startClientX: number;
+        startClientY: number;
+        moved: boolean;
+    } | null;
 }
 
 type SheetMusicCursor = NonNullable<SheetMusicEntry['measureCursor']>;
@@ -55,6 +63,7 @@ const DEFAULT_CURSOR_ALPHA = 0.1;
 const DEFAULT_GRAPHICAL_MEASURE_CLASS_NAME = 'GraphicalMeasure';
 const MIN_OSMD_ZOOM = 0.05;
 const MAX_OSMD_ZOOM = 8;
+const TOUCH_TAP_MOVE_THRESHOLD_PX = 10;
 
 function sanitizeCursorAlpha(value: number): number {
     if (!Number.isFinite(value)) {
@@ -138,7 +147,10 @@ export class SheetMusicEngine {
                 syncEnabled: false,
                 targetMeasure: null,
                 clickListener: null,
+                touchStartListener: null,
+                touchMoveListener: null,
                 touchListener: null,
+                touchTapState: null,
             };
         });
 
@@ -287,14 +299,24 @@ export class SheetMusicEngine {
         entry.host.classList.toggle('sheetmusic-error', !entry.osmd);
 
         if (entry.osmd) {
+            const touchStartListener = (event: TouchEvent) => {
+                this.handleHostTouchStart(entry, event);
+            };
+            const touchMoveListener = (event: TouchEvent) => {
+                this.handleHostTouchMove(entry, event);
+            };
             const clickListener = (event: MouseEvent) => {
                 this.handleHostClick(entry, event);
             };
             const touchListener = (event: TouchEvent) => {
                 this.handleHostTouch(entry, event);
             };
+            entry.touchStartListener = touchStartListener;
+            entry.touchMoveListener = touchMoveListener;
             entry.clickListener = clickListener;
             entry.touchListener = touchListener;
+            entry.host.addEventListener('touchstart', touchStartListener, { passive: true });
+            entry.host.addEventListener('touchmove', touchMoveListener, { passive: true });
             entry.host.addEventListener('click', clickListener);
             entry.host.addEventListener('touchend', touchListener, { passive: false });
         }
@@ -413,6 +435,16 @@ export class SheetMusicEngine {
     }
 
     private disposeEntry(entry: SheetMusicEntry): void {
+        if (entry.touchStartListener) {
+            entry.host.removeEventListener('touchstart', entry.touchStartListener);
+            entry.touchStartListener = null;
+        }
+
+        if (entry.touchMoveListener) {
+            entry.host.removeEventListener('touchmove', entry.touchMoveListener);
+            entry.touchMoveListener = null;
+        }
+
         if (entry.clickListener) {
             entry.host.removeEventListener('click', entry.clickListener);
             entry.clickListener = null;
@@ -422,6 +454,8 @@ export class SheetMusicEngine {
             entry.host.removeEventListener('touchend', entry.touchListener);
             entry.touchListener = null;
         }
+
+        entry.touchTapState = null;
 
         const osmd = entry.osmd;
         if (!osmd) {
@@ -455,8 +489,80 @@ export class SheetMusicEngine {
         this.handleHostInteraction(entry, event);
     }
 
+    private handleHostTouchStart(entry: SheetMusicEntry, event: TouchEvent): void {
+        if (event.touches.length !== 1) {
+            entry.touchTapState = null;
+            return;
+        }
+
+        const touch = event.touches[0];
+        if (!touch) {
+            entry.touchTapState = null;
+            return;
+        }
+
+        entry.touchTapState = {
+            identifier: touch.identifier,
+            startClientX: touch.clientX,
+            startClientY: touch.clientY,
+            moved: false,
+        };
+    }
+
+    private handleHostTouchMove(entry: SheetMusicEntry, event: TouchEvent): void {
+        const tapState = entry.touchTapState;
+        if (!tapState) {
+            return;
+        }
+
+        const matchingTouch = this.findTouchByIdentifier(event.touches, tapState.identifier);
+        if (!matchingTouch) {
+            tapState.moved = true;
+            return;
+        }
+
+        const deltaX = matchingTouch.clientX - tapState.startClientX;
+        const deltaY = matchingTouch.clientY - tapState.startClientY;
+        const distance = Math.hypot(deltaX, deltaY);
+        if (distance >= TOUCH_TAP_MOVE_THRESHOLD_PX) {
+            tapState.moved = true;
+        }
+    }
+
     private handleHostTouch(entry: SheetMusicEntry, event: TouchEvent): void {
+        const tapState = entry.touchTapState;
+        entry.touchTapState = null;
+        if (!tapState || tapState.moved) {
+            return;
+        }
+
+        const endingTouch = this.findTouchByIdentifier(event.changedTouches, tapState.identifier);
+        if (!endingTouch) {
+            return;
+        }
+
+        const deltaX = endingTouch.clientX - tapState.startClientX;
+        const deltaY = endingTouch.clientY - tapState.startClientY;
+        const distance = Math.hypot(deltaX, deltaY);
+        if (!Number.isFinite(distance) || distance >= TOUCH_TAP_MOVE_THRESHOLD_PX) {
+            return;
+        }
+
         this.handleHostInteraction(entry, event);
+    }
+
+    private findTouchByIdentifier(
+        touchList: TouchList | ArrayLike<Touch>,
+        identifier: number
+    ): Touch | null {
+        for (let index = 0; index < touchList.length; index += 1) {
+            const touch = touchList[index];
+            if (touch && touch.identifier === identifier) {
+                return touch;
+            }
+        }
+
+        return null;
     }
 
     private handleHostInteraction(entry: SheetMusicEntry, event: MouseEvent | TouchEvent): void {
