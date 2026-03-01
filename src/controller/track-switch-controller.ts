@@ -1729,9 +1729,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         };
 
         this.renderer.updateMainControls(uiState, this.runtimes, this.getWaveformTimelineContext());
-        if (this.isAlignmentMode()) {
-            this.sheetMusicEngine.updatePosition(this.state.position);
-        }
+        this.sheetMusicEngine.updatePosition(this.state.position);
 
         this.emit('position', {
             position: this.state.position,
@@ -1747,10 +1745,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         }
 
         await this.sheetMusicEngine.initialize(hosts);
-
-        if (this.isAlignmentMode()) {
-            this.sheetMusicEngine.updatePosition(this.state.position);
-        }
+        this.sheetMusicEngine.updatePosition(this.state.position);
     }
 
     private dispatch(action: PlayerAction): void {
