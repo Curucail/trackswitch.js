@@ -74,6 +74,11 @@ Track fields:
 - `sources: TrackSourceDefinition[]` (required)
 - `alignment?: { column?: string; sources?: TrackSourceDefinition[] }`
 
+Notes:
+
+- Custom track `id` values are not supported.
+- Track index is inferred from the order tracks appear in each `ui.trackGroup`.
+
 Source fields:
 
 - `src: string` (required)

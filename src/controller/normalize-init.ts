@@ -41,6 +41,14 @@ function resolveTracksFromUi(
 
         const startTrackIndex = tracks.length;
         entry.trackGroup.forEach(function(track) {
+            if (
+                track
+                && typeof track === 'object'
+                && Object.prototype.hasOwnProperty.call(track, 'id')
+            ) {
+                throw new Error('Track ids are no longer supported. Track order in ui trackGroup defines the track index.');
+            }
+
             if (!hasValidTrackSources(track)) {
                 throw new Error('Each track in ui trackGroup must define at least one valid source src.');
             }
