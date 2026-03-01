@@ -333,6 +333,14 @@ export class SheetMusicEngine {
     }
 
     private ensureCurrentMeasureVisible(entry: SheetMusicEntry): void {
+        this.scrollCurrentMeasure(entry, false);
+    }
+
+    private centerCurrentMeasureInViewport(entry: SheetMusicEntry): void {
+        this.scrollCurrentMeasure(entry, true);
+    }
+
+    private scrollCurrentMeasure(entry: SheetMusicEntry, forceCenter: boolean): void {
         if (!entry.followPlayback || !entry.syncEnabled || !entry.scrollContainer) {
             return;
         }
@@ -376,7 +384,9 @@ export class SheetMusicEngine {
 
         const cursorCenter = cursorTop + ((cursorBottom - cursorTop) / 2);
         let nextScrollTop = viewportTop;
-        if (cursorTop < visibleTop) {
+        if (forceCenter) {
+            nextScrollTop = cursorCenter - (clientHeight / 2);
+        } else if (cursorTop < visibleTop) {
             nextScrollTop = cursorCenter - (clientHeight / 2);
         } else if (cursorBottom > visibleBottom) {
             nextScrollTop = cursorCenter - (clientHeight / 2);
@@ -437,6 +447,12 @@ export class SheetMusicEngine {
         const clickedMeasure = this.resolveClickedMeasure(entry, event);
         if (clickedMeasure === null) {
             return;
+        }
+
+        const availableMeasure = this.resolveAvailableMeasure(entry, clickedMeasure);
+        if (availableMeasure !== null) {
+            this.moveCursorToMeasure(entry, availableMeasure);
+            this.centerCurrentMeasureInViewport(entry);
         }
 
         const referenceTime = this.resolveReferenceTimeForMeasure(entry.measureMap, clickedMeasure);
