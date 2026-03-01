@@ -56,60 +56,54 @@
 
   var CONTROL_NAMES = [
     'looping',
-    'globalvolume',
+    'globalVolume',
     'presets',
-    'seekbar',
+    'seekBar',
     'timer',
     'keyboard',
     'waveform',
     'customImage',
-    'mute',
-    'solo',
-    'tabview',
     'radiosolo',
+    'tabView',
     'repeatEnabled',
   ];
 
   var REBUILD_TOGGLE_NAMES = [
     'looping',
-    'globalvolume',
+    'globalVolume',
     'presets',
-    'seekbar',
+    'seekBar',
     'timer',
     'keyboard',
     'waveform',
     'customImage',
-    'mute',
-    'solo',
-    'tabview',
     'radiosolo',
+    'tabView',
   ];
 
   var MODE_DISABLED_CONTROLS = {
     default: [],
-    alignment: ['customImage', 'presets', 'mute', 'solo', 'radiosolo'],
+    alignment: ['customImage', 'presets', 'radiosolo'],
   };
 
   var DEFAULT_MODEL = {
     looping: true,
-    globalvolume: true,
+    globalVolume: true,
     presets: true,
-    seekbar: true,
+    seekBar: true,
     timer: true,
     keyboard: true,
     waveform: true,
     customImage: false,
-    mute: true,
-    solo: true,
-    tabview: false,
     radiosolo: false,
+    tabView: false,
     repeatEnabled: false,
   };
 
   var ALIGNMENT_DEFAULT_MODEL = Object.assign({}, DEFAULT_MODEL, {
     presets: false,
     customImage: false,
-    radiosolo: false,
+    radiosolo: true,
   });
 
   document.addEventListener('DOMContentLoaded', function () {
@@ -177,10 +171,6 @@
 
     function isControlDisabled(name, model, mode) {
       if (getModeDisabledControlNames(mode).indexOf(name) !== -1) {
-        return true;
-      }
-
-      if (name === 'presets' && Boolean(model.radiosolo)) {
         return true;
       }
 
@@ -377,20 +367,15 @@
           notes.push('Presets are unavailable in alignment mode.');
         }
 
-        if (normalized.radiosolo) {
-          normalized.radiosolo = false;
-          notes.push('Radio Solo is unavailable in alignment mode.');
+        if (!normalized.radiosolo) {
+          normalized.radiosolo = true;
+          notes.push('Single solo mode is enforced in alignment mode.');
         }
       }
 
       if (normalized.radiosolo && normalized.presets) {
         normalized.presets = false;
-        notes.push('Presets were turned off because Radio Solo disables presets.');
-      }
-
-      if (!normalized.mute && !normalized.solo) {
-        normalized.solo = true;
-        notes.push('Solo was re-enabled because mute and solo cannot both be disabled.');
+        notes.push('Presets were turned off because single solo mode disables presets.');
       }
 
       return {
@@ -450,16 +435,16 @@
         "      mode: 'default',",
         '      looping: ' + Boolean(model.looping) + ',',
         '      repeat: ' + Boolean(model.repeatEnabled) + ',',
-        '      globalvolume: ' + Boolean(model.globalvolume) + ',',
+        '      globalVolume: ' + Boolean(model.globalVolume) + ',',
+        '      muteOtherPlayerInstances: true,',
         '      presets: ' + Boolean(model.presets) + ',',
-        '      seekbar: ' + Boolean(model.seekbar) + ',',
+        '      seekBar: ' + Boolean(model.seekBar) + ',',
         '      timer: ' + Boolean(model.timer) + ',',
         '      keyboard: ' + Boolean(model.keyboard) + ',',
         '      waveform: ' + Boolean(model.waveform) + ',',
-        '      mute: ' + Boolean(model.mute) + ',',
-        '      solo: ' + Boolean(model.solo) + ',',
-        '      tabview: ' + Boolean(model.tabview) + ',',
         '      radiosolo: ' + Boolean(model.radiosolo) + ',',
+        '      tabView: ' + Boolean(model.tabView) + ',',
+        '      iosUnmute: true,',
         '    },',
         '  });',
         '});',
@@ -531,16 +516,16 @@
         "      mode: 'alignment',",
         '      looping: ' + Boolean(model.looping) + ',',
         '      repeat: ' + Boolean(model.repeatEnabled) + ',',
-        '      globalvolume: ' + Boolean(model.globalvolume) + ',',
+        '      globalVolume: ' + Boolean(model.globalVolume) + ',',
+        '      muteOtherPlayerInstances: true,',
         '      presets: ' + Boolean(model.presets) + ',',
-        '      seekbar: ' + Boolean(model.seekbar) + ',',
+        '      seekBar: ' + Boolean(model.seekBar) + ',',
         '      timer: ' + Boolean(model.timer) + ',',
         '      keyboard: ' + Boolean(model.keyboard) + ',',
         '      waveform: ' + Boolean(model.waveform) + ',',
-        '      mute: ' + Boolean(model.mute) + ',',
-        '      solo: ' + Boolean(model.solo) + ',',
-        '      tabview: ' + Boolean(model.tabview) + ',',
         '      radiosolo: ' + Boolean(model.radiosolo) + ',',
+        '      tabView: ' + Boolean(model.tabView) + ',',
+        '      iosUnmute: true,',
         '    },',
         '  });',
         '});',
@@ -720,16 +705,16 @@
           mode: currentMode,
           looping: model.looping,
           repeat: model.repeatEnabled,
-          globalvolume: model.globalvolume,
+          globalVolume: model.globalVolume,
+          muteOtherPlayerInstances: true,
           presets: model.presets,
-          seekbar: model.seekbar,
+          seekBar: model.seekBar,
           timer: model.timer,
           keyboard: model.keyboard,
           waveform: model.waveform,
-          mute: model.mute,
-          solo: model.solo,
-          tabview: model.tabview,
           radiosolo: model.radiosolo,
+          tabView: model.tabView,
+          iosUnmute: true,
         },
       };
 
@@ -771,7 +756,7 @@
 
       if (!stateSnapshot || !stateSnapshot.isLoaded) {
         nextController.setRepeat(Boolean(model.repeatEnabled));
-        if (model.globalvolume) {
+        if (model.globalVolume) {
           nextController.setVolume(1);
         }
         return;
@@ -779,7 +764,7 @@
 
       nextController.setRepeat(Boolean(stateSnapshot.repeat || model.repeatEnabled));
 
-      if (model.globalvolume && typeof stateSnapshot.volume === 'number') {
+      if (model.globalVolume && typeof stateSnapshot.volume === 'number') {
         nextController.setVolume(stateSnapshot.volume);
       }
 

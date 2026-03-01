@@ -338,7 +338,7 @@ export class ViewRenderer {
                 : '')
             + '</ul>'
             + '</li>'
-            + (this.features.globalvolume
+            + (this.features.globalVolume
                 ? '<li class="volume"><div class="volume-control"><i class="fa-volume-up volume-icon"></i>'
                     + '<input type="range" class="volume-slider" min="0" max="100" value="100"></div></li>'
                 : '')
@@ -354,7 +354,7 @@ export class ViewRenderer {
             + (this.features.timer
                 ? '<li class="timing"><span class="time">--:--:--:---</span> / <span class="length">--:--:--:---</span></li>'
                 : '')
-            + (this.features.seekbar
+            + (this.features.seekBar
                 ? '<li class="seekwrap">'
                     + '<div class="seekbar">'
                     + '<div class="loop-region"></div>'
@@ -381,9 +381,9 @@ export class ViewRenderer {
     }
 
     private buildTrackRow(runtime: TrackRuntime, index: number): HTMLElement {
-        const tabviewClass = this.features.tabview ? ' tabs' : '';
+        const tabviewClass = this.features.tabView ? ' tabs' : '';
         const radioSoloClass = this.features.radiosolo ? ' radio' : '';
-        const wholeSoloClass = this.features.onlyradiosolo ? ' solo' : '';
+        const wholeSoloClass = this.features.radiosolo ? ' solo' : '';
 
         const track = document.createElement('li');
         track.className = 'track' + tabviewClass + wholeSoloClass;
@@ -394,21 +394,11 @@ export class ViewRenderer {
         const controls = document.createElement('ul');
         controls.className = 'control';
 
-        if (this.features.mute) {
-            const mute = document.createElement('li');
-            mute.className = 'mute button';
-            mute.title = 'Mute';
-            mute.textContent = 'Mute';
-            controls.appendChild(mute);
-        }
-
-        if (this.features.solo) {
-            const solo = document.createElement('li');
-            solo.className = 'solo button' + radioSoloClass;
-            solo.title = 'Solo';
-            solo.textContent = 'Solo';
-            controls.appendChild(solo);
-        }
+        const solo = document.createElement('li');
+        solo.className = 'solo button' + radioSoloClass;
+        solo.title = 'Solo';
+        solo.textContent = 'Solo';
+        controls.appendChild(solo);
 
         track.appendChild(controls);
         return track;
@@ -904,7 +894,6 @@ export class ViewRenderer {
                 const timingDuration = runtime.timing ? runtime.timing.effectiveDuration : 0;
                 return [
                     index,
-                    runtime.state.mute ? 1 : 0,
                     runtime.state.solo ? 1 : 0,
                     Math.round(duration * 1000),
                     Math.round(timingDuration * 1000),
@@ -1211,7 +1200,6 @@ export class ViewRenderer {
         return [{
             ...selected,
             state: {
-                mute: false,
                 solo: false,
             },
         }];
@@ -1481,7 +1469,7 @@ export class ViewRenderer {
     updateTrackControls(
         runtimes: TrackRuntime[],
         syncLockedTrackIndexes?: ReadonlySet<number>,
-        effectiveOnlyRadioSolo = this.features.onlyradiosolo
+        effectiveSingleSoloMode = this.features.radiosolo
     ): void {
         runtimes.forEach((runtime, index) => {
             const row = this.query('.track[data-track-index="' + index + '"]');
@@ -1489,21 +1477,15 @@ export class ViewRenderer {
                 return;
             }
 
-            const mute = row.querySelector('.mute');
             const solo = row.querySelector('.solo');
             const isLocked = !!syncLockedTrackIndexes && syncLockedTrackIndexes.has(index);
 
-            row.classList.toggle('solo', effectiveOnlyRadioSolo);
-
-            if (mute) {
-                mute.classList.toggle('checked', runtime.state.mute);
-                mute.classList.toggle('disabled', isLocked);
-            }
+            row.classList.toggle('solo', effectiveSingleSoloMode);
 
             if (solo) {
                 solo.classList.toggle('checked', runtime.state.solo);
                 solo.classList.toggle('disabled', isLocked);
-                solo.classList.toggle('radio', effectiveOnlyRadioSolo);
+                solo.classList.toggle('radio', effectiveSingleSoloMode);
             }
         });
     }

@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', function () {
     ],
     features: {
       mode: 'default',
-      globalvolume: true,
+      globalVolume: true,
       looping: true,
       presets: true,
     },
@@ -100,7 +100,7 @@ Main methods:
 - `seekTo`, `seekRelative`
 - `setRepeat`, `setVolume`
 - `setLoopPoint`, `toggleLoop`, `clearLoop`
-- `toggleMute`, `toggleSolo`, `applyPreset`
+- `toggleSolo`, `applyPreset`
 - `getState`, `on`, `off`
 
 Events:
@@ -108,11 +108,11 @@ Events:
 - `loaded` -> `{ longestDuration }`
 - `error` -> `{ message }`
 - `position` -> `{ position, duration }`
-- `trackState` -> `{ index, state: { mute, solo } }`
+- `trackState` -> `{ index, state: { solo } }`
 
-`getState()` returns player loading/playback state, feature flags, and per-track `mute`/`solo` state.
+`getState()` returns player loading/playback state, feature flags, and per-track `solo` state.
 
-When `features.globalsolo` is enabled, starting playback in one player pauses other players on the page.
+When `features.muteOtherPlayerInstances` is enabled, starting playback in one player pauses other players on the page.
 
 Alignment Modes
 ---------------
@@ -135,7 +135,7 @@ Alignment mode behavior:
 
 - In `alignment`, the longest track is used as the reference timeline axis
 - `seekTo`/seekbar/timer/`position` events stay on reference time in `alignment`
-- `alignment` starts with `SYNC` off and single-track solo behavior enforced automatically
+- `alignment` starts with `SYNC` off and single-track solo behavior (`features.radiosolo`) enforced automatically
 - `alignment`: switching solo track remaps position and restarts playback on the newly active track timeline
 - `alignment`: enabling global `SYNC` allows multi-track listening again, switches synced tracks to synchronized sources, and locks non-synced tracks muted
 - `alignment`: with `SYNC` off, fixed waveforms (`waveformSource: <trackIndex>`) render on their native track timeline and their waveform seek overlays (playhead + loop markers/region) use that same local axis; interactions are converted to reference time internally
@@ -171,7 +171,7 @@ Keyboard Shortcuts
 - `← / →` - Seek backward / forward 2 seconds
 - `Shift + ← / →` - Seek backward / forward 5 seconds
 - `Home` - Jump to start
-- `↑ / ↓` - Increase / decrease volume by 10% (when `globalvolume` is enabled)
+- `↑ / ↓` - Increase / decrease volume by 10% (when `globalVolume` is enabled)
 - `A` - Set loop point A (when `looping` is enabled)
 - `B` - Set loop point B (when `looping` is enabled)
 - `L` - Toggle loop (when `looping` is enabled)

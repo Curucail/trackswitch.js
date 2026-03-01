@@ -2,10 +2,8 @@ import { TrackDefinition, TrackRuntime } from './types';
 
 export function createTrackRuntime(definition: TrackDefinition, index: number): TrackRuntime {
     return {
-        id: definition.id || 'track-' + index,
         definition: definition,
         state: {
-            mute: !!definition.muted,
             solo: !!definition.solo,
         },
         gainNode: null,

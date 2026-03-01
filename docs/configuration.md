@@ -54,7 +54,7 @@ TrackSwitch.createTrackSwitch(rootElement, {
   },
   features: {
     mode: 'default',
-    globalvolume: true,
+    globalVolume: true,
     looping: true,
   },
 });
@@ -66,9 +66,7 @@ TrackSwitch.createTrackSwitch(rootElement, {
 
 Track fields:
 
-- `id?: string`
 - `title?: string`
-- `muted?: boolean`
 - `solo?: boolean`
 - `image?: string`
 - `style?: string`
@@ -107,7 +105,7 @@ Rules:
 - Missing names fall back to `Preset {index}`.
 - Extra names are ignored.
 - Preset `0` is auto-applied at initialization when presets exist.
-- Applying a preset sets `solo` by membership and clears `mute` on all tracks.
+- Applying a preset sets `solo` by membership.
 - Preset selector is shown only when at least 2 presets exist and `features.presets` is `true`.
 
 ## UI Elements
@@ -137,8 +135,8 @@ Waveform element:
 - `maxZoom` accepts either a factor (`20`) or percentage string (`'2000%'`), where `100% = 1x`
 - Zoom is enabled per waveform only when `maxZoom > 1` (or `> '100%'`); `maxZoom: 1` / `maxZoom: '100%'` disables zoom for that waveform
 - `waveformSource` controls what gets visualized:
-  - `'audible'` (default): render the current audible mix based on mute/solo state
-  - non-negative integer: render that specific track index waveform regardless of mute/solo
+  - `'audible'` (default): render the current audible mix based on solo state
+  - non-negative integer: render that specific track index waveform regardless of solo state
 - `timer` controls the waveform's top-right `current / duration` badge:
   - `alignment` mode default: enabled when omitted
   - `default` mode default: disabled when omitted
@@ -182,27 +180,22 @@ Sheet music element:
 Feature defaults:
 
 - `mode: 'default'`
-- `mute: true`
-- `solo: true`
-- `globalsolo: true`
-- `globalvolume: false`
-- `repeat: false`
 - `radiosolo: false`
-- `onlyradiosolo: false`
-- `tabview: false`
-- `iosunmute: true`
+- `muteOtherPlayerInstances: true`
+- `globalVolume: false`
+- `repeat: false`
+- `tabView: false`
+- `iosUnmute: true`
 - `keyboard: true`
 - `looping: false`
-- `seekbar: true`
+- `seekBar: true`
 - `timer: true`
 - `presets: true`
 - `waveform: true`
 
 Normalization rules:
 
-- If `mute` and `solo` are both `false`, `solo` is forced to `true`
-- `onlyradiosolo: true` forces `mute: false` and `radiosolo: true`
-- `radiosolo` or `onlyradiosolo` forces `presets: false`
+- `radiosolo: true` forces `presets: false`
 - A configured waveform UI element forces `waveform: true`
 - In `alignment`, single-track solo behavior is enforced automatically at startup
 
@@ -240,7 +233,7 @@ Behavior:
 - Public timing (`seekTo`, seekbar, timer, `position` event) stays on reference time in `alignment`
 - `alignment` starts with `SYNC` disabled and single-track solo mode enforced
 - `alignment`: switching active solo track remaps playback position via CSV and restarts from the mapped position
-- `alignment`: enabling global `SYNC` switches synced tracks to synchronized sources, re-enables multi-track listening, and locks non-synced tracks muted
+- `alignment`: enabling global `SYNC` switches synced tracks to synchronized sources, re-enables multi-track listening, and locks non-synced tracks out
 - `alignment`: with `SYNC` off, fixed-track waveforms (`waveformSource: <trackIndex>`) render on native track time and their waveform seek overlays (playhead + loop markers/region) use that local axis
 - `alignment`: with `SYNC` on, fixed-track waveforms return to shared reference-axis behavior; synced tracks bypass CSV mapping (identity)
 - `alignment`: waveform containers default to rendering a top-right timer badge in `current / duration` format; fixed-track waveforms use local track time while `SYNC` is off
@@ -249,7 +242,7 @@ Behavior:
 
 Cross-player behavior:
 
-- When `globalsolo` is `true`, starting playback in one player pauses other players on the same page
+- When `muteOtherPlayerInstances` is `true`, starting playback in one player pauses other players on the same page
 
 ## Keyboard Shortcuts
 
@@ -261,7 +254,7 @@ When `features.keyboard` is enabled:
 - `ArrowLeft` / `ArrowRight` - seek -/+ 2 seconds
 - `Shift + ArrowLeft` / `Shift + ArrowRight` - seek -/+ 5 seconds
 - `Home` - jump to start
-- `ArrowUp` / `ArrowDown` - adjust volume (when `globalvolume` is enabled)
+- `ArrowUp` / `ArrowDown` - adjust volume (when `globalVolume` is enabled)
 
 When `features.looping` is enabled:
 
@@ -306,7 +299,6 @@ Controller methods:
 - `setLoopPoint(marker: 'A' | 'B'): boolean`
 - `toggleLoop(): boolean`
 - `clearLoop(): void`
-- `toggleMute(trackIndex: number): void`
 - `toggleSolo(trackIndex: number, exclusive?: boolean): void`
 - `applyPreset(presetIndex: number): void`
 - `getState(): TrackSwitchSnapshot`
@@ -318,7 +310,7 @@ Events:
 - `loaded` payload: `{ longestDuration: number }`
 - `error` payload: `{ message: string }`
 - `position` payload: `{ position: number, duration: number }`
-- `trackState` payload: `{ index: number, state: { mute: boolean, solo: boolean } }`
+- `trackState` payload: `{ index: number, state: { solo: boolean } }`
 
 `getState()` snapshot highlights:
 
@@ -326,7 +318,7 @@ Events:
 - `longestDuration`
 - `features`
 - `state` (`playing`, `repeat`, `position`, `startTime`, `currentlySeeking`, `loop`, `volume`)
-- `tracks` (array of `{ mute, solo }`)
+- `tracks` (array of `{ solo }`)
 
 ## Utility Exports
 

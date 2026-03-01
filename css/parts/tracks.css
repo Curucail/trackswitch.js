@@ -154,20 +154,6 @@
     opacity: 1;
 }
 
-.trackswitch .control li.mute:after {
-    content: "\f028";
-    /* fa-volume-up */
-    position: absolute;
-    bottom: 50%;
-    left: 4px;
-    /* Necessary to do it this way? ----------------------------------------------------- TODO */
-}
-
-.trackswitch .control li.mute.checked:after {
-    content: "\f026";
-    /* fa-volume-off */
-}
-
 .trackswitch .control li.solo:after {
     content: "\f10c";
     /* fa-circle-o */

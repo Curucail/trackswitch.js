@@ -122,7 +122,7 @@ export class WaveformEngine {
         });
 
         const audible = runtimes.filter(function(runtime) {
-            return anySolo ? runtime.state.solo : !runtime.state.mute;
+            return anySolo ? runtime.state.solo : true;
         });
 
         if (!audible.length) {

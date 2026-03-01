@@ -77,7 +77,7 @@ export class AudioEngine {
 
         if (!this.gainNodeVolume) {
             const volumeNode = this.context.createGain();
-            volumeNode.gain.value = this.features.globalvolume ? this.masterVolume : 1.0;
+            volumeNode.gain.value = this.features.globalVolume ? this.masterVolume : 1.0;
             volumeNode.connect(this.context.destination);
             this.gainNodeVolume = volumeNode;
         }
@@ -161,7 +161,7 @@ export class AudioEngine {
     }
 
     async unlockIOSPlayback(): Promise<void> {
-        if (!this.features.iosunmute) {
+        if (!this.features.iosUnmute) {
             return;
         }
 
@@ -406,7 +406,7 @@ export class AudioEngine {
 
         const nextVolume = Math.max(0, Math.min(1, Number.isFinite(volume) ? volume : 0));
         this.masterVolume = nextVolume;
-        this.gainNodeVolume.gain.value = this.features.globalvolume ? nextVolume : 1;
+        this.gainNodeVolume.gain.value = this.features.globalVolume ? nextVolume : 1;
     }
 
     applyTrackStateGains(runtimes: TrackRuntime[]): void {
@@ -419,10 +419,9 @@ export class AudioEngine {
                 return;
             }
 
-            let gain = runtime.state.mute ? 0 : 1;
-            if (anySolos) {
-                gain = runtime.state.solo ? 1 : 0;
-            }
+            const gain = anySolos
+                ? (runtime.state.solo ? 1 : 0)
+                : 1;
             runtime.gainNode.gain.value = gain;
         });
     }

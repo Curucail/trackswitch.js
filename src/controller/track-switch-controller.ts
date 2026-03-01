@@ -120,7 +120,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     private alignmentContext: AlignmentContext | null = null;
     private alignmentPlaybackTrackIndex: number | null = null;
     private globalSyncEnabled = false;
-    private effectiveOnlyRadioSolo = false;
+    private effectiveSingleSoloMode = false;
     private readonly syncLockedTrackIndexes = new Set<number>();
     private preSyncSoloTrackIndex: number | null = null;
 
@@ -141,14 +141,12 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
         this.features = normalizeFeatures(config.features);
         if (this.features.mode === 'alignment') {
-            this.features.onlyradiosolo = true;
             this.features.radiosolo = true;
-            this.features.mute = false;
             this.features.presets = false;
         }
-        this.effectiveOnlyRadioSolo = this.features.mode === 'alignment'
+        this.effectiveSingleSoloMode = this.features.mode === 'alignment'
             ? true
-            : this.features.onlyradiosolo;
+            : this.features.radiosolo;
         this.state = createInitialPlayerState(this.features.repeat);
 
         this.runtimes = config.tracks.map(function(track, index) {
@@ -223,9 +221,9 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         this.globalSyncEnabled = false;
         this.syncLockedTrackIndexes.clear();
         this.preSyncSoloTrackIndex = null;
-        this.effectiveOnlyRadioSolo = this.isAlignmentMode()
+        this.effectiveSingleSoloMode = this.isAlignmentMode()
             ? true
-            : this.features.onlyradiosolo;
+            : this.features.radiosolo;
 
         this.runtimes.forEach(function(runtime) {
             runtime.successful = false;
@@ -447,7 +445,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     }
 
     setVolume(volumeZeroToOne: number): void {
-        if (!this.features.globalvolume) {
+        if (!this.features.globalVolume) {
             this.dispatch({ type: 'set-volume', volume: 1 });
             this.audioEngine.setMasterVolume(1);
             this.renderer.setVolumeSlider(1);
@@ -550,20 +548,6 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         this.updateMainControls();
     }
 
-    toggleMute(trackIndex: number): void {
-        const runtime = this.runtimes[trackIndex];
-        if (!runtime) {
-            return;
-        }
-
-        if (this.isTrackSyncLocked(trackIndex)) {
-            return;
-        }
-
-        runtime.state.mute = !runtime.state.mute;
-        this.applyTrackProperties();
-    }
-
     toggleSolo(trackIndex: number, exclusive = false): void {
         const runtime = this.runtimes[trackIndex];
         if (!runtime) {
@@ -578,13 +562,13 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
         const currentState = runtime.state.solo;
 
-        if (exclusive || this.effectiveOnlyRadioSolo) {
+        if (exclusive || this.effectiveSingleSoloMode) {
             this.runtimes.forEach(function(entry) {
                 entry.state.solo = false;
             });
         }
 
-        if ((exclusive || this.effectiveOnlyRadioSolo) && currentState) {
+        if ((exclusive || this.effectiveSingleSoloMode) && currentState) {
             runtime.state.solo = true;
         } else {
             runtime.state.solo = !currentState;
@@ -596,7 +580,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         if (
             this.isAlignmentMode()
             && this.alignmentContext
-            && this.effectiveOnlyRadioSolo
+            && this.effectiveSingleSoloMode
             && previousActiveTrackIndex !== nextActiveTrackIndex
             && nextActiveTrackIndex >= 0
         ) {
@@ -612,7 +596,6 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         this.runtimes.forEach(function(runtime) {
             const presets = runtime.definition.presets ?? [];
             runtime.state.solo = presets.indexOf(presetIndex) !== -1;
-            runtime.state.mute = false;
         });
 
         this.applyTrackProperties();
@@ -631,7 +614,6 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             },
             tracks: this.runtimes.map(function(runtime) {
                 return {
-                    mute: runtime.state.mute,
                     solo: runtime.state.solo,
                 };
             }),
@@ -988,19 +970,6 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         event.stopPropagation();
     }
 
-    onMute(event: ControllerPointerEvent): void {
-        if (!isPrimaryInput(event)) {
-            return;
-        }
-
-        event.preventDefault();
-        const index = this.trackIndexFromTarget(event.target ?? null);
-        if (index >= 0) {
-            this.toggleMute(index);
-        }
-        event.stopPropagation();
-    }
-
     onSolo(event: ControllerPointerEvent): void {
         if (!isPrimaryInput(event)) {
             return;
@@ -1221,7 +1190,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
                 break;
 
             case 'ArrowUp':
-                if (this.features.globalvolume) {
+                if (this.features.globalVolume) {
                     event.preventDefault();
                     this.setVolume(this.state.volume + 0.1);
                     handled = true;
@@ -1229,7 +1198,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
                 break;
 
             case 'ArrowDown':
-                if (this.features.globalvolume) {
+                if (this.features.globalVolume) {
                     event.preventDefault();
                     this.setVolume(this.state.volume - 0.1);
                     handled = true;
@@ -1607,16 +1576,12 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         return this.globalSyncEnabled && this.syncLockedTrackIndexes.has(trackIndex);
     }
 
-    private setEffectiveSoloMode(onlyRadio: boolean): void {
-        this.effectiveOnlyRadioSolo = onlyRadio;
+    private setEffectiveSoloMode(singleSoloMode: boolean): void {
+        this.effectiveSingleSoloMode = singleSoloMode;
 
-        if (!onlyRadio || this.runtimes.length === 0) {
+        if (!singleSoloMode || this.runtimes.length === 0) {
             return;
         }
-
-        this.runtimes.forEach(function(runtime) {
-            runtime.state.mute = false;
-        });
 
         const previousSoloIndex = this.getActiveSoloTrackIndex();
         const targetSoloIndex = previousSoloIndex >= 0 ? previousSoloIndex : 0;
@@ -1657,13 +1622,11 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             this.runtimes.forEach((runtime, index) => {
                 if (this.hasSyncedVariant(runtime)) {
                     this.setRuntimeActiveVariant(runtime, 'synced');
-                    runtime.state.mute = false;
                     runtime.state.solo = true;
                     return;
                 }
 
                 this.setRuntimeActiveVariant(runtime, 'base');
-                runtime.state.mute = true;
                 runtime.state.solo = false;
                 this.syncLockedTrackIndexes.add(index);
             });
@@ -1673,7 +1636,6 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
             this.runtimes.forEach((runtime) => {
                 this.setRuntimeActiveVariant(runtime, 'base');
-                runtime.state.mute = false;
                 runtime.state.solo = false;
             });
 
@@ -1729,7 +1691,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         this.renderer.updateTrackControls(
             this.runtimes,
             this.syncLockedTrackIndexes,
-            this.effectiveOnlyRadioSolo
+            this.effectiveSingleSoloMode
         );
         this.audioEngine.applyTrackStateGains(this.runtimes);
         this.renderer.switchPosterImage(this.runtimes);
@@ -1745,7 +1707,6 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             this.emit('trackState', {
                 index: index,
                 state: {
-                    mute: runtime.state.mute,
                     solo: runtime.state.solo,
                 },
             });
@@ -1793,7 +1754,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     }
 
     private pauseOthers(): void {
-        if (!this.features.globalsolo) {
+        if (!this.features.muteOtherPlayerInstances) {
             return;
         }
 
@@ -2250,12 +2211,10 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         }
 
         const trackIndexByRuntime = new Map<TrackRuntime, number>();
-        const trackIndexById = new Map<string, number>();
         const trackIndexByDefinition = new Map<object, number>();
 
         this.runtimes.forEach(function(runtime, index) {
             trackIndexByRuntime.set(runtime, index);
-            trackIndexById.set(runtime.id, index);
             trackIndexByDefinition.set(runtime.definition, index);
         });
 
@@ -2268,11 +2227,6 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             const definitionIndex = trackIndexByDefinition.get(runtime.definition);
             if (definitionIndex !== undefined) {
                 return this.trackToReferenceTime(definitionIndex, trackTimelineTime);
-            }
-
-            const idIndex = trackIndexById.get(runtime.id);
-            if (idIndex !== undefined) {
-                return this.trackToReferenceTime(idIndex, trackTimelineTime);
             }
 
             return trackTimelineTime;
@@ -2353,7 +2307,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         this.globalSyncEnabled = false;
         this.syncLockedTrackIndexes.clear();
         this.preSyncSoloTrackIndex = null;
-        this.effectiveOnlyRadioSolo = this.isAlignmentMode() ? true : this.features.onlyradiosolo;
+        this.effectiveSingleSoloMode = this.isAlignmentMode() ? true : this.features.radiosolo;
 
         this.stopAudio();
 

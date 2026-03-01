@@ -29,9 +29,7 @@ export interface TrackDefinitionAlignment {
 }
 
 export interface TrackDefinition {
-    id?: string;
     title?: string;
-    muted?: boolean;
     solo?: boolean;
     image?: string;
     style?: string;
@@ -44,18 +42,15 @@ export interface TrackDefinition {
 
 export interface TrackSwitchFeatures {
     mode: TrackSwitchMode;
-    mute: boolean;
-    solo: boolean;
-    globalsolo: boolean;
-    globalvolume: boolean;
-    repeat: boolean;
     radiosolo: boolean;
-    onlyradiosolo: boolean;
-    tabview: boolean;
-    iosunmute: boolean;
+    muteOtherPlayerInstances: boolean;
+    globalVolume: boolean;
+    repeat: boolean;
+    tabView: boolean;
+    iosUnmute: boolean;
     keyboard: boolean;
     looping: boolean;
-    seekbar: boolean;
+    seekBar: boolean;
     timer: boolean;
     presets: boolean;
     waveform: boolean;
@@ -149,7 +144,6 @@ export interface TrackTiming {
 }
 
 export interface TrackState {
-    mute: boolean;
     solo: boolean;
 }
 
@@ -162,7 +156,6 @@ export interface TrackLoadedSource {
 }
 
 export interface TrackRuntime {
-    id: string;
     definition: TrackDefinition;
     state: TrackState;
     gainNode: GainNode | null;
@@ -231,7 +224,6 @@ export interface TrackSwitchController {
     setLoopPoint(marker: LoopMarker): boolean;
     toggleLoop(): boolean;
     clearLoop(): void;
-    toggleMute(trackIndex: number): void;
     toggleSolo(trackIndex: number, exclusive?: boolean): void;
     applyPreset(presetIndex: number): void;
     getState(): TrackSwitchSnapshot;

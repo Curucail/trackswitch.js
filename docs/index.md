@@ -45,7 +45,7 @@ title: trackswitch.js
         </label>
         <label class="ts-control-row">
           <span>Global Volume</span>
-          <input type="checkbox" name="globalvolume" checked />
+          <input type="checkbox" name="globalVolume" checked />
         </label>
         <label class="ts-control-row">
           <span>Presets</span>
@@ -53,7 +53,7 @@ title: trackswitch.js
         </label>
         <label class="ts-control-row">
           <span>Seekbar</span>
-          <input type="checkbox" name="seekbar" checked />
+          <input type="checkbox" name="seekBar" checked />
         </label>
         <label class="ts-control-row">
           <span>Timer</span>
@@ -76,20 +76,12 @@ title: trackswitch.js
       <div class="ts-control-group">
         <h5>Track Behavior</h5>
         <label class="ts-control-row">
-          <span>Mute Buttons</span>
-          <input type="checkbox" name="mute" checked />
-        </label>
-        <label class="ts-control-row">
-          <span>Solo Buttons</span>
-          <input type="checkbox" name="solo" checked />
+          <span>Single Solo Mode</span>
+          <input type="checkbox" name="radiosolo" />
         </label>
         <label class="ts-control-row">
           <span>Tab View</span>
-          <input type="checkbox" name="tabview" />
-        </label>
-        <label class="ts-control-row">
-          <span>Radio Solo</span>
-          <input type="checkbox" name="radiosolo" />
+          <input type="checkbox" name="tabView" />
         </label>
       </div>
 

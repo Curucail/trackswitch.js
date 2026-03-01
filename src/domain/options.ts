@@ -2,18 +2,15 @@ import { TrackSwitchFeatures } from './types';
 
 export const defaultFeatures: Readonly<TrackSwitchFeatures> = {
     mode: 'default',
-    mute: true,
-    solo: true,
-    globalsolo: true,
-    globalvolume: false,
-    repeat: false,
     radiosolo: false,
-    onlyradiosolo: false,
-    tabview: false,
-    iosunmute: true,
+    muteOtherPlayerInstances: true,
+    globalVolume: false,
+    repeat: false,
+    tabView: false,
+    iosUnmute: true,
     keyboard: true,
     looping: false,
-    seekbar: true,
+    seekBar: true,
     timer: true,
     presets: true,
     waveform: true,
@@ -32,16 +29,7 @@ export function normalizeFeatures(features: Partial<TrackSwitchFeatures> | undef
         normalized.mode = 'default';
     }
 
-    if (!normalized.mute && !normalized.solo) {
-        normalized.solo = true;
-    }
-
-    if (normalized.onlyradiosolo) {
-        normalized.mute = false;
-        normalized.radiosolo = true;
-    }
-
-    if (normalized.radiosolo || normalized.onlyradiosolo) {
+    if (normalized.radiosolo) {
         normalized.presets = false;
     }
 

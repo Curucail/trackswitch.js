@@ -24,32 +24,6 @@
         document.addEventListener('DOMContentLoaded', function () {
             TrackSwitch.createTrackSwitch(document.getElementById('player'), {
                 presetNames: ['All Tracks', 'Violins & Synths', 'Drums & Bass', 'Drums Only'],
-                tracks: [
-                    {
-                        title: 'Violins',
-                        image: 'data/violins.png',
-                        presets: [0, 1],
-                        sources: [{ src: 'data/violins.mp3' }],
-                    },
-                    {
-                        title: 'Synths',
-                        image: 'data/synth.png',
-                        presets: [0, 1],
-                        sources: [{ src: 'data/synth.mp3' }],
-                    },
-                    {
-                        title: 'Bass',
-                        image: 'data/bass.png',
-                        presets: [0, 2],
-                        sources: [{ src: 'data/bass.mp3' }],
-                    },
-                    {
-                        title: 'Drums',
-                        image: 'data/drums.png',
-                        presets: [0, 2, 3],
-                        sources: [{ src: 'data/drums.mp3' }],
-                    },
-                ],
                 ui: [
                     {
                         type: 'image',
@@ -61,21 +35,49 @@
                         height: 150,
                         waveformBarWidth: 1,
                     },
+                    {
+                        type: 'trackGroup',
+                        trackGroup: [
+                            {
+                                title: 'Violins',
+                                image: 'data/violins.png',
+                                presets: [0, 1],
+                                sources: [{ src: 'data/violins.mp3' }],
+                            },
+                            {
+                                title: 'Synths',
+                                image: 'data/synth.png',
+                                presets: [0, 1],
+                                sources: [{ src: 'data/synth.mp3' }],
+                            },
+                            {
+                                title: 'Bass',
+                                image: 'data/bass.png',
+                                presets: [0, 2],
+                                sources: [{ src: 'data/bass.mp3' }],
+                            },
+                            {
+                                title: 'Drums',
+                                image: 'data/drums.png',
+                                presets: [0, 2, 3],
+                                sources: [{ src: 'data/drums.mp3' }],
+                            },
+                        ],
+                    },
                 ],
                 features: {
-                    solo: true,
-                    globalsolo: true,
-                    globalvolume: true,
-                    repeat: false,
+                    mode: 'default',
                     radiosolo: false,
-                    onlyradiosolo: false,
-                    tabview: false,
-                    iosunmute: true,
+                    globalVolume: true,
+                    repeat: false,
+                    tabView: false,
+                    iosUnmute: true,
                     keyboard: true,
                     looping: true,
-                    seekbar: true,
+                    seekBar: true,
                     timer: true,
                     presets: true,
+                    muteOtherPlayerInstances: true,
                 },
             });
         });
