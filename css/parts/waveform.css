@@ -55,7 +55,7 @@
 .trackswitch canvas.waveform {
     display: block;
     width: 100%;
-    background-color: rgb(238, 238, 238);
+    background-color: rgb(228, 228, 228);
     /* Subtle background */
     --waveform-color: #ED8C01;
     /* CSS custom property for waveform color (orange) */

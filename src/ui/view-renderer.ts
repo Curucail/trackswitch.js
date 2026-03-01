@@ -1,4 +1,4 @@
-import { TrackRuntime, TrackSwitchFeatures, TrackSwitchUiState } from '../domain/types';
+import { NormalizedTrackGroupLayout, TrackRuntime, TrackSwitchFeatures, TrackSwitchUiState } from '../domain/types';
 import { escapeHtml, sanitizeInlineStyle } from '../shared/dom';
 import { formatSecondsToHHMMSSmmm } from '../shared/format';
 import { clampPercent } from '../shared/math';
@@ -245,6 +245,7 @@ export class ViewRenderer {
     private readonly root: HTMLElement;
     private readonly features: TrackSwitchFeatures;
     private readonly presetNames: string[];
+    private readonly trackGroups: NormalizedTrackGroupLayout[];
 
     private originalImage = '';
     private readonly waveformSeekSurfaces: WaveformSeekSurfaceMetadata[] = [];
@@ -252,10 +253,16 @@ export class ViewRenderer {
     private waveformTileRefreshFrameId: number | null = null;
     private latestWaveformRenderInput: LatestWaveformRenderInput | null = null;
 
-    constructor(root: HTMLElement, features: TrackSwitchFeatures, presetNames: string[]) {
+    constructor(
+        root: HTMLElement,
+        features: TrackSwitchFeatures,
+        presetNames: string[],
+        trackGroups: NormalizedTrackGroupLayout[] = []
+    ) {
         this.root = root;
         this.features = features;
         this.presetNames = presetNames;
+        this.trackGroups = trackGroups;
     }
 
     private query(selector: string): HTMLElement | null {
@@ -367,9 +374,44 @@ export class ViewRenderer {
         }
 
         return runtimes.some(function(runtime) {
-            const sources = runtime.definition.alignment?.sources;
+            const sources = runtime.definition.alignment?.synchronizedSources
+                || runtime.definition.alignment?.sources;
             return Array.isArray(sources) && sources.length > 0;
         });
+    }
+
+    private buildTrackRow(runtime: TrackRuntime, index: number): HTMLElement {
+        const tabviewClass = this.features.tabview ? ' tabs' : '';
+        const radioSoloClass = this.features.radiosolo ? ' radio' : '';
+        const wholeSoloClass = this.features.onlyradiosolo ? ' solo' : '';
+
+        const track = document.createElement('li');
+        track.className = 'track' + tabviewClass + wholeSoloClass;
+        track.setAttribute('style', sanitizeInlineStyle(runtime.definition.style || ''));
+        track.setAttribute('data-track-index', String(index));
+        track.append(document.createTextNode(runtime.definition.title || 'Track ' + (index + 1)));
+
+        const controls = document.createElement('ul');
+        controls.className = 'control';
+
+        if (this.features.mute) {
+            const mute = document.createElement('li');
+            mute.className = 'mute button';
+            mute.title = 'Mute';
+            mute.textContent = 'Mute';
+            controls.appendChild(mute);
+        }
+
+        if (this.features.solo) {
+            const solo = document.createElement('li');
+            solo.className = 'solo button' + radioSoloClass;
+            solo.title = 'Solo';
+            solo.textContent = 'Solo';
+            controls.appendChild(solo);
+        }
+
+        track.appendChild(controls);
+        return track;
     }
 
     private renderTrackList(runtimes: TrackRuntime[]): void {
@@ -377,43 +419,41 @@ export class ViewRenderer {
             existing.remove();
         });
 
-        const list = document.createElement('ul');
-        list.className = 'track_list';
+        if (this.trackGroups.length === 0) {
+            const list = document.createElement('ul');
+            list.className = 'track_list';
 
-        runtimes.forEach((runtime, index) => {
-            const tabviewClass = this.features.tabview ? ' tabs' : '';
-            const radioSoloClass = this.features.radiosolo ? ' radio' : '';
-            const wholeSoloClass = this.features.onlyradiosolo ? ' solo' : '';
+            runtimes.forEach((runtime, index) => {
+                list.appendChild(this.buildTrackRow(runtime, index));
+            });
 
-            const track = document.createElement('li');
-            track.className = 'track' + tabviewClass + wholeSoloClass;
-            track.setAttribute('style', sanitizeInlineStyle(runtime.definition.style || ''));
-            track.append(document.createTextNode(runtime.definition.title || 'Track ' + (index + 1)));
+            this.root.appendChild(list);
+            return;
+        }
 
-            const controls = document.createElement('ul');
-            controls.className = 'control';
+        this.trackGroups.forEach((group) => {
+            const list = document.createElement('ul');
+            list.className = 'track_list';
+            list.setAttribute('data-track-group-index', String(group.groupIndex));
 
-            if (this.features.mute) {
-                const mute = document.createElement('li');
-                mute.className = 'mute button';
-                mute.title = 'Mute';
-                mute.textContent = 'Mute';
-                controls.appendChild(mute);
+            for (let offset = 0; offset < group.trackCount; offset += 1) {
+                const trackIndex = group.startTrackIndex + offset;
+                const runtime = runtimes[trackIndex];
+                if (!runtime) {
+                    continue;
+                }
+
+                list.appendChild(this.buildTrackRow(runtime, trackIndex));
             }
 
-            if (this.features.solo) {
-                const solo = document.createElement('li');
-                solo.className = 'solo button' + radioSoloClass;
-                solo.title = 'Solo';
-                solo.textContent = 'Solo';
-                controls.appendChild(solo);
+            const container = this.query('.track-group[data-track-group-index="' + group.groupIndex + '"]');
+            if (container) {
+                container.appendChild(list);
+                return;
             }
 
-            track.appendChild(controls);
-            list.appendChild(track);
+            this.root.appendChild(list);
         });
-
-        this.root.appendChild(list);
     }
 
     private wrapSeekableImages(): void {
@@ -611,9 +651,13 @@ export class ViewRenderer {
             const maxHeight = parseSheetMusicMaxHeight(hostElement.getAttribute('data-sheetmusic-max-height'));
             if (maxHeight !== null) {
                 scrollContainer.style.maxHeight = maxHeight + 'px';
+                scrollContainer.style.height = maxHeight + 'px';
+                scrollContainer.style.minHeight = maxHeight + 'px';
                 wrapper.classList.add('sheetmusic-scrollable');
             } else {
                 scrollContainer.style.removeProperty('max-height');
+                scrollContainer.style.removeProperty('height');
+                scrollContainer.style.removeProperty('min-height');
                 wrapper.classList.remove('sheetmusic-scrollable');
             }
 
@@ -1440,7 +1484,7 @@ export class ViewRenderer {
         effectiveOnlyRadioSolo = this.features.onlyradiosolo
     ): void {
         runtimes.forEach((runtime, index) => {
-            const row = this.query('.track_list li.track:nth-child(' + (index + 1) + ')');
+            const row = this.query('.track[data-track-index="' + index + '"]');
             if (!row) {
                 return;
             }
@@ -1558,7 +1602,7 @@ export class ViewRenderer {
                 return;
             }
 
-            const row = this.query('.track_list > li:nth-child(' + (index + 1) + ')');
+            const row = this.query('.track[data-track-index="' + index + '"]');
             if (row) {
                 row.classList.add('error');
             }

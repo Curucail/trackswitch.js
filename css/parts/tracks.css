@@ -4,6 +4,10 @@
     padding: 0;
 }
 
+.trackswitch .track-group {
+    border-top: 1px solid rgba(124, 124, 124, 1.0);
+}
+
 .trackswitch li.track {
     background-color: #DDDDDD;
     position: relative;

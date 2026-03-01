@@ -736,7 +736,7 @@
       if (isAlignmentMode(currentMode)) {
         init.alignment = {
           csv: basePath + '/dtw_alignment.csv',
-          referenceColumn: 't1_sec',
+          referenceTimeColumn: 't1_sec',
           outOfRange: 'clamp',
         };
       } else {

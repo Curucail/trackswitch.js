@@ -4,6 +4,7 @@ import {
     TrackSwitchUiConfig,
     TrackSwitchUiElement,
     TrackSwitchWaveformConfig,
+    TrackSwitchTrackGroupUiElement,
 } from '../domain/types';
 import { clampPercent } from '../shared/math';
 
@@ -148,6 +149,39 @@ function normalizeSheetMusicConfig<T extends TrackSwitchSheetMusicConfig>(sheetm
     };
 }
 
+function normalizeTrackGroupConfig<T extends TrackSwitchTrackGroupUiElement>(group: T): T {
+    const normalizedTracks = Array.isArray(group.trackGroup)
+        ? group.trackGroup.map(function(track) {
+            return {
+                ...track,
+                sources: Array.isArray(track.sources) ? track.sources.map(function(source) {
+                    return { ...source };
+                }) : track.sources,
+                alignment: track.alignment
+                    ? {
+                        ...track.alignment,
+                        synchronizedSources: Array.isArray(track.alignment.synchronizedSources)
+                            ? track.alignment.synchronizedSources.map(function(source) {
+                                return { ...source };
+                            })
+                            : track.alignment.synchronizedSources,
+                        sources: Array.isArray(track.alignment.sources)
+                            ? track.alignment.sources.map(function(source) {
+                                return { ...source };
+                            })
+                            : track.alignment.sources,
+                    }
+                    : track.alignment,
+            };
+        })
+        : group.trackGroup;
+
+    return {
+        ...group,
+        trackGroup: normalizedTracks,
+    };
+}
+
 export function normalizeUiElement(element: TrackSwitchUiElement): TrackSwitchUiElement {
     if (element.type === 'waveform') {
         return normalizeWaveformConfig(element);
@@ -157,7 +191,18 @@ export function normalizeUiElement(element: TrackSwitchUiElement): TrackSwitchUi
         return normalizeSheetMusicConfig(element);
     }
 
+    if (element.type === 'trackGroup') {
+        return normalizeTrackGroupConfig(element);
+    }
+
     return element;
+}
+
+function injectTrackGroup(root: HTMLElement, trackGroupIndex: number): void {
+    const container = document.createElement('div');
+    container.className = 'track-group';
+    container.setAttribute('data-track-group-index', String(trackGroupIndex));
+    root.appendChild(container);
 }
 
 function injectImage(root: HTMLElement, image: TrackSwitchImageConfig): void {
@@ -267,7 +312,14 @@ export function injectConfiguredUiElements(root: HTMLElement, uiElements: TrackS
         throw new Error('TrackSwitch UI config supports at most one seekable image.');
     }
 
+    let trackGroupIndex = 0;
     uiElements.forEach(function(entry) {
+        if (entry.type === 'trackGroup') {
+            injectTrackGroup(root, trackGroupIndex);
+            trackGroupIndex += 1;
+            return;
+        }
+
         if (entry.type === 'image') {
             injectImage(root, entry);
             return;

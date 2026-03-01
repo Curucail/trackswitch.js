@@ -10,6 +10,7 @@ export interface TrackAlignmentMapping {
 export interface TrackAlignmentConfig {
     csv: string;
     mappings?: TrackAlignmentMapping[];
+    referenceTimeColumn?: string;
     referenceColumn?: string;
     outOfRange?: AlignmentOutOfRangeMode;
 }
@@ -23,6 +24,7 @@ export interface TrackSourceDefinition {
 
 export interface TrackDefinitionAlignment {
     column?: string;
+    synchronizedSources?: TrackSourceDefinition[];
     sources?: TrackSourceDefinition[];
 }
 
@@ -104,10 +106,22 @@ export interface TrackSwitchSheetMusicUiElement extends TrackSwitchSheetMusicCon
     type: 'sheetmusic';
 }
 
+export interface TrackSwitchTrackGroupUiElement {
+    type: 'trackGroup';
+    trackGroup: TrackDefinition[];
+}
+
+export interface NormalizedTrackGroupLayout {
+    groupIndex: number;
+    startTrackIndex: number;
+    trackCount: number;
+}
+
 export type TrackSwitchUiElement =
     | TrackSwitchImageUiElement
     | TrackSwitchWaveformUiElement
-    | TrackSwitchSheetMusicUiElement;
+    | TrackSwitchSheetMusicUiElement
+    | TrackSwitchTrackGroupUiElement;
 export type TrackSwitchUiConfig = TrackSwitchUiElement[];
 
 export interface TrackSwitchConfig {
@@ -116,10 +130,11 @@ export interface TrackSwitchConfig {
     features?: Partial<TrackSwitchFeatures>;
     alignment?: TrackAlignmentConfig;
     ui?: TrackSwitchUiConfig;
+    trackGroups?: NormalizedTrackGroupLayout[];
 }
 
 export interface TrackSwitchInit {
-    tracks: TrackDefinition[];
+    tracks?: TrackDefinition[];
     presetNames?: string[];
     features?: Partial<TrackSwitchFeatures>;
     alignment?: TrackAlignmentConfig;

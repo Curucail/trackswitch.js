@@ -173,7 +173,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         this.sheetMusicEngine = new SheetMusicEngine((referenceTime) => {
             this.seekTo(referenceTime);
         });
-        this.renderer = new ViewRenderer(this.root, this.features, presetNames);
+        this.renderer = new ViewRenderer(this.root, this.features, presetNames, config.trackGroups || []);
 
         this.instanceId = allocateInstanceId();
 
@@ -1581,12 +1581,18 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     }
 
     private trackIndexFromTarget(target: EventTarget | null): number {
-        const track = closestInRoot(this.root, target, '.track');
-        if (!track || !track.parentElement) {
+        const track = closestInRoot(this.root, target, '.track[data-track-index]');
+        if (!track) {
             return -1;
         }
 
-        return Array.from(track.parentElement.children).indexOf(track);
+        const rawIndex = track.getAttribute('data-track-index');
+        const parsed = Number(rawIndex);
+        if (!Number.isFinite(parsed) || parsed < 0) {
+            return -1;
+        }
+
+        return Math.floor(parsed);
     }
 
     private isAlignmentMode(): boolean {
@@ -2027,9 +2033,9 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         config: TrackAlignmentConfig,
         mappingByTrack: Map<number, string>
     ): { referenceTrackIndex: number; referenceColumn: string } | string {
-        const configuredReferenceColumn = typeof config.referenceColumn === 'string'
-            ? config.referenceColumn.trim()
-            : '';
+        const configuredReferenceColumn = typeof config.referenceTimeColumn === 'string'
+            ? config.referenceTimeColumn.trim()
+            : (typeof config.referenceColumn === 'string' ? config.referenceColumn.trim() : '');
 
         if (!configuredReferenceColumn) {
             const fallbackTrackIndex = this.findLongestTrackIndex();
@@ -2052,12 +2058,12 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         }
 
         if (matchingTrackIndexes.length === 0) {
-            return 'Alignment referenceColumn must match one configured track alignment column: '
+            return 'Alignment referenceTimeColumn must match one configured track alignment column: '
                 + configuredReferenceColumn;
         }
 
         if (matchingTrackIndexes.length > 1) {
-            return 'Alignment referenceColumn is ambiguous across multiple tracks: ' + configuredReferenceColumn;
+            return 'Alignment referenceTimeColumn is ambiguous across multiple tracks: ' + configuredReferenceColumn;
         }
 
         return {

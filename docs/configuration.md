@@ -84,7 +84,7 @@ Source fields:
 - `endOffsetMs?: number` (positive trims end, negative pads end)
 
 Note: when a track has multiple `sources`, the first playable source is used.
-In `alignment`, `alignment.sources` enables the global `SYNC` button in the main control bar.
+In `alignment`, `alignment.synchronizedSources` enables the global `SYNC` button in the main control bar.
 
 ## Presets
 
@@ -216,7 +216,7 @@ Normalization rules:
 Alignment config lives at `init.alignment`.
 
 - `csv: string` - URL/path to a numeric CSV file with header row
-- `referenceColumn?: string` - optional CSV column used as the reference timeline axis
+- `referenceTimeColumn?: string` - optional CSV column used as the reference timeline axis
 - `outOfRange?: 'clamp' | 'linear'` - defaults to `clamp`
 
 Per-track alignment fields live on `tracks[*].alignment`:
