@@ -503,6 +503,15 @@
         "      outOfRange: 'clamp',",
         '    },',
         '    ui: [',
+        '      {',
+        "        type: 'sheetmusic',",
+        "        src: 'Schubert_D911-03.xml',",
+        "        measureCsv: 'Schubert_D911-03_HU33_measures.csv',",
+        '        maxHeight: 380,',
+        '        renderScale: 0.5,',
+        '        followPlayback: true,',
+        "        style: 'margin: 12px auto;',",
+        '      },',
       ];
 
       if (model.waveform) {
@@ -657,6 +666,19 @@
           src: basePath + '/cover.jpg',
           seekable: false,
           style: 'margin: 12px auto;',
+        });
+      }
+
+      if (isAlignmentMode(currentMode)) {
+        uiConfig.push({
+          type: 'sheetmusic',
+          src: basePath + '/Schubert_D911-03.xml',
+          measureCsv: basePath + '/Schubert_D911-03_HU33_measures.csv',
+          maxHeight: 380,
+          renderScale: 0.7,
+          followPlayback: true,
+          cursorColor: '#999999',
+          cursorAlpha: 0.4,
         });
       }
 
