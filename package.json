@@ -33,7 +33,8 @@
   "files": [
     "dist/",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "THIRD_PARTY_NOTICES.md"
   ],
   "dependencies": {
     "font-awesome": "^4.2.0",
