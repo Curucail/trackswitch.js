@@ -46,7 +46,7 @@ TrackSwitch.createTrackSwitch(rootElement, {
   ui: [
     { type: 'image', src: 'cover.jpg', seekable: true },
     { type: 'waveform', width: 1200, height: 150 },
-    { type: 'sheetmusic', src: 'score.musicxml', measureCsv: 'score_measures.csv', width: 960, renderScale: 0.75, maxHeight: 360 },
+    { type: 'sheetmusic', src: 'score.musicxml', measureCsv: 'score_measures.csv', width: 960, renderScale: 0.75, maxHeight: 360, followPlayback: true },
   ],
   alignment: {
     csv: 'dtw_alignment.csv',
@@ -149,17 +149,19 @@ Sheet music element:
   width: 960,
   renderScale: 0.75,
   maxHeight: 360,
+  followPlayback: true,
   style: 'margin: 12px 0;',
   cursorColor: '#999999',
   cursorAlpha: 0.1,
 }
 ```
 
-- Fields: `src` (MusicXML URL), `measureCsv` (time-to-measure map CSV URL), `width?` (container width in px), `renderScale?` (OSMD zoom factor), `maxHeight?` (viewport max height in px), `style?`, `cursorColor?`, `cursorAlpha?`
+- Fields: `src` (MusicXML URL), `measureCsv` (time-to-measure map CSV URL), `width?` (container width in px), `renderScale?` (OSMD zoom factor), `maxHeight?` (viewport max height in px), `followPlayback?` (auto-follow highlighted measure), `style?`, `cursorColor?`, `cursorAlpha?`
 - `width` accepts finite numbers, is rounded to an integer, and values `< 1` are ignored
 - `renderScale` accepts finite numbers `> 0`; values `< 1` render smaller notation, values `> 1` render larger notation
 - `maxHeight` accepts finite numbers, is rounded to an integer, and values `< 1` are ignored
 - When `maxHeight` is set, the sheet-music viewport becomes internally scrollable (vertical + horizontal as needed)
+- `followPlayback` defaults to `true`; with measure sync active it auto-scrolls vertically only when the current measure leaves the viewport
 - `cursorAlpha` is normalized to `[0, 1]` and defaults to `0.1`
 - Measure map CSV requires `start` and `measure` columns (comma or semicolon delimiter)
 - Measure highlighting is intended for `alignment` mode and uses reference timeline position
@@ -236,6 +238,7 @@ Behavior:
 - `alignment`: with `SYNC` on, fixed-track waveforms return to shared reference-axis behavior; synced tracks bypass CSV mapping (identity)
 - `alignment`: waveform containers render a top-right timer badge in `current / duration` format; fixed-track waveforms use local track time while `SYNC` is off
 - `alignment`: sheet-music UI elements (`type: 'sheetmusic'`) highlight the currently mapped measure from `measureCsv` on the reference axis
+- `alignment`: `sheetmusic.followPlayback` (default `true`) auto-scrolls the internal sheet viewport vertically when the highlighted measure moves outside the visible area
 
 Cross-player behavior:
 

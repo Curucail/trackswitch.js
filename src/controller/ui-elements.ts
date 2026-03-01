@@ -79,12 +79,21 @@ function normalizeSheetMusicRenderScale(value: number | undefined): number | und
     return value;
 }
 
+function normalizeSheetMusicFollowPlayback(value: boolean | undefined): boolean {
+    if (value === undefined) {
+        return true;
+    }
+
+    return typeof value === 'boolean' ? value : true;
+}
+
 function normalizeSheetMusicConfig<T extends TrackSwitchSheetMusicConfig>(sheetmusic: T): T {
     return {
         ...sheetmusic,
         width: normalizeSheetMusicDimension(sheetmusic.width),
         maxHeight: normalizeSheetMusicDimension(sheetmusic.maxHeight),
         renderScale: normalizeSheetMusicRenderScale(sheetmusic.renderScale),
+        followPlayback: normalizeSheetMusicFollowPlayback(sheetmusic.followPlayback),
         cursorAlpha: normalizeCursorAlpha(sheetmusic.cursorAlpha),
     };
 }
@@ -152,6 +161,10 @@ function injectSheetMusic(root: HTMLElement, sheetmusic: TrackSwitchSheetMusicCo
     container.className = 'sheetmusic';
     container.setAttribute('data-sheetmusic-src', String(sheetmusic.src || ''));
     container.setAttribute('data-sheetmusic-measure-csv', String(sheetmusic.measureCsv || ''));
+    container.setAttribute(
+        'data-sheetmusic-follow-playback',
+        String(normalizeSheetMusicFollowPlayback(sheetmusic.followPlayback))
+    );
     container.setAttribute('data-sheetmusic-cursor-alpha', String(normalizeCursorAlpha(sheetmusic.cursorAlpha)));
 
     const width = normalizeSheetMusicDimension(sheetmusic.width);

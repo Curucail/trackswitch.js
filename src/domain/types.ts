@@ -84,6 +84,7 @@ export interface TrackSwitchSheetMusicConfig {
     width?: number;
     maxHeight?: number;
     renderScale?: number;
+    followPlayback?: boolean;
     style?: string;
     cursorColor?: string;
     cursorAlpha?: number;

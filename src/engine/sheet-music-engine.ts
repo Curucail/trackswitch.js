@@ -8,18 +8,22 @@ import { loadMeasureMapCsv, MeasureMapPoint } from '../shared/measure-map';
 
 export interface SheetMusicHostConfig {
     host: HTMLElement;
+    scrollContainer: HTMLElement | null;
     source: string;
     measureCsv: string;
     renderScale: number | null;
+    followPlayback: boolean;
     cursorColor: string;
     cursorAlpha: number;
 }
 
 interface SheetMusicEntry {
     host: HTMLElement;
+    scrollContainer: HTMLElement | null;
     source: string;
     measureCsv: string;
     renderScale: number | null;
+    followPlayback: boolean;
     cursorColor: string;
     cursorAlpha: number;
     osmd: OpenSheetMusicDisplay | null;
@@ -33,6 +37,7 @@ interface SheetMusicEntry {
                 MeasureNumber?: number;
             };
         };
+        cursorElement?: Element | null;
     } | null;
     measureMap: MeasureMapPoint[] | null;
     availableMeasures: number[];
@@ -80,6 +85,22 @@ function sanitizeRenderScale(value: number | null | undefined): number | null {
     return value;
 }
 
+function clampNumber(value: number, minimum: number, maximum: number): number {
+    if (!Number.isFinite(value)) {
+        return minimum;
+    }
+
+    if (value < minimum) {
+        return minimum;
+    }
+
+    if (value > maximum) {
+        return maximum;
+    }
+
+    return value;
+}
+
 export class SheetMusicEngine {
     private readonly onSeekReferenceTime: ((referenceTime: number) => void) | null;
     private entries: SheetMusicEntry[] = [];
@@ -99,9 +120,11 @@ export class SheetMusicEngine {
         this.entries = hosts.map((host) => {
             return {
                 host: host.host,
+                scrollContainer: host.scrollContainer || null,
                 source: host.source,
                 measureCsv: host.measureCsv,
                 renderScale: sanitizeRenderScale(host.renderScale),
+                followPlayback: host.followPlayback !== false,
                 cursorColor: host.cursorColor || DEFAULT_CURSOR_COLOR,
                 cursorAlpha: sanitizeCursorAlpha(host.cursorAlpha),
                 osmd: null,
@@ -150,6 +173,7 @@ export class SheetMusicEngine {
             try {
                 this.applyConfiguredRenderScale(entry);
                 entry.osmd.render();
+                this.ensureCurrentMeasureVisible(entry);
             } catch (error) {
                 console.warn(
                     '[trackswitch] Failed to re-render sheet music on resize for source:',
@@ -221,6 +245,7 @@ export class SheetMusicEngine {
             }
 
             entry.measureCursor = cursor || null;
+            this.refreshCursorElement(entry);
             entry.availableMeasures = this.collectAvailableMeasures(osmd);
             entry.availableMeasureSet = new Set(entry.availableMeasures);
 
@@ -281,6 +306,81 @@ export class SheetMusicEngine {
             MIN_OSMD_ZOOM,
             Math.min(MAX_OSMD_ZOOM, entry.renderScale)
         );
+    }
+
+    private refreshCursorElement(entry: SheetMusicEntry): void {
+        const cursor = entry.measureCursor;
+        if (!cursor) {
+            return;
+        }
+
+        if (cursor.cursorElement instanceof Element) {
+            return;
+        }
+
+        const hostCursor = entry.host.querySelector('[id^="osmdCursor"]');
+        if (hostCursor instanceof Element) {
+            cursor.cursorElement = hostCursor;
+        }
+    }
+
+    private ensureCurrentMeasureVisible(entry: SheetMusicEntry): void {
+        if (!entry.followPlayback || !entry.syncEnabled || !entry.scrollContainer) {
+            return;
+        }
+
+        const cursor = entry.measureCursor;
+        if (!cursor) {
+            return;
+        }
+
+        this.refreshCursorElement(entry);
+        if (!(cursor.cursorElement instanceof Element)) {
+            return;
+        }
+
+        const scrollContainer = entry.scrollContainer;
+        const clientHeight = scrollContainer.clientHeight;
+        const maxScrollTop = scrollContainer.scrollHeight - clientHeight;
+        if (!Number.isFinite(maxScrollTop) || maxScrollTop <= 1 || clientHeight <= 0) {
+            return;
+        }
+
+        const cursorRect = cursor.cursorElement.getBoundingClientRect();
+        const viewportRect = scrollContainer.getBoundingClientRect();
+
+        if (
+            !Number.isFinite(cursorRect.top)
+            || !Number.isFinite(cursorRect.bottom)
+            || !Number.isFinite(viewportRect.top)
+            || !Number.isFinite(viewportRect.bottom)
+        ) {
+            return;
+        }
+
+        const viewportTop = scrollContainer.scrollTop;
+        const viewportBottom = viewportTop + clientHeight;
+        const cursorTop = viewportTop + (cursorRect.top - viewportRect.top);
+        const cursorBottom = viewportTop + (cursorRect.bottom - viewportRect.top);
+        const padding = clampNumber(Math.round(clientHeight * 0.12), 8, 24);
+        const visibleTop = viewportTop + padding;
+        const visibleBottom = viewportBottom - padding;
+
+        let nextScrollTop = viewportTop;
+        if (cursorTop < visibleTop) {
+            nextScrollTop = cursorTop - padding;
+        } else if (cursorBottom > visibleBottom) {
+            nextScrollTop = cursorBottom + padding - clientHeight;
+        } else {
+            return;
+        }
+
+        const clampedScrollTop = clampNumber(nextScrollTop, 0, maxScrollTop);
+        if (Math.abs(clampedScrollTop - viewportTop) < 0.5) {
+            return;
+        }
+
+        scrollContainer.scrollTop = clampedScrollTop;
     }
 
     private disposeEntry(entry: SheetMusicEntry): void {
@@ -420,6 +520,8 @@ export class SheetMusicEngine {
             entry,
             currentMeasure === null ? targetMeasure : currentMeasure
         );
+
+        this.ensureCurrentMeasureVisible(entry);
     }
 
     private readCursorMeasure(cursor: NonNullable<SheetMusicEntry['measureCursor']>): number | null {

@@ -12,9 +12,11 @@ export interface WaveformTimelineContext {
 
 export interface SheetMusicHostConfig {
     host: HTMLElement;
+    scrollContainer: HTMLElement;
     source: string;
     measureCsv: string;
     renderScale: number | null;
+    followPlayback: boolean;
     cursorColor: string;
     cursorAlpha: number;
 }
@@ -173,6 +175,14 @@ function parseSheetMusicRenderScale(value: string | null): number | null {
     }
 
     return parsed;
+}
+
+function parseSheetMusicFollowPlayback(value: string | null): boolean {
+    if (value === null) {
+        return true;
+    }
+
+    return parseSheetMusicString(value).toLowerCase() !== 'false';
 }
 
 function clampWaveformZoom(zoom: number): number {
@@ -531,9 +541,11 @@ export class ViewRenderer {
 
             this.sheetMusicHosts.push({
                 host: hostElement,
+                scrollContainer: scrollContainer,
                 source: source,
                 measureCsv: measureCsv,
                 renderScale: parseSheetMusicRenderScale(hostElement.getAttribute('data-sheetmusic-render-scale')),
+                followPlayback: parseSheetMusicFollowPlayback(hostElement.getAttribute('data-sheetmusic-follow-playback')),
                 cursorColor: parseSheetMusicCursorColor(hostElement.getAttribute('data-sheetmusic-cursor-color')),
                 cursorAlpha: parseSheetMusicCursorAlpha(hostElement.getAttribute('data-sheetmusic-cursor-alpha')),
             });
@@ -544,9 +556,11 @@ export class ViewRenderer {
         return this.sheetMusicHosts.map((entry) => {
             return {
                 host: entry.host,
+                scrollContainer: entry.scrollContainer,
                 source: entry.source,
                 measureCsv: entry.measureCsv,
                 renderScale: entry.renderScale,
+                followPlayback: entry.followPlayback,
                 cursorColor: entry.cursorColor,
                 cursorAlpha: entry.cursorAlpha,
             };
