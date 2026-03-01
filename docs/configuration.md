@@ -127,15 +127,19 @@ Image element:
 Waveform element:
 
 ```javascript
-{ type: 'waveform', width: 1200, height: 150, waveformBarWidth: 2, waveformSource: 'audible' }
+{ type: 'waveform', width: 1200, height: 150, waveformBarWidth: 2, waveformSource: 'audible', timer: true }
 ```
 
-- Fields: `width?`, `height?`, `waveformBarWidth?`, `waveformSource?`, `style?`, `seekMarginLeft?`, `seekMarginRight?`
+- Fields: `width?`, `height?`, `waveformBarWidth?`, `waveformSource?`, `timer?`, `style?`, `seekMarginLeft?`, `seekMarginRight?`
 - Defaults: `width: 1200`, `height: 150`, `waveformBarWidth: 1`
 - Invalid `waveformBarWidth` values are normalized to `1`
 - `waveformSource` controls what gets visualized:
   - `'audible'` (default): render the current audible mix based on mute/solo state
   - non-negative integer: render that specific track index waveform regardless of mute/solo
+- `timer` controls the waveform's top-right `current / duration` badge:
+  - `alignment` mode default: enabled when omitted
+  - `default` mode default: disabled when omitted
+  - explicit `timer: true` or `timer: false` always overrides the mode default
 - If at least one waveform UI element is configured, waveform rendering is enabled
 - Each waveform container supports independent zoom (desktop wheel and mobile pinch) when `features.waveformzoom` is enabled
 
@@ -236,7 +240,7 @@ Behavior:
 - `alignment`: enabling global `SYNC` switches synced tracks to synchronized sources, re-enables multi-track listening, and locks non-synced tracks muted
 - `alignment`: with `SYNC` off, fixed-track waveforms (`waveformSource: <trackIndex>`) render on native track time and their waveform seek overlays (playhead + loop markers/region) use that local axis
 - `alignment`: with `SYNC` on, fixed-track waveforms return to shared reference-axis behavior; synced tracks bypass CSV mapping (identity)
-- `alignment`: waveform containers render a top-right timer badge in `current / duration` format; fixed-track waveforms use local track time while `SYNC` is off
+- `alignment`: waveform containers default to rendering a top-right timer badge in `current / duration` format; fixed-track waveforms use local track time while `SYNC` is off
 - `alignment`: sheet-music UI elements (`type: 'sheetmusic'`) highlight the currently mapped measure from `measureCsv` on the reference axis
 - `alignment`: `sheetmusic.followPlayback` (default `true`) auto-scrolls the internal sheet viewport vertically when the highlighted measure moves outside the visible area
 

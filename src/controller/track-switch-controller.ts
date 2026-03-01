@@ -1728,7 +1728,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             },
         };
 
-        this.renderer.updateMainControls(uiState, this.getWaveformTimelineContext());
+        this.renderer.updateMainControls(uiState, this.runtimes, this.getWaveformTimelineContext());
         if (this.isAlignmentMode()) {
             this.sheetMusicEngine.updatePosition(this.state.position);
         }

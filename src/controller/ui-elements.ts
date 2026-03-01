@@ -39,11 +39,20 @@ function normalizeWaveformSource(value: 'audible' | number | undefined): 'audibl
     return Math.floor(value);
 }
 
+function normalizeWaveformTimer(value: boolean | undefined): boolean | undefined {
+    if (value === undefined) {
+        return undefined;
+    }
+
+    return typeof value === 'boolean' ? value : undefined;
+}
+
 function normalizeWaveformConfig<T extends TrackSwitchWaveformConfig>(waveform: T): T {
     return {
         ...waveform,
         waveformBarWidth: normalizeWaveformBarWidth(waveform.waveformBarWidth),
         waveformSource: normalizeWaveformSource(waveform.waveformSource),
+        timer: normalizeWaveformTimer(waveform.timer),
     };
 }
 
@@ -140,6 +149,10 @@ function injectWaveform(root: HTMLElement, waveform: TrackSwitchWaveformConfig):
     canvas.height = toCanvasSize(waveform.height, 150);
     canvas.setAttribute('data-waveform-bar-width', String(normalizeWaveformBarWidth(waveform.waveformBarWidth)));
     canvas.setAttribute('data-waveform-source', String(normalizeWaveformSource(waveform.waveformSource)));
+
+    if (typeof waveform.timer === 'boolean') {
+        canvas.setAttribute('data-waveform-timer', String(waveform.timer));
+    }
 
     if (typeof waveform.style === 'string') {
         canvas.setAttribute('data-waveform-style', waveform.style);

@@ -108,6 +108,14 @@ function parseWaveformSource(value: string | null): 'audible' | number {
     return Math.floor(parsed);
 }
 
+function parseWaveformTimerEnabled(value: string | null, mode: TrackSwitchFeatures['mode']): boolean {
+    if (value === null) {
+        return mode === 'alignment';
+    }
+
+    return value.trim().toLowerCase() === 'true';
+}
+
 function parseSheetMusicString(value: string | null): string {
     return typeof value === 'string' ? value.trim() : '';
 }
@@ -420,6 +428,10 @@ export class ViewRenderer {
 
             const waveformSource = parseWaveformSource(canvasElement.getAttribute('data-waveform-source'));
             const barWidth = parseWaveformBarWidth(canvasElement.getAttribute('data-waveform-bar-width'), 1);
+            const timerEnabled = parseWaveformTimerEnabled(
+                canvasElement.getAttribute('data-waveform-timer'),
+                this.features.mode
+            );
             const originalHeight = canvasElement.height;
 
             const wrapper = document.createElement('div');
@@ -454,7 +466,7 @@ export class ViewRenderer {
             if (seekWrap instanceof HTMLElement) {
                 seekWrap.setAttribute('data-seek-surface', 'waveform');
                 seekWrap.setAttribute('data-waveform-source', String(waveformSource));
-                const timingNode = this.features.mode === 'alignment'
+                const timingNode = timerEnabled
                     ? this.createWaveformTimingNode(overlay)
                     : null;
                 this.waveformSeekSurfaces.push({
@@ -819,7 +831,7 @@ export class ViewRenderer {
         return Math.floor(waveformSource);
     }
 
-    updateMainControls(state: TrackSwitchUiState, waveformTimelineContext?: WaveformTimelineContext): void {
+    updateMainControls(state: TrackSwitchUiState, runtimes: TrackRuntime[], waveformTimelineContext?: WaveformTimelineContext): void {
         this.root.classList.toggle('sync-enabled', state.syncEnabled);
 
         this.queryAll('.playpause').forEach(function(element) {
@@ -846,7 +858,7 @@ export class ViewRenderer {
             this.updateTiming(state.position, state.longestDuration);
         }
 
-        this.updateWaveformTiming(state, waveformTimelineContext);
+        this.updateWaveformTiming(state, runtimes, waveformTimelineContext);
 
         if (!this.features.looping) {
             return;
@@ -915,8 +927,39 @@ export class ViewRenderer {
         });
     }
 
+    private getLongestWaveformSourceDuration(
+        runtimes: TrackRuntime[],
+        waveformSource: 'audible' | number
+    ): number {
+        const getRuntimeDuration = (runtime: TrackRuntime): number => {
+            return runtime.timing
+                ? runtime.timing.effectiveDuration
+                : (runtime.buffer ? runtime.buffer.duration : 0);
+        };
+
+        if (waveformSource === 'audible') {
+            // For audible source, find longest among all tracks
+            let longest = 0;
+            runtimes.forEach(function(runtime) {
+                const duration = getRuntimeDuration(runtime);
+                if (duration > longest) {
+                    longest = duration;
+                }
+            });
+            return longest;
+        } else {
+            // For fixed track source, return that track's duration
+            const trackIndex = Math.floor(waveformSource);
+            if (trackIndex >= 0 && trackIndex < runtimes.length) {
+                return getRuntimeDuration(runtimes[trackIndex]);
+            }
+            return 0;
+        }
+    }
+
     private updateWaveformTiming(
         state: TrackSwitchUiState,
+        runtimes: TrackRuntime[],
         waveformTimelineContext?: WaveformTimelineContext
     ): void {
         this.waveformSeekSurfaces.forEach((surface) => {
@@ -925,7 +968,7 @@ export class ViewRenderer {
             }
 
             let position = state.position;
-            let duration = state.longestDuration;
+            let duration = this.getLongestWaveformSourceDuration(runtimes, surface.waveformSource);
 
             if (
                 waveformTimelineContext
