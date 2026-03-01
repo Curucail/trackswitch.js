@@ -159,7 +159,7 @@ function parseSheetMusicMaxHeight(value: string | null): number | null {
     return Math.max(1, Math.round(parsed));
 }
 
-function parseSheetMusicWidth(value: string | null): number | null {
+function parseSheetMusicMaxWidth(value: string | null): number | null {
     if (value === null) {
         return null;
     }
@@ -527,13 +527,18 @@ export class ViewRenderer {
                 return;
             }
 
-            const width = parseSheetMusicWidth(hostElement.getAttribute('data-sheetmusic-width'));
-            if (width !== null) {
-                wrapper.style.width = width + 'px';
-                wrapper.setAttribute('data-sheetmusic-width-applied', 'true');
-            } else if (wrapper.getAttribute('data-sheetmusic-width-applied') === 'true') {
+            const maxWidth = parseSheetMusicMaxWidth(
+                hostElement.getAttribute('data-sheetmusic-max-width')
+                ?? hostElement.getAttribute('data-sheetmusic-width')
+            );
+            if (maxWidth !== null) {
+                wrapper.style.width = '100%';
+                wrapper.style.maxWidth = maxWidth + 'px';
+                wrapper.setAttribute('data-sheetmusic-max-width-applied', 'true');
+            } else if (wrapper.getAttribute('data-sheetmusic-max-width-applied') === 'true') {
                 wrapper.style.removeProperty('width');
-                wrapper.removeAttribute('data-sheetmusic-width-applied');
+                wrapper.style.removeProperty('max-width');
+                wrapper.removeAttribute('data-sheetmusic-max-width-applied');
             }
 
             const maxHeight = parseSheetMusicMaxHeight(hostElement.getAttribute('data-sheetmusic-max-height'));

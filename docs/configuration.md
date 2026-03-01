@@ -46,7 +46,7 @@ TrackSwitch.createTrackSwitch(rootElement, {
   ui: [
     { type: 'image', src: 'cover.jpg', seekable: true },
     { type: 'waveform', width: 1200, height: 150 },
-    { type: 'sheetmusic', src: 'score.musicxml', measureCsv: 'score_measures.csv', width: 960, renderScale: 0.75, maxHeight: 360, followPlayback: true },
+    { type: 'sheetmusic', src: 'score.musicxml', measureCsv: 'score_measures.csv', maxWidth: 960, renderScale: 0.75, maxHeight: 360, followPlayback: true },
   ],
   alignment: {
     csv: 'dtw_alignment.csv',
@@ -150,7 +150,7 @@ Sheet music element:
   type: 'sheetmusic',
   src: 'score.musicxml',
   measureCsv: 'score_measures.csv',
-  width: 960,
+  maxWidth: 960,
   renderScale: 0.75,
   maxHeight: 360,
   followPlayback: true,
@@ -160,8 +160,9 @@ Sheet music element:
 }
 ```
 
-- Fields: `src` (MusicXML URL), `measureCsv` (time-to-measure map CSV URL), `width?` (container width in px), `renderScale?` (OSMD zoom factor), `maxHeight?` (viewport max height in px), `followPlayback?` (auto-follow highlighted measure), `style?`, `cursorColor?`, `cursorAlpha?`
-- `width` accepts finite numbers, is rounded to an integer, and values `< 1` are ignored
+- Fields: `src` (MusicXML URL), `measureCsv` (time-to-measure map CSV URL), `maxWidth?` (container max width in px), `renderScale?` (OSMD zoom factor), `maxHeight?` (viewport max height in px), `followPlayback?` (auto-follow highlighted measure), `style?`, `cursorColor?`, `cursorAlpha?`
+- `maxWidth` accepts finite numbers, is rounded to an integer, and values `< 1` are ignored
+- Sheet music width is responsive: it uses available player width up to `maxWidth`
 - `renderScale` accepts finite numbers `> 0`; values `< 1` render smaller notation, values `> 1` render larger notation
 - `maxHeight` accepts finite numbers, is rounded to an integer, and values `< 1` are ignored
 - When `maxHeight` is set, the sheet-music viewport becomes internally scrollable (vertical + horizontal as needed)

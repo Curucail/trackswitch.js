@@ -97,8 +97,13 @@ function normalizeSheetMusicFollowPlayback(value: boolean | undefined): boolean 
 }
 
 function normalizeSheetMusicConfig<T extends TrackSwitchSheetMusicConfig>(sheetmusic: T): T {
+    const normalizedMaxWidth = normalizeSheetMusicDimension(
+        sheetmusic.maxWidth !== undefined ? sheetmusic.maxWidth : sheetmusic.width
+    );
+
     return {
         ...sheetmusic,
+        maxWidth: normalizedMaxWidth,
         width: normalizeSheetMusicDimension(sheetmusic.width),
         maxHeight: normalizeSheetMusicDimension(sheetmusic.maxHeight),
         renderScale: normalizeSheetMusicRenderScale(sheetmusic.renderScale),
@@ -180,9 +185,11 @@ function injectSheetMusic(root: HTMLElement, sheetmusic: TrackSwitchSheetMusicCo
     );
     container.setAttribute('data-sheetmusic-cursor-alpha', String(normalizeCursorAlpha(sheetmusic.cursorAlpha)));
 
-    const width = normalizeSheetMusicDimension(sheetmusic.width);
-    if (width !== undefined) {
-        container.setAttribute('data-sheetmusic-width', String(width));
+    const maxWidth = normalizeSheetMusicDimension(
+        sheetmusic.maxWidth !== undefined ? sheetmusic.maxWidth : sheetmusic.width
+    );
+    if (maxWidth !== undefined) {
+        container.setAttribute('data-sheetmusic-max-width', String(maxWidth));
     }
 
     const maxHeight = normalizeSheetMusicDimension(sheetmusic.maxHeight);

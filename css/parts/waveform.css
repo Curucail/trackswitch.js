@@ -47,7 +47,7 @@
     cursor: pointer;
     pointer-events: auto;
     /* Ensure overlay captures click events */
-    touch-action: none;
+    touch-action: pan-y;
 }
 
 .trackswitch .waveform-wrap .seekwrap .seekhead {
