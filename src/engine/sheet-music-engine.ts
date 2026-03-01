@@ -54,6 +54,7 @@ interface SheetMusicEntry {
         startClientY: number;
         moved: boolean;
     } | null;
+    lastRenderedHostWidth: number;
 }
 
 type SheetMusicCursor = NonNullable<SheetMusicEntry['measureCursor']>;
@@ -64,6 +65,7 @@ const DEFAULT_GRAPHICAL_MEASURE_CLASS_NAME = 'GraphicalMeasure';
 const MIN_OSMD_ZOOM = 0.05;
 const MAX_OSMD_ZOOM = 8;
 const TOUCH_TAP_MOVE_THRESHOLD_PX = 10;
+const MIN_HOST_WIDTH_DELTA_FOR_RERENDER_PX = 2;
 
 function sanitizeCursorAlpha(value: number): number {
     if (!Number.isFinite(value)) {
@@ -151,6 +153,7 @@ export class SheetMusicEngine {
                 touchMoveListener: null,
                 touchListener: null,
                 touchTapState: null,
+                lastRenderedHostWidth: -1,
             };
         });
 
@@ -186,17 +189,25 @@ export class SheetMusicEngine {
     }
 
     resize(): void {
+        let hasRerenderedEntry = false;
+
         this.entries.forEach((entry) => {
             if (!entry.osmd) {
+                return;
+            }
+
+            if (!this.shouldRerenderOnResize(entry)) {
                 return;
             }
 
             try {
                 this.applyConfiguredRenderScale(entry);
                 entry.osmd.render();
+                entry.lastRenderedHostWidth = this.readHostWidth(entry.host);
                 this.rebindMeasureCursor(entry);
                 this.refreshCursorElement(entry);
                 this.ensureCurrentMeasureVisible(entry);
+                hasRerenderedEntry = true;
             } catch (error) {
                 console.warn(
                     '[trackswitch] Failed to re-render sheet music on resize for source:',
@@ -206,7 +217,9 @@ export class SheetMusicEngine {
             }
         });
 
-        this.updatePosition(this.lastPosition);
+        if (hasRerenderedEntry) {
+            this.updatePosition(this.lastPosition);
+        }
     }
 
     destroy(): void {
@@ -257,6 +270,7 @@ export class SheetMusicEngine {
             entry.osmd = osmd;
             this.applyConfiguredRenderScale(entry);
             osmd.render();
+            entry.lastRenderedHostWidth = this.readHostWidth(entry.host);
             osmd.enableOrDisableCursors(true);
 
             this.rebindMeasureCursor(entry);
@@ -336,6 +350,30 @@ export class SheetMusicEngine {
             MIN_OSMD_ZOOM,
             Math.min(MAX_OSMD_ZOOM, entry.renderScale)
         );
+    }
+
+    private readHostWidth(host: HTMLElement): number {
+        const width = host.clientWidth || host.getBoundingClientRect().width;
+        if (!Number.isFinite(width) || width <= 0) {
+            return 0;
+        }
+
+        return width;
+    }
+
+    private shouldRerenderOnResize(entry: SheetMusicEntry): boolean {
+        const currentWidth = this.readHostWidth(entry.host);
+        const previousWidth = entry.lastRenderedHostWidth;
+
+        if (currentWidth <= 0) {
+            return false;
+        }
+
+        if (previousWidth <= 0) {
+            return true;
+        }
+
+        return Math.abs(currentWidth - previousWidth) >= MIN_HOST_WIDTH_DELTA_FOR_RERENDER_PX;
     }
 
     private refreshCursorElement(entry: SheetMusicEntry): void {
@@ -483,6 +521,7 @@ export class SheetMusicEngine {
         entry.osmd = null;
         entry.measureCursor = null;
         entry.syncEnabled = false;
+        entry.lastRenderedHostWidth = -1;
     }
 
     private handleHostClick(entry: SheetMusicEntry, event: MouseEvent): void {
