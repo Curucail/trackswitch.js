@@ -45,6 +45,7 @@ interface SheetMusicEntry {
     syncEnabled: boolean;
     targetMeasure: number | null;
     clickListener: ((event: MouseEvent) => void) | null;
+    touchListener: ((event: TouchEvent) => void) | null;
 }
 
 type SheetMusicCursor = NonNullable<SheetMusicEntry['measureCursor']>;
@@ -137,6 +138,7 @@ export class SheetMusicEngine {
                 syncEnabled: false,
                 targetMeasure: null,
                 clickListener: null,
+                touchListener: null,
             };
         });
 
@@ -288,8 +290,13 @@ export class SheetMusicEngine {
             const clickListener = (event: MouseEvent) => {
                 this.handleHostClick(entry, event);
             };
+            const touchListener = (event: TouchEvent) => {
+                this.handleHostTouch(entry, event);
+            };
             entry.clickListener = clickListener;
+            entry.touchListener = touchListener;
             entry.host.addEventListener('click', clickListener);
+            entry.host.addEventListener('touchend', touchListener, { passive: false });
         }
     }
 
@@ -411,6 +418,11 @@ export class SheetMusicEngine {
             entry.clickListener = null;
         }
 
+        if (entry.touchListener) {
+            entry.host.removeEventListener('touchend', entry.touchListener);
+            entry.touchListener = null;
+        }
+
         const osmd = entry.osmd;
         if (!osmd) {
             return;
@@ -440,6 +452,14 @@ export class SheetMusicEngine {
     }
 
     private handleHostClick(entry: SheetMusicEntry, event: MouseEvent): void {
+        this.handleHostInteraction(entry, event);
+    }
+
+    private handleHostTouch(entry: SheetMusicEntry, event: TouchEvent): void {
+        this.handleHostInteraction(entry, event);
+    }
+
+    private handleHostInteraction(entry: SheetMusicEntry, event: MouseEvent | TouchEvent): void {
         if (!this.onSeekReferenceTime || !entry.measureMap || entry.measureMap.length === 0) {
             return;
         }
@@ -618,7 +638,7 @@ export class SheetMusicEngine {
         });
     }
 
-    private resolveClickedMeasure(entry: SheetMusicEntry, event: MouseEvent): number | null {
+    private resolveClickedMeasure(entry: SheetMusicEntry, event: MouseEvent | TouchEvent): number | null {
         const graphicSheet = entry.osmd?.GraphicSheet as {
             domToSvg?: (point: PointF2D) => PointF2D;
             svgToOsmd?: (point: PointF2D) => PointF2D;
@@ -671,8 +691,39 @@ export class SheetMusicEngine {
             }
         };
 
-        return attemptFromPoint(event.clientX, event.clientY)
-            ?? attemptFromPoint(event.pageX, event.pageY);
+        const pointCandidates = this.extractInteractionPointCandidates(event);
+        for (let index = 0; index < pointCandidates.length; index += 1) {
+            const point = pointCandidates[index];
+            const resolvedMeasure = attemptFromPoint(point.x, point.y);
+            if (resolvedMeasure !== null) {
+                return resolvedMeasure;
+            }
+        }
+
+        return null;
+    }
+
+    private extractInteractionPointCandidates(
+        event: MouseEvent | TouchEvent
+    ): Array<{ x: number | undefined; y: number | undefined }> {
+        if ('changedTouches' in event) {
+            const touch = event.changedTouches && event.changedTouches.length > 0
+                ? event.changedTouches[0]
+                : (event.touches && event.touches.length > 0 ? event.touches[0] : null);
+            if (!touch) {
+                return [];
+            }
+
+            return [
+                { x: touch.clientX, y: touch.clientY },
+                { x: touch.pageX, y: touch.pageY },
+            ];
+        }
+
+        return [
+            { x: event.clientX, y: event.clientY },
+            { x: event.pageX, y: event.pageY },
+        ];
     }
 
     private resolveGraphicalMeasureClassName(): string {
