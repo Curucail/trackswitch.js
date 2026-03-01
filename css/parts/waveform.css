@@ -6,6 +6,7 @@
     width: 100%;
     margin: 0;
     border-top: 1px solid rgba(124, 124, 124, 1.0);
+    border-bottom: 1px solid rgba(124, 124, 124, 1.0);
 }
 
 .trackswitch .waveform-wrap .waveform-scroll {

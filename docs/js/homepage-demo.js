@@ -408,12 +408,6 @@
         "document.addEventListener('DOMContentLoaded', function () {",
         "  TrackSwitch.createTrackSwitch(document.getElementById('player'), {",
         "    presetNames: ['All Tracks', 'Violins & Synths', 'Drums & Bass', 'Drums Only'],",
-        '    tracks: [',
-        "      { title: 'Violins', presets: [0, 1], image: 'violins.png', sources: [{ src: 'violins.mp3' }] },",
-        "      { title: 'Synths', presets: [0, 1], image: 'synth.png', sources: [{ src: 'synth.mp3' }] },",
-        "      { title: 'Bass', presets: [0, 2], image: 'bass.png', sources: [{ src: 'bass.mp3' }] },",
-        "      { title: 'Drums', presets: [0, 2, 3], image: 'drums.png', sources: [{ src: 'drums.mp3' }] },",
-        '    ],',
         '    ui: [',
       ];
 
@@ -425,9 +419,21 @@
 
       if (model.waveform) {
         snippetLines.push(
-          "      { type: 'waveform', width: 1200, height: 150, style: 'margin: 20px auto;' },"
+          "      { type: 'waveform', width: 1200, height: 150},"
         );
       }
+
+      snippetLines.push(
+        '      {',
+        "        type: 'trackGroup',",
+        '        trackGroup: [',
+        "          { title: 'Violins', presets: [0, 1], image: 'violins.png', sources: [{ src: 'violins.mp3' }] },",
+        "          { title: 'Synths', presets: [0, 1], image: 'synth.png', sources: [{ src: 'synth.mp3' }] },",
+        "          { title: 'Bass', presets: [0, 2], image: 'bass.png', sources: [{ src: 'bass.mp3' }] },",
+        "          { title: 'Drums', presets: [0, 2, 3], image: 'drums.png', sources: [{ src: 'drums.mp3' }] },",
+        '        ],',
+        '      },'
+      );
 
       snippetLines = snippetLines.concat([
         '    ],',
@@ -468,21 +474,6 @@
         '<script>',
         "document.addEventListener('DOMContentLoaded', function () {",
         "  TrackSwitch.createTrackSwitch(document.getElementById('player'), {",
-        '    tracks: [',
-        '      {',
-        "        title: 'SC06',",
-        "        sources: [{ src: 'Schubert_D911-03_SC06.wav' }],",
-        '        alignment: {',
-        "          column: 't1_sec',",
-        "          sources: [{ src: 'Schubert_D911-03_SC06_syncronized.wav' }],",
-        '        },',
-        '      },',
-        '      {',
-        "        title: 'HU33',",
-        "        sources: [{ src: 'Schubert_D911-03_HU33.wav' }],",
-        "        alignment: { column: 't2_sec' },",
-        '      },',
-        '    ],',
         '    alignment: {',
         "      csv: 'dtw_alignment.csv',",
         "      outOfRange: 'clamp',",
@@ -503,12 +494,33 @@
 
       if (model.waveform) {
         snippetLines.push(
-          "      { type: 'waveform', width: 1200, height: 120, waveformSource: 0, style: 'margin: 12px auto 8px;' },"
+          "      { type: 'waveform', width: 1200, height: 120, waveformSource: 0},"
         );
         snippetLines.push(
-          "      { type: 'waveform', width: 1200, height: 120, waveformSource: 1, style: 'margin: 8px auto 20px;' },"
+          "      { type: 'waveform', width: 1200, height: 120, waveformSource: 1},"
         );
       }
+
+      snippetLines.push(
+        '      {',
+        "        type: 'trackGroup',",
+        '        trackGroup: [',
+        '          {',
+        "            title: 'SC06',",
+        "            sources: [{ src: 'Schubert_D911-03_SC06.wav' }],",
+        '            alignment: {',
+        "              column: 't1_sec',",
+        "              synchronizedSources: [{ src: 'Schubert_D911-03_SC06_syncronized.wav' }],",
+        '            },',
+        '          },',
+        '          {',
+        "            title: 'HU33',",
+        "            sources: [{ src: 'Schubert_D911-03_HU33.wav' }],",
+        "            alignment: { column: 't2_sec' },",
+        '          },',
+        '        ],',
+        '      },'
+      );
 
       snippetLines = snippetLines.concat([
         '    ],',
@@ -652,7 +664,6 @@
           type: 'image',
           src: basePath + '/cover.jpg',
           seekable: false,
-          style: 'margin: 12px auto;',
         });
       }
 
@@ -666,7 +677,6 @@
           followPlayback: true,
           cursorColor: '#999999',
           cursorAlpha: 0.4,
-          style: 'margin: 0px;',
         });
       }
 
@@ -677,29 +687,23 @@
             width: 1200,
             height: 120,
             waveformSource: 0,
-            // style: 'margin: 12px auto 8px;',
           });
           uiConfig.push({
             type: 'waveform',
             width: 1200,
             height: 120,
             waveformSource: 1,
-            // style: 'margin: 8px auto 20px;',
           });
         } else {
           uiConfig.push({
             type: 'waveform',
             width: 1200,
             height: 150,
-            style: 'margin: 20px auto;',
           });
         }
       }
 
       init = {
-        tracks: isAlignmentMode(currentMode)
-          ? createAlignmentTracks(basePath)
-          : createBaseTracks(basePath),
         ui: uiConfig,
         features: {
           mode: currentMode,
@@ -719,12 +723,22 @@
       };
 
       if (isAlignmentMode(currentMode)) {
+        uiConfig.push({
+          type: 'trackGroup',
+          trackGroup: createAlignmentTracks(basePath),
+        });
+
         init.alignment = {
           csv: basePath + '/dtw_alignment.csv',
           referenceTimeColumn: 't1_sec',
           outOfRange: 'clamp',
         };
       } else {
+        uiConfig.push({
+          type: 'trackGroup',
+          trackGroup: createBaseTracks(basePath),
+        });
+
         init.presetNames = ['All Tracks', 'Violins & Synths', 'Drums & Bass', 'Drums Only'];
       }
 

@@ -5,16 +5,17 @@
     max-width: 100%;
     /* Limit images to 100% width (unless overridden by the user) */
     display: block;
-    margin: 0;
+    margin: 0 auto;
     /* Prevent inheritence from kirby styles */
     padding: 0;
 }
 
 .trackswitch .seekable-img-wrap {
-    display: inline-block;
+    display: block;
+    width: fit-content;
     position: relative;
-    margin: 0;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.28);
+    margin: 0 auto;
+    border-bottom: 1px solid rgba(124, 124, 124, 1.0);
 }
 
 .trackswitch .seekable-img-wrap .seekwrap {
