@@ -381,7 +381,10 @@ export class SheetMusicEngine {
             return;
         }
 
-        scrollContainer.scrollTop = clampedScrollTop;
+        scrollContainer.scrollTo({
+            top: clampedScrollTop,
+            behavior: 'smooth'
+        });
     }
 
     private disposeEntry(entry: SheetMusicEntry): void {
