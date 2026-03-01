@@ -47,6 +47,8 @@ interface SheetMusicEntry {
     clickListener: ((event: MouseEvent) => void) | null;
 }
 
+type SheetMusicCursor = NonNullable<SheetMusicEntry['measureCursor']>;
+
 const DEFAULT_CURSOR_COLOR = '#999999';
 const DEFAULT_CURSOR_ALPHA = 0.1;
 const DEFAULT_GRAPHICAL_MEASURE_CLASS_NAME = 'GraphicalMeasure';
@@ -150,6 +152,11 @@ export class SheetMusicEngine {
                 return;
             }
 
+            const cursor = this.rebindMeasureCursor(entry);
+            if (!cursor) {
+                return;
+            }
+
             const mappedMeasure = this.resolveMappedMeasure(entry.measureMap, this.lastPosition);
             if (mappedMeasure === null) {
                 return;
@@ -173,6 +180,8 @@ export class SheetMusicEngine {
             try {
                 this.applyConfiguredRenderScale(entry);
                 entry.osmd.render();
+                this.rebindMeasureCursor(entry);
+                this.refreshCursorElement(entry);
                 this.ensureCurrentMeasureVisible(entry);
             } catch (error) {
                 console.warn(
@@ -236,15 +245,7 @@ export class SheetMusicEngine {
             osmd.render();
             osmd.enableOrDisableCursors(true);
 
-            const rawCursor = osmd.cursors && osmd.cursors.length > 0
-                ? osmd.cursors[0]
-                : osmd.cursor;
-            const cursor = rawCursor as SheetMusicEntry['measureCursor'];
-            if (cursor?.show) {
-                cursor.show();
-            }
-
-            entry.measureCursor = cursor || null;
+            this.rebindMeasureCursor(entry);
             this.refreshCursorElement(entry);
             entry.availableMeasures = this.collectAvailableMeasures(osmd);
             entry.availableMeasureSet = new Set(entry.availableMeasures);
@@ -314,14 +315,21 @@ export class SheetMusicEngine {
             return;
         }
 
-        if (cursor.cursorElement instanceof Element) {
+        if (
+            cursor.cursorElement instanceof Element
+            && cursor.cursorElement.isConnected
+            && entry.host.contains(cursor.cursorElement)
+        ) {
             return;
         }
 
         const hostCursor = entry.host.querySelector('[id^="osmdCursor"]');
         if (hostCursor instanceof Element) {
             cursor.cursorElement = hostCursor;
+            return;
         }
+
+        cursor.cursorElement = null;
     }
 
     private ensureCurrentMeasureVisible(entry: SheetMusicEntry): void {
@@ -329,7 +337,7 @@ export class SheetMusicEngine {
             return;
         }
 
-        const cursor = entry.measureCursor;
+        const cursor = this.rebindMeasureCursor(entry);
         if (!cursor) {
             return;
         }
@@ -483,7 +491,7 @@ export class SheetMusicEngine {
     }
 
     private moveCursorToMeasure(entry: SheetMusicEntry, targetMeasure: number): void {
-        const cursor = entry.measureCursor;
+        const cursor = this.rebindMeasureCursor(entry);
         if (!cursor?.reset || !cursor?.nextMeasure || !cursor?.previousMeasure) {
             return;
         }
@@ -526,6 +534,42 @@ export class SheetMusicEngine {
         );
 
         this.ensureCurrentMeasureVisible(entry);
+    }
+
+    private resolveRuntimeCursor(entry: SheetMusicEntry): SheetMusicEntry['measureCursor'] {
+        const osmd = entry.osmd;
+        if (!osmd) {
+            return null;
+        }
+
+        const runtimeCursor = osmd.cursors && osmd.cursors.length > 0
+            ? osmd.cursors[0]
+            : osmd.cursor;
+        return (runtimeCursor as SheetMusicEntry['measureCursor']) || null;
+    }
+
+    private rebindMeasureCursor(entry: SheetMusicEntry): SheetMusicCursor | null {
+        const runtimeCursor = this.resolveRuntimeCursor(entry);
+        if (!runtimeCursor) {
+            entry.measureCursor = null;
+            entry.syncEnabled = false;
+            return null;
+        }
+
+        if (entry.measureCursor !== runtimeCursor) {
+            entry.measureCursor = runtimeCursor;
+            entry.targetMeasure = null;
+        }
+
+        if (entry.measureCursor?.show) {
+            entry.measureCursor.show();
+        }
+
+        if (!entry.syncEnabled && entry.measureMap && entry.measureMap.length > 0 && entry.availableMeasures.length > 0) {
+            entry.syncEnabled = true;
+        }
+
+        return entry.measureCursor as SheetMusicCursor;
     }
 
     private readCursorMeasure(cursor: NonNullable<SheetMusicEntry['measureCursor']>): number | null {
