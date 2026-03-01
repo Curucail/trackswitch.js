@@ -1075,7 +1075,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     }
 
     onWaveformZoomWheel(event: ControllerPointerEvent): void {
-        if (!this.features.waveform || !this.features.waveformzoom) {
+        if (!this.features.waveform) {
             return;
         }
 
@@ -1092,6 +1092,10 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
         const seekWrap = wrapper.querySelector('.seekwrap[data-seek-surface="waveform"]');
         if (!(seekWrap instanceof HTMLElement)) {
+            return;
+        }
+
+        if (!this.renderer.isWaveformZoomEnabled(seekWrap)) {
             return;
         }
 
@@ -1363,7 +1367,6 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         if (
             event.type !== 'touchstart'
             || !this.features.waveform
-            || !this.features.waveformzoom
             || !this.isWaveformSeekSurface(seekWrap)
             || this.getActiveTouchCount(event) !== 1
             || !seekWrap
@@ -1498,7 +1501,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     }
 
     private tryStartPinchZoom(event: ControllerPointerEvent, seekWrap: HTMLElement | null): boolean {
-        if (!this.features.waveform || !this.features.waveformzoom || event.type !== 'touchstart') {
+        if (!this.features.waveform || event.type !== 'touchstart') {
             return false;
         }
 
@@ -1507,6 +1510,10 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         }
 
         if (!seekWrap || seekWrap.getAttribute('data-seek-surface') !== 'waveform') {
+            return false;
+        }
+
+        if (!this.renderer.isWaveformZoomEnabled(seekWrap)) {
             return false;
         }
 

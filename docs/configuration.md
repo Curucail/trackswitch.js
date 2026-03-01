@@ -135,6 +135,7 @@ Waveform element:
 - Invalid `waveformBarWidth` values are normalized to `1`
 - `maxZoom` controls maximum per-waveform zoom factor and defaults to `20`
 - `maxZoom` accepts either a factor (`20`) or percentage string (`'2000%'`), where `100% = 1x`
+- Zoom is enabled per waveform only when `maxZoom > 1` (or `> '100%'`); `maxZoom: 1` / `maxZoom: '100%'` disables zoom for that waveform
 - `waveformSource` controls what gets visualized:
   - `'audible'` (default): render the current audible mix based on mute/solo state
   - non-negative integer: render that specific track index waveform regardless of mute/solo
@@ -143,7 +144,7 @@ Waveform element:
   - `default` mode default: disabled when omitted
   - explicit `timer: true` or `timer: false` always overrides the mode default
 - If at least one waveform UI element is configured, waveform rendering is enabled
-- Each waveform container supports independent zoom (desktop wheel and mobile pinch) when `features.waveformzoom` is enabled
+- Each waveform container supports independent zoom (desktop wheel and mobile pinch) when that waveform's `maxZoom` is greater than `1`
 
 Sheet music element:
 
@@ -196,7 +197,6 @@ Feature defaults:
 - `timer: true`
 - `presets: true`
 - `waveform: true`
-- `waveformzoom: true`
 
 Normalization rules:
 

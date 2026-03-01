@@ -597,10 +597,14 @@ export class ViewRenderer {
             if (maxWidth !== null) {
                 wrapper.style.width = '100%';
                 wrapper.style.maxWidth = maxWidth + 'px';
+                wrapper.style.marginLeft = 'auto';
+                wrapper.style.marginRight = 'auto';
                 wrapper.setAttribute('data-sheetmusic-max-width-applied', 'true');
             } else if (wrapper.getAttribute('data-sheetmusic-max-width-applied') === 'true') {
                 wrapper.style.removeProperty('width');
                 wrapper.style.removeProperty('max-width');
+                wrapper.style.removeProperty('margin-left');
+                wrapper.style.removeProperty('margin-right');
                 wrapper.removeAttribute('data-sheetmusic-max-width-applied');
             }
 
@@ -934,6 +938,15 @@ export class ViewRenderer {
         }
 
         return surfaceMetadata.zoom;
+    }
+
+    isWaveformZoomEnabled(seekWrap: HTMLElement): boolean {
+        const surfaceMetadata = this.findWaveformSurface(seekWrap);
+        if (!surfaceMetadata) {
+            return false;
+        }
+
+        return surfaceMetadata.maxZoom > MIN_WAVEFORM_ZOOM;
     }
 
     setWaveformZoom(seekWrap: HTMLElement, zoom: number, anchorPageX?: number): boolean {

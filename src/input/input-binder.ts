@@ -323,17 +323,15 @@ export class InputBinder {
         const hasSheetMusicUi = !!this.root.querySelector('.sheetmusic, .sheetmusic-wrap');
 
         if (this.features.waveform) {
-            if (this.features.waveformzoom) {
-                this.addDelegatedListener(
-                    'wheel',
-                    '.waveform-wrap',
-                    (event) => {
-                        this.controller.onWaveformZoomWheel(event);
-                    },
-                    undefined,
-                    { passive: false }
-                );
-            }
+            this.addDelegatedListener(
+                'wheel',
+                '.waveform-wrap',
+                (event) => {
+                    this.controller.onWaveformZoomWheel(event);
+                },
+                undefined,
+                { passive: false }
+            );
 
         }
 
