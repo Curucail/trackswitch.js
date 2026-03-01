@@ -127,12 +127,14 @@ Image element:
 Waveform element:
 
 ```javascript
-{ type: 'waveform', width: 1200, height: 150, waveformBarWidth: 2, waveformSource: 'audible', timer: true }
+{ type: 'waveform', width: 1200, height: 150, waveformBarWidth: 2, maxZoom: 20, waveformSource: 'audible', timer: true }
 ```
 
-- Fields: `width?`, `height?`, `waveformBarWidth?`, `waveformSource?`, `timer?`, `style?`, `seekMarginLeft?`, `seekMarginRight?`
+- Fields: `width?`, `height?`, `waveformBarWidth?`, `maxZoom?`, `waveformSource?`, `timer?`, `style?`, `seekMarginLeft?`, `seekMarginRight?`
 - Defaults: `width: 1200`, `height: 150`, `waveformBarWidth: 1`
 - Invalid `waveformBarWidth` values are normalized to `1`
+- `maxZoom` controls maximum per-waveform zoom factor and defaults to `20`
+- `maxZoom` accepts either a factor (`20`) or percentage string (`'2000%'`), where `100% = 1x`
 - `waveformSource` controls what gets visualized:
   - `'audible'` (default): render the current audible mix based on mute/solo state
   - non-negative integer: render that specific track index waveform regardless of mute/solo

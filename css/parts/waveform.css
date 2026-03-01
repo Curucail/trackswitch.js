@@ -27,6 +27,20 @@
     min-width: 100%;
 }
 
+.trackswitch .waveform-wrap .waveform-surface .waveform-tile-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.trackswitch .waveform-wrap .waveform-surface canvas.waveform-tile {
+    position: absolute;
+    top: 0;
+    display: block;
+}
+
 .trackswitch .waveform-wrap .waveform-overlay {
     position: absolute;
     top: 0;

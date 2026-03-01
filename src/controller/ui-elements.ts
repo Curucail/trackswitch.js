@@ -27,6 +27,41 @@ function normalizeWaveformBarWidth(value: number | undefined): number {
     return Math.max(1, Math.floor(value));
 }
 
+function normalizeWaveformMaxZoom(value: number | string | undefined): number | undefined {
+    if (typeof value === 'number') {
+        if (!Number.isFinite(value) || value < 1) {
+            return undefined;
+        }
+
+        return value;
+    }
+
+    if (typeof value !== 'string') {
+        return undefined;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return undefined;
+    }
+
+    if (trimmed.endsWith('%')) {
+        const percent = Number(trimmed.slice(0, -1).trim());
+        if (!Number.isFinite(percent) || percent < 100) {
+            return undefined;
+        }
+
+        return percent / 100;
+    }
+
+    const parsed = Number(trimmed);
+    if (!Number.isFinite(parsed) || parsed < 1) {
+        return undefined;
+    }
+
+    return parsed;
+}
+
 function normalizeWaveformSource(value: 'audible' | number | undefined): 'audible' | number {
     if (value === 'audible' || value === undefined) {
         return 'audible';
@@ -51,6 +86,7 @@ function normalizeWaveformConfig<T extends TrackSwitchWaveformConfig>(waveform: 
     return {
         ...waveform,
         waveformBarWidth: normalizeWaveformBarWidth(waveform.waveformBarWidth),
+        maxZoom: normalizeWaveformMaxZoom(waveform.maxZoom),
         waveformSource: normalizeWaveformSource(waveform.waveformSource),
         timer: normalizeWaveformTimer(waveform.timer),
     };
@@ -154,6 +190,11 @@ function injectWaveform(root: HTMLElement, waveform: TrackSwitchWaveformConfig):
     canvas.height = toCanvasSize(waveform.height, 150);
     canvas.setAttribute('data-waveform-bar-width', String(normalizeWaveformBarWidth(waveform.waveformBarWidth)));
     canvas.setAttribute('data-waveform-source', String(normalizeWaveformSource(waveform.waveformSource)));
+
+    const maxZoom = normalizeWaveformMaxZoom(waveform.maxZoom);
+    if (maxZoom !== undefined) {
+        canvas.setAttribute('data-waveform-max-zoom', String(maxZoom));
+    }
 
     if (typeof waveform.timer === 'boolean') {
         canvas.setAttribute('data-waveform-timer', String(waveform.timer));

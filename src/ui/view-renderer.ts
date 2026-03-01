@@ -26,20 +26,30 @@ interface WaveformSeekSurfaceMetadata {
     scrollContainer: HTMLElement;
     overlay: HTMLElement;
     surface: HTMLElement;
-    canvas: HTMLCanvasElement;
-    context: CanvasRenderingContext2D | null;
+    tileLayer: HTMLElement;
     seekWrap: HTMLElement;
     waveformSource: 'audible' | number;
     originalHeight: number;
     barWidth: number;
+    maxZoom: number;
     baseWidth: number;
     zoom: number;
     timingNode: HTMLElement | null;
     zoomNode: HTMLElement;
+    tiles: Map<number, HTMLCanvasElement>;
+}
+
+interface LatestWaveformRenderInput {
+    waveformEngine: WaveformEngine;
+    runtimes: TrackRuntime[];
+    timelineDuration: number;
+    trackTimelineProjector?: TrackTimelineProjector;
+    waveformTimelineContext?: WaveformTimelineContext;
 }
 
 const MIN_WAVEFORM_ZOOM = 1;
-const MAX_WAVEFORM_ZOOM = 15;
+const DEFAULT_MAX_WAVEFORM_ZOOM = 20;
+const WAVEFORM_TILE_WIDTH_PX = 1024;
 
 function buildSeekWrap(leftPercent: number, rightPercent: number): string {
     return '<div class="seekwrap" style="left: ' + leftPercent + '%; right: ' + rightPercent + '%;">'
@@ -115,6 +125,33 @@ function parseWaveformTimerEnabled(value: string | null, mode: TrackSwitchFeatur
     }
 
     return value.trim().toLowerCase() === 'true';
+}
+
+function parseWaveformMaxZoom(value: string | null): number {
+    if (value === null) {
+        return DEFAULT_MAX_WAVEFORM_ZOOM;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return DEFAULT_MAX_WAVEFORM_ZOOM;
+    }
+
+    if (trimmed.endsWith('%')) {
+        const percent = Number(trimmed.slice(0, -1).trim());
+        if (Number.isFinite(percent) && percent >= 100) {
+            return percent / 100;
+        }
+
+        return DEFAULT_MAX_WAVEFORM_ZOOM;
+    }
+
+    const parsed = Number(trimmed);
+    if (!Number.isFinite(parsed) || parsed < MIN_WAVEFORM_ZOOM) {
+        return DEFAULT_MAX_WAVEFORM_ZOOM;
+    }
+
+    return parsed;
 }
 
 function parseSheetMusicString(value: string | null): string {
@@ -194,12 +231,12 @@ function parseSheetMusicFollowPlayback(value: string | null): boolean {
     return parseSheetMusicString(value).toLowerCase() !== 'false';
 }
 
-function clampWaveformZoom(zoom: number): number {
+function clampWaveformZoom(zoom: number, maximum: number): number {
     if (!Number.isFinite(zoom)) {
         return MIN_WAVEFORM_ZOOM;
     }
 
-    return clampTime(zoom, MIN_WAVEFORM_ZOOM, MAX_WAVEFORM_ZOOM);
+    return clampTime(zoom, MIN_WAVEFORM_ZOOM, maximum);
 }
 
 export class ViewRenderer {
@@ -210,6 +247,8 @@ export class ViewRenderer {
     private originalImage = '';
     private readonly waveformSeekSurfaces: WaveformSeekSurfaceMetadata[] = [];
     private readonly sheetMusicHosts: SheetMusicHostConfig[] = [];
+    private waveformTileRefreshFrameId: number | null = null;
+    private latestWaveformRenderInput: LatestWaveformRenderInput | null = null;
 
     constructor(root: HTMLElement, features: TrackSwitchFeatures, presetNames: string[]) {
         this.root = root;
@@ -429,6 +468,7 @@ export class ViewRenderer {
 
             const waveformSource = parseWaveformSource(canvasElement.getAttribute('data-waveform-source'));
             const barWidth = parseWaveformBarWidth(canvasElement.getAttribute('data-waveform-bar-width'), 1);
+            const maxZoom = parseWaveformMaxZoom(canvasElement.getAttribute('data-waveform-max-zoom'));
             const timerEnabled = parseWaveformTimerEnabled(
                 canvasElement.getAttribute('data-waveform-timer'),
                 this.features.mode
@@ -454,7 +494,6 @@ export class ViewRenderer {
             wrapper.appendChild(scrollContainer);
             wrapper.appendChild(overlay);
             scrollContainer.appendChild(surface);
-            surface.appendChild(canvasElement);
             surface.insertAdjacentHTML(
                 'beforeend',
                 buildSeekWrap(
@@ -463,7 +502,19 @@ export class ViewRenderer {
                 )
             );
 
+            const tileLayer = document.createElement('div');
+            tileLayer.className = 'waveform-tile-layer';
             const seekWrap = surface.querySelector('.seekwrap');
+            if (seekWrap instanceof HTMLElement) {
+                surface.insertBefore(tileLayer, seekWrap);
+            } else {
+                surface.appendChild(tileLayer);
+            }
+
+            surface.style.height = originalHeight + 'px';
+            scrollContainer.style.height = originalHeight + 'px';
+            canvasElement.remove();
+
             if (seekWrap instanceof HTMLElement) {
                 seekWrap.setAttribute('data-seek-surface', 'waveform');
                 seekWrap.setAttribute('data-waveform-source', String(waveformSource));
@@ -476,17 +527,22 @@ export class ViewRenderer {
                     scrollContainer: scrollContainer,
                     overlay: overlay,
                     surface: surface,
-                    canvas: canvasElement,
-                    context: canvasElement.getContext('2d'),
+                    tileLayer: tileLayer,
                     seekWrap: seekWrap,
                     waveformSource: waveformSource,
                     originalHeight: originalHeight,
                     barWidth: barWidth,
+                    maxZoom: maxZoom,
                     baseWidth: this.resolveWaveformBaseWidth(scrollContainer, canvasElement.width),
                     zoom: MIN_WAVEFORM_ZOOM,
                     timingNode: timingNode,
                     zoomNode: zoomNode,
+                    tiles: new Map<number, HTMLCanvasElement>(),
                 });
+
+                scrollContainer.addEventListener('scroll', () => {
+                    this.scheduleVisibleWaveformTileRefresh();
+                }, { passive: true });
             }
         });
     }
@@ -620,6 +676,155 @@ export class ViewRenderer {
     private setWaveformSurfaceWidth(surfaceMetadata: WaveformSeekSurfaceMetadata): void {
         const width = Math.max(1, Math.round(surfaceMetadata.baseWidth * surfaceMetadata.zoom));
         surfaceMetadata.surface.style.width = width + 'px';
+        surfaceMetadata.surface.style.height = surfaceMetadata.originalHeight + 'px';
+        surfaceMetadata.tileLayer.style.height = surfaceMetadata.originalHeight + 'px';
+    }
+
+    private forEachVisibleWaveformTile(
+        surfaceMetadata: WaveformSeekSurfaceMetadata,
+        pixelRatio: number,
+        callback: (tile: {
+            tileIndex: number;
+            tileStartPx: number;
+            tileCssWidth: number;
+            surfaceWidth: number;
+            canvas: HTMLCanvasElement;
+            context: CanvasRenderingContext2D;
+            renderBarWidth: number;
+        }) => void
+    ): void {
+        const surfaceWidth = Math.max(1, Math.round(surfaceMetadata.baseWidth * surfaceMetadata.zoom));
+        const viewportWidth = Math.max(1, surfaceMetadata.scrollContainer.clientWidth);
+        const scrollLeft = clampTime(surfaceMetadata.scrollContainer.scrollLeft, 0, Math.max(0, surfaceWidth - viewportWidth));
+        const bufferPx = viewportWidth;
+        const visibleStart = Math.max(0, scrollLeft - bufferPx);
+        const visibleEnd = Math.min(surfaceWidth, scrollLeft + viewportWidth + bufferPx);
+        const tileWidth = WAVEFORM_TILE_WIDTH_PX;
+        const firstTile = Math.max(0, Math.floor(visibleStart / tileWidth));
+        const lastTile = Math.max(firstTile, Math.floor(Math.max(0, visibleEnd - 1) / tileWidth));
+
+        const needed = new Set<number>();
+        for (let tileIndex = firstTile; tileIndex <= lastTile; tileIndex += 1) {
+            const tileStartPx = tileIndex * tileWidth;
+            if (tileStartPx >= surfaceWidth) {
+                break;
+            }
+
+            const tileCssWidth = Math.max(1, Math.min(tileWidth, surfaceWidth - tileStartPx));
+            let tileCanvas = surfaceMetadata.tiles.get(tileIndex);
+            if (!tileCanvas) {
+                tileCanvas = document.createElement('canvas');
+                tileCanvas.className = 'waveform waveform-tile';
+                tileCanvas.style.position = 'absolute';
+                tileCanvas.style.top = '0';
+                tileCanvas.style.display = 'block';
+                surfaceMetadata.tileLayer.appendChild(tileCanvas);
+                surfaceMetadata.tiles.set(tileIndex, tileCanvas);
+            }
+
+            tileCanvas.style.left = tileStartPx + 'px';
+            tileCanvas.style.width = tileCssWidth + 'px';
+            tileCanvas.style.height = surfaceMetadata.originalHeight + 'px';
+
+            const renderWidth = Math.max(1, Math.round(tileCssWidth * pixelRatio));
+            const renderHeight = Math.max(1, Math.round(surfaceMetadata.originalHeight * pixelRatio));
+            if (tileCanvas.width !== renderWidth) {
+                tileCanvas.width = renderWidth;
+            }
+            if (tileCanvas.height !== renderHeight) {
+                tileCanvas.height = renderHeight;
+            }
+
+            const context = tileCanvas.getContext('2d');
+            if (!context) {
+                continue;
+            }
+
+            const renderBarWidth = Math.max(1, Math.round(surfaceMetadata.barWidth * pixelRatio));
+            callback({
+                tileIndex,
+                tileStartPx,
+                tileCssWidth,
+                surfaceWidth,
+                canvas: tileCanvas,
+                context,
+                renderBarWidth,
+            });
+            needed.add(tileIndex);
+        }
+
+        Array.from(surfaceMetadata.tiles.keys()).forEach((tileIndex) => {
+            if (needed.has(tileIndex)) {
+                return;
+            }
+
+            const tileCanvas = surfaceMetadata.tiles.get(tileIndex);
+            if (tileCanvas) {
+                tileCanvas.remove();
+            }
+            surfaceMetadata.tiles.delete(tileIndex);
+        });
+    }
+
+    private scheduleVisibleWaveformTileRefresh(): void {
+        if (this.waveformTileRefreshFrameId !== null) {
+            return;
+        }
+
+        this.waveformTileRefreshFrameId = requestAnimationFrame(() => {
+            this.waveformTileRefreshFrameId = null;
+            this.refreshVisibleWaveformTilesFromLatestInput();
+        });
+    }
+
+    private refreshVisibleWaveformTilesFromLatestInput(): void {
+        const latestInput = this.latestWaveformRenderInput;
+        if (!latestInput) {
+            return;
+        }
+
+        this.renderWaveformsInternal(
+            latestInput.waveformEngine,
+            latestInput.runtimes,
+            latestInput.timelineDuration,
+            latestInput.trackTimelineProjector,
+            latestInput.waveformTimelineContext,
+            false
+        );
+    }
+
+    private computeNormalizationPeak(
+        waveformEngine: WaveformEngine,
+        sourceRuntimes: TrackRuntime[],
+        renderBarWidth: number,
+        duration: number,
+        baseProjector: TrackTimelineProjector,
+        baseWidth: number
+    ): number {
+        if (!Number.isFinite(duration) || duration <= 0 || sourceRuntimes.length === 0) {
+            return 1;
+        }
+
+        const normalizationPeakCount = Math.max(256, Math.min(4096, Math.round(baseWidth)));
+        const mixed = waveformEngine.calculateMixedWaveform(
+            sourceRuntimes,
+            normalizationPeakCount,
+            renderBarWidth,
+            duration,
+            baseProjector
+        );
+        if (!mixed || mixed.length === 0) {
+            return 1;
+        }
+
+        let maxPeak = 0;
+        for (let index = 0; index < mixed.length; index += 1) {
+            if (mixed[index] > maxPeak) {
+                maxPeak = mixed[index];
+            }
+        }
+
+        return maxPeak > 0 ? maxPeak : 1;
     }
 
     private findWaveformSurface(
@@ -681,7 +886,7 @@ export class ViewRenderer {
             return false;
         }
 
-        const nextZoom = clampWaveformZoom(zoom);
+        const nextZoom = clampWaveformZoom(zoom, surfaceMetadata.maxZoom);
         if (Math.abs(nextZoom - surfaceMetadata.zoom) < 0.000001) {
             return false;
         }
@@ -723,27 +928,9 @@ export class ViewRenderer {
 
         for (let i = 0; i < this.waveformSeekSurfaces.length; i += 1) {
             const surfaceMetadata = this.waveformSeekSurfaces[i];
-            const canvas = surfaceMetadata.canvas;
-            const context = surfaceMetadata.context;
-            const barWidth = surfaceMetadata.barWidth;
-            if (!context) {
-                continue;
-            }
-
-            const displayWidth = canvas.clientWidth || canvas.width;
-            const originalHeight = surfaceMetadata.originalHeight || canvas.height;
-            const renderWidth = Math.max(1, Math.round(displayWidth * pixelRatio));
-            const renderHeight = Math.max(1, Math.round(originalHeight * pixelRatio));
-            const renderBarWidth = Math.max(1, Math.round(barWidth * pixelRatio));
-
-            if (canvas.width !== renderWidth) {
-                canvas.width = renderWidth;
-            }
-            if (canvas.height !== renderHeight) {
-                canvas.height = renderHeight;
-            }
-
-            waveformEngine.drawPlaceholder(canvas, context, renderBarWidth, 0.3);
+            this.forEachVisibleWaveformTile(surfaceMetadata, pixelRatio, (tile) => {
+                waveformEngine.drawPlaceholder(tile.canvas, tile.context, tile.renderBarWidth, 0.3);
+            });
         }
     }
 
@@ -754,38 +941,45 @@ export class ViewRenderer {
         trackTimelineProjector?: TrackTimelineProjector,
         waveformTimelineContext?: WaveformTimelineContext
     ): void {
+        this.latestWaveformRenderInput = {
+            waveformEngine,
+            runtimes,
+            timelineDuration,
+            trackTimelineProjector,
+            waveformTimelineContext,
+        };
+
+        this.renderWaveformsInternal(
+            waveformEngine,
+            runtimes,
+            timelineDuration,
+            trackTimelineProjector,
+            waveformTimelineContext,
+            true
+        );
+    }
+
+    private renderWaveformsInternal(
+        waveformEngine: WaveformEngine,
+        runtimes: TrackRuntime[],
+        timelineDuration: number,
+        trackTimelineProjector?: TrackTimelineProjector,
+        waveformTimelineContext?: WaveformTimelineContext,
+        performReflow = true
+    ): void {
         if (!this.features.waveform || this.waveformSeekSurfaces.length === 0) {
             return;
         }
 
-        this.reflowWaveforms();
+        if (performReflow) {
+            this.reflowWaveforms();
+        }
 
         const pixelRatio = this.getCanvasPixelRatio();
         const safeTimelineDuration = Number.isFinite(timelineDuration) && timelineDuration > 0 ? timelineDuration : 0;
 
         for (let i = 0; i < this.waveformSeekSurfaces.length; i += 1) {
             const surfaceMetadata = this.waveformSeekSurfaces[i];
-            const canvas = surfaceMetadata.canvas;
-            const context = surfaceMetadata.context;
-            const barWidth = surfaceMetadata.barWidth;
-            if (!context) {
-                continue;
-            }
-
-            const displayWidth = canvas.clientWidth || canvas.width;
-            const originalHeight = surfaceMetadata.originalHeight || canvas.height;
-            const renderWidth = Math.max(1, Math.round(displayWidth * pixelRatio));
-            const renderHeight = Math.max(1, Math.round(originalHeight * pixelRatio));
-            const renderBarWidth = Math.max(1, Math.round(barWidth * pixelRatio));
-
-            if (canvas.width !== renderWidth) {
-                canvas.width = renderWidth;
-            }
-            if (canvas.height !== renderHeight) {
-                canvas.height = renderHeight;
-            }
-
-            const peakCount = Math.max(1, Math.floor(canvas.width / renderBarWidth));
             const waveformSource = surfaceMetadata.waveformSource;
             const sourceRuntimes = this.getWaveformSourceRuntimes(runtimes, waveformSource);
             const fixedWaveformTrackIndex = this.resolveWaveformTrackIndex(runtimes, waveformSource);
@@ -796,20 +990,64 @@ export class ViewRenderer {
                 && waveformTimelineContext.enabled
                 && fixedWaveformTrackIndex !== null
                 && localTrackDuration > 0;
-            const mixed = waveformEngine.calculateMixedWaveform(
+            const fullDuration = useLocalAxis ? localTrackDuration : safeTimelineDuration;
+            const baseProjector: TrackTimelineProjector = useLocalAxis
+                ? ((_runtime, trackTimelineTimeSeconds) => trackTimelineTimeSeconds)
+                : (trackTimelineProjector || ((_runtime, trackTimelineTimeSeconds) => trackTimelineTimeSeconds));
+
+            const surfaceRenderBarWidth = Math.max(1, Math.round(surfaceMetadata.barWidth * pixelRatio));
+            const normalizationPeak = this.computeNormalizationPeak(
+                waveformEngine,
                 sourceRuntimes,
-                peakCount,
-                renderBarWidth,
-                useLocalAxis ? localTrackDuration : safeTimelineDuration,
-                useLocalAxis ? undefined : trackTimelineProjector
+                surfaceRenderBarWidth,
+                fullDuration,
+                baseProjector,
+                surfaceMetadata.baseWidth
             );
 
-            if (!mixed) {
-                waveformEngine.drawPlaceholder(canvas, context, renderBarWidth, 0.3);
-                continue;
-            }
+            this.forEachVisibleWaveformTile(surfaceMetadata, pixelRatio, (tile) => {
+                const peakCount = Math.max(1, Math.floor(tile.canvas.width / tile.renderBarWidth));
+                if (fullDuration <= 0) {
+                    waveformEngine.drawPlaceholder(tile.canvas, tile.context, tile.renderBarWidth, 0.3);
+                    return;
+                }
 
-            waveformEngine.drawWaveform(canvas, context, mixed, renderBarWidth);
+                const tileStartTime = fullDuration * (tile.tileStartPx / tile.surfaceWidth);
+                const tileDuration = fullDuration * (tile.tileCssWidth / tile.surfaceWidth);
+                if (!Number.isFinite(tileDuration) || tileDuration <= 0) {
+                    waveformEngine.drawPlaceholder(tile.canvas, tile.context, tile.renderBarWidth, 0.3);
+                    return;
+                }
+
+                const tileProjector: TrackTimelineProjector = (runtime, trackTimelineTimeSeconds) => {
+                    const mapped = baseProjector(runtime, trackTimelineTimeSeconds);
+                    if (!Number.isFinite(mapped)) {
+                        return NaN;
+                    }
+                    return mapped - tileStartTime;
+                };
+
+                const mixed = waveformEngine.calculateMixedWaveform(
+                    sourceRuntimes,
+                    peakCount,
+                    tile.renderBarWidth,
+                    tileDuration,
+                    tileProjector
+                );
+
+                if (!mixed) {
+                    waveformEngine.drawPlaceholder(tile.canvas, tile.context, tile.renderBarWidth, 0.3);
+                    return;
+                }
+
+                waveformEngine.drawWaveform(
+                    tile.canvas,
+                    tile.context,
+                    mixed,
+                    tile.renderBarWidth,
+                    normalizationPeak
+                );
+            });
         }
     }
 
@@ -900,7 +1138,7 @@ export class ViewRenderer {
 
     private updateWaveformZoomIndicators(): void {
         this.waveformSeekSurfaces.forEach((surface) => {
-            const zoomPercent = Math.round(clampWaveformZoom(surface.zoom) * 100);
+            const zoomPercent = Math.round(clampWaveformZoom(surface.zoom, surface.maxZoom) * 100);
             if (zoomPercent === 100) {
                 surface.zoomNode.style.display = 'none';
                 return;

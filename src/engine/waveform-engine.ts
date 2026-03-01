@@ -314,7 +314,8 @@ export class WaveformEngine {
         canvas: HTMLCanvasElement,
         context: CanvasRenderingContext2D,
         peaks: Float32Array | null,
-        barWidth: number
+        barWidth: number,
+        normalizationPeak?: number
     ): void {
         const width = canvas.width;
         const height = canvas.height;
@@ -325,10 +326,14 @@ export class WaveformEngine {
             return;
         }
 
-        let maxPeak = 0;
-        for (let i = 0; i < peaks.length; i += 1) {
-            if (peaks[i] > maxPeak) {
-                maxPeak = peaks[i];
+        let maxPeak = Number.isFinite(normalizationPeak) && (normalizationPeak as number) > 0
+            ? (normalizationPeak as number)
+            : 0;
+        if (maxPeak <= 0) {
+            for (let i = 0; i < peaks.length; i += 1) {
+                if (peaks[i] > maxPeak) {
+                    maxPeak = peaks[i];
+                }
             }
         }
 
