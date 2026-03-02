@@ -65,6 +65,8 @@ interface AlignmentContext {
     referenceDuration: number;
     outOfRange: AlignmentOutOfRangeMode;
     converters: Map<number, TrackAlignmentConverter>;
+    columnByTrack: Map<number, string>;
+    uniqueColumnOrder: string[];
 }
 
 interface SeekTimelineContext {
@@ -1996,7 +1998,26 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             referenceDuration: referenceDuration,
             outOfRange: resolveAlignmentOutOfRangeMode(this.alignmentConfig.outOfRange),
             converters: converters,
+            columnByTrack: new Map<number, string>(mappingByTrack),
+            uniqueColumnOrder: this.collectUniqueAlignmentColumns(mappingByTrack),
         };
+    }
+
+    private collectUniqueAlignmentColumns(mappingByTrack: Map<number, string>): string[] {
+        const seenColumns = new Set<string>();
+        const uniqueColumns: string[] = [];
+
+        for (const [, rawColumn] of mappingByTrack) {
+            const column = String(rawColumn || '').trim();
+            if (!column || seenColumns.has(column)) {
+                continue;
+            }
+
+            seenColumns.add(column);
+            uniqueColumns.push(column);
+        }
+
+        return uniqueColumns;
     }
 
     private getWarpingMatrixContext(): WarpingMatrixRenderContext | undefined {
@@ -2009,19 +2030,30 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
                 enabled: true,
                 referenceDuration: this.longestDuration,
                 currentReferenceTime: this.state.position,
+                columnOrder: [],
                 trackSeries: [],
             };
         }
 
         const trackIndexes = this.getAudibleTrackIndexesForWarpingMatrix();
+        const seenColumns = new Set<string>();
         const trackSeries = trackIndexes.map((trackIndex) => {
+            const column = this.alignmentContext?.columnByTrack.get(trackIndex);
+            const normalizedColumn = typeof column === 'string' ? column.trim() : '';
+            if (!normalizedColumn || seenColumns.has(normalizedColumn)) {
+                return null;
+            }
+
             const converter = this.alignmentContext?.converters.get(trackIndex);
             if (!converter) {
                 return null;
             }
 
+            seenColumns.add(normalizedColumn);
+
             return {
                 trackIndex: trackIndex,
+                columnKey: normalizedColumn,
                 points: converter.referenceToTrack.points.map((point) => {
                     return {
                         referenceTime: point.x,
@@ -2037,6 +2069,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             enabled: true,
             referenceDuration: this.longestDuration,
             currentReferenceTime: this.state.position,
+            columnOrder: this.alignmentContext.uniqueColumnOrder,
             trackSeries: trackSeries,
         };
     }
