@@ -84,6 +84,10 @@ interface WarpingMatrixHostMetadata {
     configuredHeight: number | null;
     projectedByTrack: Map<number, WarpingMatrixProjectedPoint[]>;
     indicatorByTrack: Map<number, SVGCircleElement>;
+    plotLeft: number;
+    plotRight: number;
+    referenceDuration: number;
+    activePointerId: number | null;
     lastGeometryKey: string | null;
 }
 
@@ -817,60 +821,88 @@ export class ViewRenderer {
                 configuredHeight: configuredHeight,
                 projectedByTrack: new Map<number, WarpingMatrixProjectedPoint[]>(),
                 indicatorByTrack: new Map<number, SVGCircleElement>(),
+                plotLeft: 0,
+                plotRight: 0,
+                referenceDuration: 0,
+                activePointerId: null,
                 lastGeometryKey: null,
             };
 
-            svg.addEventListener('click', (event) => {
-                this.onWarpingMatrixPathClick(metadata, event);
+            svg.addEventListener('pointerdown', (event) => {
+                this.onWarpingMatrixPointerDown(metadata, event);
+            });
+            svg.addEventListener('pointermove', (event) => {
+                this.onWarpingMatrixPointerMove(metadata, event);
+            });
+            svg.addEventListener('pointerup', (event) => {
+                this.onWarpingMatrixPointerUp(metadata, event);
+            });
+            svg.addEventListener('pointercancel', (event) => {
+                this.onWarpingMatrixPointerUp(metadata, event);
             });
 
             this.warpingMatrixHosts.push(metadata);
         });
     }
 
-    private onWarpingMatrixPathClick(host: WarpingMatrixHostMetadata, event: MouseEvent): void {
+    private onWarpingMatrixPointerDown(host: WarpingMatrixHostMetadata, event: PointerEvent): void {
         if (!this.onWarpingMatrixSeek) {
             return;
         }
 
-        const target = event.target;
-        if (!(target instanceof Element)) {
+        if (event.button !== 0) {
             return;
         }
 
-        const matchedPath = target.closest('.warping-matrix-path');
-        if (!(matchedPath instanceof SVGPathElement) || !host.svg.contains(matchedPath)) {
+        host.activePointerId = event.pointerId;
+        host.svg.setPointerCapture(event.pointerId);
+        this.seekWarpingMatrixFromPointerX(host, event.clientX);
+        event.preventDefault();
+    }
+
+    private onWarpingMatrixPointerMove(host: WarpingMatrixHostMetadata, event: PointerEvent): void {
+        if (!this.onWarpingMatrixSeek) {
             return;
         }
 
-        const trackIndex = Number(matchedPath.getAttribute('data-track-index'));
-        if (!Number.isFinite(trackIndex)) {
+        if (host.activePointerId === null || host.activePointerId !== event.pointerId) {
             return;
         }
 
-        const projectedPoints = host.projectedByTrack.get(Math.floor(trackIndex));
-        if (!projectedPoints || projectedPoints.length === 0) {
+        this.seekWarpingMatrixFromPointerX(host, event.clientX);
+        event.preventDefault();
+    }
+
+    private onWarpingMatrixPointerUp(host: WarpingMatrixHostMetadata, event: PointerEvent): void {
+        if (host.activePointerId === null || host.activePointerId !== event.pointerId) {
+            return;
+        }
+
+        this.seekWarpingMatrixFromPointerX(host, event.clientX);
+        host.activePointerId = null;
+        if (host.svg.hasPointerCapture(event.pointerId)) {
+            host.svg.releasePointerCapture(event.pointerId);
+        }
+        event.preventDefault();
+    }
+
+    private seekWarpingMatrixFromPointerX(host: WarpingMatrixHostMetadata, clientX: number): void {
+        if (!this.onWarpingMatrixSeek) {
+            return;
+        }
+
+        const axisWidth = host.plotRight - host.plotLeft;
+        if (axisWidth <= 0 || host.referenceDuration <= 0) {
+            this.onWarpingMatrixSeek(0);
             return;
         }
 
         const rect = host.svg.getBoundingClientRect();
-        const pointerX = event.clientX - rect.left;
-        const pointerY = event.clientY - rect.top;
-
-        let nearestReferenceTime = projectedPoints[0].referenceTime;
-        let nearestDistance = Number.POSITIVE_INFINITY;
-
-        projectedPoints.forEach((point) => {
-            const dx = point.x - pointerX;
-            const dy = point.y - pointerY;
-            const distance = (dx * dx) + (dy * dy);
-            if (distance < nearestDistance) {
-                nearestDistance = distance;
-                nearestReferenceTime = point.referenceTime;
-            }
-        });
-
-        this.onWarpingMatrixSeek(nearestReferenceTime);
+        const pointerX = clientX - rect.left;
+        const clampedX = clampTime(pointerX, host.plotLeft, host.plotRight);
+        const ratio = (clampedX - host.plotLeft) / axisWidth;
+        const referenceTime = ratio * host.referenceDuration;
+        this.onWarpingMatrixSeek(referenceTime);
     }
 
     private updateWarpingMatrix(
@@ -906,6 +938,9 @@ export class ViewRenderer {
         const plotLeft = padding.left + ((availableInnerWidth - axisLength) / 2);
         const plotTop = padding.top + ((availableInnerHeight - axisLength) / 2);
         const referenceDuration = Math.max(0.001, sanitizeDuration(context.referenceDuration));
+        host.plotLeft = plotLeft;
+        host.plotRight = plotLeft + innerWidth;
+        host.referenceDuration = referenceDuration;
 
         let maxTrackTime = 0;
         context.trackSeries.forEach((series) => {
