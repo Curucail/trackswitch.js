@@ -877,7 +877,7 @@ export class ViewRenderer {
         host: WarpingMatrixHostMetadata,
         context: WarpingMatrixRenderContext | undefined
     ): void {
-        if (!context || !context.enabled || context.trackSeries.length === 0) {
+        if (!context || !context.enabled) {
             host.wrapper.style.display = 'none';
             return;
         }

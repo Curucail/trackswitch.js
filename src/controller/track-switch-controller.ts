@@ -2004,8 +2004,17 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     }
 
     private getWarpingMatrixContext(): WarpingMatrixRenderContext | undefined {
-        if (!this.isAlignmentMode() || !this.alignmentContext) {
+        if (!this.isAlignmentMode()) {
             return undefined;
+        }
+
+        if (!this.alignmentContext) {
+            return {
+                enabled: true,
+                referenceDuration: this.longestDuration,
+                currentReferenceTime: this.state.position,
+                trackSeries: [],
+            };
         }
 
         const trackIndexes = this.getAudibleTrackIndexesForWarpingMatrix();
