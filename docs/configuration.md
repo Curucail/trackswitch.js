@@ -50,6 +50,7 @@ TrackSwitch.createTrackSwitch(rootElement, {
   ],
   alignment: {
     csv: 'dtw_alignment.csv',
+    referenceTimeColumn: 't_ref_sec',
     outOfRange: 'clamp',
   },
   features: {
@@ -214,7 +215,7 @@ Normalization rules:
 Alignment config lives at `init.alignment`.
 
 - `csv: string` - URL/path to a numeric CSV file with header row
-- `referenceTimeColumn?: string` - optional CSV column used as the reference timeline axis
+- `referenceTimeColumn: string` - CSV column used as the reference timeline axis (can be an abstract axis such as seconds or measures)
 - `outOfRange?: 'clamp' | 'linear'` - defaults to `clamp`
 
 Per-track alignment fields live on `tracks[*].alignment`:
@@ -234,7 +235,8 @@ Legacy fallback:
 
 Behavior:
 
-- `alignment` uses the longest track as the reference axis
+- `alignment` uses `referenceTimeColumn` as the reference axis
+- `alignment` timeline duration is the maximum value in `referenceTimeColumn`
 - Public timing (`seekTo`, seekbar, timer, `position` event) stays on reference time in `alignment`
 - `alignment` starts with `SYNC` disabled and single-track solo mode enforced
 - `alignment`: switching active solo track remaps playback position via CSV and restarts from the mapped position

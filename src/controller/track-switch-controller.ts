@@ -62,7 +62,7 @@ interface TrackAlignmentConverter {
 }
 
 interface AlignmentContext {
-    referenceTrackIndex: number;
+    referenceDuration: number;
     outOfRange: AlignmentOutOfRangeMode;
     converters: Map<number, TrackAlignmentConverter>;
 }
@@ -1885,21 +1885,6 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         return longest;
     }
 
-    private findLongestTrackIndex(): number {
-        let longest = -1;
-        let longestTrackIndex = 0;
-
-        this.runtimes.forEach(function(runtime, index) {
-            const duration = TrackSwitchControllerImpl.getRuntimeDuration(runtime);
-            if (duration > longest) {
-                longest = duration;
-                longestTrackIndex = index;
-            }
-        });
-
-        return longestTrackIndex;
-    }
-
     private static getRuntimeDuration(runtime: TrackRuntime): number {
         return runtime.timing
             ? runtime.timing.effectiveDuration
@@ -1918,7 +1903,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         this.setEffectiveSoloMode(true);
 
         this.alignmentContext = alignmentContextResult;
-        this.longestDuration = TrackSwitchControllerImpl.getRuntimeDuration(this.runtimes[this.alignmentContext.referenceTrackIndex]);
+        this.longestDuration = this.alignmentContext.referenceDuration;
 
         const activeTrackIndex = this.getActiveSoloTrackIndex();
         if (activeTrackIndex >= 0) {
@@ -1947,13 +1932,10 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             return mappingByTrack;
         }
 
-        const referenceConfig = this.resolveReferenceTrackAndColumn(this.alignmentConfig, mappingByTrack);
-        if (typeof referenceConfig === 'string') {
-            return referenceConfig;
+        const referenceColumn = this.resolveReferenceColumn(this.alignmentConfig);
+        if (!referenceColumn) {
+            return 'Alignment configuration requires alignment.referenceTimeColumn (or legacy alignment.referenceColumn).';
         }
-
-        const referenceTrackIndex = referenceConfig.referenceTrackIndex;
-        const referenceColumn = referenceConfig.referenceColumn;
 
         let parsedCsv;
         try {
@@ -1965,10 +1947,19 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         }
 
         const availableColumns = new Set(parsedCsv.headers);
+        if (!availableColumns.has(referenceColumn)) {
+            return 'Alignment CSV is missing configured referenceTimeColumn: ' + referenceColumn;
+        }
+
         for (const [, column] of mappingByTrack) {
             if (!availableColumns.has(column)) {
                 return 'Alignment CSV is missing configured column: ' + column;
             }
+        }
+
+        const referenceDuration = this.resolveReferenceDuration(parsedCsv.rows, referenceColumn);
+        if (typeof referenceDuration === 'string') {
+            return referenceDuration;
         }
 
         const converters = new Map<number, TrackAlignmentConverter>();
@@ -1986,53 +1977,39 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         }
 
         return {
-            referenceTrackIndex: referenceTrackIndex,
+            referenceDuration: referenceDuration,
             outOfRange: resolveAlignmentOutOfRangeMode(this.alignmentConfig.outOfRange),
             converters: converters,
         };
     }
 
-    private resolveReferenceTrackAndColumn(
-        config: TrackAlignmentConfig,
-        mappingByTrack: Map<number, string>
-    ): { referenceTrackIndex: number; referenceColumn: string } | string {
+    private resolveReferenceColumn(config: TrackAlignmentConfig): string | null {
         const configuredReferenceColumn = typeof config.referenceTimeColumn === 'string'
             ? config.referenceTimeColumn.trim()
             : (typeof config.referenceColumn === 'string' ? config.referenceColumn.trim() : '');
 
         if (!configuredReferenceColumn) {
-            const fallbackTrackIndex = this.findLongestTrackIndex();
-            const fallbackReferenceColumn = mappingByTrack.get(fallbackTrackIndex);
-            if (!fallbackReferenceColumn) {
-                return 'Alignment mappings must include the reference track column.';
+            return null;
+        }
+
+        return configuredReferenceColumn;
+    }
+
+    private resolveReferenceDuration(rows: Array<Record<string, number>>, referenceColumn: string): number | string {
+        let maxReference = Number.NEGATIVE_INFINITY;
+
+        rows.forEach(function(row) {
+            const value = Number(row[referenceColumn]);
+            if (Number.isFinite(value) && value > maxReference) {
+                maxReference = value;
             }
+        });
 
-            return {
-                referenceTrackIndex: fallbackTrackIndex,
-                referenceColumn: fallbackReferenceColumn,
-            };
+        if (!Number.isFinite(maxReference)) {
+            return 'Alignment CSV does not contain valid numeric values for referenceTimeColumn: ' + referenceColumn;
         }
 
-        const matchingTrackIndexes: number[] = [];
-        for (const [trackIndex, column] of mappingByTrack) {
-            if (column === configuredReferenceColumn) {
-                matchingTrackIndexes.push(trackIndex);
-            }
-        }
-
-        if (matchingTrackIndexes.length === 0) {
-            return 'Alignment referenceTimeColumn must match one configured track alignment column: '
-                + configuredReferenceColumn;
-        }
-
-        if (matchingTrackIndexes.length > 1) {
-            return 'Alignment referenceTimeColumn is ambiguous across multiple tracks: ' + configuredReferenceColumn;
-        }
-
-        return {
-            referenceTrackIndex: matchingTrackIndexes[0],
-            referenceColumn: configuredReferenceColumn,
-        };
+        return Math.max(0, maxReference);
     }
 
     private resolveAlignmentMappingsByTrack(config: TrackAlignmentConfig): Map<number, string> | string {

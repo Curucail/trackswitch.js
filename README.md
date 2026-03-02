@@ -126,14 +126,15 @@ Alignment Modes
 
 - `alignment` config with:
   - `csv: string`
-  - `referenceTimeColumn?: string` (optional CSV column to use as the reference time axis)
+  - `referenceTimeColumn: string` (CSV column used as the reference time axis; can be an abstract axis such as seconds or measures)
   - `outOfRange?: 'clamp' | 'linear'` (default `clamp`)
 - per-track alignment columns on `tracks[*].alignment.column`
   - optional `tracks[*].alignment.synchronizedSources` enables the global `SYNC` control in the main bar
 
 Alignment mode behavior:
 
-- In `alignment`, the longest track is used as the reference timeline axis
+- In `alignment`, the configured `referenceTimeColumn` defines the reference timeline axis
+- In `alignment`, timeline duration is derived from the maximum value in `referenceTimeColumn`
 - `seekTo`/seekbar/timer/`position` events stay on reference time in `alignment`
 - `alignment` starts with `SYNC` off and single-track solo behavior (`features.radiosolo`) enforced automatically
 - `alignment`: switching solo track remaps position and restarts playback on the newly active track timeline
