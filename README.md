@@ -76,6 +76,10 @@ document.addEventListener('DOMContentLoaded', function () {
         cursorColor: '#999999',
         cursorAlpha: 0.1,
       },
+      {
+        type: 'warping_matrix',
+        height: 240,
+      },
     ],
     features: {
       mode: 'default',
@@ -146,6 +150,8 @@ Alignment mode behavior:
 - `alignment`: clicking a rendered sheet-music measure seeks playback to that measure start on the reference timeline (resolved from `measureCsv`)
 - `alignment`: `sheetmusic` supports optional `maxWidth` (container max-width px), `renderScale` (OSMD zoom), and `maxHeight` (px) for internal score scrolling
 - `alignment`: `sheetmusic` supports optional `followPlayback` (default `true`) to auto-scroll vertically and keep the current highlighted measure in view
+- `alignment`: optional `warping_matrix` UI entries render per-track warping paths from alignment CSV pairs with reference time on the bottom x-axis and track time on the y-axis
+- `alignment`: `warping_matrix` overlays currently selected tracks, updates a moving current-reference indicator, and supports click-to-seek by snapping to the nearest path point
 - Waveform zoom is configured per waveform via `maxZoom`; wheel/pinch zoom is enabled only when `maxZoom > 1` (or `> '100%'`)
 
 Legacy note:

@@ -47,6 +47,7 @@ TrackSwitch.createTrackSwitch(rootElement, {
     { type: 'image', src: 'cover.jpg', seekable: true },
     { type: 'waveform', width: 1200, height: 150 },
     { type: 'sheetmusic', src: 'score.musicxml', measureCsv: 'score_measures.csv', maxWidth: 960, renderScale: 0.75, maxHeight: 360, followPlayback: true },
+    { type: 'warping_matrix', height: 240 },
   ],
   alignment: {
     csv: 'dtw_alignment.csv',
@@ -181,6 +182,19 @@ Sheet music element:
 - If MusicXML fails to load, only the sheet music panel fails (audio player continues)
 - If measure CSV fails, score rendering still works but measure highlighting is disabled
 
+Warping matrix element:
+
+```javascript
+{ type: 'warping_matrix', height: 240, style: 'margin: 12px 0;' }
+```
+
+- Fields: `height?` (matrix height in px), `style?`
+- Rendering is active in `alignment` mode only; outside `alignment` the element stays hidden
+- Reference timeline is drawn on the bottom x-axis, and track timeline on the y-axis
+- Multiple selected tracks are overlaid as separate warping paths
+- Current reference time is shown as an indicator on each rendered path
+- Clicking a path seeks to the nearest underlying alignment CSV point on the reference timeline
+
 ## Player Features
 
 Feature defaults:
@@ -246,6 +260,7 @@ Behavior:
 - `alignment`: waveform containers default to rendering a top-right timer badge in `current / duration` format; fixed-track waveforms use local track time while `SYNC` is off
 - `alignment`: sheet-music UI elements (`type: 'sheetmusic'`) highlight the currently mapped measure from `measureCsv` on the reference axis
 - `alignment`: `sheetmusic.followPlayback` (default `true`) auto-scrolls the internal sheet viewport vertically when the highlighted measure moves outside the visible area
+- `alignment`: `warping_matrix` UI elements render warping paths from alignment CSV mappings and keep the x-axis on reference time even when `SYNC` is enabled
 
 Cross-player behavior:
 

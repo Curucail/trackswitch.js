@@ -20,7 +20,7 @@ import { createTrackRuntime } from '../domain/runtime';
 import { AudioEngine } from '../engine/audio-engine';
 import { SheetMusicEngine } from '../engine/sheet-music-engine';
 import { TrackTimelineProjector, WaveformEngine } from '../engine/waveform-engine';
-import { ViewRenderer, WaveformTimelineContext } from '../ui/view-renderer';
+import { ViewRenderer, WarpingMatrixRenderContext, WaveformTimelineContext } from '../ui/view-renderer';
 import { InputBinder, InputController } from '../input/input-binder';
 import { eventTargetAsElement } from '../shared/dom';
 import { clamp } from '../shared/math';
@@ -65,6 +65,7 @@ interface AlignmentContext {
     referenceDuration: number;
     outOfRange: AlignmentOutOfRangeMode;
     converters: Map<number, TrackAlignmentConverter>;
+    warpingSeriesByTrack: Map<number, TimeMappingSeries>;
 }
 
 interface SeekTimelineContext {
@@ -171,7 +172,15 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         this.sheetMusicEngine = new SheetMusicEngine((referenceTime) => {
             this.seekTo(referenceTime);
         });
-        this.renderer = new ViewRenderer(this.root, this.features, presetNames, config.trackGroups || []);
+        this.renderer = new ViewRenderer(
+            this.root,
+            this.features,
+            presetNames,
+            config.trackGroups || [],
+            (referenceTime) => {
+                this.seekTo(referenceTime);
+            }
+        );
 
         this.instanceId = allocateInstanceId();
 
@@ -1731,7 +1740,12 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             },
         };
 
-        this.renderer.updateMainControls(uiState, this.runtimes, this.getWaveformTimelineContext());
+        this.renderer.updateMainControls(
+            uiState,
+            this.runtimes,
+            this.getWaveformTimelineContext(),
+            this.getWarpingMatrixContext()
+        );
         this.sheetMusicEngine.updatePosition(this.state.position);
 
         this.emit('position', {
@@ -1963,12 +1977,17 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         }
 
         const converters = new Map<number, TrackAlignmentConverter>();
+        const warpingSeriesByTrack = new Map<number, TimeMappingSeries>();
         for (const [trackIndex, column] of mappingByTrack) {
             try {
+                const referenceToTrack = buildColumnTimeMapping(parsedCsv.rows, referenceColumn, column);
+                const trackToReference = buildColumnTimeMapping(parsedCsv.rows, column, referenceColumn);
+
                 converters.set(trackIndex, {
-                    referenceToTrack: buildColumnTimeMapping(parsedCsv.rows, referenceColumn, column),
-                    trackToReference: buildColumnTimeMapping(parsedCsv.rows, column, referenceColumn),
+                    referenceToTrack: referenceToTrack,
+                    trackToReference: trackToReference,
                 });
+                warpingSeriesByTrack.set(trackIndex, referenceToTrack);
             } catch (error) {
                 return error instanceof Error
                     ? error.message
@@ -1980,7 +1999,57 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             referenceDuration: referenceDuration,
             outOfRange: resolveAlignmentOutOfRangeMode(this.alignmentConfig.outOfRange),
             converters: converters,
+            warpingSeriesByTrack: warpingSeriesByTrack,
         };
+    }
+
+    private getWarpingMatrixContext(): WarpingMatrixRenderContext | undefined {
+        if (!this.isAlignmentMode() || !this.alignmentContext) {
+            return undefined;
+        }
+
+        const trackIndexes = this.getAudibleTrackIndexesForWarpingMatrix();
+        const trackSeries = trackIndexes.map((trackIndex) => {
+            const series = this.alignmentContext?.warpingSeriesByTrack.get(trackIndex);
+            if (!series) {
+                return null;
+            }
+
+            return {
+                trackIndex: trackIndex,
+                points: series.points.map((point) => {
+                    return {
+                        referenceTime: point.x,
+                        trackTime: point.y,
+                    };
+                }),
+            };
+        }).filter((entry): entry is NonNullable<typeof entry> => {
+            return !!entry && entry.points.length > 0;
+        });
+
+        return {
+            enabled: true,
+            referenceDuration: this.longestDuration,
+            currentReferenceTime: this.state.position,
+            trackSeries: trackSeries,
+        };
+    }
+
+    private getAudibleTrackIndexesForWarpingMatrix(): number[] {
+        const selected = this.runtimes.map((runtime, index) => {
+            return runtime.state.solo ? index : -1;
+        }).filter((index) => {
+            return index >= 0;
+        });
+
+        if (selected.length > 0) {
+            return selected;
+        }
+
+        return this.runtimes.map(function(_, index) {
+            return index;
+        });
     }
 
     private resolveReferenceColumn(config: TrackAlignmentConfig): string | null {

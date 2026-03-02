@@ -21,6 +21,23 @@ export interface SheetMusicHostConfig {
     cursorAlpha: number;
 }
 
+export interface WarpingMatrixDataPoint {
+    referenceTime: number;
+    trackTime: number;
+}
+
+export interface WarpingMatrixTrackSeries {
+    trackIndex: number;
+    points: WarpingMatrixDataPoint[];
+}
+
+export interface WarpingMatrixRenderContext {
+    enabled: boolean;
+    referenceDuration: number;
+    currentReferenceTime: number;
+    trackSeries: WarpingMatrixTrackSeries[];
+}
+
 interface WaveformSeekSurfaceMetadata {
     wrapper: HTMLElement;
     scrollContainer: HTMLElement;
@@ -49,9 +66,31 @@ interface LatestWaveformRenderInput {
     waveformTimelineContext?: WaveformTimelineContext;
 }
 
+interface WarpingMatrixProjectedPoint {
+    referenceTime: number;
+    x: number;
+    y: number;
+}
+
+interface WarpingMatrixHostMetadata {
+    wrapper: HTMLElement;
+    host: HTMLElement;
+    svg: SVGSVGElement;
+    axisLayer: SVGGElement;
+    pathLayer: SVGGElement;
+    indicatorLayer: SVGGElement;
+    xAxisLabel: SVGTextElement;
+    yAxisLabel: SVGTextElement;
+    configuredHeight: number | null;
+    projectedByTrack: Map<number, WarpingMatrixProjectedPoint[]>;
+    indicatorByTrack: Map<number, SVGCircleElement>;
+    lastGeometryKey: string | null;
+}
+
 const MIN_WAVEFORM_ZOOM = 1;
 const DEFAULT_MAX_WAVEFORM_ZOOM = 20;
 const WAVEFORM_TILE_WIDTH_PX = 1024;
+const SVG_NS = 'http://www.w3.org/2000/svg';
 
 function buildSeekWrap(leftPercent: number, rightPercent: number): string {
     return '<div class="seekwrap" style="left: ' + leftPercent + '%; right: ' + rightPercent + '%;">'
@@ -233,6 +272,19 @@ function parseSheetMusicFollowPlayback(value: string | null): boolean {
     return parseSheetMusicString(value).toLowerCase() !== 'false';
 }
 
+function parseWarpingMatrixHeight(value: string | null): number | null {
+    if (value === null) {
+        return null;
+    }
+
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed < 1) {
+        return null;
+    }
+
+    return Math.max(1, Math.round(parsed));
+}
+
 function clampWaveformZoom(zoom: number, maximum: number): number {
     if (!Number.isFinite(zoom)) {
         return MIN_WAVEFORM_ZOOM;
@@ -250,19 +302,23 @@ export class ViewRenderer {
     private originalImage = '';
     private readonly waveformSeekSurfaces: WaveformSeekSurfaceMetadata[] = [];
     private readonly sheetMusicHosts: SheetMusicHostConfig[] = [];
+    private readonly warpingMatrixHosts: WarpingMatrixHostMetadata[] = [];
     private waveformTileRefreshFrameId: number | null = null;
     private latestWaveformRenderInput: LatestWaveformRenderInput | null = null;
+    private readonly onWarpingMatrixSeek?: (referenceTime: number) => void;
 
     constructor(
         root: HTMLElement,
         features: TrackSwitchFeatures,
         presetNames: string[],
-        trackGroups: NormalizedTrackGroupLayout[] = []
+        trackGroups: NormalizedTrackGroupLayout[] = [],
+        onWarpingMatrixSeek?: (referenceTime: number) => void
     ) {
         this.root = root;
         this.features = features;
         this.presetNames = presetNames;
         this.trackGroups = trackGroups;
+        this.onWarpingMatrixSeek = onWarpingMatrixSeek;
     }
 
     private query(selector: string): HTMLElement | null {
@@ -292,6 +348,7 @@ export class ViewRenderer {
         this.wrapSeekableImages();
         this.wrapWaveformCanvases();
         this.wrapSheetMusicContainers();
+        this.wrapWarpingMatrixContainers();
         this.reflowWaveforms();
         this.renderTrackList(runtimes);
 
@@ -683,6 +740,362 @@ export class ViewRenderer {
                 cursorAlpha: entry.cursorAlpha,
             };
         });
+    }
+
+    private wrapWarpingMatrixContainers(): void {
+        this.warpingMatrixHosts.length = 0;
+
+        const hosts = this.root.querySelectorAll('.warping-matrix');
+        hosts.forEach((hostElement) => {
+            if (!(hostElement instanceof HTMLElement)) {
+                return;
+            }
+
+            let wrapper: HTMLElement | null = hostElement.closest('.warping-matrix-wrap') as HTMLElement | null;
+            if (!wrapper) {
+                wrapper = document.createElement('div');
+                wrapper.className = 'warping-matrix-wrap';
+                wrapper.setAttribute(
+                    'style',
+                    sanitizeInlineStyle(hostElement.getAttribute('data-warping-matrix-style')) + '; display: block;'
+                );
+
+                const parent = hostElement.parentElement;
+                if (!parent) {
+                    return;
+                }
+
+                parent.insertBefore(wrapper, hostElement);
+                wrapper.appendChild(hostElement);
+            }
+
+            const configuredHeight = parseWarpingMatrixHeight(hostElement.getAttribute('data-warping-matrix-height'));
+            if (configuredHeight !== null) {
+                hostElement.style.height = configuredHeight + 'px';
+            }
+
+            hostElement.classList.add('warping-matrix-host');
+            hostElement.textContent = '';
+
+            const svg = document.createElementNS(SVG_NS, 'svg');
+            svg.classList.add('warping-matrix-svg');
+            svg.setAttribute('preserveAspectRatio', 'none');
+
+            const axisLayer = document.createElementNS(SVG_NS, 'g');
+            axisLayer.setAttribute('class', 'warping-matrix-axes');
+            svg.appendChild(axisLayer);
+
+            const pathLayer = document.createElementNS(SVG_NS, 'g');
+            pathLayer.setAttribute('class', 'warping-matrix-paths');
+            svg.appendChild(pathLayer);
+
+            const indicatorLayer = document.createElementNS(SVG_NS, 'g');
+            indicatorLayer.setAttribute('class', 'warping-matrix-indicators');
+            svg.appendChild(indicatorLayer);
+
+            const xAxisLabel = document.createElementNS(SVG_NS, 'text');
+            xAxisLabel.setAttribute('class', 'warping-matrix-axis-label x-axis');
+            xAxisLabel.textContent = 'Reference time';
+            axisLayer.appendChild(xAxisLabel);
+
+            const yAxisLabel = document.createElementNS(SVG_NS, 'text');
+            yAxisLabel.setAttribute('class', 'warping-matrix-axis-label y-axis');
+            yAxisLabel.textContent = 'Track time';
+            axisLayer.appendChild(yAxisLabel);
+
+            hostElement.appendChild(svg);
+
+            const metadata: WarpingMatrixHostMetadata = {
+                wrapper: wrapper,
+                host: hostElement,
+                svg: svg,
+                axisLayer: axisLayer,
+                pathLayer: pathLayer,
+                indicatorLayer: indicatorLayer,
+                xAxisLabel: xAxisLabel,
+                yAxisLabel: yAxisLabel,
+                configuredHeight: configuredHeight,
+                projectedByTrack: new Map<number, WarpingMatrixProjectedPoint[]>(),
+                indicatorByTrack: new Map<number, SVGCircleElement>(),
+                lastGeometryKey: null,
+            };
+
+            svg.addEventListener('click', (event) => {
+                this.onWarpingMatrixPathClick(metadata, event);
+            });
+
+            this.warpingMatrixHosts.push(metadata);
+        });
+    }
+
+    private onWarpingMatrixPathClick(host: WarpingMatrixHostMetadata, event: MouseEvent): void {
+        if (!this.onWarpingMatrixSeek) {
+            return;
+        }
+
+        const target = event.target;
+        if (!(target instanceof Element)) {
+            return;
+        }
+
+        const matchedPath = target.closest('.warping-matrix-path');
+        if (!(matchedPath instanceof SVGPathElement) || !host.svg.contains(matchedPath)) {
+            return;
+        }
+
+        const trackIndex = Number(matchedPath.getAttribute('data-track-index'));
+        if (!Number.isFinite(trackIndex)) {
+            return;
+        }
+
+        const projectedPoints = host.projectedByTrack.get(Math.floor(trackIndex));
+        if (!projectedPoints || projectedPoints.length === 0) {
+            return;
+        }
+
+        const rect = host.svg.getBoundingClientRect();
+        const pointerX = event.clientX - rect.left;
+        const pointerY = event.clientY - rect.top;
+
+        let nearestReferenceTime = projectedPoints[0].referenceTime;
+        let nearestDistance = Number.POSITIVE_INFINITY;
+
+        projectedPoints.forEach((point) => {
+            const dx = point.x - pointerX;
+            const dy = point.y - pointerY;
+            const distance = (dx * dx) + (dy * dy);
+            if (distance < nearestDistance) {
+                nearestDistance = distance;
+                nearestReferenceTime = point.referenceTime;
+            }
+        });
+
+        this.onWarpingMatrixSeek(nearestReferenceTime);
+    }
+
+    private updateWarpingMatrix(
+        host: WarpingMatrixHostMetadata,
+        context: WarpingMatrixRenderContext | undefined
+    ): void {
+        if (!context || !context.enabled || context.trackSeries.length === 0) {
+            host.wrapper.style.display = 'none';
+            return;
+        }
+
+        host.wrapper.style.display = 'block';
+
+        const renderedHeight = host.configuredHeight
+            ?? Math.max(180, host.host.clientHeight || 220);
+        const renderedWidth = Math.max(220, Math.round(host.host.clientWidth || host.wrapper.clientWidth || 720));
+
+        host.svg.setAttribute('viewBox', '0 0 ' + renderedWidth + ' ' + renderedHeight);
+        host.svg.setAttribute('width', String(renderedWidth));
+        host.svg.setAttribute('height', String(renderedHeight));
+
+        const padding = {
+            top: 12,
+            right: 12,
+            bottom: 28,
+            left: 42,
+        };
+        const availableInnerWidth = Math.max(1, renderedWidth - padding.left - padding.right);
+        const availableInnerHeight = Math.max(1, renderedHeight - padding.top - padding.bottom);
+        const axisLength = Math.max(1, Math.min(availableInnerWidth, availableInnerHeight));
+        const innerWidth = axisLength;
+        const innerHeight = axisLength;
+        const plotLeft = padding.left + ((availableInnerWidth - axisLength) / 2);
+        const plotTop = padding.top + ((availableInnerHeight - axisLength) / 2);
+        const referenceDuration = Math.max(0.001, sanitizeDuration(context.referenceDuration));
+
+        let maxTrackTime = 0;
+        context.trackSeries.forEach((series) => {
+            series.points.forEach((point) => {
+                if (Number.isFinite(point.trackTime) && point.trackTime > maxTrackTime) {
+                    maxTrackTime = point.trackTime;
+                }
+            });
+        });
+        const trackDuration = Math.max(0.001, maxTrackTime);
+
+        const geometryKey = context.trackSeries.map((series) => {
+            const lastPoint = series.points.length > 0
+                ? series.points[series.points.length - 1]
+                : null;
+            return [
+                series.trackIndex,
+                series.points.length,
+                lastPoint ? Math.round(lastPoint.referenceTime * 1000) : 0,
+                lastPoint ? Math.round(lastPoint.trackTime * 1000) : 0,
+            ].join(':');
+        }).join('|')
+            + '#'
+            + renderedWidth
+            + '#'
+            + renderedHeight
+            + '#'
+            + Math.round(referenceDuration * 1000)
+            + '#'
+            + Math.round(trackDuration * 1000);
+
+        const projectPoint = (referenceTime: number, trackTime: number): { x: number; y: number } => {
+            const x = plotLeft + (clampTime(referenceTime, 0, referenceDuration) / referenceDuration) * innerWidth;
+            const y = plotTop + (1 - (clampTime(trackTime, 0, trackDuration) / trackDuration)) * innerHeight;
+            return { x, y };
+        };
+
+        if (host.lastGeometryKey !== geometryKey) {
+            host.lastGeometryKey = geometryKey;
+
+            host.axisLayer.querySelectorAll('.warping-matrix-axis-line').forEach((node) => {
+                node.remove();
+            });
+
+            const xAxis = document.createElementNS(SVG_NS, 'line');
+            xAxis.setAttribute('class', 'warping-matrix-axis-line x-axis');
+            xAxis.setAttribute('x1', String(plotLeft));
+            xAxis.setAttribute('y1', String(plotTop + innerHeight));
+            xAxis.setAttribute('x2', String(plotLeft + innerWidth));
+            xAxis.setAttribute('y2', String(plotTop + innerHeight));
+            host.axisLayer.insertBefore(xAxis, host.xAxisLabel);
+
+            const yAxis = document.createElementNS(SVG_NS, 'line');
+            yAxis.setAttribute('class', 'warping-matrix-axis-line y-axis');
+            yAxis.setAttribute('x1', String(plotLeft));
+            yAxis.setAttribute('y1', String(plotTop));
+            yAxis.setAttribute('x2', String(plotLeft));
+            yAxis.setAttribute('y2', String(plotTop + innerHeight));
+            host.axisLayer.insertBefore(yAxis, host.xAxisLabel);
+
+            host.xAxisLabel.setAttribute('x', String(plotLeft + (innerWidth / 2)));
+            host.xAxisLabel.setAttribute('y', String(renderedHeight - 6));
+            host.xAxisLabel.setAttribute('text-anchor', 'middle');
+
+            const yAxisLabelX = plotLeft - 14;
+            const yAxisLabelY = plotTop + (innerHeight / 2);
+            host.yAxisLabel.setAttribute('x', String(yAxisLabelX));
+            host.yAxisLabel.setAttribute('y', String(yAxisLabelY));
+            host.yAxisLabel.setAttribute('text-anchor', 'middle');
+            host.yAxisLabel.setAttribute('transform', 'rotate(-90 ' + yAxisLabelX + ' ' + yAxisLabelY + ')');
+
+            host.pathLayer.textContent = '';
+            host.projectedByTrack.clear();
+
+            context.trackSeries.forEach((series) => {
+                if (!Array.isArray(series.points) || series.points.length === 0) {
+                    return;
+                }
+
+                const projected: WarpingMatrixProjectedPoint[] = series.points.map((point) => {
+                    const projectedPoint = projectPoint(point.referenceTime, point.trackTime);
+                    return {
+                        referenceTime: point.referenceTime,
+                        x: projectedPoint.x,
+                        y: projectedPoint.y,
+                    };
+                });
+
+                if (projected.length === 0) {
+                    return;
+                }
+
+                let pathData = 'M ' + projected[0].x + ' ' + projected[0].y;
+                for (let index = 1; index < projected.length; index += 1) {
+                    pathData += ' L ' + projected[index].x + ' ' + projected[index].y;
+                }
+
+                const path = document.createElementNS(SVG_NS, 'path');
+                path.setAttribute('class', 'warping-matrix-path');
+                path.setAttribute('data-track-index', String(series.trackIndex));
+                path.setAttribute('d', pathData);
+                host.pathLayer.appendChild(path);
+                host.projectedByTrack.set(series.trackIndex, projected);
+            });
+        }
+
+        const activeTrackIndexes = new Set<number>();
+        const currentReferenceTime = clampTime(context.currentReferenceTime, 0, referenceDuration);
+
+        context.trackSeries.forEach((series) => {
+            if (!Array.isArray(series.points) || series.points.length === 0) {
+                return;
+            }
+
+            const currentTrackTime = this.interpolateWarpingTrackTime(series.points, currentReferenceTime);
+            const projected = projectPoint(currentReferenceTime, currentTrackTime);
+
+            let indicator = host.indicatorByTrack.get(series.trackIndex);
+            if (!indicator) {
+                indicator = document.createElementNS(SVG_NS, 'circle');
+                indicator.setAttribute('class', 'warping-matrix-indicator');
+                indicator.setAttribute('r', '3');
+                indicator.setAttribute('data-track-index', String(series.trackIndex));
+                host.indicatorLayer.appendChild(indicator);
+                host.indicatorByTrack.set(series.trackIndex, indicator);
+            }
+
+            indicator.setAttribute('cx', String(projected.x));
+            indicator.setAttribute('cy', String(projected.y));
+            indicator.style.display = 'block';
+            activeTrackIndexes.add(series.trackIndex);
+        });
+
+        Array.from(host.indicatorByTrack.entries()).forEach(([trackIndex, indicator]) => {
+            if (activeTrackIndexes.has(trackIndex)) {
+                return;
+            }
+
+            indicator.remove();
+            host.indicatorByTrack.delete(trackIndex);
+        });
+    }
+
+    private interpolateWarpingTrackTime(points: WarpingMatrixDataPoint[], referenceTime: number): number {
+        if (!Array.isArray(points) || points.length === 0) {
+            return 0;
+        }
+
+        if (points.length === 1) {
+            return points[0].trackTime;
+        }
+
+        const first = points[0];
+        const last = points[points.length - 1];
+
+        if (referenceTime <= first.referenceTime) {
+            return first.trackTime;
+        }
+
+        if (referenceTime >= last.referenceTime) {
+            return last.trackTime;
+        }
+
+        let leftIndex = 0;
+        let rightIndex = points.length - 1;
+
+        while (leftIndex <= rightIndex) {
+            const middleIndex = Math.floor((leftIndex + rightIndex) / 2);
+            const middle = points[middleIndex];
+
+            if (middle.referenceTime === referenceTime) {
+                return middle.trackTime;
+            }
+
+            if (middle.referenceTime < referenceTime) {
+                leftIndex = middleIndex + 1;
+            } else {
+                rightIndex = middleIndex - 1;
+            }
+        }
+
+        const rightPoint = points[Math.min(points.length - 1, leftIndex)];
+        const leftPoint = points[Math.max(0, leftIndex - 1)];
+        const range = rightPoint.referenceTime - leftPoint.referenceTime;
+        if (!Number.isFinite(range) || range <= 0) {
+            return leftPoint.trackTime;
+        }
+
+        const ratio = (referenceTime - leftPoint.referenceTime) / range;
+        return leftPoint.trackTime + ((rightPoint.trackTime - leftPoint.trackTime) * ratio);
     }
 
     private createWaveformTimingNode(overlay: HTMLElement): HTMLElement {
@@ -1220,7 +1633,12 @@ export class ViewRenderer {
         return Math.floor(waveformSource);
     }
 
-    updateMainControls(state: TrackSwitchUiState, runtimes: TrackRuntime[], waveformTimelineContext?: WaveformTimelineContext): void {
+    updateMainControls(
+        state: TrackSwitchUiState,
+        runtimes: TrackRuntime[],
+        waveformTimelineContext?: WaveformTimelineContext,
+        warpingMatrixContext?: WarpingMatrixRenderContext
+    ): void {
         this.root.classList.toggle('sync-enabled', state.syncEnabled);
 
         this.queryAll('.playpause').forEach(function(element) {
@@ -1249,6 +1667,9 @@ export class ViewRenderer {
 
         this.updateWaveformTiming(state, runtimes, waveformTimelineContext);
         this.updateWaveformZoomIndicators();
+        this.warpingMatrixHosts.forEach((host) => {
+            this.updateWarpingMatrix(host, warpingMatrixContext);
+        });
 
         if (!this.features.looping) {
             return;
@@ -1601,6 +2022,7 @@ export class ViewRenderer {
         });
 
         this.sheetMusicHosts.length = 0;
+        this.warpingMatrixHosts.length = 0;
     }
 
     getPresetCount(): number {

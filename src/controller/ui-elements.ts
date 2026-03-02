@@ -5,6 +5,7 @@ import {
     TrackSwitchUiElement,
     TrackSwitchWaveformConfig,
     TrackSwitchTrackGroupUiElement,
+    TrackSwitchWarpingMatrixConfig,
 } from '../domain/types';
 import { clampPercent } from '../shared/math';
 
@@ -149,6 +150,21 @@ function normalizeSheetMusicConfig<T extends TrackSwitchSheetMusicConfig>(sheetm
     };
 }
 
+function normalizeWarpingMatrixHeight(value: number | undefined): number | undefined {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 1) {
+        return undefined;
+    }
+
+    return Math.max(1, Math.round(value));
+}
+
+function normalizeWarpingMatrixConfig<T extends TrackSwitchWarpingMatrixConfig>(warpingMatrix: T): T {
+    return {
+        ...warpingMatrix,
+        height: normalizeWarpingMatrixHeight(warpingMatrix.height),
+    };
+}
+
 function normalizeTrackGroupConfig<T extends TrackSwitchTrackGroupUiElement>(group: T): T {
     const normalizedTracks = Array.isArray(group.trackGroup)
         ? group.trackGroup.map(function(track) {
@@ -191,11 +207,31 @@ export function normalizeUiElement(element: TrackSwitchUiElement): TrackSwitchUi
         return normalizeSheetMusicConfig(element);
     }
 
+    if (element.type === 'warping_matrix') {
+        return normalizeWarpingMatrixConfig(element);
+    }
+
     if (element.type === 'trackGroup') {
         return normalizeTrackGroupConfig(element);
     }
 
     return element;
+}
+
+function injectWarpingMatrix(root: HTMLElement, warpingMatrix: TrackSwitchWarpingMatrixConfig): void {
+    const container = document.createElement('div');
+    container.className = 'warping-matrix';
+
+    if (typeof warpingMatrix.style === 'string') {
+        container.setAttribute('data-warping-matrix-style', warpingMatrix.style);
+    }
+
+    const normalizedHeight = normalizeWarpingMatrixHeight(warpingMatrix.height);
+    if (normalizedHeight !== undefined) {
+        container.setAttribute('data-warping-matrix-height', String(normalizedHeight));
+    }
+
+    root.appendChild(container);
 }
 
 function injectTrackGroup(root: HTMLElement, trackGroupIndex: number): void {
@@ -332,6 +368,11 @@ export function injectConfiguredUiElements(root: HTMLElement, uiElements: TrackS
 
         if (entry.type === 'sheetmusic') {
             injectSheetMusic(root, entry);
+            return;
+        }
+
+        if (entry.type === 'warping_matrix') {
+            injectWarpingMatrix(root, entry);
         }
     });
 }

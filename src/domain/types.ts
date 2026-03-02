@@ -89,6 +89,11 @@ export interface TrackSwitchSheetMusicConfig {
     cursorAlpha?: number;
 }
 
+export interface TrackSwitchWarpingMatrixConfig {
+    style?: string;
+    height?: number;
+}
+
 export interface TrackSwitchImageUiElement extends TrackSwitchImageConfig {
     type: 'image';
 }
@@ -99,6 +104,10 @@ export interface TrackSwitchWaveformUiElement extends TrackSwitchWaveformConfig 
 
 export interface TrackSwitchSheetMusicUiElement extends TrackSwitchSheetMusicConfig {
     type: 'sheetmusic';
+}
+
+export interface TrackSwitchWarpingMatrixUiElement extends TrackSwitchWarpingMatrixConfig {
+    type: 'warping_matrix';
 }
 
 export interface TrackSwitchTrackGroupUiElement {
@@ -116,6 +125,7 @@ export type TrackSwitchUiElement =
     | TrackSwitchImageUiElement
     | TrackSwitchWaveformUiElement
     | TrackSwitchSheetMusicUiElement
+    | TrackSwitchWarpingMatrixUiElement
     | TrackSwitchTrackGroupUiElement;
 export type TrackSwitchUiConfig = TrackSwitchUiElement[];
 
