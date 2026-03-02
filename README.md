@@ -79,6 +79,7 @@ document.addEventListener('DOMContentLoaded', function () {
       {
         type: 'warping_matrix',
         height: 240,
+        pathStrokeWidth: 2,
       },
     ],
     features: {

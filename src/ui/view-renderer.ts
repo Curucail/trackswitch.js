@@ -82,6 +82,7 @@ interface WarpingMatrixHostMetadata {
     xAxisLabel: SVGTextElement;
     yAxisLabel: SVGTextElement;
     configuredHeight: number | null;
+    configuredPathStrokeWidth: number | null;
     projectedByTrack: Map<number, WarpingMatrixProjectedPoint[]>;
     indicatorByTrack: Map<number, SVGCircleElement>;
     colorByTrack: Map<number, string>;
@@ -109,6 +110,7 @@ const WARPING_MATRIX_FIXED_COLORS = [
     '#FF7F0E',
 ];
 const WARPING_MATRIX_OVERFLOW_COLOR = '#555555';
+const DEFAULT_WARPING_MATRIX_PATH_STROKE_WIDTH = 3;
 
 function buildSeekWrap(leftPercent: number, rightPercent: number): string {
     return '<div class="seekwrap" style="left: ' + leftPercent + '%; right: ' + rightPercent + '%;">'
@@ -303,6 +305,19 @@ function parseWarpingMatrixHeight(value: string | null): number | null {
     return Math.max(1, Math.round(parsed));
 }
 
+function parseWarpingMatrixPathStrokeWidth(value: string | null): number | null {
+    if (value === null) {
+        return null;
+    }
+
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+        return null;
+    }
+
+    return Math.max(0.5, parsed);
+}
+
 function clampWaveformZoom(zoom: number, maximum: number): number {
     if (!Number.isFinite(zoom)) {
         return MIN_WAVEFORM_ZOOM;
@@ -347,13 +362,21 @@ export class ViewRenderer {
         return Array.from(this.root.querySelectorAll(selector)) as HTMLElement[];
     }
 
-    private getFixedWarpingMatrixColor(visibleIndex: number): string {
-        const normalizedIndex = Math.max(0, Math.floor(visibleIndex));
+    private getFixedWarpingMatrixColor(trackIndex: number): string {
+        const normalizedIndex = Math.max(0, Math.floor(trackIndex));
         if (normalizedIndex < WARPING_MATRIX_FIXED_COLORS.length) {
             return WARPING_MATRIX_FIXED_COLORS[normalizedIndex];
         }
 
         return WARPING_MATRIX_OVERFLOW_COLOR;
+    }
+
+    private getWarpingMatrixPathStrokeWidth(host: WarpingMatrixHostMetadata): number {
+        return host.configuredPathStrokeWidth ?? DEFAULT_WARPING_MATRIX_PATH_STROKE_WIDTH;
+    }
+
+    private getWarpingMatrixIndicatorRadius(host: WarpingMatrixHostMetadata): number {
+        return Math.max(3, this.getWarpingMatrixPathStrokeWidth(host) * 1.8);
     }
 
     private getCanvasPixelRatio(): number {
@@ -797,6 +820,9 @@ export class ViewRenderer {
             }
 
             const configuredHeight = parseWarpingMatrixHeight(hostElement.getAttribute('data-warping-matrix-height'));
+            const configuredPathStrokeWidth = parseWarpingMatrixPathStrokeWidth(
+                hostElement.getAttribute('data-warping-matrix-path-stroke-width')
+            );
             if (configuredHeight !== null) {
                 hostElement.style.height = configuredHeight + 'px';
             }
@@ -842,6 +868,7 @@ export class ViewRenderer {
                 xAxisLabel: xAxisLabel,
                 yAxisLabel: yAxisLabel,
                 configuredHeight: configuredHeight,
+                configuredPathStrokeWidth: configuredPathStrokeWidth,
                 projectedByTrack: new Map<number, WarpingMatrixProjectedPoint[]>(),
                 indicatorByTrack: new Map<number, SVGCircleElement>(),
                 colorByTrack: new Map<number, string>(),
@@ -997,10 +1024,10 @@ export class ViewRenderer {
             + Math.round(trackDuration * 1000);
 
         host.colorByTrack.clear();
-        context.trackSeries.forEach((series, visibleIndex) => {
+        context.trackSeries.forEach((series) => {
             host.colorByTrack.set(
                 series.trackIndex,
-                this.getFixedWarpingMatrixColor(visibleIndex)
+                this.getFixedWarpingMatrixColor(series.trackIndex)
             );
         });
 
@@ -1075,6 +1102,7 @@ export class ViewRenderer {
                 path.setAttribute('data-track-index', String(series.trackIndex));
                 path.setAttribute('d', pathData);
                 path.style.stroke = host.colorByTrack.get(series.trackIndex) || WARPING_MATRIX_FIXED_COLORS[0];
+                path.style.strokeWidth = String(this.getWarpingMatrixPathStrokeWidth(host));
                 host.pathLayer.appendChild(path);
                 host.projectedByTrack.set(series.trackIndex, projected);
             });
@@ -1095,11 +1123,11 @@ export class ViewRenderer {
             if (!indicator) {
                 indicator = document.createElementNS(SVG_NS, 'circle');
                 indicator.setAttribute('class', 'warping-matrix-indicator');
-                indicator.setAttribute('r', '3');
                 indicator.setAttribute('data-track-index', String(series.trackIndex));
                 host.indicatorLayer.appendChild(indicator);
                 host.indicatorByTrack.set(series.trackIndex, indicator);
             }
+            indicator.setAttribute('r', String(this.getWarpingMatrixIndicatorRadius(host)));
 
             const trackColor = host.colorByTrack.get(series.trackIndex)
                 || WARPING_MATRIX_FIXED_COLORS[0];

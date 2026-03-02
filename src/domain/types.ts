@@ -92,6 +92,7 @@ export interface TrackSwitchSheetMusicConfig {
 export interface TrackSwitchWarpingMatrixConfig {
     style?: string;
     height?: number;
+    pathStrokeWidth?: number;
 }
 
 export interface TrackSwitchImageUiElement extends TrackSwitchImageConfig {

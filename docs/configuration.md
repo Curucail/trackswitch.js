@@ -185,10 +185,10 @@ Sheet music element:
 Warping matrix element:
 
 ```javascript
-{ type: 'warping_matrix', height: 240, style: 'margin: 12px 0;' }
+{ type: 'warping_matrix', height: 240, pathStrokeWidth: 2, style: 'margin: 12px 0;' }
 ```
 
-- Fields: `height?` (matrix height in px), `style?`
+- Fields: `height?` (matrix height in px), `pathStrokeWidth?` (path stroke width in px), `style?`
 - Rendering is active in `alignment` mode only; outside `alignment` the element stays hidden
 - Reference timeline is drawn on the bottom x-axis, and track timeline on the y-axis
 - Multiple selected tracks are overlaid as separate warping paths
