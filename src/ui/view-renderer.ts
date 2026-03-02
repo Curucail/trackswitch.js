@@ -84,6 +84,7 @@ interface WarpingMatrixHostMetadata {
     configuredHeight: number | null;
     projectedByTrack: Map<number, WarpingMatrixProjectedPoint[]>;
     indicatorByTrack: Map<number, SVGCircleElement>;
+    colorByTrack: Map<number, string>;
     plotLeft: number;
     plotRight: number;
     referenceDuration: number;
@@ -95,6 +96,19 @@ const MIN_WAVEFORM_ZOOM = 1;
 const DEFAULT_MAX_WAVEFORM_ZOOM = 20;
 const WAVEFORM_TILE_WIDTH_PX = 1024;
 const SVG_NS = 'http://www.w3.org/2000/svg';
+const WARPING_MATRIX_FIXED_COLORS = [
+    '#ED8C01',
+    '#1F77B4',
+    '#2CA02C',
+    '#D62728',
+    '#9467BD',
+    '#17BECF',
+    '#8C564B',
+    '#E377C2',
+    '#BCBD22',
+    '#FF7F0E',
+];
+const WARPING_MATRIX_OVERFLOW_COLOR = '#555555';
 
 function buildSeekWrap(leftPercent: number, rightPercent: number): string {
     return '<div class="seekwrap" style="left: ' + leftPercent + '%; right: ' + rightPercent + '%;">'
@@ -331,6 +345,15 @@ export class ViewRenderer {
 
     private queryAll(selector: string): HTMLElement[] {
         return Array.from(this.root.querySelectorAll(selector)) as HTMLElement[];
+    }
+
+    private getFixedWarpingMatrixColor(visibleIndex: number): string {
+        const normalizedIndex = Math.max(0, Math.floor(visibleIndex));
+        if (normalizedIndex < WARPING_MATRIX_FIXED_COLORS.length) {
+            return WARPING_MATRIX_FIXED_COLORS[normalizedIndex];
+        }
+
+        return WARPING_MATRIX_OVERFLOW_COLOR;
     }
 
     private getCanvasPixelRatio(): number {
@@ -821,6 +844,7 @@ export class ViewRenderer {
                 configuredHeight: configuredHeight,
                 projectedByTrack: new Map<number, WarpingMatrixProjectedPoint[]>(),
                 indicatorByTrack: new Map<number, SVGCircleElement>(),
+                colorByTrack: new Map<number, string>(),
                 plotLeft: 0,
                 plotRight: 0,
                 referenceDuration: 0,
@@ -972,6 +996,14 @@ export class ViewRenderer {
             + '#'
             + Math.round(trackDuration * 1000);
 
+        host.colorByTrack.clear();
+        context.trackSeries.forEach((series, visibleIndex) => {
+            host.colorByTrack.set(
+                series.trackIndex,
+                this.getFixedWarpingMatrixColor(visibleIndex)
+            );
+        });
+
         const projectPoint = (referenceTime: number, trackTime: number): { x: number; y: number } => {
             const x = plotLeft + (clampTime(referenceTime, 0, referenceDuration) / referenceDuration) * innerWidth;
             const y = plotTop + (1 - (clampTime(trackTime, 0, trackDuration) / trackDuration)) * innerHeight;
@@ -1042,6 +1074,7 @@ export class ViewRenderer {
                 path.setAttribute('class', 'warping-matrix-path');
                 path.setAttribute('data-track-index', String(series.trackIndex));
                 path.setAttribute('d', pathData);
+                path.style.stroke = host.colorByTrack.get(series.trackIndex) || WARPING_MATRIX_FIXED_COLORS[0];
                 host.pathLayer.appendChild(path);
                 host.projectedByTrack.set(series.trackIndex, projected);
             });
@@ -1067,6 +1100,10 @@ export class ViewRenderer {
                 host.indicatorLayer.appendChild(indicator);
                 host.indicatorByTrack.set(series.trackIndex, indicator);
             }
+
+            const trackColor = host.colorByTrack.get(series.trackIndex)
+                || WARPING_MATRIX_FIXED_COLORS[0];
+            indicator.style.fill = trackColor;
 
             indicator.setAttribute('cx', String(projected.x));
             indicator.setAttribute('cy', String(projected.y));
