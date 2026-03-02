@@ -224,6 +224,8 @@ export class WaveformEngine {
         for (let x = 0; x < trackPeaks.length; x += 1) {
             const peak = trackPeaks[x];
             if (peak <= 0) {
+                previousTargetIndex = null;
+                previousPeak = 0;
                 continue;
             }
 
