@@ -1,4 +1,5 @@
 import { AlignmentOutOfRangeMode } from '../domain/types';
+import Papa from 'papaparse';
 
 type AlignmentTempoInterpolationMode = 'step' | 'linear';
 
@@ -53,35 +54,31 @@ function requestText(url: string): Promise<string> {
 
 export function parseNumericCsv(csvText: string): ParsedNumericCsv {
     const normalizedText = String(csvText || '').replace(/^\uFEFF/, '');
-    const lines = normalizedText.split(/\r?\n/).map(function(line) {
-        return line.trim();
-    }).filter(function(line) {
-        return line.length > 0;
+    const parsed = Papa.parse<string[]>(normalizedText, {
+        delimiter: ',',
+        skipEmptyLines: 'greedy',
     });
 
-    if (lines.length < 2) {
+    if (parsed.errors.length > 0) {
+        const papaErrors = parsed.errors.map(function(error) {
+            const rowSuffix = typeof error.row === 'number' ? ' (row ' + error.row + ')' : '';
+            return error.message + rowSuffix;
+        }).join('; ');
+        throw new Error(papaErrors);
+    }
+
+    if (parsed.data.length < 2) {
         throw new Error('Alignment CSV must include a header and at least one data row.');
     }
 
-    const headers = splitCsvLine(lines[0]).map(function(header) {
-        return header.trim();
+    const headers = parsed.data[0].map(function(headerCell: string) {
+        return String(headerCell ?? '').trim();
     });
-
-    if (headers.length === 0 || headers.some(function(header) { return !header; })) {
-        throw new Error('Alignment CSV contains an invalid header row.');
-    }
-
-    const duplicateHeader = headers.find(function(header, index) {
-        return headers.indexOf(header) !== index;
-    });
-    if (duplicateHeader) {
-        throw new Error('Alignment CSV contains duplicate header: ' + duplicateHeader);
-    }
 
     const rows: CsvNumericRow[] = [];
 
-    for (let lineIndex = 1; lineIndex < lines.length; lineIndex += 1) {
-        const cells = splitCsvLine(lines[lineIndex]);
+    for (let lineIndex = 1; lineIndex < parsed.data.length; lineIndex += 1) {
+        const cells = parsed.data[lineIndex] || [];
         if (cells.length !== headers.length) {
             continue;
         }
@@ -90,12 +87,12 @@ export function parseNumericCsv(csvText: string): ParsedNumericCsv {
         let validRow = true;
 
         for (let cellIndex = 0; cellIndex < headers.length; cellIndex += 1) {
-            const parsed = Number(cells[cellIndex].trim());
-            if (!Number.isFinite(parsed)) {
+            const parsedCell = Number(String(cells[cellIndex] ?? '').trim());
+            if (!Number.isFinite(parsedCell)) {
                 validRow = false;
                 break;
             }
-            row[headers[cellIndex]] = parsed;
+            row[headers[cellIndex]] = parsedCell;
         }
 
         if (validRow) {
@@ -111,11 +108,6 @@ export function parseNumericCsv(csvText: string): ParsedNumericCsv {
         headers: headers,
         rows: rows,
     };
-}
-
-function splitCsvLine(line: string): string[] {
-    // Alignment tables are expected to be simple numeric CSV without quoted commas.
-    return line.split(',');
 }
 
 export function createTimeMappingSeries(points: TimeMappingPoint[]): TimeMappingSeries {

@@ -9,7 +9,8 @@
     "lib": ["DOM", "ES2017"]
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "src/**/*.d.ts"
   ],
   "exclude": [
     "dist",
