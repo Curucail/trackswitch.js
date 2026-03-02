@@ -975,6 +975,8 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             return;
         }
 
+        event.preventDefault();
+
         const index = this.trackIndexFromTarget(event.target ?? null);
         if (index >= 0) {
             this.toggleSolo(index, !!event.shiftKey);
