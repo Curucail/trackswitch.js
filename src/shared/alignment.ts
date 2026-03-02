@@ -54,8 +54,9 @@ function requestText(url: string): Promise<string> {
 
 export function parseNumericCsv(csvText: string): ParsedNumericCsv {
     const normalizedText = String(csvText || '').replace(/^\uFEFF/, '');
-    const parsed = Papa.parse<string[]>(normalizedText, {
-        delimiter: ',',
+    const parsed = Papa.parse<Record<string, unknown>>(normalizedText, {
+        header: true,
+        dynamicTyping: true,
         skipEmptyLines: 'greedy',
     });
 
@@ -67,32 +68,33 @@ export function parseNumericCsv(csvText: string): ParsedNumericCsv {
         throw new Error(papaErrors);
     }
 
-    if (parsed.data.length < 2) {
+    const headers = Array.isArray(parsed.meta.fields)
+        ? parsed.meta.fields.map(function(field) {
+            return String(field ?? '').trim();
+        }).filter(function(field) {
+            return field.length > 0;
+        })
+        : [];
+
+    if (headers.length === 0) {
         throw new Error('Alignment CSV must include a header and at least one data row.');
     }
 
-    const headers = parsed.data[0].map(function(headerCell: string) {
-        return String(headerCell ?? '').trim();
-    });
-
     const rows: CsvNumericRow[] = [];
 
-    for (let lineIndex = 1; lineIndex < parsed.data.length; lineIndex += 1) {
-        const cells = parsed.data[lineIndex] || [];
-        if (cells.length !== headers.length) {
-            continue;
-        }
-
+    for (let lineIndex = 0; lineIndex < parsed.data.length; lineIndex += 1) {
+        const sourceRow = parsed.data[lineIndex] || {};
         const row: CsvNumericRow = {};
         let validRow = true;
 
         for (let cellIndex = 0; cellIndex < headers.length; cellIndex += 1) {
-            const parsedCell = Number(String(cells[cellIndex] ?? '').trim());
+            const header = headers[cellIndex];
+            const parsedCell = Number(sourceRow[header]);
             if (!Number.isFinite(parsedCell)) {
                 validRow = false;
                 break;
             }
-            row[headers[cellIndex]] = parsedCell;
+            row[header] = parsedCell;
         }
 
         if (validRow) {

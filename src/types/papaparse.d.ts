@@ -1,5 +1,7 @@
 declare module 'papaparse' {
     export interface ParseConfig {
+        header?: boolean;
+        dynamicTyping?: boolean;
         delimiter?: string;
         skipEmptyLines?: boolean | 'greedy';
     }
@@ -14,6 +16,9 @@ declare module 'papaparse' {
     export interface ParseResult<T> {
         data: T[];
         errors: ParseError[];
+        meta: {
+            fields?: string[];
+        };
     }
 
     export interface PapaStatic {

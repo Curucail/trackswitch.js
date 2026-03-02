@@ -65,7 +65,6 @@ interface AlignmentContext {
     referenceDuration: number;
     outOfRange: AlignmentOutOfRangeMode;
     converters: Map<number, TrackAlignmentConverter>;
-    warpingSeriesByTrack: Map<number, TimeMappingSeries>;
 }
 
 interface SeekTimelineContext {
@@ -1977,7 +1976,6 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         }
 
         const converters = new Map<number, TrackAlignmentConverter>();
-        const warpingSeriesByTrack = new Map<number, TimeMappingSeries>();
         for (const [trackIndex, column] of mappingByTrack) {
             try {
                 const referenceToTrack = buildColumnTimeMapping(parsedCsv.rows, referenceColumn, column);
@@ -1987,7 +1985,6 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
                     referenceToTrack: referenceToTrack,
                     trackToReference: trackToReference,
                 });
-                warpingSeriesByTrack.set(trackIndex, referenceToTrack);
             } catch (error) {
                 return error instanceof Error
                     ? error.message
@@ -1999,7 +1996,6 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             referenceDuration: referenceDuration,
             outOfRange: resolveAlignmentOutOfRangeMode(this.alignmentConfig.outOfRange),
             converters: converters,
-            warpingSeriesByTrack: warpingSeriesByTrack,
         };
     }
 
@@ -2019,14 +2015,14 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
         const trackIndexes = this.getAudibleTrackIndexesForWarpingMatrix();
         const trackSeries = trackIndexes.map((trackIndex) => {
-            const series = this.alignmentContext?.warpingSeriesByTrack.get(trackIndex);
-            if (!series) {
+            const converter = this.alignmentContext?.converters.get(trackIndex);
+            if (!converter) {
                 return null;
             }
 
             return {
                 trackIndex: trackIndex,
-                points: series.points.map((point) => {
+                points: converter.referenceToTrack.points.map((point) => {
                     return {
                         referenceTime: point.x,
                         trackTime: point.y,
