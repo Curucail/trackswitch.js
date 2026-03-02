@@ -79,6 +79,7 @@ interface WarpingMatrixHostMetadata {
     host: HTMLElement;
     svg: SVGSVGElement;
     axisLayer: SVGGElement;
+    referenceLayer: SVGGElement;
     pathLayer: SVGGElement;
     indicatorLayer: SVGGElement;
     xAxisLabel: SVGTextElement;
@@ -841,6 +842,10 @@ export class ViewRenderer {
             axisLayer.setAttribute('class', 'warping-matrix-axes');
             svg.appendChild(axisLayer);
 
+            const referenceLayer = document.createElementNS(SVG_NS, 'g');
+            referenceLayer.setAttribute('class', 'warping-matrix-reference-layer');
+            svg.appendChild(referenceLayer);
+
             const pathLayer = document.createElementNS(SVG_NS, 'g');
             pathLayer.setAttribute('class', 'warping-matrix-paths');
             svg.appendChild(pathLayer);
@@ -866,6 +871,7 @@ export class ViewRenderer {
                 host: hostElement,
                 svg: svg,
                 axisLayer: axisLayer,
+                referenceLayer: referenceLayer,
                 pathLayer: pathLayer,
                 indicatorLayer: indicatorLayer,
                 xAxisLabel: xAxisLabel,
@@ -1062,6 +1068,19 @@ export class ViewRenderer {
             yAxis.setAttribute('x2', String(plotLeft));
             yAxis.setAttribute('y2', String(plotTop + innerHeight));
             host.axisLayer.insertBefore(yAxis, host.xAxisLabel);
+
+            host.referenceLayer.textContent = '';
+            const referenceDiagonal = document.createElementNS(SVG_NS, 'line');
+            referenceDiagonal.setAttribute('class', 'warping-matrix-reference-diagonal');
+            referenceDiagonal.setAttribute('x1', String(plotLeft));
+            referenceDiagonal.setAttribute('y1', String(plotTop + innerHeight));
+            referenceDiagonal.setAttribute('x2', String(plotLeft + innerWidth));
+            referenceDiagonal.setAttribute('y2', String(plotTop));
+            referenceDiagonal.style.stroke = '#888888';
+            referenceDiagonal.style.strokeWidth = String(this.getWarpingMatrixPathStrokeWidth(host));
+            referenceDiagonal.style.strokeDasharray = '6 4';
+            referenceDiagonal.style.fill = 'none';
+            host.referenceLayer.appendChild(referenceDiagonal);
 
             host.xAxisLabel.setAttribute('x', String(plotLeft + (innerWidth / 2)));
             host.xAxisLabel.setAttribute('y', String(renderedHeight - 6));

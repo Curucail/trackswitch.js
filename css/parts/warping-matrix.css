@@ -34,7 +34,7 @@
 .trackswitch .warping-matrix-path {
     fill: none;
     stroke-width: 1.5;
-    stroke-opacity: 0.7;
+    stroke-opacity: 0.9;
     vector-effect: non-scaling-stroke;
     cursor: pointer;
 }
