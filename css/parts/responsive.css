@@ -214,4 +214,14 @@
     .trackswitch li.track {
         min-height: 40px;
     }
+
+    .trackswitch .warping-matrix-axis-label {
+        font-size: 16px;
+    }
+}
+
+@media (max-width: 500px) {
+    .trackswitch .warping-matrix-axis-label {
+        font-size: 18px;
+    }
 }
