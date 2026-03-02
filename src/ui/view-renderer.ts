@@ -1001,16 +1001,7 @@ export class ViewRenderer {
         host.plotLeft = plotLeft;
         host.plotRight = plotLeft + innerWidth;
         host.referenceDuration = referenceDuration;
-
-        let maxTrackTime = 0;
-        context.trackSeries.forEach((series) => {
-            series.points.forEach((point) => {
-                if (Number.isFinite(point.trackTime) && point.trackTime > maxTrackTime) {
-                    maxTrackTime = point.trackTime;
-                }
-            });
-        });
-        const trackDuration = Math.max(0.001, maxTrackTime);
+        const trackDuration = referenceDuration;
 
         const geometryKey = context.trackSeries.map((series) => {
             const lastPoint = series.points.length > 0
