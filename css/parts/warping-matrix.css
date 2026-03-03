@@ -31,6 +31,15 @@
     pointer-events: none;
 }
 
+.trackswitch .warping-matrix-title {
+    fill: #666666;
+    font-size: 15px;
+    font-family: monospace;
+    font-weight: 600;
+    user-select: none;
+    pointer-events: none;
+}
+
 .trackswitch .warping-matrix-path {
     fill: none;
     stroke-width: 1.5;

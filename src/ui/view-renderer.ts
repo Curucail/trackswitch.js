@@ -30,6 +30,7 @@ export interface WarpingMatrixTrackSeries {
     trackIndex: number;
     columnKey: string;
     points: WarpingMatrixDataPoint[];
+    trackDuration: number;
 }
 
 export interface WarpingMatrixRenderContext {
@@ -79,6 +80,7 @@ interface WarpingMatrixHostMetadata {
     host: HTMLElement;
     svg: SVGSVGElement;
     axisLayer: SVGGElement;
+    titleLabel: SVGTextElement;
     referenceLayer: SVGGElement;
     pathLayer: SVGGElement;
     indicatorLayer: SVGGElement;
@@ -91,6 +93,8 @@ interface WarpingMatrixHostMetadata {
     colorByColumn: Map<string, string>;
     plotLeft: number;
     plotRight: number;
+    plotTop: number;
+    plotBottom: number;
     referenceDuration: number;
     activePointerId: number | null;
     lastGeometryKey: string | null;
@@ -158,6 +162,20 @@ function sanitizeDuration(value: number): number {
     }
 
     return value;
+}
+
+function resolveWarpingMatrixTrackDuration(trackDuration: number, fallbackDuration: number): number {
+    const normalizedTrackDuration = sanitizeDuration(trackDuration);
+    if (normalizedTrackDuration > 0) {
+        return normalizedTrackDuration;
+    }
+
+    const normalizedFallbackDuration = sanitizeDuration(fallbackDuration);
+    if (normalizedFallbackDuration > 0) {
+        return normalizedFallbackDuration;
+    }
+
+    return 0.001;
 }
 
 function parseWaveformBarWidth(value: string | null, fallback: number): number {
@@ -842,6 +860,11 @@ export class ViewRenderer {
             axisLayer.setAttribute('class', 'warping-matrix-axes');
             svg.appendChild(axisLayer);
 
+            const titleLabel = document.createElementNS(SVG_NS, 'text');
+            titleLabel.setAttribute('class', 'warping-matrix-title');
+            titleLabel.textContent = 'Local Tempo Deviations';
+            axisLayer.appendChild(titleLabel);
+
             const referenceLayer = document.createElementNS(SVG_NS, 'g');
             referenceLayer.setAttribute('class', 'warping-matrix-reference-layer');
             svg.appendChild(referenceLayer);
@@ -871,6 +894,7 @@ export class ViewRenderer {
                 host: hostElement,
                 svg: svg,
                 axisLayer: axisLayer,
+                titleLabel: titleLabel,
                 referenceLayer: referenceLayer,
                 pathLayer: pathLayer,
                 indicatorLayer: indicatorLayer,
@@ -883,6 +907,8 @@ export class ViewRenderer {
                 colorByColumn: new Map<string, string>(),
                 plotLeft: 0,
                 plotRight: 0,
+                plotTop: 0,
+                plotBottom: 0,
                 referenceDuration: 0,
                 activePointerId: null,
                 lastGeometryKey: null,
@@ -911,6 +937,18 @@ export class ViewRenderer {
         }
 
         if (event.button !== 0) {
+            return;
+        }
+
+        const rect = host.svg.getBoundingClientRect();
+        const pointerX = event.clientX - rect.left;
+        const pointerY = event.clientY - rect.top;
+        if (
+            pointerX < host.plotLeft
+            || pointerX > host.plotRight
+            || pointerY < host.plotTop
+            || pointerY > host.plotBottom
+        ) {
             return;
         }
 
@@ -985,7 +1023,7 @@ export class ViewRenderer {
         host.svg.setAttribute('height', String(renderedHeight));
 
         const padding = {
-            top: 12,
+            top: 34,
             right: 12,
             bottom: 28,
             left: 42,
@@ -1000,18 +1038,21 @@ export class ViewRenderer {
         const referenceDuration = Math.max(0.001, sanitizeDuration(context.referenceDuration));
         host.plotLeft = plotLeft;
         host.plotRight = plotLeft + innerWidth;
+        host.plotTop = plotTop;
+        host.plotBottom = plotTop + innerHeight;
         host.referenceDuration = referenceDuration;
-        const trackDuration = referenceDuration;
 
         const geometryKey = context.trackSeries.map((series) => {
             const lastPoint = series.points.length > 0
                 ? series.points[series.points.length - 1]
                 : null;
+            const seriesTrackDuration = resolveWarpingMatrixTrackDuration(series.trackDuration, referenceDuration);
             return [
                 series.trackIndex,
                 series.points.length,
                 lastPoint ? Math.round(lastPoint.referenceTime * 1000) : 0,
                 lastPoint ? Math.round(lastPoint.trackTime * 1000) : 0,
+                Math.round(seriesTrackDuration * 1000),
             ].join(':');
         }).join('|')
             + '#'
@@ -1019,9 +1060,7 @@ export class ViewRenderer {
             + '#'
             + renderedHeight
             + '#'
-            + Math.round(referenceDuration * 1000)
-            + '#'
-            + Math.round(trackDuration * 1000);
+            + Math.round(referenceDuration * 1000);
 
         host.colorByColumn.clear();
         context.trackSeries.forEach((series) => {
@@ -1031,7 +1070,11 @@ export class ViewRenderer {
             );
         });
 
-        const projectPoint = (referenceTime: number, trackTime: number): { x: number; y: number } => {
+        const projectPoint = (
+            referenceTime: number,
+            trackTime: number,
+            trackDuration: number
+        ): { x: number; y: number } => {
             const x = plotLeft + (clampTime(referenceTime, 0, referenceDuration) / referenceDuration) * innerWidth;
             const y = plotTop + (1 - (clampTime(trackTime, 0, trackDuration) / trackDuration)) * innerHeight;
             return { x, y };
@@ -1077,6 +1120,10 @@ export class ViewRenderer {
             host.xAxisLabel.setAttribute('y', String(renderedHeight - 6));
             host.xAxisLabel.setAttribute('text-anchor', 'middle');
 
+            host.titleLabel.setAttribute('x', String(renderedWidth / 2));
+            host.titleLabel.setAttribute('y', '18');
+            host.titleLabel.setAttribute('text-anchor', 'middle');
+
             const yAxisLabelX = plotLeft - 14;
             const yAxisLabelY = plotTop + (innerHeight / 2);
             host.yAxisLabel.setAttribute('x', String(yAxisLabelX));
@@ -1091,9 +1138,10 @@ export class ViewRenderer {
                 if (!Array.isArray(series.points) || series.points.length === 0) {
                     return;
                 }
+                const seriesTrackDuration = resolveWarpingMatrixTrackDuration(series.trackDuration, referenceDuration);
 
                 const projected: WarpingMatrixProjectedPoint[] = series.points.map((point) => {
-                    const projectedPoint = projectPoint(point.referenceTime, point.trackTime);
+                    const projectedPoint = projectPoint(point.referenceTime, point.trackTime, seriesTrackDuration);
                     return {
                         referenceTime: point.referenceTime,
                         x: projectedPoint.x,
@@ -1130,7 +1178,8 @@ export class ViewRenderer {
             }
 
             const currentTrackTime = this.interpolateWarpingTrackTime(series.points, currentReferenceTime);
-            const projected = projectPoint(currentReferenceTime, currentTrackTime);
+            const seriesTrackDuration = resolveWarpingMatrixTrackDuration(series.trackDuration, referenceDuration);
+            const projected = projectPoint(currentReferenceTime, currentTrackTime, seriesTrackDuration);
 
             let indicator = host.indicatorByColumn.get(series.columnKey);
             if (!indicator) {

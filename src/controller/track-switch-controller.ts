@@ -587,15 +587,21 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         this.applyTrackProperties();
 
         const nextActiveTrackIndex = this.getActiveSoloTrackIndex();
-        if (
+        const shouldHandleAlignmentSwitch = (
             this.isAlignmentMode()
             && this.alignmentContext
             && this.effectiveSingleSoloMode
             && previousActiveTrackIndex !== nextActiveTrackIndex
             && nextActiveTrackIndex >= 0
+        );
+        if (
+            shouldHandleAlignmentSwitch
         ) {
             this.handleAlignmentTrackSwitch(nextActiveTrackIndex);
+            return;
         }
+
+        this.updateMainControls();
     }
 
     applyPreset(presetIndex: number): void {
@@ -2072,6 +2078,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
         const trackIndexes = this.getAudibleTrackIndexesForWarpingMatrix();
         const seenColumns = new Set<string>();
+        const referenceDuration = this.longestDuration;
         const trackSeries = trackIndexes.map((trackIndex) => {
             const column = this.alignmentContext?.columnByTrack.get(trackIndex);
             const normalizedColumn = typeof column === 'string' ? column.trim() : '';
@@ -2085,16 +2092,33 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             }
 
             seenColumns.add(normalizedColumn);
+            const points = converter.referenceToTrack.points.map((point) => {
+                return {
+                    referenceTime: point.x,
+                    trackTime: point.y,
+                };
+            });
+            const runtime = this.runtimes[trackIndex];
+            let trackDuration = runtime.baseSource.timing
+                ? runtime.baseSource.timing.effectiveDuration
+                : (runtime.baseSource.buffer ? runtime.baseSource.buffer.duration : 0);
+            if (!Number.isFinite(trackDuration) || trackDuration <= 0) {
+                let maxMappedTrackTime = Number.NEGATIVE_INFINITY;
+                points.forEach((point) => {
+                    if (Number.isFinite(point.trackTime) && point.trackTime > maxMappedTrackTime) {
+                        maxMappedTrackTime = point.trackTime;
+                    }
+                });
+                trackDuration = Number.isFinite(maxMappedTrackTime) && maxMappedTrackTime > 0
+                    ? maxMappedTrackTime
+                    : referenceDuration;
+            }
 
             return {
                 trackIndex: trackIndex,
                 columnKey: normalizedColumn,
-                points: converter.referenceToTrack.points.map((point) => {
-                    return {
-                        referenceTime: point.x,
-                        trackTime: point.y,
-                    };
-                }),
+                points: points,
+                trackDuration: trackDuration,
             };
         }).filter((entry): entry is NonNullable<typeof entry> => {
             return !!entry && entry.points.length > 0;
