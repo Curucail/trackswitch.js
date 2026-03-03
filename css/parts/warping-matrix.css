@@ -50,6 +50,7 @@
     order: 0;
     display: flex;
     align-items: center;
+    justify-content: flex-start;
     gap: 12px;
     padding: 6px 10px 4px 10px;
     border-bottom: 1px solid #DDDDDD;
@@ -65,8 +66,8 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    min-width: 0;
-    flex: 1 1 0;
+    min-width: fit-content;
+    flex: 0 0 auto;
 }
 
 .trackswitch .warping-tempo-control-label {
@@ -77,8 +78,9 @@
 .trackswitch .warping-tempo-slider {
     -webkit-appearance: none;
     appearance: none;
-    min-width: 70px;
-    width: 100%;
+    min-width: 80px;
+    width: 80px;
+    max-width: 80px;
     height: 4px;
     background: #555555;
     outline: none;
@@ -157,11 +159,10 @@
     stroke-dasharray: 6 4;
 }
 
-.trackswitch .warping-playhead-line {
-    fill: none;
-    stroke: #777777;
-    stroke-width: 1.3px;
-    stroke-dasharray: 5 5;
+.trackswitch .warping-playhead-dot {
+    fill: #777777;
+    stroke: #EEEEEE;
+    stroke-width: 1px;
 }
 
 .trackswitch .warping-tempo-line {
@@ -232,6 +233,6 @@
     }
 
     .trackswitch .warping-tempo-control {
-        flex: 1 1 180px;
+        flex: 0 0 auto;
     }
 }
