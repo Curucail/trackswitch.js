@@ -8,7 +8,9 @@
 .trackswitch .warping-matrix-host {
     width: 100%;
     min-height: 180px;
-    display: block;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
 }
 
 .trackswitch .warping-matrix-panel {
@@ -21,32 +23,79 @@
 .trackswitch .warping-plot-host {
     width: 100%;
     height: 100%;
-}
-
-.trackswitch .warping-plot-host .uplot {
-    width: 100%;
-    height: 100%;
+    position: relative;
     font-family: monospace;
     background-color: #EEEEEE;
 }
 
-.trackswitch .warping-plot-host .u-axis text {
-    fill: #BBBBBB;
-    font-size: 14px;
+.trackswitch .warping-plot-host .warping-plot-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
 }
 
-.trackswitch .warping-plot-host .u-legend {
-    display: none;
-}
-
-.trackswitch .warping-plot-host .u-title {
-    color: #666666;
+.trackswitch .warping-plot-title {
+    fill: #666666;
     font-size: 15px;
     font-weight: 600;
 }
 
-.trackswitch .warping-plot-host .u-axis {
+.trackswitch .warping-plot-axis path,
+.trackswitch .warping-plot-axis line {
     stroke: #666666;
+}
+
+.trackswitch .warping-plot-axis text {
+    fill: #BBBBBB;
+    font-size: 14px;
+}
+
+.trackswitch .warping-plot-axis-label {
+    fill: #888888;
+    font-size: 12px;
+}
+
+.trackswitch .warping-path-line {
+    fill: none;
+    stroke: #ED8C01;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.trackswitch .warping-guide-line {
+    fill: none;
+    stroke: #888888;
+    stroke-width: 1.3px;
+    stroke-dasharray: 6 4;
+}
+
+.trackswitch .warping-playhead-line {
+    fill: none;
+    stroke: #777777;
+    stroke-width: 1.3px;
+    stroke-dasharray: 5 5;
+}
+
+.trackswitch .warping-tempo-line {
+    fill: none;
+    stroke: #ED8C01;
+    stroke-width: 2px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.trackswitch .warping-tempo-reference-line {
+    fill: none;
+    stroke: #888888;
+    stroke-width: 1.3px;
+    stroke-dasharray: 6 4;
+}
+
+.trackswitch .warping-tempo-center-line {
+    fill: none;
+    stroke: #777777;
+    stroke-width: 1.3px;
+    stroke-dasharray: 5 5;
 }
 
 .trackswitch .warping-matrix-disabled-overlay {
@@ -64,14 +113,18 @@
     pointer-events: none;
 }
 
-.trackswitch .warping-matrix-host.warping-matrix-main-disabled .warping-matrix-panel-main .warping-plot-host {
+.trackswitch .warping-matrix-host.warping-matrix-sync-disabled .warping-plot-host {
     pointer-events: none;
-}
-
-.trackswitch .warping-matrix-host.warping-matrix-main-disabled .warping-matrix-panel-main .uplot {
     opacity: 0.55;
 }
 
-.trackswitch .warping-matrix-host.warping-matrix-main-disabled .warping-matrix-disabled-overlay {
+.trackswitch .warping-matrix-host.warping-matrix-sync-disabled .warping-matrix-disabled-overlay {
     display: flex;
+}
+
+@media (max-width: 900px) {
+    .trackswitch .warping-matrix-host {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
 }

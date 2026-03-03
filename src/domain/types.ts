@@ -96,6 +96,8 @@ export interface TrackSwitchWarpingMatrixConfig {
     style?: string;
     height?: number;
     pathStrokeWidth?: number;
+    localTempoWindowSeconds?: number;
+    localTempoSlopeHalfWindowPoints?: number;
 }
 
 export interface TrackSwitchImageUiElement extends TrackSwitchImageConfig {

@@ -238,7 +238,7 @@
         height: 16px;
     }
 
-    .trackswitch .warping-plot-host .u-axis text {
+    .trackswitch .warping-plot-host .warping-plot-axis text {
         font-size: 16px;
     }
 
@@ -262,7 +262,7 @@
         font-size: 11px;
     }
 
-    .trackswitch .warping-plot-host .u-axis text {
+    .trackswitch .warping-plot-host .warping-plot-axis text {
         font-size: 18px;
     }
 }
