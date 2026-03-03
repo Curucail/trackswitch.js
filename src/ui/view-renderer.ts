@@ -156,6 +156,22 @@ function clampTime(value: number, minimum: number, maximum: number): number {
     return value;
 }
 
+function sanitizeVolume(value: number): number {
+    if (!Number.isFinite(value)) {
+        return 1;
+    }
+
+    return clampTime(value, 0, 1);
+}
+
+function sanitizePan(value: number): number {
+    if (!Number.isFinite(value)) {
+        return 0;
+    }
+
+    return clampTime(value, -1, 1);
+}
+
 function sanitizeDuration(value: number): number {
     if (!Number.isFinite(value) || value <= 0) {
         return 0;
@@ -518,7 +534,10 @@ export class ViewRenderer {
         track.className = 'track' + tabviewClass + wholeSoloClass;
         track.setAttribute('style', sanitizeInlineStyle(runtime.definition.style || ''));
         track.setAttribute('data-track-index', String(index));
-        track.append(document.createTextNode(runtime.definition.title || 'Track ' + (index + 1)));
+        const title = document.createElement('span');
+        title.className = 'track-title';
+        title.textContent = runtime.definition.title || 'Track ' + (index + 1);
+        track.appendChild(title);
 
         const controls = document.createElement('ul');
         controls.className = 'control';
@@ -530,6 +549,49 @@ export class ViewRenderer {
         controls.appendChild(solo);
 
         track.appendChild(controls);
+
+        if (this.features.trackMixControls) {
+            const mixControls = document.createElement('div');
+            mixControls.className = 'track-mix-controls';
+
+            const volumeControl = document.createElement('div');
+            volumeControl.className = 'track-volume-control';
+
+            const volumeIcon = document.createElement('i');
+            volumeIcon.className = 'volume-icon track-volume-icon fa-volume-up';
+
+            const volumeSlider = document.createElement('input');
+            volumeSlider.className = 'track-volume-slider mix-slider';
+            volumeSlider.type = 'range';
+            volumeSlider.min = '0';
+            volumeSlider.max = '100';
+            volumeSlider.value = String(Math.round(sanitizeVolume(runtime.state.volume) * 100));
+
+            volumeControl.appendChild(volumeIcon);
+            volumeControl.appendChild(volumeSlider);
+
+            const panControl = document.createElement('div');
+            panControl.className = 'track-pan-control';
+
+            const panLabel = document.createElement('span');
+            panLabel.className = 'track-pan-label';
+            panLabel.textContent = 'L/R';
+
+            const panSlider = document.createElement('input');
+            panSlider.className = 'track-pan-slider mix-slider';
+            panSlider.type = 'range';
+            panSlider.min = '-100';
+            panSlider.max = '100';
+            panSlider.value = String(Math.round(sanitizePan(runtime.state.pan) * 100));
+
+            panControl.appendChild(panLabel);
+            panControl.appendChild(panSlider);
+
+            mixControls.appendChild(volumeControl);
+            mixControls.appendChild(panControl);
+            track.appendChild(mixControls);
+        }
+
         return track;
     }
 
@@ -1776,6 +1838,8 @@ export class ViewRenderer {
             ...selected,
             state: {
                 solo: false,
+                volume: selected.state.volume,
+                pan: selected.state.pan,
             },
         }];
     }
@@ -2052,7 +2116,8 @@ export class ViewRenderer {
     updateTrackControls(
         runtimes: TrackRuntime[],
         syncLockedTrackIndexes?: ReadonlySet<number>,
-        effectiveSingleSoloMode = this.features.radiosolo
+        effectiveSingleSoloMode = this.features.radiosolo,
+        panSupported = true
     ): void {
         runtimes.forEach((runtime, index) => {
             const row = this.query('.track[data-track-index="' + index + '"]');
@@ -2069,6 +2134,38 @@ export class ViewRenderer {
                 solo.classList.toggle('checked', runtime.state.solo);
                 solo.classList.toggle('disabled', isLocked);
                 solo.classList.toggle('radio', effectiveSingleSoloMode);
+            }
+
+            if (!this.features.trackMixControls) {
+                return;
+            }
+
+            this.setTrackVolumeSlider(index, runtime.state.volume);
+            this.setTrackPanSlider(index, panSupported ? runtime.state.pan : 0);
+
+            const trackVolumeSlider = row.querySelector('.track-volume-slider');
+            if (trackVolumeSlider instanceof HTMLInputElement) {
+                trackVolumeSlider.disabled = isLocked;
+            }
+
+            const trackPanSlider = row.querySelector('.track-pan-slider');
+            if (trackPanSlider instanceof HTMLInputElement) {
+                trackPanSlider.disabled = isLocked || !panSupported;
+            }
+
+            const trackVolumeIcon = row.querySelector('.track-volume-icon');
+            if (trackVolumeIcon instanceof HTMLElement) {
+                this.applyVolumeIconState(trackVolumeIcon, runtime.state.volume);
+            }
+
+            const trackMixControls = row.querySelector('.track-mix-controls');
+            if (trackMixControls) {
+                trackMixControls.classList.toggle('disabled', isLocked);
+            }
+
+            const trackPanControl = row.querySelector('.track-pan-control');
+            if (trackPanControl) {
+                trackPanControl.classList.toggle('disabled', isLocked || !panSupported);
             }
         });
     }
@@ -2100,7 +2197,7 @@ export class ViewRenderer {
     }
 
     setVolumeSlider(volumeZeroToOne: number): void {
-        const slider = this.query('.volume-slider');
+        const slider = this.query('.main-control .volume-slider');
         if (!slider || !(slider instanceof HTMLInputElement)) {
             return;
         }
@@ -2109,18 +2206,51 @@ export class ViewRenderer {
         this.updateVolumeIcon(volumeZeroToOne);
     }
 
-    updateVolumeIcon(volumeZeroToOne: number): void {
-        this.queryAll('.volume-control .volume-icon').forEach(function(icon) {
-            icon.classList.remove('fa-volume-off', 'fa-volume-down', 'fa-volume-up');
+    setTrackVolumeSlider(trackIndex: number, volumeZeroToOne: number): void {
+        const row = this.query('.track[data-track-index="' + trackIndex + '"]');
+        if (!row) {
+            return;
+        }
 
-            if (volumeZeroToOne === 0) {
-                icon.classList.add('fa-volume-off');
-            } else if (volumeZeroToOne < 0.5) {
-                icon.classList.add('fa-volume-down');
-            } else {
-                icon.classList.add('fa-volume-up');
-            }
+        const slider = row.querySelector('.track-volume-slider');
+        if (!(slider instanceof HTMLInputElement)) {
+            return;
+        }
+
+        slider.value = String(Math.round(sanitizeVolume(volumeZeroToOne) * 100));
+    }
+
+    setTrackPanSlider(trackIndex: number, panMinusOneToOne: number): void {
+        const row = this.query('.track[data-track-index="' + trackIndex + '"]');
+        if (!row) {
+            return;
+        }
+
+        const slider = row.querySelector('.track-pan-slider');
+        if (!(slider instanceof HTMLInputElement)) {
+            return;
+        }
+
+        slider.value = String(Math.round(sanitizePan(panMinusOneToOne) * 100));
+    }
+
+    updateVolumeIcon(volumeZeroToOne: number): void {
+        this.queryAll('.main-control .volume-control .volume-icon').forEach((icon) => {
+            this.applyVolumeIconState(icon, volumeZeroToOne);
         });
+    }
+
+    private applyVolumeIconState(icon: HTMLElement, volumeZeroToOne: number): void {
+        icon.classList.remove('fa-volume-off', 'fa-volume-down', 'fa-volume-up');
+
+        const volume = sanitizeVolume(volumeZeroToOne);
+        if (volume === 0) {
+            icon.classList.add('fa-volume-off');
+        } else if (volume < 0.5) {
+            icon.classList.add('fa-volume-down');
+        } else {
+            icon.classList.add('fa-volume-up');
+        }
     }
 
     setOverlayLoading(isLoading: boolean): void {

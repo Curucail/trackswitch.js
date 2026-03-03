@@ -240,6 +240,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             runtime.errored = false;
             runtime.buffer = null;
             runtime.gainNode = null;
+            runtime.pannerNode = null;
             runtime.timing = null;
             runtime.activeSource = null;
             runtime.sourceIndex = -1;
@@ -467,6 +468,36 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         this.renderer.setVolumeSlider(this.state.volume);
     }
 
+    setTrackVolume(trackIndex: number, volumeZeroToOne: number): void {
+        if (!Number.isInteger(trackIndex) || trackIndex < 0 || trackIndex >= this.runtimes.length) {
+            return;
+        }
+
+        if (this.isTrackSyncLocked(trackIndex)) {
+            return;
+        }
+
+        const runtime = this.runtimes[trackIndex];
+        runtime.state.volume = clamp(volumeZeroToOne, 0, 1);
+        this.applyTrackProperties();
+    }
+
+    setTrackPan(trackIndex: number, panMinusOneToOne: number): void {
+        if (!Number.isInteger(trackIndex) || trackIndex < 0 || trackIndex >= this.runtimes.length) {
+            return;
+        }
+
+        if (this.isTrackSyncLocked(trackIndex)) {
+            return;
+        }
+
+        const runtime = this.runtimes[trackIndex];
+        runtime.state.pan = this.audioEngine.supportsStereoPanning()
+            ? clamp(panMinusOneToOne, -1, 1)
+            : 0;
+        this.applyTrackProperties();
+    }
+
     setLoopPoint(marker: LoopMarker): boolean {
         if (!this.features.looping) {
             return false;
@@ -631,6 +662,8 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             tracks: this.runtimes.map(function(runtime) {
                 return {
                     solo: runtime.state.solo,
+                    volume: runtime.state.volume,
+                    pan: runtime.state.pan,
                 };
             }),
         };
@@ -1017,6 +1050,36 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
         const volume = parseFloat(target.value || '0') / 100;
         this.setVolume(volume);
+    }
+
+    onTrackVolume(event: ControllerPointerEvent): void {
+        const target = eventTargetAsElement(event.target ?? null);
+        if (!(target instanceof HTMLInputElement)) {
+            return;
+        }
+
+        const trackIndex = this.trackIndexFromTarget(target);
+        if (trackIndex < 0) {
+            return;
+        }
+
+        const volume = parseFloat(target.value || '0') / 100;
+        this.setTrackVolume(trackIndex, volume);
+    }
+
+    onTrackPan(event: ControllerPointerEvent): void {
+        const target = eventTargetAsElement(event.target ?? null);
+        if (!(target instanceof HTMLInputElement)) {
+            return;
+        }
+
+        const trackIndex = this.trackIndexFromTarget(target);
+        if (trackIndex < 0) {
+            return;
+        }
+
+        const pan = parseFloat(target.value || '0') / 100;
+        this.setTrackPan(trackIndex, pan);
     }
 
     onPreset(event: ControllerPointerEvent): void {
@@ -1741,10 +1804,18 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     }
 
     private applyTrackProperties(): void {
+        const panSupported = this.audioEngine.supportsStereoPanning();
+        if (!panSupported) {
+            this.runtimes.forEach((runtime) => {
+                runtime.state.pan = 0;
+            });
+        }
+
         this.renderer.updateTrackControls(
             this.runtimes,
             this.syncLockedTrackIndexes,
-            this.effectiveSingleSoloMode
+            this.effectiveSingleSoloMode,
+            panSupported
         );
         this.audioEngine.applyTrackStateGains(this.runtimes);
         this.renderer.switchPosterImage(this.runtimes);
@@ -1761,6 +1832,8 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
                 index: index,
                 state: {
                     solo: runtime.state.solo,
+                    volume: runtime.state.volume,
+                    pan: runtime.state.pan,
                 },
             });
         });

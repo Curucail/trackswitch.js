@@ -28,6 +28,8 @@ document.addEventListener('DOMContentLoaded', function () {
     tracks: [
       {
         title: 'Violins',
+        volume: 0.9, // optional per-track volume (0..1)
+        pan: -0.2, // optional per-track pan (-1..1)
         image: 'violins.png',
         presets: [0, 1],
         sources: [{ src: 'violins.mp3', type: 'audio/mpeg' }],
@@ -85,6 +87,7 @@ document.addEventListener('DOMContentLoaded', function () {
     features: {
       mode: 'default',
       globalVolume: true,
+      trackMixControls: true, // optional per-track volume/pan sliders in track rows
       looping: true,
       presets: true,
     },
@@ -103,7 +106,7 @@ Main methods:
 - `load`, `destroy`
 - `togglePlay`, `play`, `pause`, `stop`
 - `seekTo`, `seekRelative`
-- `setRepeat`, `setVolume`
+- `setRepeat`, `setVolume`, `setTrackVolume`, `setTrackPan`
 - `setLoopPoint`, `toggleLoop`, `clearLoop`
 - `toggleSolo`, `applyPreset`
 - `getState`, `on`, `off`
@@ -113,9 +116,10 @@ Events:
 - `loaded` -> `{ longestDuration }`
 - `error` -> `{ message }`
 - `position` -> `{ position, duration }`
-- `trackState` -> `{ index, state: { solo } }`
+- `trackState` -> `{ index, state: { solo, volume, pan } }`
 
-`getState()` returns player loading/playback state, feature flags, and per-track `solo` state.
+`getState()` returns player loading/playback state, feature flags, and per-track `solo`/`volume`/`pan` state.
+Track pan uses Web Audio `StereoPannerNode` (equal-power panning law) when supported.
 
 When `features.muteOtherPlayerInstances` is enabled, starting playback in one player pauses other players on the page.
 

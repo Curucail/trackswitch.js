@@ -45,6 +45,22 @@ interface LoadSourceSelectionResult {
 
 const RESUME_WAIT_TIMEOUT_MS = 250;
 
+function clamp01(value: number): number {
+    if (!Number.isFinite(value)) {
+        return 0;
+    }
+
+    return Math.max(0, Math.min(1, value));
+}
+
+function clampPan(value: number): number {
+    if (!Number.isFinite(value)) {
+        return 0;
+    }
+
+    return Math.max(-1, Math.min(1, value));
+}
+
 export class AudioEngine {
     private context: AudioContext | null;
     private readonly features: TrackSwitchFeatures;
@@ -99,6 +115,28 @@ export class AudioEngine {
     canUseAudioGraph(): boolean {
         this.initializeAudioGraph();
         return !!(this.context && this.gainNodeMaster && this.gainNodeVolume);
+    }
+
+    supportsStereoPanning(): boolean {
+        if (this.context) {
+            return typeof this.context.createStereoPanner === 'function';
+        }
+
+        if (typeof window === 'undefined') {
+            return false;
+        }
+
+        const audioContextHost = window as unknown as {
+            AudioContext?: typeof AudioContext;
+            webkitAudioContext?: typeof AudioContext;
+        };
+        const AudioContextConstructor = audioContextHost.AudioContext || audioContextHost.webkitAudioContext;
+
+        return !!(
+            AudioContextConstructor
+            && AudioContextConstructor.prototype
+            && typeof AudioContextConstructor.prototype.createStereoPanner === 'function'
+        );
     }
 
     private requestContextResume(): Promise<void> {
@@ -241,6 +279,33 @@ export class AudioEngine {
 
         if (!runtime.gainNode) {
             runtime.gainNode = this.context.createGain();
+        }
+
+        const previousPannerNode = runtime.pannerNode;
+        const stereoPanningSupported = this.supportsStereoPanning();
+        if (stereoPanningSupported && !runtime.pannerNode && typeof this.context.createStereoPanner === 'function') {
+            runtime.pannerNode = this.context.createStereoPanner();
+        }
+
+        if (!stereoPanningSupported) {
+            runtime.pannerNode = null;
+        }
+
+        try {
+            runtime.gainNode.disconnect();
+        } catch (_error) {
+            // ignore
+        }
+        try {
+            previousPannerNode?.disconnect();
+        } catch (_error) {
+            // ignore
+        }
+
+        if (runtime.pannerNode) {
+            runtime.gainNode.connect(runtime.pannerNode);
+            runtime.pannerNode.connect(this.gainNodeMaster);
+        } else {
             runtime.gainNode.connect(this.gainNodeMaster);
         }
 
@@ -404,7 +469,7 @@ export class AudioEngine {
             return;
         }
 
-        const nextVolume = Math.max(0, Math.min(1, Number.isFinite(volume) ? volume : 0));
+        const nextVolume = clamp01(volume);
         this.masterVolume = nextVolume;
         this.gainNodeVolume.gain.value = this.features.globalVolume ? nextVolume : 1;
     }
@@ -419,10 +484,14 @@ export class AudioEngine {
                 return;
             }
 
-            const gain = anySolos
+            const soloGate = anySolos
                 ? (runtime.state.solo ? 1 : 0)
                 : 1;
-            runtime.gainNode.gain.value = gain;
+            runtime.gainNode.gain.value = soloGate * clamp01(runtime.state.volume);
+
+            if (runtime.pannerNode) {
+                runtime.pannerNode.pan.value = clampPan(runtime.state.pan);
+            }
         });
     }
 

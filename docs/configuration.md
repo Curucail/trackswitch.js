@@ -57,6 +57,7 @@ TrackSwitch.createTrackSwitch(rootElement, {
   features: {
     mode: 'default',
     globalVolume: true,
+    trackMixControls: true,
     looping: true,
   },
 });
@@ -70,6 +71,8 @@ Track fields:
 
 - `title?: string`
 - `solo?: boolean`
+- `volume?: number` (`0..1`, defaults to `1`)
+- `pan?: number` (`-1..1`, defaults to `0`)
 - `image?: string`
 - `style?: string`
 - `presets?: number[]`
@@ -90,6 +93,13 @@ Source fields:
 
 Note: when a track has multiple `sources`, the first playable source is used.
 In `alignment`, `alignment.synchronizedSources` enables the global `SYNC` button in the main control bar.
+
+Per-track volume and pan controls:
+
+- Enable via `features.trackMixControls: true`
+- Track volume uses `0..1` (`1` is unchanged level)
+- Track pan uses `-1..1` (`-1` full left, `1` full right)
+- Track pan uses Web Audio `StereoPannerNode` (equal-power panning law) when supported
 
 ## Presets
 
@@ -203,6 +213,7 @@ Feature defaults:
 - `radiosolo: false`
 - `muteOtherPlayerInstances: true`
 - `globalVolume: false`
+- `trackMixControls: false`
 - `repeat: false`
 - `tabView: false`
 - `iosUnmute: true`
@@ -321,6 +332,8 @@ Controller methods:
 - `seekRelative(seconds: number): void`
 - `setRepeat(enabled: boolean): void`
 - `setVolume(volumeZeroToOne: number): void`
+- `setTrackVolume(trackIndex: number, volumeZeroToOne: number): void`
+- `setTrackPan(trackIndex: number, panMinusOneToOne: number): void`
 - `setLoopPoint(marker: 'A' | 'B'): boolean`
 - `toggleLoop(): boolean`
 - `clearLoop(): void`
@@ -335,7 +348,7 @@ Events:
 - `loaded` payload: `{ longestDuration: number }`
 - `error` payload: `{ message: string }`
 - `position` payload: `{ position: number, duration: number }`
-- `trackState` payload: `{ index: number, state: { solo: boolean } }`
+- `trackState` payload: `{ index: number, state: { solo: boolean, volume: number, pan: number } }`
 
 `getState()` snapshot highlights:
 
@@ -343,7 +356,7 @@ Events:
 - `longestDuration`
 - `features`
 - `state` (`playing`, `repeat`, `position`, `startTime`, `currentlySeeking`, `loop`, `volume`)
-- `tracks` (array of `{ solo }`)
+- `tracks` (array of `{ solo, volume, pan }`)
 
 ## Utility Exports
 

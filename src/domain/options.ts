@@ -5,6 +5,7 @@ export const defaultFeatures: Readonly<TrackSwitchFeatures> = {
     radiosolo: false,
     muteOtherPlayerInstances: true,
     globalVolume: false,
+    trackMixControls: false,
     repeat: false,
     tabView: false,
     iosUnmute: true,

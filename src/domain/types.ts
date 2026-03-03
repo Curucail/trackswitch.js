@@ -31,6 +31,8 @@ export interface TrackDefinitionAlignment {
 export interface TrackDefinition {
     title?: string;
     solo?: boolean;
+    volume?: number;
+    pan?: number;
     image?: string;
     style?: string;
     presets?: number[];
@@ -45,6 +47,7 @@ export interface TrackSwitchFeatures {
     radiosolo: boolean;
     muteOtherPlayerInstances: boolean;
     globalVolume: boolean;
+    trackMixControls: boolean;
     repeat: boolean;
     tabView: boolean;
     iosUnmute: boolean;
@@ -156,6 +159,8 @@ export interface TrackTiming {
 
 export interface TrackState {
     solo: boolean;
+    volume: number;
+    pan: number;
 }
 
 export type TrackSourceVariant = 'base' | 'synced';
@@ -170,6 +175,7 @@ export interface TrackRuntime {
     definition: TrackDefinition;
     state: TrackState;
     gainNode: GainNode | null;
+    pannerNode: StereoPannerNode | null;
     buffer: AudioBuffer | null;
     timing: TrackTiming | null;
     activeSource: AudioBufferSourceNode | null;
@@ -232,6 +238,8 @@ export interface TrackSwitchController {
     seekRelative(seconds: number): void;
     setRepeat(enabled: boolean): void;
     setVolume(volumeZeroToOne: number): void;
+    setTrackVolume(trackIndex: number, volumeZeroToOne: number): void;
+    setTrackPan(trackIndex: number, panMinusOneToOne: number): void;
     setLoopPoint(marker: LoopMarker): boolean;
     toggleLoop(): boolean;
     clearLoop(): void;

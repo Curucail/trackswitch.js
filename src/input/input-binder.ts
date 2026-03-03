@@ -17,6 +17,8 @@ export interface InputController {
     onSolo(event: ControllerPointerEvent): void;
     onAlignmentSync(event: ControllerPointerEvent): void;
     onVolume(event: ControllerPointerEvent): void;
+    onTrackVolume(event: ControllerPointerEvent): void;
+    onTrackPan(event: ControllerPointerEvent): void;
     onPreset(event: ControllerPointerEvent): void;
     onPresetScroll(event: ControllerPointerEvent): void;
     onWaveformZoomWheel(event: ControllerPointerEvent): void;
@@ -193,10 +195,10 @@ export class InputBinder {
             this.controller.onSeekEnd(eventToPointerEvent(event));
         });
 
-        this.addDelegatedListener('touchstart', '.solo', (event) => {
+        this.addDelegatedListener('touchstart', '.track .control .solo', (event) => {
             this.controller.onSolo(event);
         });
-        this.addDelegatedListener('mousedown', '.solo', (event) => {
+        this.addDelegatedListener('mousedown', '.track .control .solo', (event) => {
             this.controller.onSolo(event);
         });
 
@@ -229,6 +231,33 @@ export class InputBinder {
             this.addListener(this.root, 'mousedown', stopPropagationOnVolume as EventListener);
             this.addListener(this.root, 'mousemove', stopPropagationOnVolume as EventListener);
             this.addListener(this.root, 'mouseup', stopPropagationOnVolume as EventListener);
+        }
+
+        if (this.features.trackMixControls) {
+            this.addDelegatedListener('input', '.track-volume-slider', (event) => {
+                this.controller.onTrackVolume(event);
+            });
+            this.addDelegatedListener('input', '.track-pan-slider', (event) => {
+                this.controller.onTrackPan(event);
+            });
+
+            const stopPropagationOnTrackMix = (event: Event) => {
+                const eventElement = eventTargetAsElement(event.target);
+                if (!eventElement) {
+                    return;
+                }
+                const matched = eventElement.closest('.track-mix-controls');
+                if (matched && this.root.contains(matched)) {
+                    event.stopPropagation();
+                }
+            };
+
+            this.addListener(this.root, 'touchstart', stopPropagationOnTrackMix as EventListener, { passive: false });
+            this.addListener(this.root, 'touchmove', stopPropagationOnTrackMix as EventListener, { passive: false });
+            this.addListener(this.root, 'touchend', stopPropagationOnTrackMix as EventListener, { passive: false });
+            this.addListener(this.root, 'mousedown', stopPropagationOnTrackMix as EventListener);
+            this.addListener(this.root, 'mousemove', stopPropagationOnTrackMix as EventListener);
+            this.addListener(this.root, 'mouseup', stopPropagationOnTrackMix as EventListener);
         }
 
         if (this.features.presets && this.controller.presetCount >= 2) {

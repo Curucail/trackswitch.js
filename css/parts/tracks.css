@@ -21,7 +21,8 @@
 }
 
 .trackswitch li.track.tabs {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
     padding-right: 12px;
     border: 1px solid #999;
 }
@@ -188,4 +189,88 @@
     opacity: 0.35;
     cursor: default;
     pointer-events: none;
+}
+
+.trackswitch li.track .track-title {
+    line-height: 1.2;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.trackswitch li.track .track-mix-controls {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 14px;
+    padding-left: 14px;
+}
+
+.trackswitch li.track .track-volume-control,
+.trackswitch li.track .track-pan-control {
+    display: flex;
+    align-items: center;
+}
+
+.trackswitch li.track .track-volume-icon {
+    font-family: FontAwesome;
+    font-style: normal;
+    font-size: 16px;
+    color: #777777;
+    margin-right: 8px;
+    width: 16px;
+    display: inline-block;
+    text-align: left;
+}
+
+.trackswitch li.track .track-pan-label {
+    color: #777777;
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    margin-right: 8px;
+    min-width: 24px;
+}
+
+.trackswitch li.track .mix-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 80px;
+    height: 4px;
+    background: #A9A9A9;
+    outline: none;
+    cursor: pointer;
+}
+
+.trackswitch li.track .mix-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    background: #ED8C01;
+    cursor: pointer;
+    border-radius: 50%;
+}
+
+.trackswitch li.track .mix-slider::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    background: #ED8C01;
+    cursor: pointer;
+    border-radius: 50%;
+    border: none;
+}
+
+.trackswitch li.track .mix-slider:disabled {
+    cursor: default;
+    opacity: 0.45;
+}
+
+.trackswitch li.track .track-pan-control.disabled .track-pan-label,
+.trackswitch li.track .track-mix-controls.disabled .track-volume-icon {
+    opacity: 0.45;
 }
