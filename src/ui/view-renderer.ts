@@ -160,6 +160,11 @@ interface WarpingMatrixHostMetadata {
     tempoPlotHost: HTMLElement;
     tempoPlot: WarpingTempoPlotState | null;
     tempoDisabledOverlay: HTMLElement;
+    tempoControls: HTMLElement;
+    tempoWindowSlider: HTMLInputElement;
+    tempoWindowValueNode: HTMLElement;
+    tempoYScaleSlider: HTMLInputElement;
+    tempoYScaleValueNode: HTMLElement;
     matrixSeriesSignature: string | null;
     matrixDataCache: WarpingMatrixMatrixData | null;
     matrixDataCacheKey: string | null;
@@ -171,6 +176,8 @@ interface WarpingMatrixHostMetadata {
     configuredPathStrokeWidth: number | null;
     configuredLocalTempoWindowSeconds: number;
     configuredLocalTempoSlopeHalfWindowPoints: number;
+    tempoWindowSeconds: number;
+    tempoYHalfRangePercent: number;
     colorByColumn: Map<string, string>;
     activeColumnKey: string | null;
     referenceDuration: number;
@@ -187,8 +194,13 @@ const WARPING_MATRIX_PRIMARY_COLOR = '#ED8C01';
 const DEFAULT_WARPING_MATRIX_PATH_STROKE_WIDTH = 3;
 const DEFAULT_WARPING_MATRIX_LOCAL_TEMPO_WINDOW_SECONDS = 10;
 const DEFAULT_WARPING_MATRIX_LOCAL_TEMPO_SLOPE_HALF_WINDOW_POINTS = 5;
-const WARPING_MATRIX_FALLBACK_TEMPO_DOMAIN_MIN = 80;
-const WARPING_MATRIX_FALLBACK_TEMPO_DOMAIN_MAX = 120;
+const WARPING_MATRIX_TEMPO_WINDOW_MIN_SECONDS = 2;
+const WARPING_MATRIX_TEMPO_WINDOW_MAX_SECONDS = 30;
+const WARPING_MATRIX_TEMPO_WINDOW_STEP_SECONDS = 0.5;
+const WARPING_MATRIX_TEMPO_Y_RANGE_MIN_PERCENT = 5;
+const WARPING_MATRIX_TEMPO_Y_RANGE_MAX_PERCENT = 120;
+const WARPING_MATRIX_TEMPO_Y_RANGE_STEP_PERCENT = 1;
+const DEFAULT_WARPING_MATRIX_TEMPO_Y_HALF_RANGE_PERCENT = 20;
 
 function buildSeekWrap(leftPercent: number, rightPercent: number): string {
     return '<div class="seekwrap" style="left: ' + leftPercent + '%; right: ' + rightPercent + '%;">'
@@ -470,6 +482,30 @@ function parseWarpingMatrixLocalTempoSlopeHalfWindowPoints(value: string | null)
     return Math.max(1, Math.round(parsed));
 }
 
+function normalizeTempoWindowSeconds(value: number): number {
+    if (!Number.isFinite(value)) {
+        return DEFAULT_WARPING_MATRIX_LOCAL_TEMPO_WINDOW_SECONDS;
+    }
+
+    return clampTime(
+        Math.round(value / WARPING_MATRIX_TEMPO_WINDOW_STEP_SECONDS) * WARPING_MATRIX_TEMPO_WINDOW_STEP_SECONDS,
+        WARPING_MATRIX_TEMPO_WINDOW_MIN_SECONDS,
+        WARPING_MATRIX_TEMPO_WINDOW_MAX_SECONDS
+    );
+}
+
+function normalizeTempoYHalfRangePercent(value: number): number {
+    if (!Number.isFinite(value)) {
+        return DEFAULT_WARPING_MATRIX_TEMPO_Y_HALF_RANGE_PERCENT;
+    }
+
+    return clampTime(
+        Math.round(value / WARPING_MATRIX_TEMPO_Y_RANGE_STEP_PERCENT) * WARPING_MATRIX_TEMPO_Y_RANGE_STEP_PERCENT,
+        WARPING_MATRIX_TEMPO_Y_RANGE_MIN_PERCENT,
+        WARPING_MATRIX_TEMPO_Y_RANGE_MAX_PERCENT
+    );
+}
+
 function clampWaveformZoom(zoom: number, maximum: number): number {
     if (!Number.isFinite(zoom)) {
         return MIN_WAVEFORM_ZOOM;
@@ -492,6 +528,10 @@ export class ViewRenderer {
     private latestWaveformRenderInput: LatestWaveformRenderInput | null = null;
     private readonly onWarpingMatrixSeek?: (referenceTime: number) => void;
     private warpingClipPathCounter = 0;
+    private readonly warpingMatrixTempoControlState = new WeakMap<
+        HTMLElement,
+        { windowSeconds: number; yHalfRangePercent: number }
+    >();
 
     constructor(
         root: HTMLElement,
@@ -520,11 +560,27 @@ export class ViewRenderer {
     }
 
     private getWarpingMatrixLocalTempoWindowSeconds(host: WarpingMatrixHostMetadata): number {
-        return host.configuredLocalTempoWindowSeconds;
+        return normalizeTempoWindowSeconds(host.tempoWindowSeconds);
     }
 
     private getWarpingMatrixLocalTempoSlopeHalfWindowPoints(host: WarpingMatrixHostMetadata): number {
         return host.configuredLocalTempoSlopeHalfWindowPoints;
+    }
+
+    private getWarpingMatrixTempoYHalfRangePercent(host: WarpingMatrixHostMetadata): number {
+        return normalizeTempoYHalfRangePercent(host.tempoYHalfRangePercent);
+    }
+
+    private updateWarpingMatrixTempoControlLabels(host: WarpingMatrixHostMetadata): void {
+        host.tempoWindowValueNode.textContent = this.getWarpingMatrixLocalTempoWindowSeconds(host).toFixed(1) + 's';
+        host.tempoYScaleValueNode.textContent = '±' + Math.round(this.getWarpingMatrixTempoYHalfRangePercent(host)) + '%';
+    }
+
+    private persistWarpingMatrixTempoControls(host: WarpingMatrixHostMetadata): void {
+        this.warpingMatrixTempoControlState.set(host.host, {
+            windowSeconds: this.getWarpingMatrixLocalTempoWindowSeconds(host),
+            yHalfRangePercent: this.getWarpingMatrixTempoYHalfRangePercent(host),
+        });
     }
 
     private getWarpingMatrixSquarePlotSize(plot: WarpingMatrixPlotState): number {
@@ -1082,10 +1138,61 @@ export class ViewRenderer {
             tempoPlotHost.className = 'warping-plot-host warping-plot-host-tempo';
             tempoPanel.appendChild(tempoPlotHost);
 
+            const tempoControls = document.createElement('div');
+            tempoControls.className = 'warping-tempo-controls';
+
+            const windowControl = document.createElement('label');
+            windowControl.className = 'warping-tempo-control';
+            const windowLabel = document.createElement('span');
+            windowLabel.className = 'warping-tempo-control-label';
+            windowLabel.textContent = 'Window (s)';
+            const tempoWindowSlider = document.createElement('input');
+            tempoWindowSlider.className = 'warping-tempo-slider';
+            tempoWindowSlider.type = 'range';
+            tempoWindowSlider.min = String(WARPING_MATRIX_TEMPO_WINDOW_MIN_SECONDS);
+            tempoWindowSlider.max = String(WARPING_MATRIX_TEMPO_WINDOW_MAX_SECONDS);
+            tempoWindowSlider.step = String(WARPING_MATRIX_TEMPO_WINDOW_STEP_SECONDS);
+            const tempoWindowValueNode = document.createElement('span');
+            tempoWindowValueNode.className = 'warping-tempo-value';
+            windowControl.appendChild(windowLabel);
+            windowControl.appendChild(tempoWindowSlider);
+            windowControl.appendChild(tempoWindowValueNode);
+
+            const yScaleControl = document.createElement('label');
+            yScaleControl.className = 'warping-tempo-control';
+            const yScaleLabel = document.createElement('span');
+            yScaleLabel.className = 'warping-tempo-control-label';
+            yScaleLabel.textContent = 'Y scale (±%)';
+            const tempoYScaleSlider = document.createElement('input');
+            tempoYScaleSlider.className = 'warping-tempo-slider';
+            tempoYScaleSlider.type = 'range';
+            tempoYScaleSlider.min = String(WARPING_MATRIX_TEMPO_Y_RANGE_MIN_PERCENT);
+            tempoYScaleSlider.max = String(WARPING_MATRIX_TEMPO_Y_RANGE_MAX_PERCENT);
+            tempoYScaleSlider.step = String(WARPING_MATRIX_TEMPO_Y_RANGE_STEP_PERCENT);
+            const tempoYScaleValueNode = document.createElement('span');
+            tempoYScaleValueNode.className = 'warping-tempo-value';
+            yScaleControl.appendChild(yScaleLabel);
+            yScaleControl.appendChild(tempoYScaleSlider);
+            yScaleControl.appendChild(tempoYScaleValueNode);
+
+            tempoControls.appendChild(windowControl);
+            tempoControls.appendChild(yScaleControl);
+            tempoPanel.appendChild(tempoControls);
+
             const tempoDisabledOverlay = document.createElement('div');
             tempoDisabledOverlay.className = 'warping-matrix-disabled-overlay';
             tempoDisabledOverlay.textContent = 'SYNC mode';
             tempoPanel.appendChild(tempoDisabledOverlay);
+
+            const persistedTempoControls = this.warpingMatrixTempoControlState.get(hostElement);
+            const initialTempoWindowSeconds = normalizeTempoWindowSeconds(
+                persistedTempoControls ? persistedTempoControls.windowSeconds : configuredLocalTempoWindowSeconds
+            );
+            const initialTempoYHalfRangePercent = normalizeTempoYHalfRangePercent(
+                persistedTempoControls ? persistedTempoControls.yHalfRangePercent : DEFAULT_WARPING_MATRIX_TEMPO_Y_HALF_RANGE_PERCENT
+            );
+            tempoWindowSlider.value = String(initialTempoWindowSeconds);
+            tempoYScaleSlider.value = String(initialTempoYHalfRangePercent);
 
             const metadata: WarpingMatrixHostMetadata = {
                 wrapper: wrapper,
@@ -1098,6 +1205,11 @@ export class ViewRenderer {
                 tempoPlotHost: tempoPlotHost,
                 tempoPlot: null,
                 tempoDisabledOverlay: tempoDisabledOverlay,
+                tempoControls: tempoControls,
+                tempoWindowSlider: tempoWindowSlider,
+                tempoWindowValueNode: tempoWindowValueNode,
+                tempoYScaleSlider: tempoYScaleSlider,
+                tempoYScaleValueNode: tempoYScaleValueNode,
                 matrixSeriesSignature: null,
                 matrixDataCache: null,
                 matrixDataCacheKey: null,
@@ -1109,6 +1221,8 @@ export class ViewRenderer {
                 configuredPathStrokeWidth: configuredPathStrokeWidth,
                 configuredLocalTempoWindowSeconds: configuredLocalTempoWindowSeconds,
                 configuredLocalTempoSlopeHalfWindowPoints: configuredLocalTempoSlopeHalfWindowPoints,
+                tempoWindowSeconds: initialTempoWindowSeconds,
+                tempoYHalfRangePercent: initialTempoYHalfRangePercent,
                 colorByColumn: new Map<string, string>(),
                 activeColumnKey: null,
                 referenceDuration: 0,
@@ -1117,6 +1231,31 @@ export class ViewRenderer {
                 matrixActivePointerId: null,
                 lastSizeKey: null,
             };
+            this.updateWarpingMatrixTempoControlLabels(metadata);
+            this.persistWarpingMatrixTempoControls(metadata);
+
+            const stopTempoControlPropagation = (event: Event) => {
+                event.stopPropagation();
+            };
+            const tempoControlEvents: Array<keyof HTMLElementEventMap> = ['pointerdown', 'mousedown', 'touchstart', 'wheel'];
+            tempoControlEvents.forEach((eventName) => {
+                tempoControls.addEventListener(eventName, stopTempoControlPropagation as EventListener, { passive: false });
+            });
+
+            tempoWindowSlider.addEventListener('input', () => {
+                metadata.tempoWindowSeconds = normalizeTempoWindowSeconds(Number(tempoWindowSlider.value));
+                tempoWindowSlider.value = String(metadata.tempoWindowSeconds);
+                this.updateWarpingMatrixTempoControlLabels(metadata);
+                this.persistWarpingMatrixTempoControls(metadata);
+                this.renderWarpingMatrixTempoPlot(metadata);
+            });
+            tempoYScaleSlider.addEventListener('input', () => {
+                metadata.tempoYHalfRangePercent = normalizeTempoYHalfRangePercent(Number(tempoYScaleSlider.value));
+                tempoYScaleSlider.value = String(metadata.tempoYHalfRangePercent);
+                this.updateWarpingMatrixTempoControlLabels(metadata);
+                this.persistWarpingMatrixTempoControls(metadata);
+                this.renderWarpingMatrixTempoPlot(metadata);
+            });
 
             matrixPlotHost.addEventListener('pointerdown', (event) => {
                 this.onWarpingMatrixPointerDown(metadata, event);
@@ -1133,6 +1272,9 @@ export class ViewRenderer {
             tempoPlotHost.addEventListener('pointerdown', (event) => {
                 this.onWarpingTempoPointerDown(metadata, event);
             });
+            tempoPlotHost.addEventListener('wheel', (event) => {
+                this.onWarpingTempoWheel(metadata, event);
+            }, { passive: false });
 
             this.warpingMatrixHosts.push(metadata);
         });
@@ -1484,6 +1626,32 @@ export class ViewRenderer {
         event.preventDefault();
     }
 
+    private onWarpingTempoWheel(host: WarpingMatrixHostMetadata, event: WheelEvent): void {
+        if (host.matrixDisabled) {
+            return;
+        }
+
+        if (!Number.isFinite(event.deltaY) || event.deltaY === 0) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const currentWindow = this.getWarpingMatrixLocalTempoWindowSeconds(host);
+        const zoomFactor = Math.exp(event.deltaY * 0.002);
+        const nextWindow = normalizeTempoWindowSeconds(currentWindow * zoomFactor);
+        if (Math.abs(nextWindow - currentWindow) < 0.0001) {
+            return;
+        }
+
+        host.tempoWindowSeconds = nextWindow;
+        host.tempoWindowSlider.value = String(nextWindow);
+        this.updateWarpingMatrixTempoControlLabels(host);
+        this.persistWarpingMatrixTempoControls(host);
+        this.renderWarpingMatrixTempoPlot(host);
+    }
+
     private seekWarpingMatrixFromTempoPointerX(host: WarpingMatrixHostMetadata, clientX: number): void {
         if (!this.onWarpingMatrixSeek || !host.tempoPlot) {
             return;
@@ -1539,6 +1707,18 @@ export class ViewRenderer {
         host.host.classList.toggle('warping-matrix-sync-disabled', host.matrixDisabled);
         host.matrixDisabledOverlay.style.display = host.matrixDisabled ? 'flex' : 'none';
         host.tempoDisabledOverlay.style.display = host.matrixDisabled ? 'flex' : 'none';
+        host.tempoWindowSeconds = normalizeTempoWindowSeconds(host.tempoWindowSeconds);
+        host.tempoYHalfRangePercent = normalizeTempoYHalfRangePercent(host.tempoYHalfRangePercent);
+        if (host.tempoWindowSlider.value !== String(host.tempoWindowSeconds)) {
+            host.tempoWindowSlider.value = String(host.tempoWindowSeconds);
+        }
+        if (host.tempoYScaleSlider.value !== String(host.tempoYHalfRangePercent)) {
+            host.tempoYScaleSlider.value = String(host.tempoYHalfRangePercent);
+        }
+        host.tempoWindowSlider.disabled = host.matrixDisabled;
+        host.tempoYScaleSlider.disabled = host.matrixDisabled;
+        this.updateWarpingMatrixTempoControlLabels(host);
+        this.persistWarpingMatrixTempoControls(host);
 
         const renderedHeight = host.configuredHeight ?? Math.max(180, host.matrixPanel.clientHeight || 220);
         const fallbackHostWidth = Math.max(460, Math.round(host.host.clientWidth || host.wrapper.clientWidth || 720));
@@ -1575,7 +1755,17 @@ export class ViewRenderer {
         host.matrixPanel.style.height = renderedHeight + 'px';
         host.tempoPanel.style.height = renderedHeight + 'px';
 
-        const sizeKey = [matrixRenderedWidth, tempoRenderedWidth, renderedHeight].join(':');
+        const measuredMatrixPlotWidth = Math.max(1, Math.round(host.matrixPlotHost.clientWidth || matrixRenderedWidth));
+        const measuredMatrixPlotHeight = Math.max(1, Math.round(host.matrixPlotHost.clientHeight || renderedHeight));
+        const measuredTempoPlotWidth = Math.max(1, Math.round(host.tempoPlotHost.clientWidth || tempoRenderedWidth));
+        const measuredTempoPlotHeight = Math.max(1, Math.round(host.tempoPlotHost.clientHeight || renderedHeight));
+
+        const sizeKey = [
+            measuredMatrixPlotWidth,
+            measuredMatrixPlotHeight,
+            measuredTempoPlotWidth,
+            measuredTempoPlotHeight,
+        ].join(':');
         const sizeChanged = host.lastSizeKey !== sizeKey;
         host.lastSizeKey = sizeKey;
 
@@ -1617,17 +1807,24 @@ export class ViewRenderer {
             ].join(':');
         }).join('|') + '#' + pathStrokeWidth;
 
-        if (!host.matrixPlot || !host.tempoPlot || sizeChanged) {
+        if (!host.matrixPlot) {
             host.matrixPlot = this.createWarpingMatrixPlotState(
                 host.matrixPlotHost,
-                matrixRenderedWidth,
-                renderedHeight
+                measuredMatrixPlotWidth,
+                measuredMatrixPlotHeight
             );
+        } else if (sizeChanged) {
+            this.applyWarpingMatrixPlotDimensions(host.matrixPlot, measuredMatrixPlotWidth, measuredMatrixPlotHeight);
+        }
+
+        if (!host.tempoPlot) {
             host.tempoPlot = this.createWarpingTempoPlotState(
                 host.tempoPlotHost,
-                tempoRenderedWidth,
-                renderedHeight
+                measuredTempoPlotWidth,
+                measuredTempoPlotHeight
             );
+        } else if (sizeChanged) {
+            this.applyWarpingTempoPlotDimensions(host.tempoPlot, measuredTempoPlotWidth, measuredTempoPlotHeight);
         }
         host.matrixSeriesSignature = matrixSeriesSignature;
 
@@ -1764,21 +1961,19 @@ export class ViewRenderer {
         const trackDuration = primarySeriesData ? Math.max(0.001, primarySeriesData.trackDuration) : 0.001;
         const windowSeconds = this.getWarpingMatrixLocalTempoWindowSeconds(host);
         const xDomain = this.resolveCenteredWarpingWindow(host.currentTrackTime, windowSeconds, trackDuration);
+        const tempoYHalfRangePercent = this.getWarpingMatrixTempoYHalfRangePercent(host);
 
         tempoPlot.xScale
             .domain(xDomain)
             .range([0, tempoPlot.innerWidth]);
 
-        const visibleTempo = tempoSeries.filter((point) => {
-            return point.trackTime >= xDomain[0] && point.trackTime <= xDomain[1] && Number.isFinite(point.tempoPercent);
-        }).map((point) => point.tempoPercent);
-        const yDomain = this.resolveTempoPlotDomain(visibleTempo);
+        const yDomain: [number, number] = [100 - tempoYHalfRangePercent, 100 + tempoYHalfRangePercent];
         tempoPlot.yScale
             .domain(yDomain)
             .range([tempoPlot.innerHeight, 0]);
 
         const xTickCount = Math.max(2, Math.round(tempoPlot.innerWidth / 90));
-        const yTickCount = Math.max(2, Math.round(tempoPlot.innerHeight / 60));
+        const yTickCount = Math.max(5, Math.round(tempoPlot.innerHeight / 35));
         tempoPlot.xAxis.call(d3.axisBottom(tempoPlot.xScale).ticks(xTickCount));
         tempoPlot.yAxis.call(d3.axisLeft(tempoPlot.yScale).ticks(yTickCount));
 
@@ -1823,26 +2018,6 @@ export class ViewRenderer {
         const safeCenter = Number.isFinite(center) ? center : 0;
         const halfWindow = Math.max(0.0005, windowSeconds / 2);
         return [safeCenter - halfWindow, safeCenter + halfWindow];
-    }
-
-    private resolveTempoPlotDomain(visibleTempoValues: number[]): [number, number] {
-        const finiteValues = visibleTempoValues.filter((value) => Number.isFinite(value));
-        if (finiteValues.length === 0) {
-            return [WARPING_MATRIX_FALLBACK_TEMPO_DOMAIN_MIN, WARPING_MATRIX_FALLBACK_TEMPO_DOMAIN_MAX];
-        }
-
-        const maxDeviation = finiteValues.reduce((currentMax, value) => {
-            const deviation = Math.abs(value - 100);
-            return deviation > currentMax ? deviation : currentMax;
-        }, 0);
-        if (!Number.isFinite(maxDeviation)) {
-            return [WARPING_MATRIX_FALLBACK_TEMPO_DOMAIN_MIN, WARPING_MATRIX_FALLBACK_TEMPO_DOMAIN_MAX];
-        }
-
-        const spread = Math.max(5, maxDeviation);
-        const padding = Math.max(2, spread * 0.1);
-        const halfRange = spread + padding;
-        return [100 - halfRange, 100 + halfRange];
     }
 
     private buildWarpingMatrixData(

@@ -170,7 +170,17 @@
         height: 16px;
     }
 
+    .trackswitch .warping-tempo-slider::-webkit-slider-thumb {
+        width: 16px;
+        height: 16px;
+    }
+
     .trackswitch .main-control .volume-slider::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+    }
+
+    .trackswitch .warping-tempo-slider::-moz-range-thumb {
         width: 16px;
         height: 16px;
     }
