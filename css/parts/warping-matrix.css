@@ -8,8 +8,24 @@
 .trackswitch .warping-matrix-host {
     width: 100%;
     min-height: 180px;
-    height: 220px;
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+}
+
+.trackswitch .warping-matrix-panel {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 180px;
     background-color: #EEEEEE;
+}
+
+.trackswitch .warping-matrix-host.warping-matrix-tempo-hidden .warping-matrix-panel-tempo {
+    display: none;
+}
+
+.trackswitch .warping-matrix-host.warping-matrix-tempo-hidden .warping-matrix-panel-main {
+    flex: 1 1 auto;
 }
 
 .trackswitch .warping-matrix-svg {
@@ -19,6 +35,11 @@
 }
 
 .trackswitch .warping-matrix-axis-line {
+    stroke: #666;
+    stroke-width: 1;
+}
+
+.trackswitch .warping-tempo-axis-line {
     stroke: #666;
     stroke-width: 1;
 }
@@ -55,5 +76,29 @@
 .trackswitch .warping-matrix-indicator {
     stroke: #FFFFFF;
     stroke-width: 1;
+    pointer-events: none;
+}
+
+.trackswitch .warping-tempo-zero-line {
+    stroke: #888888;
+    stroke-width: 1.5;
+    stroke-dasharray: 6 4;
+    fill: none;
+    pointer-events: none;
+}
+
+.trackswitch .warping-tempo-playhead-line {
+    stroke: #777777;
+    stroke-width: 1.5;
+    stroke-dasharray: 5 5;
+    fill: none;
+    pointer-events: none;
+}
+
+.trackswitch .warping-tempo-path {
+    fill: none;
+    stroke-width: 1.5;
+    stroke-opacity: 0.9;
+    vector-effect: non-scaling-stroke;
     pointer-events: none;
 }

@@ -2142,6 +2142,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         if (!this.alignmentContext) {
             return {
                 enabled: true,
+                syncEnabled: this.globalSyncEnabled,
                 referenceDuration: this.longestDuration,
                 currentReferenceTime: this.state.position,
                 columnOrder: [],
@@ -2199,6 +2200,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
         return {
             enabled: true,
+            syncEnabled: this.globalSyncEnabled,
             referenceDuration: this.longestDuration,
             currentReferenceTime: this.state.position,
             columnOrder: this.alignmentContext.uniqueColumnOrder,

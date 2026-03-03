@@ -82,6 +82,8 @@ document.addEventListener('DOMContentLoaded', function () {
         type: 'warping_matrix',
         height: 240,
         pathStrokeWidth: 2,
+        localTempoWindowSeconds: 10,
+        localTempoInterpolation: 'step', // 'step' | 'linear'
       },
     ],
     features: {
@@ -155,8 +157,9 @@ Alignment mode behavior:
 - `alignment`: clicking a rendered sheet-music measure seeks playback to that measure start on the reference timeline (resolved from `measureCsv`)
 - `alignment`: `sheetmusic` supports optional `maxWidth` (container max-width px), `renderScale` (OSMD zoom), and `maxHeight` (px) for internal score scrolling
 - `alignment`: `sheetmusic` supports optional `followPlayback` (default `true`) to auto-scroll vertically and keep the current highlighted measure in view
-- `alignment`: optional `warping_matrix` UI entries render per-track warping paths from alignment CSV pairs with reference time on the bottom x-axis and track time on the y-axis
-- `alignment`: `warping_matrix` overlays currently selected tracks, updates a moving current-reference indicator, and supports click-to-seek by snapping to the nearest path point
+- `alignment`: optional `warping_matrix` UI entries render two linked panels: the original warping-path graph plus a local-tempo-deviation graph (`100 * (d(track)/d(reference) - 1)`)
+- `alignment`: the tempo panel shows a gray dashed `y = 0` reference line plus a fixed dashed vertical playhead guide at panel center; its x-axis is active-track time and it uses a centered moving track-time window (`localTempoWindowSeconds`, default `10`)
+- `alignment`: the tempo panel renders a single active-track curve (`localTempoInterpolation: 'step' | 'linear'`, default `'step'`), supports click-to-seek, and is hidden while global `SYNC` is enabled
 - Waveform zoom is configured per waveform via `maxZoom`; wheel/pinch zoom is enabled only when `maxZoom > 1` (or `> '100%'`)
 
 Legacy note:

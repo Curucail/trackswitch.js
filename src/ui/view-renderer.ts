@@ -35,6 +35,7 @@ export interface WarpingMatrixTrackSeries {
 
 export interface WarpingMatrixRenderContext {
     enabled: boolean;
+    syncEnabled: boolean;
     referenceDuration: number;
     currentReferenceTime: number;
     columnOrder: string[];
@@ -75,28 +76,58 @@ interface WarpingMatrixProjectedPoint {
     y: number;
 }
 
+interface WarpingMatrixTempoProfile {
+    referenceTimes: number[];
+    trackTimes: number[];
+    segmentDeviations: number[];
+    knotDeviations: number[];
+    maxAbsDeviation: number;
+}
+
 interface WarpingMatrixHostMetadata {
     wrapper: HTMLElement;
     host: HTMLElement;
-    svg: SVGSVGElement;
-    axisLayer: SVGGElement;
-    titleLabel: SVGTextElement;
-    referenceLayer: SVGGElement;
-    pathLayer: SVGGElement;
-    indicatorLayer: SVGGElement;
-    xAxisLabel: SVGTextElement;
-    yAxisLabel: SVGTextElement;
+    matrixPanel: HTMLElement;
+    matrixSvg: SVGSVGElement;
+    matrixAxisLayer: SVGGElement;
+    matrixTitleLabel: SVGTextElement;
+    matrixReferenceLayer: SVGGElement;
+    matrixPathLayer: SVGGElement;
+    matrixIndicatorLayer: SVGGElement;
+    matrixXAxisLabel: SVGTextElement;
+    matrixYAxisLabel: SVGTextElement;
+    tempoPanel: HTMLElement;
+    tempoSvg: SVGSVGElement;
+    tempoAxisLayer: SVGGElement;
+    tempoTitleLabel: SVGTextElement;
+    tempoReferenceLayer: SVGGElement;
+    tempoPathLayer: SVGGElement;
+    tempoXAxisLabel: SVGTextElement;
+    tempoYAxisLabel: SVGTextElement;
     configuredHeight: number | null;
     configuredPathStrokeWidth: number | null;
-    projectedByColumn: Map<string, WarpingMatrixProjectedPoint[]>;
-    indicatorByColumn: Map<string, SVGCircleElement>;
+    configuredLocalTempoWindowSeconds: number | null;
+    configuredLocalTempoInterpolation: 'step' | 'linear' | null;
+    matrixProjectedByColumn: Map<string, WarpingMatrixProjectedPoint[]>;
+    matrixIndicatorByColumn: Map<string, SVGCircleElement>;
+    tempoProfileByColumn: Map<string, WarpingMatrixTempoProfile>;
+    tempoPathByColumn: Map<string, SVGPathElement>;
     colorByColumn: Map<string, string>;
-    plotLeft: number;
-    plotRight: number;
-    plotTop: number;
-    plotBottom: number;
+    matrixPlotLeft: number;
+    matrixPlotRight: number;
+    matrixPlotTop: number;
+    matrixPlotBottom: number;
+    tempoPlotLeft: number;
+    tempoPlotRight: number;
+    tempoPlotTop: number;
+    tempoPlotBottom: number;
+    tempoWindowStart: number;
+    tempoWindowEnd: number;
+    tempoMaxAbsDeviation: number;
+    tempoActiveSeriesPoints: WarpingMatrixDataPoint[];
+    tempoActiveTrackDuration: number;
     referenceDuration: number;
-    activePointerId: number | null;
+    matrixActivePointerId: number | null;
     lastGeometryKey: string | null;
 }
 
@@ -118,6 +149,8 @@ const WARPING_MATRIX_FIXED_COLORS = [
 ];
 const WARPING_MATRIX_OVERFLOW_COLOR = '#555555';
 const DEFAULT_WARPING_MATRIX_PATH_STROKE_WIDTH = 3;
+const DEFAULT_WARPING_MATRIX_LOCAL_TEMPO_WINDOW_SECONDS = 10;
+const DEFAULT_WARPING_MATRIX_LOCAL_TEMPO_INTERPOLATION: 'step' | 'linear' = 'step';
 
 function buildSeekWrap(leftPercent: number, rightPercent: number): string {
     return '<div class="seekwrap" style="left: ' + leftPercent + '%; right: ' + rightPercent + '%;">'
@@ -355,6 +388,36 @@ function parseWarpingMatrixPathStrokeWidth(value: string | null): number | null 
     return Math.max(0.5, parsed);
 }
 
+function parseWarpingMatrixLocalTempoWindowSeconds(value: string | null): number | null {
+    if (value === null) {
+        return null;
+    }
+
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+        return null;
+    }
+
+    return Math.max(0.1, parsed);
+}
+
+function parseWarpingMatrixLocalTempoInterpolation(value: string | null): 'step' | 'linear' | null {
+    if (value === null) {
+        return null;
+    }
+
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'linear') {
+        return 'linear';
+    }
+
+    if (normalized === 'step') {
+        return 'step';
+    }
+
+    return null;
+}
+
 function clampWaveformZoom(zoom: number, maximum: number): number {
     if (!Number.isFinite(zoom)) {
         return MIN_WAVEFORM_ZOOM;
@@ -411,6 +474,14 @@ export class ViewRenderer {
 
     private getWarpingMatrixPathStrokeWidth(host: WarpingMatrixHostMetadata): number {
         return host.configuredPathStrokeWidth ?? DEFAULT_WARPING_MATRIX_PATH_STROKE_WIDTH;
+    }
+
+    private getWarpingMatrixLocalTempoWindowSeconds(host: WarpingMatrixHostMetadata): number {
+        return host.configuredLocalTempoWindowSeconds ?? DEFAULT_WARPING_MATRIX_LOCAL_TEMPO_WINDOW_SECONDS;
+    }
+
+    private getWarpingMatrixLocalTempoInterpolation(host: WarpingMatrixHostMetadata): 'step' | 'linear' {
+        return host.configuredLocalTempoInterpolation ?? DEFAULT_WARPING_MATRIX_LOCAL_TEMPO_INTERPOLATION;
     }
 
     private getWarpingMatrixIndicatorRadius(host: WarpingMatrixHostMetadata): number {
@@ -907,86 +978,154 @@ export class ViewRenderer {
             const configuredPathStrokeWidth = parseWarpingMatrixPathStrokeWidth(
                 hostElement.getAttribute('data-warping-matrix-path-stroke-width')
             );
-            if (configuredHeight !== null) {
-                hostElement.style.height = configuredHeight + 'px';
-            }
+            const configuredLocalTempoWindowSeconds = parseWarpingMatrixLocalTempoWindowSeconds(
+                hostElement.getAttribute('data-warping-matrix-local-tempo-window-seconds')
+            );
+            const configuredLocalTempoInterpolation = parseWarpingMatrixLocalTempoInterpolation(
+                hostElement.getAttribute('data-warping-matrix-local-tempo-interpolation')
+            );
+            hostElement.style.removeProperty('height');
 
             hostElement.classList.add('warping-matrix-host');
             hostElement.textContent = '';
 
-            const svg = document.createElementNS(SVG_NS, 'svg');
-            svg.classList.add('warping-matrix-svg');
-            svg.setAttribute('preserveAspectRatio', 'none');
+            const matrixPanel = document.createElement('div');
+            matrixPanel.className = 'warping-matrix-panel warping-matrix-panel-main';
+            hostElement.appendChild(matrixPanel);
 
-            const axisLayer = document.createElementNS(SVG_NS, 'g');
-            axisLayer.setAttribute('class', 'warping-matrix-axes');
-            svg.appendChild(axisLayer);
+            const tempoPanel = document.createElement('div');
+            tempoPanel.className = 'warping-matrix-panel warping-matrix-panel-tempo';
+            hostElement.appendChild(tempoPanel);
 
-            const titleLabel = document.createElementNS(SVG_NS, 'text');
-            titleLabel.setAttribute('class', 'warping-matrix-title');
-            titleLabel.textContent = 'Local Tempo Deviations';
-            axisLayer.appendChild(titleLabel);
+            const matrixSvg = document.createElementNS(SVG_NS, 'svg');
+            matrixSvg.classList.add('warping-matrix-svg', 'warping-matrix-main-svg');
+            matrixSvg.setAttribute('preserveAspectRatio', 'none');
+            matrixPanel.appendChild(matrixSvg);
 
-            const referenceLayer = document.createElementNS(SVG_NS, 'g');
-            referenceLayer.setAttribute('class', 'warping-matrix-reference-layer');
-            svg.appendChild(referenceLayer);
+            const matrixAxisLayer = document.createElementNS(SVG_NS, 'g');
+            matrixAxisLayer.setAttribute('class', 'warping-matrix-axes');
+            matrixSvg.appendChild(matrixAxisLayer);
 
-            const pathLayer = document.createElementNS(SVG_NS, 'g');
-            pathLayer.setAttribute('class', 'warping-matrix-paths');
-            svg.appendChild(pathLayer);
+            const matrixTitleLabel = document.createElementNS(SVG_NS, 'text');
+            matrixTitleLabel.setAttribute('class', 'warping-matrix-title');
+            matrixTitleLabel.textContent = 'Warping Path';
+            matrixAxisLayer.appendChild(matrixTitleLabel);
 
-            const indicatorLayer = document.createElementNS(SVG_NS, 'g');
-            indicatorLayer.setAttribute('class', 'warping-matrix-indicators');
-            svg.appendChild(indicatorLayer);
+            const matrixReferenceLayer = document.createElementNS(SVG_NS, 'g');
+            matrixReferenceLayer.setAttribute('class', 'warping-matrix-reference-layer');
+            matrixSvg.appendChild(matrixReferenceLayer);
 
-            const xAxisLabel = document.createElementNS(SVG_NS, 'text');
-            xAxisLabel.setAttribute('class', 'warping-matrix-axis-label x-axis');
-            xAxisLabel.textContent = 'Reference time';
-            axisLayer.appendChild(xAxisLabel);
+            const matrixPathLayer = document.createElementNS(SVG_NS, 'g');
+            matrixPathLayer.setAttribute('class', 'warping-matrix-paths');
+            matrixSvg.appendChild(matrixPathLayer);
 
-            const yAxisLabel = document.createElementNS(SVG_NS, 'text');
-            yAxisLabel.setAttribute('class', 'warping-matrix-axis-label y-axis');
-            yAxisLabel.textContent = 'Track time';
-            axisLayer.appendChild(yAxisLabel);
+            const matrixIndicatorLayer = document.createElementNS(SVG_NS, 'g');
+            matrixIndicatorLayer.setAttribute('class', 'warping-matrix-indicators');
+            matrixSvg.appendChild(matrixIndicatorLayer);
 
-            hostElement.appendChild(svg);
+            const matrixXAxisLabel = document.createElementNS(SVG_NS, 'text');
+            matrixXAxisLabel.setAttribute('class', 'warping-matrix-axis-label x-axis');
+            matrixXAxisLabel.textContent = 'Reference time';
+            matrixAxisLayer.appendChild(matrixXAxisLabel);
+
+            const matrixYAxisLabel = document.createElementNS(SVG_NS, 'text');
+            matrixYAxisLabel.setAttribute('class', 'warping-matrix-axis-label y-axis');
+            matrixYAxisLabel.textContent = 'Track time';
+            matrixAxisLayer.appendChild(matrixYAxisLabel);
+
+            const tempoSvg = document.createElementNS(SVG_NS, 'svg');
+            tempoSvg.classList.add('warping-matrix-svg', 'warping-tempo-svg');
+            tempoSvg.setAttribute('preserveAspectRatio', 'none');
+            tempoPanel.appendChild(tempoSvg);
+
+            const tempoAxisLayer = document.createElementNS(SVG_NS, 'g');
+            tempoAxisLayer.setAttribute('class', 'warping-tempo-axes');
+            tempoSvg.appendChild(tempoAxisLayer);
+
+            const tempoTitleLabel = document.createElementNS(SVG_NS, 'text');
+            tempoTitleLabel.setAttribute('class', 'warping-matrix-title');
+            tempoTitleLabel.textContent = 'Local Tempo Deviation';
+            tempoAxisLayer.appendChild(tempoTitleLabel);
+
+            const tempoReferenceLayer = document.createElementNS(SVG_NS, 'g');
+            tempoReferenceLayer.setAttribute('class', 'warping-tempo-reference-layer');
+            tempoSvg.appendChild(tempoReferenceLayer);
+
+            const tempoPathLayer = document.createElementNS(SVG_NS, 'g');
+            tempoPathLayer.setAttribute('class', 'warping-tempo-paths');
+            tempoSvg.appendChild(tempoPathLayer);
+
+            const tempoXAxisLabel = document.createElementNS(SVG_NS, 'text');
+            tempoXAxisLabel.setAttribute('class', 'warping-matrix-axis-label x-axis');
+            tempoXAxisLabel.textContent = 'Track time';
+            tempoAxisLayer.appendChild(tempoXAxisLabel);
+
+            const tempoYAxisLabel = document.createElementNS(SVG_NS, 'text');
+            tempoYAxisLabel.setAttribute('class', 'warping-matrix-axis-label y-axis');
+            tempoYAxisLabel.textContent = 'Local tempo deviation (%)';
+            tempoAxisLayer.appendChild(tempoYAxisLabel);
 
             const metadata: WarpingMatrixHostMetadata = {
                 wrapper: wrapper,
                 host: hostElement,
-                svg: svg,
-                axisLayer: axisLayer,
-                titleLabel: titleLabel,
-                referenceLayer: referenceLayer,
-                pathLayer: pathLayer,
-                indicatorLayer: indicatorLayer,
-                xAxisLabel: xAxisLabel,
-                yAxisLabel: yAxisLabel,
+                matrixPanel: matrixPanel,
+                matrixSvg: matrixSvg,
+                matrixAxisLayer: matrixAxisLayer,
+                matrixTitleLabel: matrixTitleLabel,
+                matrixReferenceLayer: matrixReferenceLayer,
+                matrixPathLayer: matrixPathLayer,
+                matrixIndicatorLayer: matrixIndicatorLayer,
+                matrixXAxisLabel: matrixXAxisLabel,
+                matrixYAxisLabel: matrixYAxisLabel,
+                tempoPanel: tempoPanel,
+                tempoSvg: tempoSvg,
+                tempoAxisLayer: tempoAxisLayer,
+                tempoTitleLabel: tempoTitleLabel,
+                tempoReferenceLayer: tempoReferenceLayer,
+                tempoPathLayer: tempoPathLayer,
+                tempoXAxisLabel: tempoXAxisLabel,
+                tempoYAxisLabel: tempoYAxisLabel,
                 configuredHeight: configuredHeight,
                 configuredPathStrokeWidth: configuredPathStrokeWidth,
-                projectedByColumn: new Map<string, WarpingMatrixProjectedPoint[]>(),
-                indicatorByColumn: new Map<string, SVGCircleElement>(),
+                configuredLocalTempoWindowSeconds: configuredLocalTempoWindowSeconds,
+                configuredLocalTempoInterpolation: configuredLocalTempoInterpolation,
+                matrixProjectedByColumn: new Map<string, WarpingMatrixProjectedPoint[]>(),
+                matrixIndicatorByColumn: new Map<string, SVGCircleElement>(),
+                tempoProfileByColumn: new Map<string, WarpingMatrixTempoProfile>(),
+                tempoPathByColumn: new Map<string, SVGPathElement>(),
                 colorByColumn: new Map<string, string>(),
-                plotLeft: 0,
-                plotRight: 0,
-                plotTop: 0,
-                plotBottom: 0,
+                matrixPlotLeft: 0,
+                matrixPlotRight: 0,
+                matrixPlotTop: 0,
+                matrixPlotBottom: 0,
+                tempoPlotLeft: 0,
+                tempoPlotRight: 0,
+                tempoPlotTop: 0,
+                tempoPlotBottom: 0,
+                tempoWindowStart: 0,
+                tempoWindowEnd: 0,
+                tempoMaxAbsDeviation: 1,
+                tempoActiveSeriesPoints: [],
+                tempoActiveTrackDuration: 0,
                 referenceDuration: 0,
-                activePointerId: null,
+                matrixActivePointerId: null,
                 lastGeometryKey: null,
             };
 
-            svg.addEventListener('pointerdown', (event) => {
+            matrixSvg.addEventListener('pointerdown', (event) => {
                 this.onWarpingMatrixPointerDown(metadata, event);
             });
-            svg.addEventListener('pointermove', (event) => {
+            matrixSvg.addEventListener('pointermove', (event) => {
                 this.onWarpingMatrixPointerMove(metadata, event);
             });
-            svg.addEventListener('pointerup', (event) => {
+            matrixSvg.addEventListener('pointerup', (event) => {
                 this.onWarpingMatrixPointerUp(metadata, event);
             });
-            svg.addEventListener('pointercancel', (event) => {
+            matrixSvg.addEventListener('pointercancel', (event) => {
                 this.onWarpingMatrixPointerUp(metadata, event);
+            });
+            tempoSvg.addEventListener('pointerdown', (event) => {
+                this.onWarpingTempoPointerDown(metadata, event);
             });
 
             this.warpingMatrixHosts.push(metadata);
@@ -1002,20 +1141,20 @@ export class ViewRenderer {
             return;
         }
 
-        const rect = host.svg.getBoundingClientRect();
+        const rect = host.matrixSvg.getBoundingClientRect();
         const pointerX = event.clientX - rect.left;
         const pointerY = event.clientY - rect.top;
         if (
-            pointerX < host.plotLeft
-            || pointerX > host.plotRight
-            || pointerY < host.plotTop
-            || pointerY > host.plotBottom
+            pointerX < host.matrixPlotLeft
+            || pointerX > host.matrixPlotRight
+            || pointerY < host.matrixPlotTop
+            || pointerY > host.matrixPlotBottom
         ) {
             return;
         }
 
-        host.activePointerId = event.pointerId;
-        host.svg.setPointerCapture(event.pointerId);
+        host.matrixActivePointerId = event.pointerId;
+        host.matrixSvg.setPointerCapture(event.pointerId);
         this.seekWarpingMatrixFromPointerX(host, event.clientX);
         event.preventDefault();
     }
@@ -1025,7 +1164,7 @@ export class ViewRenderer {
             return;
         }
 
-        if (host.activePointerId === null || host.activePointerId !== event.pointerId) {
+        if (host.matrixActivePointerId === null || host.matrixActivePointerId !== event.pointerId) {
             return;
         }
 
@@ -1034,15 +1173,40 @@ export class ViewRenderer {
     }
 
     private onWarpingMatrixPointerUp(host: WarpingMatrixHostMetadata, event: PointerEvent): void {
-        if (host.activePointerId === null || host.activePointerId !== event.pointerId) {
+        if (host.matrixActivePointerId === null || host.matrixActivePointerId !== event.pointerId) {
             return;
         }
 
         this.seekWarpingMatrixFromPointerX(host, event.clientX);
-        host.activePointerId = null;
-        if (host.svg.hasPointerCapture(event.pointerId)) {
-            host.svg.releasePointerCapture(event.pointerId);
+        host.matrixActivePointerId = null;
+        if (host.matrixSvg.hasPointerCapture(event.pointerId)) {
+            host.matrixSvg.releasePointerCapture(event.pointerId);
         }
+        event.preventDefault();
+    }
+
+    private onWarpingTempoPointerDown(host: WarpingMatrixHostMetadata, event: PointerEvent): void {
+        if (!this.onWarpingMatrixSeek) {
+            return;
+        }
+
+        if (event.button !== 0) {
+            return;
+        }
+
+        const rect = host.tempoSvg.getBoundingClientRect();
+        const pointerX = event.clientX - rect.left;
+        const pointerY = event.clientY - rect.top;
+        if (
+            pointerX < host.tempoPlotLeft
+            || pointerX > host.tempoPlotRight
+            || pointerY < host.tempoPlotTop
+            || pointerY > host.tempoPlotBottom
+        ) {
+            return;
+        }
+
+        this.seekWarpingTempoFromPointerX(host, event.clientX);
         event.preventDefault();
     }
 
@@ -1051,18 +1215,43 @@ export class ViewRenderer {
             return;
         }
 
-        const axisWidth = host.plotRight - host.plotLeft;
+        const axisWidth = host.matrixPlotRight - host.matrixPlotLeft;
         if (axisWidth <= 0 || host.referenceDuration <= 0) {
             this.onWarpingMatrixSeek(0);
             return;
         }
 
-        const rect = host.svg.getBoundingClientRect();
+        const rect = host.matrixSvg.getBoundingClientRect();
         const pointerX = clientX - rect.left;
-        const clampedX = clampTime(pointerX, host.plotLeft, host.plotRight);
-        const ratio = (clampedX - host.plotLeft) / axisWidth;
+        const clampedX = clampTime(pointerX, host.matrixPlotLeft, host.matrixPlotRight);
+        const ratio = (clampedX - host.matrixPlotLeft) / axisWidth;
         const referenceTime = ratio * host.referenceDuration;
         this.onWarpingMatrixSeek(referenceTime);
+    }
+
+    private seekWarpingTempoFromPointerX(host: WarpingMatrixHostMetadata, clientX: number): void {
+        if (!this.onWarpingMatrixSeek) {
+            return;
+        }
+
+        if (!Array.isArray(host.tempoActiveSeriesPoints) || host.tempoActiveSeriesPoints.length === 0) {
+            return;
+        }
+
+        const axisWidth = host.tempoPlotRight - host.tempoPlotLeft;
+        const visibleWindowDuration = host.tempoWindowEnd - host.tempoWindowStart;
+        if (axisWidth <= 0 || visibleWindowDuration <= 0) {
+            this.onWarpingMatrixSeek(0);
+            return;
+        }
+
+        const rect = host.tempoSvg.getBoundingClientRect();
+        const pointerX = clientX - rect.left;
+        const clampedX = clampTime(pointerX, host.tempoPlotLeft, host.tempoPlotRight);
+        const ratio = (clampedX - host.tempoPlotLeft) / axisWidth;
+        const trackTime = host.tempoWindowStart + (ratio * visibleWindowDuration);
+        const referenceTime = this.interpolateWarpingReferenceTime(host.tempoActiveSeriesPoints, trackTime);
+        this.onWarpingMatrixSeek(clampTime(referenceTime, 0, host.referenceDuration));
     }
 
     private updateWarpingMatrix(
@@ -1075,35 +1264,74 @@ export class ViewRenderer {
         }
 
         host.wrapper.style.display = 'block';
+        const tempoSeries = context.syncEnabled || context.trackSeries.length === 0
+            ? null
+            : context.trackSeries[0];
+        host.host.classList.toggle('warping-matrix-tempo-hidden', !tempoSeries);
 
         const renderedHeight = host.configuredHeight
-            ?? Math.max(180, host.host.clientHeight || 220);
-        const renderedWidth = Math.max(220, Math.round(host.host.clientWidth || host.wrapper.clientWidth || 720));
+            ?? Math.max(180, host.matrixPanel.clientHeight || 220);
+        const fallbackWidth = Math.max(220, Math.round(host.host.clientWidth || host.wrapper.clientWidth || 720));
+        const matrixRenderedWidth = Math.max(220, Math.round(host.matrixPanel.clientWidth || (fallbackWidth / 2)));
+        const tempoRenderedWidth = Math.max(220, Math.round(host.tempoPanel.clientWidth || (fallbackWidth / 2)));
+        host.matrixPanel.style.height = renderedHeight + 'px';
+        host.tempoPanel.style.height = renderedHeight + 'px';
 
-        host.svg.setAttribute('viewBox', '0 0 ' + renderedWidth + ' ' + renderedHeight);
-        host.svg.setAttribute('width', String(renderedWidth));
-        host.svg.setAttribute('height', String(renderedHeight));
+        host.matrixSvg.setAttribute('viewBox', '0 0 ' + matrixRenderedWidth + ' ' + renderedHeight);
+        host.matrixSvg.setAttribute('width', String(matrixRenderedWidth));
+        host.matrixSvg.setAttribute('height', String(renderedHeight));
+        host.tempoSvg.setAttribute('viewBox', '0 0 ' + tempoRenderedWidth + ' ' + renderedHeight);
+        host.tempoSvg.setAttribute('width', String(tempoRenderedWidth));
+        host.tempoSvg.setAttribute('height', String(renderedHeight));
 
-        const padding = {
+        const matrixPadding = {
             top: 34,
             right: 12,
             bottom: 28,
             left: 42,
         };
-        const availableInnerWidth = Math.max(1, renderedWidth - padding.left - padding.right);
-        const availableInnerHeight = Math.max(1, renderedHeight - padding.top - padding.bottom);
-        const axisLength = Math.max(1, Math.min(availableInnerWidth, availableInnerHeight));
-        const innerWidth = axisLength;
-        const innerHeight = axisLength;
-        const plotLeft = padding.left + ((availableInnerWidth - axisLength) / 2);
-        const plotTop = padding.top + ((availableInnerHeight - axisLength) / 2);
+        const matrixAvailableInnerWidth = Math.max(1, matrixRenderedWidth - matrixPadding.left - matrixPadding.right);
+        const matrixAvailableInnerHeight = Math.max(1, renderedHeight - matrixPadding.top - matrixPadding.bottom);
+        const matrixAxisLength = Math.max(1, Math.min(matrixAvailableInnerWidth, matrixAvailableInnerHeight));
+        const matrixInnerWidth = matrixAxisLength;
+        const matrixInnerHeight = matrixAxisLength;
+        const matrixPlotLeft = matrixPadding.left + ((matrixAvailableInnerWidth - matrixAxisLength) / 2);
+        const matrixPlotTop = matrixPadding.top + ((matrixAvailableInnerHeight - matrixAxisLength) / 2);
+
+        const tempoPadding = {
+            top: 34,
+            right: 12,
+            bottom: 28,
+            left: 52,
+        };
+        const tempoInnerWidth = Math.max(1, tempoRenderedWidth - tempoPadding.left - tempoPadding.right);
+        const tempoInnerHeight = Math.max(1, renderedHeight - tempoPadding.top - tempoPadding.bottom);
+        const tempoPlotLeft = tempoPadding.left;
+        const tempoPlotTop = tempoPadding.top;
+
         const referenceDuration = Math.max(0.001, sanitizeDuration(context.referenceDuration));
-        host.plotLeft = plotLeft;
-        host.plotRight = plotLeft + innerWidth;
-        host.plotTop = plotTop;
-        host.plotBottom = plotTop + innerHeight;
+        host.matrixPlotLeft = matrixPlotLeft;
+        host.matrixPlotRight = matrixPlotLeft + matrixInnerWidth;
+        host.matrixPlotTop = matrixPlotTop;
+        host.matrixPlotBottom = matrixPlotTop + matrixInnerHeight;
+        host.tempoPlotLeft = tempoPlotLeft;
+        host.tempoPlotRight = tempoPlotLeft + tempoInnerWidth;
+        host.tempoPlotTop = tempoPlotTop;
+        host.tempoPlotBottom = tempoPlotTop + tempoInnerHeight;
         host.referenceDuration = referenceDuration;
 
+        const localTempoInterpolation = this.getWarpingMatrixLocalTempoInterpolation(host);
+        const tempoSeriesTrackDuration = tempoSeries
+            ? resolveWarpingMatrixTrackDuration(tempoSeries.trackDuration, referenceDuration)
+            : 0;
+        const tempoSeriesKey = tempoSeries
+            ? [
+                tempoSeries.trackIndex,
+                tempoSeries.columnKey,
+                tempoSeries.points.length,
+                Math.round(tempoSeriesTrackDuration * 1000),
+            ].join(':')
+            : 'off';
         const geometryKey = context.trackSeries.map((series) => {
             const lastPoint = series.points.length > 0
                 ? series.points[series.points.length - 1]
@@ -1118,11 +1346,19 @@ export class ViewRenderer {
             ].join(':');
         }).join('|')
             + '#'
-            + renderedWidth
+            + matrixRenderedWidth
             + '#'
             + renderedHeight
             + '#'
-            + Math.round(referenceDuration * 1000);
+            + tempoRenderedWidth
+            + '#'
+            + Math.round(referenceDuration * 1000)
+            + '#'
+            + localTempoInterpolation
+            + '#'
+            + (context.syncEnabled ? 'sync-on' : 'sync-off')
+            + '#'
+            + tempoSeriesKey;
 
         host.colorByColumn.clear();
         context.trackSeries.forEach((series) => {
@@ -1137,64 +1373,65 @@ export class ViewRenderer {
             trackTime: number,
             trackDuration: number
         ): { x: number; y: number } => {
-            const x = plotLeft + (clampTime(referenceTime, 0, referenceDuration) / referenceDuration) * innerWidth;
-            const y = plotTop + (1 - (clampTime(trackTime, 0, trackDuration) / trackDuration)) * innerHeight;
+            const x = matrixPlotLeft
+                + (clampTime(referenceTime, 0, referenceDuration) / referenceDuration) * matrixInnerWidth;
+            const y = matrixPlotTop + (1 - (clampTime(trackTime, 0, trackDuration) / trackDuration)) * matrixInnerHeight;
             return { x, y };
         };
 
         if (host.lastGeometryKey !== geometryKey) {
             host.lastGeometryKey = geometryKey;
 
-            host.axisLayer.querySelectorAll('.warping-matrix-axis-line').forEach((node) => {
+            host.matrixAxisLayer.querySelectorAll('.warping-matrix-axis-line').forEach((node) => {
                 node.remove();
             });
 
             const xAxis = document.createElementNS(SVG_NS, 'line');
             xAxis.setAttribute('class', 'warping-matrix-axis-line x-axis');
-            xAxis.setAttribute('x1', String(plotLeft));
-            xAxis.setAttribute('y1', String(plotTop + innerHeight));
-            xAxis.setAttribute('x2', String(plotLeft + innerWidth));
-            xAxis.setAttribute('y2', String(plotTop + innerHeight));
-            host.axisLayer.insertBefore(xAxis, host.xAxisLabel);
+            xAxis.setAttribute('x1', String(matrixPlotLeft));
+            xAxis.setAttribute('y1', String(matrixPlotTop + matrixInnerHeight));
+            xAxis.setAttribute('x2', String(matrixPlotLeft + matrixInnerWidth));
+            xAxis.setAttribute('y2', String(matrixPlotTop + matrixInnerHeight));
+            host.matrixAxisLayer.insertBefore(xAxis, host.matrixXAxisLabel);
 
             const yAxis = document.createElementNS(SVG_NS, 'line');
             yAxis.setAttribute('class', 'warping-matrix-axis-line y-axis');
-            yAxis.setAttribute('x1', String(plotLeft));
-            yAxis.setAttribute('y1', String(plotTop));
-            yAxis.setAttribute('x2', String(plotLeft));
-            yAxis.setAttribute('y2', String(plotTop + innerHeight));
-            host.axisLayer.insertBefore(yAxis, host.xAxisLabel);
+            yAxis.setAttribute('x1', String(matrixPlotLeft));
+            yAxis.setAttribute('y1', String(matrixPlotTop));
+            yAxis.setAttribute('x2', String(matrixPlotLeft));
+            yAxis.setAttribute('y2', String(matrixPlotTop + matrixInnerHeight));
+            host.matrixAxisLayer.insertBefore(yAxis, host.matrixXAxisLabel);
 
-            host.referenceLayer.textContent = '';
+            host.matrixReferenceLayer.textContent = '';
             const referenceDiagonal = document.createElementNS(SVG_NS, 'line');
             referenceDiagonal.setAttribute('class', 'warping-matrix-reference-diagonal');
-            referenceDiagonal.setAttribute('x1', String(plotLeft));
-            referenceDiagonal.setAttribute('y1', String(plotTop + innerHeight));
-            referenceDiagonal.setAttribute('x2', String(plotLeft + innerWidth));
-            referenceDiagonal.setAttribute('y2', String(plotTop));
+            referenceDiagonal.setAttribute('x1', String(matrixPlotLeft));
+            referenceDiagonal.setAttribute('y1', String(matrixPlotTop + matrixInnerHeight));
+            referenceDiagonal.setAttribute('x2', String(matrixPlotLeft + matrixInnerWidth));
+            referenceDiagonal.setAttribute('y2', String(matrixPlotTop));
             referenceDiagonal.style.stroke = '#888888';
             referenceDiagonal.style.strokeWidth = String(this.getWarpingMatrixPathStrokeWidth(host));
             referenceDiagonal.style.strokeDasharray = '6 4';
             referenceDiagonal.style.fill = 'none';
-            host.referenceLayer.appendChild(referenceDiagonal);
+            host.matrixReferenceLayer.appendChild(referenceDiagonal);
 
-            host.xAxisLabel.setAttribute('x', String(plotLeft + (innerWidth / 2)));
-            host.xAxisLabel.setAttribute('y', String(renderedHeight - 6));
-            host.xAxisLabel.setAttribute('text-anchor', 'middle');
+            host.matrixXAxisLabel.setAttribute('x', String(matrixPlotLeft + (matrixInnerWidth / 2)));
+            host.matrixXAxisLabel.setAttribute('y', String(renderedHeight - 6));
+            host.matrixXAxisLabel.setAttribute('text-anchor', 'middle');
 
-            host.titleLabel.setAttribute('x', String(renderedWidth / 2));
-            host.titleLabel.setAttribute('y', '18');
-            host.titleLabel.setAttribute('text-anchor', 'middle');
+            host.matrixTitleLabel.setAttribute('x', String(matrixRenderedWidth / 2));
+            host.matrixTitleLabel.setAttribute('y', '18');
+            host.matrixTitleLabel.setAttribute('text-anchor', 'middle');
 
-            const yAxisLabelX = plotLeft - 14;
-            const yAxisLabelY = plotTop + (innerHeight / 2);
-            host.yAxisLabel.setAttribute('x', String(yAxisLabelX));
-            host.yAxisLabel.setAttribute('y', String(yAxisLabelY));
-            host.yAxisLabel.setAttribute('text-anchor', 'middle');
-            host.yAxisLabel.setAttribute('transform', 'rotate(-90 ' + yAxisLabelX + ' ' + yAxisLabelY + ')');
+            const yAxisLabelX = matrixPlotLeft - 14;
+            const yAxisLabelY = matrixPlotTop + (matrixInnerHeight / 2);
+            host.matrixYAxisLabel.setAttribute('x', String(yAxisLabelX));
+            host.matrixYAxisLabel.setAttribute('y', String(yAxisLabelY));
+            host.matrixYAxisLabel.setAttribute('text-anchor', 'middle');
+            host.matrixYAxisLabel.setAttribute('transform', 'rotate(-90 ' + yAxisLabelX + ' ' + yAxisLabelY + ')');
 
-            host.pathLayer.textContent = '';
-            host.projectedByColumn.clear();
+            host.matrixPathLayer.textContent = '';
+            host.matrixProjectedByColumn.clear();
 
             context.trackSeries.forEach((series) => {
                 if (!Array.isArray(series.points) || series.points.length === 0) {
@@ -1226,13 +1463,126 @@ export class ViewRenderer {
                 path.setAttribute('d', pathData);
                 path.style.stroke = host.colorByColumn.get(series.columnKey) || WARPING_MATRIX_FIXED_COLORS[0];
                 path.style.strokeWidth = String(this.getWarpingMatrixPathStrokeWidth(host));
-                host.pathLayer.appendChild(path);
-                host.projectedByColumn.set(series.columnKey, projected);
+                host.matrixPathLayer.appendChild(path);
+                host.matrixProjectedByColumn.set(series.columnKey, projected);
             });
+
+            host.tempoAxisLayer.querySelectorAll('.warping-tempo-axis-line').forEach((node) => {
+                node.remove();
+            });
+
+            const tempoXAxis = document.createElementNS(SVG_NS, 'line');
+            tempoXAxis.setAttribute('class', 'warping-tempo-axis-line x-axis');
+            tempoXAxis.setAttribute('x1', String(tempoPlotLeft));
+            tempoXAxis.setAttribute('y1', String(tempoPlotTop + tempoInnerHeight));
+            tempoXAxis.setAttribute('x2', String(tempoPlotLeft + tempoInnerWidth));
+            tempoXAxis.setAttribute('y2', String(tempoPlotTop + tempoInnerHeight));
+            host.tempoAxisLayer.insertBefore(tempoXAxis, host.tempoXAxisLabel);
+
+            const tempoYAxis = document.createElementNS(SVG_NS, 'line');
+            tempoYAxis.setAttribute('class', 'warping-tempo-axis-line y-axis');
+            tempoYAxis.setAttribute('x1', String(tempoPlotLeft));
+            tempoYAxis.setAttribute('y1', String(tempoPlotTop));
+            tempoYAxis.setAttribute('x2', String(tempoPlotLeft));
+            tempoYAxis.setAttribute('y2', String(tempoPlotTop + tempoInnerHeight));
+            host.tempoAxisLayer.insertBefore(tempoYAxis, host.tempoXAxisLabel);
+
+            host.tempoXAxisLabel.setAttribute('x', String(tempoPlotLeft + (tempoInnerWidth / 2)));
+            host.tempoXAxisLabel.setAttribute('y', String(renderedHeight - 6));
+            host.tempoXAxisLabel.setAttribute('text-anchor', 'middle');
+
+            host.tempoTitleLabel.setAttribute('x', String(tempoRenderedWidth / 2));
+            host.tempoTitleLabel.setAttribute('y', '18');
+            host.tempoTitleLabel.setAttribute('text-anchor', 'middle');
+
+            const tempoYAxisLabelX = tempoPlotLeft - 20;
+            const tempoYAxisLabelY = tempoPlotTop + (tempoInnerHeight / 2);
+            host.tempoYAxisLabel.setAttribute('x', String(tempoYAxisLabelX));
+            host.tempoYAxisLabel.setAttribute('y', String(tempoYAxisLabelY));
+            host.tempoYAxisLabel.setAttribute('text-anchor', 'middle');
+            host.tempoYAxisLabel.setAttribute(
+                'transform',
+                'rotate(-90 ' + tempoYAxisLabelX + ' ' + tempoYAxisLabelY + ')'
+            );
+
+            host.tempoReferenceLayer.textContent = '';
+            const zeroLine = document.createElementNS(SVG_NS, 'line');
+            zeroLine.setAttribute('class', 'warping-tempo-zero-line');
+            zeroLine.setAttribute('x1', String(tempoPlotLeft));
+            zeroLine.setAttribute('x2', String(tempoPlotLeft + tempoInnerWidth));
+            const zeroY = tempoPlotTop + (tempoInnerHeight / 2);
+            zeroLine.setAttribute('y1', String(zeroY));
+            zeroLine.setAttribute('y2', String(zeroY));
+            host.tempoReferenceLayer.appendChild(zeroLine);
+
+            const playheadLine = document.createElementNS(SVG_NS, 'line');
+            playheadLine.setAttribute('class', 'warping-tempo-playhead-line');
+            const playheadX = tempoPlotLeft + (tempoInnerWidth / 2);
+            playheadLine.setAttribute('x1', String(playheadX));
+            playheadLine.setAttribute('x2', String(playheadX));
+            playheadLine.setAttribute('y1', String(tempoPlotTop));
+            playheadLine.setAttribute('y2', String(tempoPlotTop + tempoInnerHeight));
+            host.tempoReferenceLayer.appendChild(playheadLine);
+
+            host.tempoPathLayer.textContent = '';
+            host.tempoProfileByColumn.clear();
+            host.tempoPathByColumn.clear();
+            let maxAbsDeviation = 0;
+            if (tempoSeries) {
+                const profile = this.buildWarpingTempoProfile(tempoSeries.points);
+                if (!profile) {
+                    host.tempoMaxAbsDeviation = 1;
+                } else {
+                    host.tempoProfileByColumn.set(tempoSeries.columnKey, profile);
+                    if (profile.maxAbsDeviation > maxAbsDeviation) {
+                        maxAbsDeviation = profile.maxAbsDeviation;
+                    }
+
+                    const path = document.createElementNS(SVG_NS, 'path');
+                    path.setAttribute('class', 'warping-tempo-path');
+                    path.setAttribute('data-column-key', tempoSeries.columnKey);
+                    path.style.stroke = host.colorByColumn.get(tempoSeries.columnKey) || WARPING_MATRIX_FIXED_COLORS[0];
+                    path.style.strokeWidth = String(this.getWarpingMatrixPathStrokeWidth(host));
+                    host.tempoPathLayer.appendChild(path);
+                    host.tempoPathByColumn.set(tempoSeries.columnKey, path);
+                    host.tempoMaxAbsDeviation = Math.max(1, maxAbsDeviation * 1.1);
+                }
+            } else {
+                host.tempoMaxAbsDeviation = 1;
+            }
+        }
+
+        const currentReferenceTime = clampTime(context.currentReferenceTime, 0, referenceDuration);
+        if (tempoSeries) {
+            host.tempoActiveSeriesPoints = tempoSeries.points;
+            host.tempoActiveTrackDuration = resolveWarpingMatrixTrackDuration(tempoSeries.trackDuration, referenceDuration);
+            const currentTempoTrackTime = this.interpolateWarpingTrackTime(tempoSeries.points, currentReferenceTime);
+            const configuredLocalTempoWindowSeconds = this.getWarpingMatrixLocalTempoWindowSeconds(host);
+            const tempoWindowDuration = Math.min(
+                host.tempoActiveTrackDuration,
+                Math.max(0.1, configuredLocalTempoWindowSeconds)
+            );
+            if (tempoWindowDuration >= host.tempoActiveTrackDuration) {
+                host.tempoWindowStart = 0;
+                host.tempoWindowEnd = host.tempoActiveTrackDuration;
+            } else {
+                const halfWindow = tempoWindowDuration / 2;
+                const centeredStart = currentTempoTrackTime - halfWindow;
+                host.tempoWindowStart = clampTime(
+                    centeredStart,
+                    0,
+                    host.tempoActiveTrackDuration - tempoWindowDuration
+                );
+                host.tempoWindowEnd = host.tempoWindowStart + tempoWindowDuration;
+            }
+        } else {
+            host.tempoActiveSeriesPoints = [];
+            host.tempoActiveTrackDuration = 0;
+            host.tempoWindowStart = 0;
+            host.tempoWindowEnd = 0;
         }
 
         const activeColumns = new Set<string>();
-        const currentReferenceTime = clampTime(context.currentReferenceTime, 0, referenceDuration);
 
         context.trackSeries.forEach((series) => {
             if (!Array.isArray(series.points) || series.points.length === 0) {
@@ -1243,13 +1593,13 @@ export class ViewRenderer {
             const seriesTrackDuration = resolveWarpingMatrixTrackDuration(series.trackDuration, referenceDuration);
             const projected = projectPoint(currentReferenceTime, currentTrackTime, seriesTrackDuration);
 
-            let indicator = host.indicatorByColumn.get(series.columnKey);
+            let indicator = host.matrixIndicatorByColumn.get(series.columnKey);
             if (!indicator) {
                 indicator = document.createElementNS(SVG_NS, 'circle');
                 indicator.setAttribute('class', 'warping-matrix-indicator');
                 indicator.setAttribute('data-column-key', series.columnKey);
-                host.indicatorLayer.appendChild(indicator);
-                host.indicatorByColumn.set(series.columnKey, indicator);
+                host.matrixIndicatorLayer.appendChild(indicator);
+                host.matrixIndicatorByColumn.set(series.columnKey, indicator);
             }
             indicator.setAttribute('r', String(this.getWarpingMatrixIndicatorRadius(host)));
 
@@ -1263,13 +1613,52 @@ export class ViewRenderer {
             activeColumns.add(series.columnKey);
         });
 
-        Array.from(host.indicatorByColumn.entries()).forEach(([columnKey, indicator]) => {
+        if (tempoSeries) {
+            const tempoProfile = host.tempoProfileByColumn.get(tempoSeries.columnKey);
+            const tempoPath = host.tempoPathByColumn.get(tempoSeries.columnKey);
+            if (tempoProfile && tempoPath) {
+                const tempoPathData = this.buildWarpingTempoPathData(
+                    tempoProfile,
+                    localTempoInterpolation,
+                    host.tempoWindowStart,
+                    host.tempoWindowEnd,
+                    (trackTime: number): number => {
+                        const visibleDuration = host.tempoWindowEnd - host.tempoWindowStart;
+                        if (visibleDuration <= 0) {
+                            return host.tempoPlotLeft;
+                        }
+                        const ratio = (trackTime - host.tempoWindowStart) / visibleDuration;
+                        return host.tempoPlotLeft + (ratio * (host.tempoPlotRight - host.tempoPlotLeft));
+                    },
+                    (deviationPercent: number): number => {
+                        const maxAbs = Math.max(0.0001, host.tempoMaxAbsDeviation);
+                        const clampedDeviation = clampTime(deviationPercent, -maxAbs, maxAbs);
+                        const ratio = (clampedDeviation + maxAbs) / (2 * maxAbs);
+                        return host.tempoPlotTop + (1 - ratio) * (host.tempoPlotBottom - host.tempoPlotTop);
+                    }
+                );
+                tempoPath.setAttribute('d', tempoPathData);
+                tempoPath.style.display = tempoPathData ? 'block' : 'none';
+            }
+        }
+
+        Array.from(host.matrixIndicatorByColumn.entries()).forEach(([columnKey, indicator]) => {
             if (activeColumns.has(columnKey)) {
                 return;
             }
 
             indicator.remove();
-            host.indicatorByColumn.delete(columnKey);
+            host.matrixIndicatorByColumn.delete(columnKey);
+        });
+
+        Array.from(host.tempoPathByColumn.entries()).forEach(([columnKey, path]) => {
+            if (tempoSeries && columnKey === tempoSeries.columnKey) {
+                return;
+            }
+
+            path.remove();
+            host.tempoPathByColumn.delete(columnKey);
+            host.tempoProfileByColumn.delete(columnKey);
         });
     }
 
@@ -1320,6 +1709,353 @@ export class ViewRenderer {
 
         const ratio = (referenceTime - leftPoint.referenceTime) / range;
         return leftPoint.trackTime + ((rightPoint.trackTime - leftPoint.trackTime) * ratio);
+    }
+
+    private interpolateWarpingReferenceTime(points: WarpingMatrixDataPoint[], trackTime: number): number {
+        if (!Array.isArray(points) || points.length === 0) {
+            return 0;
+        }
+
+        if (points.length === 1) {
+            return points[0].referenceTime;
+        }
+
+        const first = points[0];
+        const last = points[points.length - 1];
+
+        if (trackTime <= first.trackTime) {
+            return first.referenceTime;
+        }
+
+        if (trackTime >= last.trackTime) {
+            return last.referenceTime;
+        }
+
+        let leftIndex = 0;
+        let rightIndex = points.length - 1;
+
+        while (leftIndex <= rightIndex) {
+            const middleIndex = Math.floor((leftIndex + rightIndex) / 2);
+            const middle = points[middleIndex];
+
+            if (middle.trackTime === trackTime) {
+                return middle.referenceTime;
+            }
+
+            if (middle.trackTime < trackTime) {
+                leftIndex = middleIndex + 1;
+            } else {
+                rightIndex = middleIndex - 1;
+            }
+        }
+
+        const rightPoint = points[Math.min(points.length - 1, leftIndex)];
+        const leftPoint = points[Math.max(0, leftIndex - 1)];
+        const range = rightPoint.trackTime - leftPoint.trackTime;
+        if (!Number.isFinite(range) || range <= 0) {
+            return leftPoint.referenceTime;
+        }
+
+        const ratio = (trackTime - leftPoint.trackTime) / range;
+        return leftPoint.referenceTime + ((rightPoint.referenceTime - leftPoint.referenceTime) * ratio);
+    }
+
+    private buildWarpingTempoProfile(points: WarpingMatrixDataPoint[]): WarpingMatrixTempoProfile | null {
+        const collapsed = this.collapseWarpingPointsByReference(points);
+        if (collapsed.length === 0) {
+            return null;
+        }
+
+        const referenceTimes = collapsed.map((point) => point.referenceTime);
+        const trackTimes = collapsed.map((point) => point.trackTime);
+        const segmentDeviations: number[] = [];
+        for (let index = 0; index < collapsed.length - 1; index += 1) {
+            const left = collapsed[index];
+            const right = collapsed[index + 1];
+            const deltaReference = right.referenceTime - left.referenceTime;
+            if (!Number.isFinite(deltaReference) || deltaReference <= 0) {
+                continue;
+            }
+
+            const slope = (right.trackTime - left.trackTime) / deltaReference;
+            if (!Number.isFinite(slope)) {
+                continue;
+            }
+
+            segmentDeviations.push((slope - 1) * 100);
+        }
+
+        const normalizedSegmentDeviations = segmentDeviations.length > 0
+            ? segmentDeviations
+            : [0];
+        const knotDeviations: number[] = [];
+
+        if (referenceTimes.length <= 1) {
+            knotDeviations.push(normalizedSegmentDeviations[0]);
+        } else {
+            knotDeviations.push(normalizedSegmentDeviations[0]);
+            for (let index = 1; index < referenceTimes.length - 1; index += 1) {
+                const leftDeviation = normalizedSegmentDeviations[Math.max(0, index - 1)];
+                const rightDeviation = normalizedSegmentDeviations[
+                    Math.min(normalizedSegmentDeviations.length - 1, index)
+                ];
+                const leftSpan = referenceTimes[index] - referenceTimes[index - 1];
+                const rightSpan = referenceTimes[index + 1] - referenceTimes[index];
+                if (leftSpan > 0 && rightSpan > 0) {
+                    knotDeviations.push(
+                        (leftDeviation * rightSpan + rightDeviation * leftSpan) / (leftSpan + rightSpan)
+                    );
+                } else {
+                    knotDeviations.push((leftDeviation + rightDeviation) / 2);
+                }
+            }
+            knotDeviations.push(normalizedSegmentDeviations[normalizedSegmentDeviations.length - 1]);
+        }
+
+        let maxAbsDeviation = 0;
+        normalizedSegmentDeviations.forEach((value) => {
+            const absValue = Math.abs(value);
+            if (Number.isFinite(absValue) && absValue > maxAbsDeviation) {
+                maxAbsDeviation = absValue;
+            }
+        });
+        knotDeviations.forEach((value) => {
+            const absValue = Math.abs(value);
+            if (Number.isFinite(absValue) && absValue > maxAbsDeviation) {
+                maxAbsDeviation = absValue;
+            }
+        });
+
+        return {
+            referenceTimes: referenceTimes,
+            trackTimes: trackTimes,
+            segmentDeviations: normalizedSegmentDeviations,
+            knotDeviations: knotDeviations,
+            maxAbsDeviation: maxAbsDeviation,
+        };
+    }
+
+    private collapseWarpingPointsByReference(points: WarpingMatrixDataPoint[]): WarpingMatrixDataPoint[] {
+        if (!Array.isArray(points) || points.length === 0) {
+            return [];
+        }
+
+        const firstValidIndex = points.findIndex((point) => {
+            return Number.isFinite(point.referenceTime) && Number.isFinite(point.trackTime);
+        });
+        if (firstValidIndex < 0) {
+            return [];
+        }
+
+        const collapsed: WarpingMatrixDataPoint[] = [];
+        let activeReference = Number(points[firstValidIndex].referenceTime);
+        let trackTimeSum = Number(points[firstValidIndex].trackTime);
+        let count = 1;
+
+        for (let index = firstValidIndex + 1; index < points.length; index += 1) {
+            const point = points[index];
+            const referenceTime = Number(point.referenceTime);
+            const trackTime = Number(point.trackTime);
+            if (!Number.isFinite(referenceTime) || !Number.isFinite(trackTime)) {
+                continue;
+            }
+
+            if (referenceTime === activeReference) {
+                trackTimeSum += trackTime;
+                count += 1;
+                continue;
+            }
+
+            collapsed.push({
+                referenceTime: activeReference,
+                trackTime: trackTimeSum / count,
+            });
+            activeReference = referenceTime;
+            trackTimeSum = trackTime;
+            count = 1;
+        }
+
+        collapsed.push({
+            referenceTime: activeReference,
+            trackTime: trackTimeSum / count,
+        });
+
+        return collapsed;
+    }
+
+    private firstIndexGreaterOrEqual(values: number[], value: number): number {
+        if (values.length === 0) {
+            return 0;
+        }
+
+        let low = 0;
+        let high = values.length - 1;
+        while (low < high) {
+            const middle = Math.floor((low + high) / 2);
+            if (values[middle] < value) {
+                low = middle + 1;
+            } else {
+                high = middle;
+            }
+        }
+
+        return low;
+    }
+
+    private evaluateWarpingTempoDeviation(
+        profile: WarpingMatrixTempoProfile,
+        interpolation: 'step' | 'linear',
+        referenceTime: number
+    ): number {
+        return interpolation === 'linear'
+            ? this.evaluateWarpingTempoDeviationLinear(profile, referenceTime)
+            : this.evaluateWarpingTempoDeviationStep(profile, referenceTime);
+    }
+
+    private evaluateWarpingTempoDeviationStep(profile: WarpingMatrixTempoProfile, referenceTime: number): number {
+        const trackTimes = profile.trackTimes;
+        const segmentDeviations = profile.segmentDeviations;
+        if (trackTimes.length === 0 || segmentDeviations.length === 0) {
+            return 0;
+        }
+
+        if (trackTimes.length === 1) {
+            return segmentDeviations[0];
+        }
+
+        const firstReference = trackTimes[0];
+        const lastReference = trackTimes[trackTimes.length - 1];
+        if (referenceTime <= firstReference) {
+            return segmentDeviations[0];
+        }
+
+        if (referenceTime >= lastReference) {
+            return segmentDeviations[segmentDeviations.length - 1];
+        }
+
+        const rightIndex = this.firstIndexGreaterOrEqual(trackTimes, referenceTime);
+        const segmentIndex = Math.max(0, Math.min(segmentDeviations.length - 1, rightIndex - 1));
+        return segmentDeviations[segmentIndex];
+    }
+
+    private evaluateWarpingTempoDeviationLinear(profile: WarpingMatrixTempoProfile, referenceTime: number): number {
+        const trackTimes = profile.trackTimes;
+        const knotDeviations = profile.knotDeviations;
+        if (trackTimes.length === 0 || knotDeviations.length === 0) {
+            return 0;
+        }
+
+        if (trackTimes.length === 1) {
+            return knotDeviations[0];
+        }
+
+        const firstReference = trackTimes[0];
+        const lastReference = trackTimes[trackTimes.length - 1];
+        if (referenceTime <= firstReference) {
+            return knotDeviations[0];
+        }
+
+        if (referenceTime >= lastReference) {
+            return knotDeviations[knotDeviations.length - 1];
+        }
+
+        const rightIndex = this.firstIndexGreaterOrEqual(trackTimes, referenceTime);
+        const leftIndex = Math.max(0, rightIndex - 1);
+        const rightReference = trackTimes[rightIndex];
+        const leftReference = trackTimes[leftIndex];
+        if (rightReference === leftReference) {
+            return knotDeviations[leftIndex];
+        }
+
+        if (rightReference === referenceTime) {
+            return knotDeviations[rightIndex];
+        }
+
+        const ratio = (referenceTime - leftReference) / (rightReference - leftReference);
+        return knotDeviations[leftIndex] + ratio * (knotDeviations[rightIndex] - knotDeviations[leftIndex]);
+    }
+
+    private buildWarpingTempoPathData(
+        profile: WarpingMatrixTempoProfile,
+        interpolation: 'step' | 'linear',
+        windowStart: number,
+        windowEnd: number,
+        toX: (referenceTime: number) => number,
+        toY: (deviationPercent: number) => number
+    ): string {
+        if (windowEnd <= windowStart) {
+            return '';
+        }
+
+        const points: Array<{ referenceTime: number; deviationPercent: number }> = [];
+        if (interpolation === 'linear') {
+            points.push({
+                referenceTime: windowStart,
+                deviationPercent: this.evaluateWarpingTempoDeviationLinear(profile, windowStart),
+            });
+            profile.trackTimes.forEach((referenceTime) => {
+                if (referenceTime <= windowStart || referenceTime >= windowEnd) {
+                    return;
+                }
+
+                points.push({
+                    referenceTime: referenceTime,
+                    deviationPercent: this.evaluateWarpingTempoDeviationLinear(profile, referenceTime),
+                });
+            });
+            points.push({
+                referenceTime: windowEnd,
+                deviationPercent: this.evaluateWarpingTempoDeviationLinear(profile, windowEnd),
+            });
+        } else {
+            let currentDeviation = this.evaluateWarpingTempoDeviationStep(profile, windowStart);
+            points.push({
+                referenceTime: windowStart,
+                deviationPercent: currentDeviation,
+            });
+
+            const segmentDeviations = profile.segmentDeviations;
+            if (segmentDeviations.length > 0) {
+                profile.trackTimes.forEach((referenceTime, referenceIndex) => {
+                    if (referenceTime <= windowStart || referenceTime >= windowEnd) {
+                        return;
+                    }
+
+                    points.push({
+                        referenceTime: referenceTime,
+                        deviationPercent: currentDeviation,
+                    });
+
+                    const nextDeviation = segmentDeviations[
+                        Math.min(segmentDeviations.length - 1, Math.max(0, referenceIndex))
+                    ];
+                    if (nextDeviation !== currentDeviation) {
+                        points.push({
+                            referenceTime: referenceTime,
+                            deviationPercent: nextDeviation,
+                        });
+                    }
+                    currentDeviation = nextDeviation;
+                });
+            }
+
+            points.push({
+                referenceTime: windowEnd,
+                deviationPercent: currentDeviation,
+            });
+        }
+
+        if (points.length === 0) {
+            return '';
+        }
+
+        let pathData = '';
+        points.forEach((point, index) => {
+            const x = toX(point.referenceTime);
+            const y = toY(point.deviationPercent);
+            pathData += (index === 0 ? 'M ' : ' L ') + x + ' ' + y;
+        });
+        return pathData;
     }
 
     private createWaveformTimingNode(overlay: HTMLElement): HTMLElement {

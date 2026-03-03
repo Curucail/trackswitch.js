@@ -241,6 +241,14 @@
     .trackswitch .warping-matrix-axis-label {
         font-size: 16px;
     }
+
+    .trackswitch .warping-matrix-host {
+        flex-direction: column;
+    }
+
+    .trackswitch .warping-matrix-panel {
+        min-height: 180px;
+    }
 }
 
 @media (max-width: 500px) {

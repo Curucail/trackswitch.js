@@ -47,7 +47,12 @@ TrackSwitch.createTrackSwitch(rootElement, {
     { type: 'image', src: 'cover.jpg', seekable: true },
     { type: 'waveform', width: 1200, height: 150 },
     { type: 'sheetmusic', src: 'score.musicxml', measureCsv: 'score_measures.csv', maxWidth: 960, renderScale: 0.75, maxHeight: 360, followPlayback: true },
-    { type: 'warping_matrix', height: 240 },
+    {
+      type: 'warping_matrix',
+      height: 240,
+      localTempoWindowSeconds: 10,
+      localTempoInterpolation: 'step',
+    },
   ],
   alignment: {
     csv: 'dtw_alignment.csv',
@@ -195,15 +200,25 @@ Sheet music element:
 Warping matrix element:
 
 ```javascript
-{ type: 'warping_matrix', height: 240, pathStrokeWidth: 2, style: 'margin: 12px 0;' }
+{
+  type: 'warping_matrix',
+  height: 240,
+  pathStrokeWidth: 2,
+  localTempoWindowSeconds: 10,
+  localTempoInterpolation: 'step',
+  style: 'margin: 12px 0;',
+}
 ```
 
-- Fields: `height?` (matrix height in px), `pathStrokeWidth?` (path stroke width in px), `style?`
+- Fields: `height?` (panel height in px), `pathStrokeWidth?` (path stroke width in px), `localTempoWindowSeconds?` (moving x-window length in active-track seconds), `localTempoInterpolation?` (`'step' | 'linear'`), `style?`
 - Rendering is active in `alignment` mode only; outside `alignment` the element stays hidden
-- Reference timeline is drawn on the bottom x-axis, and track timeline on the y-axis
-- Multiple selected tracks are overlaid as separate warping paths
-- Current reference time is shown as an indicator on each rendered path
-- Clicking a path seeks to the nearest underlying alignment CSV point on the reference timeline
+- The UI renders two linked panels: left `warping path` and right `local tempo deviation`
+- Left panel uses reference timeline on x-axis and track timeline on y-axis, with current reference indicator per track
+- Right panel shows `100 * (d(track)/d(reference) - 1)` with a gray dashed baseline at `y = 0`
+- Right panel uses active-track time on its x-axis and displays a centered moving track-time window (`localTempoWindowSeconds`, default `10`)
+- Right panel renders a single active-track curve, includes a fixed dashed vertical center playhead guide, and is hidden when global `SYNC` is enabled
+- `localTempoInterpolation` defaults to `'step'`; set `'linear'` for knot-interpolated tempo deviation
+- Clicking the left panel (drag supported) or right panel (single-click) seeks on the reference timeline
 
 ## Player Features
 
@@ -271,7 +286,7 @@ Behavior:
 - `alignment`: waveform containers default to rendering a top-right timer badge in `current / duration` format; fixed-track waveforms use local track time while `SYNC` is off
 - `alignment`: sheet-music UI elements (`type: 'sheetmusic'`) highlight the currently mapped measure from `measureCsv` on the reference axis
 - `alignment`: `sheetmusic.followPlayback` (default `true`) auto-scrolls the internal sheet viewport vertically when the highlighted measure moves outside the visible area
-- `alignment`: `warping_matrix` UI elements render warping paths from alignment CSV mappings and keep the x-axis on reference time even when `SYNC` is enabled
+- `alignment`: `warping_matrix` UI elements render a warping-path panel plus a local-tempo-deviation panel; the tempo panel uses active-track x-axis time and is hidden while `SYNC` is enabled
 
 Cross-player behavior:
 
