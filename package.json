@@ -39,7 +39,8 @@
   "dependencies": {
     "font-awesome": "^4.2.0",
     "opensheetmusicdisplay": "^1.9.7",
-    "papaparse": "^5.5.3"
+    "papaparse": "^5.5.3",
+    "uplot": "^1.6.32"
   },
   "devDependencies": {
     "esbuild": "^0.27.3",

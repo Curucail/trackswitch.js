@@ -159,7 +159,7 @@ Alignment mode behavior:
 - `alignment`: `sheetmusic` supports optional `followPlayback` (default `true`) to auto-scroll vertically and keep the current highlighted measure in view
 - `alignment`: optional `warping_matrix` UI entries render two linked panels: the original warping-path graph plus a local-tempo-deviation graph (`100 * (d(track)/d(reference) - 1)`)
 - `alignment`: the tempo panel shows a gray dashed `y = 0` reference line plus a fixed dashed vertical playhead guide at panel center; its x-axis is active-track time and it uses a centered moving track-time window (`localTempoWindowSeconds`, default `10`)
-- `alignment`: the tempo panel renders a single active-track curve (`localTempoInterpolation: 'step' | 'linear'`, default `'step'`), supports click-to-seek, and is hidden while global `SYNC` is enabled
+- `alignment`: the tempo panel renders a single active-track curve (`localTempoInterpolation: 'step' | 'linear'`, default `'step'`), supports click-to-seek, and switches to a visible dimmed non-interactive state while global `SYNC` is enabled
 - Waveform zoom is configured per waveform via `maxZoom`; wheel/pinch zoom is enabled only when `maxZoom > 1` (or `> '100%'`)
 
 Legacy note:

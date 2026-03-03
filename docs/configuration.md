@@ -216,7 +216,7 @@ Warping matrix element:
 - Left panel uses reference timeline on x-axis and track timeline on y-axis, with current reference indicator per track
 - Right panel shows `100 * (d(track)/d(reference) - 1)` with a gray dashed baseline at `y = 0`
 - Right panel uses active-track time on its x-axis and displays a centered moving track-time window (`localTempoWindowSeconds`, default `10`)
-- Right panel renders a single active-track curve, includes a fixed dashed vertical center playhead guide, and is hidden when global `SYNC` is enabled
+- Right panel renders a single active-track curve, includes a fixed dashed vertical center playhead guide, and switches to a visible dimmed non-interactive state when global `SYNC` is enabled
 - `localTempoInterpolation` defaults to `'step'`; set `'linear'` for knot-interpolated tempo deviation
 - Clicking the left panel (drag supported) or right panel (single-click) seeks on the reference timeline
 
@@ -286,7 +286,7 @@ Behavior:
 - `alignment`: waveform containers default to rendering a top-right timer badge in `current / duration` format; fixed-track waveforms use local track time while `SYNC` is off
 - `alignment`: sheet-music UI elements (`type: 'sheetmusic'`) highlight the currently mapped measure from `measureCsv` on the reference axis
 - `alignment`: `sheetmusic.followPlayback` (default `true`) auto-scrolls the internal sheet viewport vertically when the highlighted measure moves outside the visible area
-- `alignment`: `warping_matrix` UI elements render a warping-path panel plus a local-tempo-deviation panel; the tempo panel uses active-track x-axis time and is hidden while `SYNC` is enabled
+- `alignment`: `warping_matrix` UI elements render a warping-path panel plus a local-tempo-deviation panel; the tempo panel uses active-track x-axis time and becomes dimmed/non-interactive while `SYNC` is enabled
 
 Cross-player behavior:
 

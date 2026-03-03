@@ -23,6 +23,7 @@ This document lists those dependencies and their licenses.
 | setimmediate | 1.0.5 | MIT |
 | immediate | 3.0.6 | MIT |
 | papaparse | 5.5.3 | MIT |
+| uplot | 1.6.32 | MIT |
 
 ## License Selection Notes
 
@@ -47,7 +48,7 @@ Redistribution and use in source and binary forms, with or without modification,
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-### MIT (applies to: vexflow, jszip [MIT option], pako, loglevel, typescript-collections, lie, setimmediate, immediate, papaparse)
+### MIT (applies to: vexflow, jszip [MIT option], pako, loglevel, typescript-collections, lie, setimmediate, immediate, papaparse, uplot)
 
 Applicable copyright notices:
 
@@ -60,6 +61,7 @@ Applicable copyright notices:
 - Copyright (c) 2012 Barnesandnoble.com, llc, Donavon West, and Domenic Denicola (setimmediate)
 - Copyright (c) 2012 Barnesandnoble.com, llc, Donavon West, Domenic Denicola, Brian Cavalier (immediate)
 - Copyright (c) Papa Parse LLC (papaparse)
+- Copyright (c) 2022 Leon Sorokin (uplot)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
