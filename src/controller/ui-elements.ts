@@ -166,35 +166,11 @@ function normalizeWarpingMatrixPathStrokeWidth(value: number | undefined): numbe
     return Math.max(0.5, value);
 }
 
-function normalizeWarpingMatrixLocalTempoWindowSeconds(value: number | undefined): number | undefined {
-    if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
-        return undefined;
-    }
-
-    return Math.max(0.1, value);
-}
-
-function normalizeWarpingMatrixLocalTempoInterpolation(
-    value: TrackSwitchWarpingMatrixConfig['localTempoInterpolation']
-): TrackSwitchWarpingMatrixConfig['localTempoInterpolation'] | undefined {
-    if (value === 'linear') {
-        return 'linear';
-    }
-
-    if (value === 'step') {
-        return 'step';
-    }
-
-    return undefined;
-}
-
 function normalizeWarpingMatrixConfig<T extends TrackSwitchWarpingMatrixConfig>(warpingMatrix: T): T {
     return {
         ...warpingMatrix,
         height: normalizeWarpingMatrixHeight(warpingMatrix.height),
         pathStrokeWidth: normalizeWarpingMatrixPathStrokeWidth(warpingMatrix.pathStrokeWidth),
-        localTempoWindowSeconds: normalizeWarpingMatrixLocalTempoWindowSeconds(warpingMatrix.localTempoWindowSeconds),
-        localTempoInterpolation: normalizeWarpingMatrixLocalTempoInterpolation(warpingMatrix.localTempoInterpolation),
     };
 }
 
@@ -267,26 +243,6 @@ function injectWarpingMatrix(root: HTMLElement, warpingMatrix: TrackSwitchWarpin
     const normalizedPathStrokeWidth = normalizeWarpingMatrixPathStrokeWidth(warpingMatrix.pathStrokeWidth);
     if (normalizedPathStrokeWidth !== undefined) {
         container.setAttribute('data-warping-matrix-path-stroke-width', String(normalizedPathStrokeWidth));
-    }
-
-    const normalizedLocalTempoWindowSeconds = normalizeWarpingMatrixLocalTempoWindowSeconds(
-        warpingMatrix.localTempoWindowSeconds
-    );
-    if (normalizedLocalTempoWindowSeconds !== undefined) {
-        container.setAttribute(
-            'data-warping-matrix-local-tempo-window-seconds',
-            String(normalizedLocalTempoWindowSeconds)
-        );
-    }
-
-    const normalizedLocalTempoInterpolation = normalizeWarpingMatrixLocalTempoInterpolation(
-        warpingMatrix.localTempoInterpolation
-    );
-    if (normalizedLocalTempoInterpolation !== undefined) {
-        container.setAttribute(
-            'data-warping-matrix-local-tempo-interpolation',
-            String(normalizedLocalTempoInterpolation)
-        );
     }
 
     root.appendChild(container);

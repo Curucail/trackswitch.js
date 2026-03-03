@@ -2150,7 +2150,19 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             };
         }
 
-        const trackIndexes = this.getAudibleTrackIndexesForWarpingMatrix();
+        const activeTrackIndex = this.getActiveSoloTrackIndex();
+        if (activeTrackIndex < 0) {
+            return {
+                enabled: true,
+                syncEnabled: this.globalSyncEnabled,
+                referenceDuration: this.longestDuration,
+                currentReferenceTime: this.state.position,
+                columnOrder: this.alignmentContext.uniqueColumnOrder,
+                trackSeries: [],
+            };
+        }
+
+        const trackIndexes = [activeTrackIndex];
         const seenColumns = new Set<string>();
         const referenceDuration = this.longestDuration;
         const trackSeries = trackIndexes.map((trackIndex) => {
@@ -2176,16 +2188,19 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             let trackDuration = runtime.baseSource.timing
                 ? runtime.baseSource.timing.effectiveDuration
                 : (runtime.baseSource.buffer ? runtime.baseSource.buffer.duration : 0);
+            let maxMappedTrackTime = Number.NEGATIVE_INFINITY;
+            points.forEach((point) => {
+                if (Number.isFinite(point.trackTime) && point.trackTime > maxMappedTrackTime) {
+                    maxMappedTrackTime = point.trackTime;
+                }
+            });
+            const resolvedMappedDuration = Number.isFinite(maxMappedTrackTime) && maxMappedTrackTime > 0
+                ? maxMappedTrackTime
+                : referenceDuration;
             if (!Number.isFinite(trackDuration) || trackDuration <= 0) {
-                let maxMappedTrackTime = Number.NEGATIVE_INFINITY;
-                points.forEach((point) => {
-                    if (Number.isFinite(point.trackTime) && point.trackTime > maxMappedTrackTime) {
-                        maxMappedTrackTime = point.trackTime;
-                    }
-                });
-                trackDuration = Number.isFinite(maxMappedTrackTime) && maxMappedTrackTime > 0
-                    ? maxMappedTrackTime
-                    : referenceDuration;
+                trackDuration = resolvedMappedDuration;
+            } else {
+                trackDuration = Math.max(trackDuration, resolvedMappedDuration);
             }
 
             return {

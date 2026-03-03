@@ -96,8 +96,6 @@ export interface TrackSwitchWarpingMatrixConfig {
     style?: string;
     height?: number;
     pathStrokeWidth?: number;
-    localTempoWindowSeconds?: number;
-    localTempoInterpolation?: 'step' | 'linear';
 }
 
 export interface TrackSwitchImageUiElement extends TrackSwitchImageConfig {

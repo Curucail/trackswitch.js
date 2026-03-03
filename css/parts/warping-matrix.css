@@ -8,14 +8,11 @@
 .trackswitch .warping-matrix-host {
     width: 100%;
     min-height: 180px;
-    display: flex;
-    gap: 12px;
-    align-items: stretch;
+    display: block;
 }
 
 .trackswitch .warping-matrix-panel {
-    flex: 1 1 0;
-    min-width: 0;
+    width: 100%;
     min-height: 180px;
     position: relative;
     background-color: #EEEEEE;
@@ -52,7 +49,7 @@
     stroke: #666666;
 }
 
-.trackswitch .warping-tempo-disabled-overlay {
+.trackswitch .warping-matrix-disabled-overlay {
     position: absolute;
     inset: 0;
     display: none;
@@ -67,14 +64,14 @@
     pointer-events: none;
 }
 
-.trackswitch .warping-matrix-host.warping-matrix-tempo-disabled .warping-matrix-panel-tempo .warping-plot-host {
+.trackswitch .warping-matrix-host.warping-matrix-main-disabled .warping-matrix-panel-main .warping-plot-host {
     pointer-events: none;
 }
 
-.trackswitch .warping-matrix-host.warping-matrix-tempo-disabled .warping-matrix-panel-tempo .uplot {
+.trackswitch .warping-matrix-host.warping-matrix-main-disabled .warping-matrix-panel-main .uplot {
     opacity: 0.55;
 }
 
-.trackswitch .warping-matrix-host.warping-matrix-tempo-disabled .warping-tempo-disabled-overlay {
+.trackswitch .warping-matrix-host.warping-matrix-main-disabled .warping-matrix-disabled-overlay {
     display: flex;
 }
