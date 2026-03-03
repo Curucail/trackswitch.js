@@ -158,39 +158,10 @@ function normalizeWarpingMatrixHeight(value: number | undefined): number | undef
     return Math.max(1, Math.round(value));
 }
 
-function normalizeWarpingMatrixPathStrokeWidth(value: number | undefined): number | undefined {
-    if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
-        return undefined;
-    }
-
-    return Math.max(0.5, value);
-}
-
-function normalizeWarpingMatrixLocalTempoWindowSeconds(value: number | undefined): number | undefined {
-    if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
-        return undefined;
-    }
-
-    return Math.max(0.1, value);
-}
-
-function normalizeWarpingMatrixLocalTempoSlopeHalfWindowPoints(value: number | undefined): number | undefined {
-    if (typeof value !== 'number' || !Number.isFinite(value) || value < 1) {
-        return undefined;
-    }
-
-    return Math.max(1, Math.round(value));
-}
-
 function normalizeWarpingMatrixConfig<T extends TrackSwitchWarpingMatrixConfig>(warpingMatrix: T): T {
     return {
         ...warpingMatrix,
         height: normalizeWarpingMatrixHeight(warpingMatrix.height),
-        pathStrokeWidth: normalizeWarpingMatrixPathStrokeWidth(warpingMatrix.pathStrokeWidth),
-        localTempoWindowSeconds: normalizeWarpingMatrixLocalTempoWindowSeconds(warpingMatrix.localTempoWindowSeconds),
-        localTempoSlopeHalfWindowPoints: normalizeWarpingMatrixLocalTempoSlopeHalfWindowPoints(
-            warpingMatrix.localTempoSlopeHalfWindowPoints
-        ),
     };
 }
 
@@ -258,31 +229,6 @@ function injectWarpingMatrix(root: HTMLElement, warpingMatrix: TrackSwitchWarpin
     const normalizedHeight = normalizeWarpingMatrixHeight(warpingMatrix.height);
     if (normalizedHeight !== undefined) {
         container.setAttribute('data-warping-matrix-height', String(normalizedHeight));
-    }
-
-    const normalizedPathStrokeWidth = normalizeWarpingMatrixPathStrokeWidth(warpingMatrix.pathStrokeWidth);
-    if (normalizedPathStrokeWidth !== undefined) {
-        container.setAttribute('data-warping-matrix-path-stroke-width', String(normalizedPathStrokeWidth));
-    }
-
-    const normalizedLocalTempoWindowSeconds = normalizeWarpingMatrixLocalTempoWindowSeconds(
-        warpingMatrix.localTempoWindowSeconds
-    );
-    if (normalizedLocalTempoWindowSeconds !== undefined) {
-        container.setAttribute(
-            'data-warping-matrix-local-tempo-window-seconds',
-            String(normalizedLocalTempoWindowSeconds)
-        );
-    }
-
-    const normalizedLocalTempoSlopeHalfWindowPoints = normalizeWarpingMatrixLocalTempoSlopeHalfWindowPoints(
-        warpingMatrix.localTempoSlopeHalfWindowPoints
-    );
-    if (normalizedLocalTempoSlopeHalfWindowPoints !== undefined) {
-        container.setAttribute(
-            'data-warping-matrix-local-tempo-slope-half-window-points',
-            String(normalizedLocalTempoSlopeHalfWindowPoints)
-        );
     }
 
     root.appendChild(container);

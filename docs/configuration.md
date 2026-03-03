@@ -50,8 +50,6 @@ TrackSwitch.createTrackSwitch(rootElement, {
     {
       type: 'warping_matrix',
       height: 240,
-      localTempoWindowSeconds: 10,
-      localTempoSlopeHalfWindowPoints: 5,
     },
   ],
   alignment: {
@@ -203,23 +201,20 @@ Warping matrix element:
 {
   type: 'warping_matrix',
   height: 240,
-  pathStrokeWidth: 2,
-  localTempoWindowSeconds: 10,
-  localTempoSlopeHalfWindowPoints: 5,
   style: 'margin: 12px 0;',
 }
 ```
 
-- Fields: `height?` (panel height in px), `pathStrokeWidth?` (path stroke width in px), `localTempoWindowSeconds?` (moving x-window length in active-track seconds), `localTempoSlopeHalfWindowPoints?` (finite-difference half-window size in DTW path points), `style?`
+- Fields: `height?` (panel height in px), `style?`
 - Rendering is active in `alignment` mode only; outside `alignment` the element stays hidden
 - The UI renders two linked panels: left `warping path` and right `local tempo deviation`
 - Left panel uses reference timeline on x-axis and track timeline on y-axis, with current reference indicator per track
 - Right panel uses active-track time on x and local tempo in percent on y, where `100` means equal local speed to reference
 - Tempo is computed directly from DTW points via finite differences: `tempoPercent = ((j[k+w] - j[k-w]) / (i[k+w] - i[k-w])) * 100`; samples with non-positive denominator are skipped
 - Right panel has a gray dashed baseline at `y = 100`
-- Right panel uses active-track time on its x-axis and displays a centered moving track-time window (`localTempoWindowSeconds`, default `10`)
+- Right panel uses active-track time on its x-axis and displays a centered moving track-time window (adjustable via the tempo controls)
 - Right panel renders a single active-track curve, includes a fixed dashed vertical center playhead guide, and switches to a visible dimmed non-interactive state when global `SYNC` is enabled
-- `localTempoSlopeHalfWindowPoints` defaults to `5` (smaller values are noisier, larger values are smoother)
+- Local tempo uses central finite differences with half-window `w = 1`
 - Clicking the left panel (drag supported) or right panel (single-click) seeks on the reference timeline
 
 ## Player Features

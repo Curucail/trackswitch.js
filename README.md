@@ -81,9 +81,6 @@ document.addEventListener('DOMContentLoaded', function () {
       {
         type: 'warping_matrix',
         height: 240,
-        pathStrokeWidth: 2,
-        localTempoWindowSeconds: 10,
-        localTempoSlopeHalfWindowPoints: 5,
       },
     ],
     features: {
@@ -159,8 +156,8 @@ Alignment mode behavior:
 - `alignment`: `sheetmusic` supports optional `followPlayback` (default `true`) to auto-scroll vertically and keep the current highlighted measure in view
 - `alignment`: optional `warping_matrix` UI entries render two linked panels: the warping-path graph plus a local-tempo graph
 - `alignment`: the tempo panel computes finite-difference local tempo from DTW path neighborhoods, with `100` meaning equal local speed to the reference
-- `alignment`: the tempo panel shows a gray dashed `y = 100` reference line plus a fixed dashed vertical playhead guide at panel center; its x-axis is active-track time and it uses a centered moving track-time window (`localTempoWindowSeconds`, default `10`)
-- `alignment`: the tempo panel renders one active-track curve (controlled by `localTempoSlopeHalfWindowPoints`, default `5`), supports click-to-seek, and switches to a visible dimmed non-interactive state while global `SYNC` is enabled
+- `alignment`: the tempo panel shows a gray dashed `y = 100` reference line plus a fixed dashed vertical playhead guide at panel center; its x-axis is active-track time and it uses a centered moving track-time window (adjustable via the tempo controls)
+- `alignment`: the tempo panel renders one active-track curve using central finite differences (`w = 1`), supports click-to-seek, and switches to a visible dimmed non-interactive state while global `SYNC` is enabled
 - Waveform zoom is configured per waveform via `maxZoom`; wheel/pinch zoom is enabled only when `maxZoom > 1` (or `> '100%'`)
 
 Legacy note:

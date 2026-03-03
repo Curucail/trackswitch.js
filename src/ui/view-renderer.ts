@@ -174,9 +174,6 @@ interface WarpingMatrixHostMetadata {
     matrixDisabled: boolean;
     matrixTrackDuration: number;
     configuredHeight: number | null;
-    configuredPathStrokeWidth: number | null;
-    configuredLocalTempoWindowSeconds: number;
-    configuredLocalTempoSlopeHalfWindowPoints: number;
     tempoWindowSeconds: number;
     tempoYHalfRangePercent: number;
     colorByColumn: Map<string, string>;
@@ -194,7 +191,7 @@ const WAVEFORM_TILE_WIDTH_PX = 1024;
 const WARPING_MATRIX_PRIMARY_COLOR = '#ED8C01';
 const DEFAULT_WARPING_MATRIX_PATH_STROKE_WIDTH = 3;
 const DEFAULT_WARPING_MATRIX_LOCAL_TEMPO_WINDOW_SECONDS = 60;
-const DEFAULT_WARPING_MATRIX_LOCAL_TEMPO_SLOPE_HALF_WINDOW_POINTS = 5;
+const WARPING_MATRIX_LOCAL_TEMPO_SLOPE_HALF_WINDOW_POINTS = 1;
 const WARPING_MATRIX_TEMPO_WINDOW_MIN_SECONDS = 10;
 const WARPING_MATRIX_TEMPO_WINDOW_MAX_SECONDS = 180;
 const WARPING_MATRIX_TEMPO_WINDOW_STEP_SECONDS = 0.5;
@@ -444,45 +441,6 @@ function parseWarpingMatrixHeight(value: string | null): number | null {
     return Math.max(1, Math.round(parsed));
 }
 
-function parseWarpingMatrixPathStrokeWidth(value: string | null): number | null {
-    if (value === null) {
-        return null;
-    }
-
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-        return null;
-    }
-
-    return Math.max(0.5, parsed);
-}
-
-function parseWarpingMatrixLocalTempoWindowSeconds(value: string | null): number {
-    if (value === null) {
-        return DEFAULT_WARPING_MATRIX_LOCAL_TEMPO_WINDOW_SECONDS;
-    }
-
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-        return DEFAULT_WARPING_MATRIX_LOCAL_TEMPO_WINDOW_SECONDS;
-    }
-
-    return Math.max(0.1, parsed);
-}
-
-function parseWarpingMatrixLocalTempoSlopeHalfWindowPoints(value: string | null): number {
-    if (value === null) {
-        return DEFAULT_WARPING_MATRIX_LOCAL_TEMPO_SLOPE_HALF_WINDOW_POINTS;
-    }
-
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed) || parsed < 1) {
-        return DEFAULT_WARPING_MATRIX_LOCAL_TEMPO_SLOPE_HALF_WINDOW_POINTS;
-    }
-
-    return Math.max(1, Math.round(parsed));
-}
-
 function normalizeTempoWindowSeconds(value: number): number {
     if (!Number.isFinite(value)) {
         return DEFAULT_WARPING_MATRIX_LOCAL_TEMPO_WINDOW_SECONDS;
@@ -556,16 +514,16 @@ export class ViewRenderer {
         return Array.from(this.root.querySelectorAll(selector)) as HTMLElement[];
     }
 
-    private getWarpingMatrixPathStrokeWidth(host: WarpingMatrixHostMetadata): number {
-        return host.configuredPathStrokeWidth ?? DEFAULT_WARPING_MATRIX_PATH_STROKE_WIDTH;
+    private getWarpingMatrixPathStrokeWidth(): number {
+        return DEFAULT_WARPING_MATRIX_PATH_STROKE_WIDTH;
     }
 
     private getWarpingMatrixLocalTempoWindowSeconds(host: WarpingMatrixHostMetadata): number {
         return normalizeTempoWindowSeconds(host.tempoWindowSeconds);
     }
 
-    private getWarpingMatrixLocalTempoSlopeHalfWindowPoints(host: WarpingMatrixHostMetadata): number {
-        return host.configuredLocalTempoSlopeHalfWindowPoints;
+    private getWarpingMatrixLocalTempoSlopeHalfWindowPoints(): number {
+        return WARPING_MATRIX_LOCAL_TEMPO_SLOPE_HALF_WINDOW_POINTS;
     }
 
     private getWarpingMatrixTempoYHalfRangePercent(host: WarpingMatrixHostMetadata): number {
@@ -1079,15 +1037,6 @@ export class ViewRenderer {
             }
 
             const configuredHeight = parseWarpingMatrixHeight(hostElement.getAttribute('data-warping-matrix-height'));
-            const configuredPathStrokeWidth = parseWarpingMatrixPathStrokeWidth(
-                hostElement.getAttribute('data-warping-matrix-path-stroke-width')
-            );
-            const configuredLocalTempoWindowSeconds = parseWarpingMatrixLocalTempoWindowSeconds(
-                hostElement.getAttribute('data-warping-matrix-local-tempo-window-seconds')
-            );
-            const configuredLocalTempoSlopeHalfWindowPoints = parseWarpingMatrixLocalTempoSlopeHalfWindowPoints(
-                hostElement.getAttribute('data-warping-matrix-local-tempo-slope-half-window-points')
-            );
             hostElement.style.removeProperty('height');
 
             hostElement.classList.add('warping-matrix-host');
@@ -1162,7 +1111,7 @@ export class ViewRenderer {
 
             const persistedTempoControls = this.warpingMatrixTempoControlState.get(hostElement);
             const initialTempoWindowSeconds = normalizeTempoWindowSeconds(
-                persistedTempoControls ? persistedTempoControls.windowSeconds : configuredLocalTempoWindowSeconds
+                persistedTempoControls ? persistedTempoControls.windowSeconds : DEFAULT_WARPING_MATRIX_LOCAL_TEMPO_WINDOW_SECONDS
             );
             const initialTempoYHalfRangePercent = normalizeTempoYHalfRangePercent(
                 persistedTempoControls ? persistedTempoControls.yHalfRangePercent : DEFAULT_WARPING_MATRIX_TEMPO_Y_HALF_RANGE_PERCENT
@@ -1194,9 +1143,6 @@ export class ViewRenderer {
                 matrixDisabled: false,
                 matrixTrackDuration: 1,
                 configuredHeight: configuredHeight,
-                configuredPathStrokeWidth: configuredPathStrokeWidth,
-                configuredLocalTempoWindowSeconds: configuredLocalTempoWindowSeconds,
-                configuredLocalTempoSlopeHalfWindowPoints: configuredLocalTempoSlopeHalfWindowPoints,
                 tempoWindowSeconds: initialTempoWindowSeconds,
                 tempoYHalfRangePercent: initialTempoYHalfRangePercent,
                 colorByColumn: new Map<string, string>(),
@@ -1692,7 +1638,7 @@ export class ViewRenderer {
         const referenceDuration = Math.max(0.001, sanitizeDuration(context.referenceDuration));
         host.referenceDuration = referenceDuration;
         host.currentReferenceTime = clampTime(context.currentReferenceTime, 0, referenceDuration);
-        const pathStrokeWidth = this.getWarpingMatrixPathStrokeWidth(host);
+        const pathStrokeWidth = this.getWarpingMatrixPathStrokeWidth();
         host.matrixDisabled = context.syncEnabled;
         host.host.classList.toggle('warping-matrix-sync-disabled', host.matrixDisabled);
         host.matrixDisabledOverlay.style.display = host.matrixDisabled ? 'flex' : 'none';
@@ -1837,7 +1783,7 @@ export class ViewRenderer {
             host.matrixDataCacheKey = matrixDataCacheKey;
         }
 
-        const localTempoSlopeHalfWindowPoints = this.getWarpingMatrixLocalTempoSlopeHalfWindowPoints(host);
+        const localTempoSlopeHalfWindowPoints = this.getWarpingMatrixLocalTempoSlopeHalfWindowPoints();
         const tempoDataCacheKey = matrixDataCacheKey + '#w' + localTempoSlopeHalfWindowPoints;
         if (host.tempoDataCacheKey !== tempoDataCacheKey) {
             host.tempoDataCache = this.buildWarpingTempoData(context.trackSeries, localTempoSlopeHalfWindowPoints);
