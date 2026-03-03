@@ -1173,6 +1173,18 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         const key = event.key || event.code;
         let handled = false;
 
+        const trackIndex = this.getKeyboardTrackIndex(event);
+        if (trackIndex !== null && trackIndex < this.runtimes.length) {
+            event.preventDefault();
+            this.toggleSolo(trackIndex, this.effectiveSingleSoloMode);
+            handled = true;
+        }
+
+        if (handled) {
+            event.stopPropagation();
+            return;
+        }
+
         switch (key) {
             case ' ':
             case 'Spacebar':
@@ -1276,6 +1288,29 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         if (handled) {
             event.stopPropagation();
         }
+    }
+
+    private getKeyboardTrackIndex(event: ControllerPointerEvent): number | null {
+        const key = event.key;
+        const code = event.code;
+
+        if (key === '0' || code === 'Digit0' || code === 'Numpad0') {
+            return 9;
+        }
+
+        if (key && key >= '1' && key <= '9') {
+            return Number(key) - 1;
+        }
+
+        if (code && code >= 'Digit1' && code <= 'Digit9') {
+            return Number(code.slice(-1)) - 1;
+        }
+
+        if (code && code >= 'Numpad1' && code <= 'Numpad9') {
+            return Number(code.slice(-1)) - 1;
+        }
+
+        return null;
     }
 
     onResize(): void {

@@ -277,6 +277,9 @@ When `features.keyboard` is enabled:
 - `Shift + ArrowLeft` / `Shift + ArrowRight` - seek -/+ 5 seconds
 - `Home` - jump to start
 - `ArrowUp` / `ArrowDown` - adjust volume (when `globalVolume` is enabled)
+- `1`-`0` - control tracks 1-10:
+  - if `radiosolo` is `true`: switch to the selected track
+  - if `radiosolo` is `false`: toggle the selected track mute state
 
 When `features.looping` is enabled:
 
