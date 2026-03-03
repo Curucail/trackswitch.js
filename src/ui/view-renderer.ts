@@ -183,18 +183,7 @@ interface WarpingMatrixHostMetadata {
 const MIN_WAVEFORM_ZOOM = 1;
 const DEFAULT_MAX_WAVEFORM_ZOOM = 20;
 const WAVEFORM_TILE_WIDTH_PX = 1024;
-const WARPING_MATRIX_FIXED_COLORS = [
-    '#ED8C01',
-    '#1F77B4',
-    '#2CA02C',
-    '#D62728',
-    '#9467BD',
-    '#17BECF',
-    '#8C564B',
-    '#E377C2',
-    '#BCBD22',
-    '#FF7F0E',
-];
+const WARPING_MATRIX_PRIMARY_COLOR = '#ED8C01';
 const DEFAULT_WARPING_MATRIX_PATH_STROKE_WIDTH = 3;
 const DEFAULT_WARPING_MATRIX_LOCAL_TEMPO_WINDOW_SECONDS = 10;
 const DEFAULT_WARPING_MATRIX_LOCAL_TEMPO_SLOPE_HALF_WINDOW_POINTS = 5;
@@ -536,6 +525,39 @@ export class ViewRenderer {
 
     private getWarpingMatrixLocalTempoSlopeHalfWindowPoints(host: WarpingMatrixHostMetadata): number {
         return host.configuredLocalTempoSlopeHalfWindowPoints;
+    }
+
+    private getWarpingMatrixSquarePlotSize(plot: WarpingMatrixPlotState): number {
+        return Math.max(1, Math.min(plot.innerWidth, plot.innerHeight));
+    }
+
+    private hashWarpingMatrixColumnKey(columnKey: string): number {
+        let hash = 0;
+        for (let index = 0; index < columnKey.length; index += 1) {
+            hash = ((hash * 31) + columnKey.charCodeAt(index)) >>> 0;
+        }
+
+        return hash;
+    }
+
+    private resolveWarpingMatrixColumnColor(columnKey: string, columnOrder: string[]): string {
+        const normalizedColumn = String(columnKey || '').trim();
+        if (!normalizedColumn) {
+            return WARPING_MATRIX_PRIMARY_COLOR;
+        }
+
+        const normalizedOrder = columnOrder.map((column) => String(column || '').trim()).filter((column) => column.length > 0);
+        let columnIndex = normalizedOrder.indexOf(normalizedColumn);
+        if (columnIndex < 0) {
+            columnIndex = (this.hashWarpingMatrixColumnKey(normalizedColumn) % 360) + 1;
+        }
+
+        if (columnIndex === 0) {
+            return WARPING_MATRIX_PRIMARY_COLOR;
+        }
+
+        const hue = (columnIndex * 137.508) % 360;
+        return d3.hsl(hue, 0.68, 0.46).formatHex();
     }
 
     private getCanvasPixelRatio(): number {
@@ -1163,12 +1185,12 @@ export class ViewRenderer {
             .append('text')
             .attr('class', 'warping-plot-axis-label')
             .attr('text-anchor', 'middle')
-            .text('Reference time');
+            .text('Reference time (s)');
         const yLabel = svg
             .append('text')
             .attr('class', 'warping-plot-axis-label')
             .attr('text-anchor', 'middle')
-            .text('Track time');
+            .text('Track time (s)');
 
         const plotRoot = svg
             .append('g')
@@ -1254,7 +1276,7 @@ export class ViewRenderer {
             .append('text')
             .attr('class', 'warping-plot-axis-label')
             .attr('text-anchor', 'middle')
-            .text('Track time');
+            .text('Track time (s)');
         const yLabel = svg
             .append('text')
             .attr('class', 'warping-plot-axis-label')
@@ -1378,11 +1400,12 @@ export class ViewRenderer {
             return;
         }
 
+        const squareSize = this.getWarpingMatrixSquarePlotSize(host.matrixPlot);
         if (!this.isPointerInsidePlotArea(
             host.matrixPlotHost,
             host.matrixPlot.margins,
-            host.matrixPlot.innerWidth,
-            host.matrixPlot.innerHeight,
+            squareSize,
+            squareSize,
             event.clientX,
             event.clientY
         )) {
@@ -1430,11 +1453,12 @@ export class ViewRenderer {
             return;
         }
 
+        const squareSize = this.getWarpingMatrixSquarePlotSize(host.matrixPlot);
         const rect = host.matrixPlotHost.getBoundingClientRect();
         const pointerX = clampTime(
             clientX - rect.left - host.matrixPlot.margins.left,
             0,
-            host.matrixPlot.innerWidth
+            squareSize
         );
         const referenceTime = host.matrixPlot.xScale.invert(pointerX);
         this.onWarpingMatrixSeek(clampTime(referenceTime, 0, Math.max(0.001, host.referenceDuration)));
@@ -1518,9 +1542,36 @@ export class ViewRenderer {
 
         const renderedHeight = host.configuredHeight ?? Math.max(180, host.matrixPanel.clientHeight || 220);
         const fallbackHostWidth = Math.max(460, Math.round(host.host.clientWidth || host.wrapper.clientWidth || 720));
-        const fallbackPanelWidth = Math.max(220, Math.round((fallbackHostWidth - 12) / 2));
-        const matrixRenderedWidth = Math.max(220, Math.round(host.matrixPanel.clientWidth || fallbackPanelWidth));
-        const tempoRenderedWidth = Math.max(220, Math.round(host.tempoPanel.clientWidth || fallbackPanelWidth));
+        const computedHostStyle = window.getComputedStyle(host.host);
+        const resolvedGap = Number.parseFloat(computedHostStyle.columnGap || computedHostStyle.gap || '12');
+        const panelGap = Number.isFinite(resolvedGap) ? Math.max(0, resolvedGap) : 12;
+        const isStackedLayout = window.matchMedia('(max-width: 900px)').matches;
+
+        let matrixRenderedWidth = 0;
+        let tempoRenderedWidth = 0;
+        if (isStackedLayout) {
+            host.matrixPanel.style.flex = '1 1 auto';
+            host.matrixPanel.style.width = '100%';
+            host.tempoPanel.style.flex = '1 1 auto';
+            host.tempoPanel.style.width = '100%';
+            matrixRenderedWidth = Math.max(220, Math.round(host.matrixPanel.clientWidth || fallbackHostWidth));
+            tempoRenderedWidth = Math.max(220, Math.round(host.tempoPanel.clientWidth || fallbackHostWidth));
+        } else {
+            // Keep the left panel roughly square relative to height and let the tempo panel absorb the rest.
+            const desiredMatrixWidth = Math.max(220, Math.round(renderedHeight - 4));
+            const maxMatrixWidth = Math.max(220, Math.round((fallbackHostWidth - panelGap) * 0.6));
+            const minTempoWidth = 220;
+            const matrixWidthByRemainingSpace = Math.max(220, Math.round(fallbackHostWidth - panelGap - minTempoWidth));
+            matrixRenderedWidth = Math.min(desiredMatrixWidth, maxMatrixWidth, matrixWidthByRemainingSpace);
+
+            host.matrixPanel.style.flex = '0 0 ' + matrixRenderedWidth + 'px';
+            host.matrixPanel.style.width = matrixRenderedWidth + 'px';
+            host.tempoPanel.style.flex = '1 1 auto';
+            host.tempoPanel.style.width = 'auto';
+
+            const fallbackTempoWidth = Math.max(220, Math.round(fallbackHostWidth - panelGap - matrixRenderedWidth));
+            tempoRenderedWidth = Math.max(220, Math.round(host.tempoPanel.clientWidth || fallbackTempoWidth));
+        }
         host.matrixPanel.style.height = renderedHeight + 'px';
         host.tempoPanel.style.height = renderedHeight + 'px';
 
@@ -1529,10 +1580,23 @@ export class ViewRenderer {
         host.lastSizeKey = sizeKey;
 
         host.colorByColumn.clear();
+        const normalizedColumnOrder = context.columnOrder.length > 0
+            ? context.columnOrder
+            : context.trackSeries.map((series) => series.columnKey);
+        normalizedColumnOrder.forEach((columnKey) => {
+            host.colorByColumn.set(
+                columnKey,
+                this.resolveWarpingMatrixColumnColor(columnKey, normalizedColumnOrder)
+            );
+        });
         context.trackSeries.forEach((series) => {
+            if (host.colorByColumn.has(series.columnKey)) {
+                return;
+            }
+
             host.colorByColumn.set(
                 series.columnKey,
-                WARPING_MATRIX_FIXED_COLORS[0]
+                this.resolveWarpingMatrixColumnColor(series.columnKey, normalizedColumnOrder)
             );
         });
 
@@ -1548,7 +1612,7 @@ export class ViewRenderer {
         const matrixSeriesSignature = context.trackSeries.map((series) => {
             return [
                 series.columnKey,
-                host.colorByColumn.get(series.columnKey) || WARPING_MATRIX_FIXED_COLORS[0],
+                host.colorByColumn.get(series.columnKey) || WARPING_MATRIX_PRIMARY_COLOR,
                 series.trackIndex,
             ].join(':');
         }).join('|') + '#' + pathStrokeWidth;
@@ -1614,16 +1678,27 @@ export class ViewRenderer {
         const plot = host.matrixPlot;
         const referenceDuration = Math.max(0.001, host.referenceDuration);
         const trackDuration = Math.max(0.001, host.matrixTrackDuration);
+        const squareSize = this.getWarpingMatrixSquarePlotSize(plot);
 
         plot.xScale
             .domain([0, referenceDuration])
-            .range([0, plot.innerWidth]);
+            .range([0, squareSize]);
         plot.yScale
             .domain([0, trackDuration])
-            .range([plot.innerHeight, 0]);
+            .range([squareSize, 0]);
 
-        const xTickCount = Math.max(2, Math.round(plot.innerWidth / 90));
-        const yTickCount = Math.max(2, Math.round(plot.innerHeight / 60));
+        plot.clipRect
+            .attr('width', squareSize)
+            .attr('height', squareSize);
+        plot.xAxis.attr('transform', 'translate(' + plot.margins.left + ',' + (plot.margins.top + squareSize) + ')');
+        plot.yAxis.attr('transform', 'translate(' + plot.margins.left + ',' + plot.margins.top + ')');
+        plot.xLabel
+            .attr('x', plot.margins.left + (squareSize / 2));
+        plot.yLabel
+            .attr('transform', 'translate(14,' + (plot.margins.top + (squareSize / 2)) + ') rotate(-90)');
+
+        const xTickCount = Math.max(2, Math.round(squareSize / 90));
+        const yTickCount = Math.max(2, Math.round(squareSize / 60));
         plot.xAxis.call(d3.axisBottom(plot.xScale).ticks(xTickCount));
         plot.yAxis.call(d3.axisLeft(plot.yScale).ticks(yTickCount));
 
@@ -1647,7 +1722,7 @@ export class ViewRenderer {
                 }
 
                 path
-                    .attr('stroke', host.colorByColumn.get(columnKey) || WARPING_MATRIX_FIXED_COLORS[0])
+                    .attr('stroke', host.colorByColumn.get(columnKey) || WARPING_MATRIX_PRIMARY_COLOR)
                     .attr('stroke-width', pathStrokeWidth)
                     .attr('d', line(seriesData.pointsByReferenceTime) || null);
             });
@@ -1665,8 +1740,8 @@ export class ViewRenderer {
 
         plot.guideDiagonal
             .attr('x1', 0)
-            .attr('y1', plot.innerHeight)
-            .attr('x2', plot.innerWidth)
+            .attr('y1', squareSize)
+            .attr('x2', squareSize)
             .attr('y2', 0);
 
         const playheadX = plot.xScale(clampTime(host.currentReferenceTime, 0, referenceDuration));
@@ -1674,7 +1749,7 @@ export class ViewRenderer {
             .attr('x1', playheadX)
             .attr('x2', playheadX)
             .attr('y1', 0)
-            .attr('y2', plot.innerHeight)
+            .attr('y2', squareSize)
             .raise();
     }
 
@@ -1717,7 +1792,12 @@ export class ViewRenderer {
             .x((point) => tempoPlot.xScale(point.trackTime))
             .y((point) => tempoPlot.yScale(point.tempoPercent));
 
-        tempoPlot.path.attr('d', tempoLine(tempoSeries) || null);
+        const activeColor = host.activeColumnKey
+            ? (host.colorByColumn.get(host.activeColumnKey) || WARPING_MATRIX_PRIMARY_COLOR)
+            : WARPING_MATRIX_PRIMARY_COLOR;
+        tempoPlot.path
+            .attr('stroke', activeColor)
+            .attr('d', tempoLine(tempoSeries) || null);
 
         const baselineY = tempoPlot.yScale(100);
         tempoPlot.baseline
@@ -1738,35 +1818,11 @@ export class ViewRenderer {
     private resolveCenteredWarpingWindow(
         center: number,
         windowSeconds: number,
-        maxTime: number
+        _maxTime: number
     ): [number, number] {
-        const duration = Math.max(0.001, maxTime);
-        const windowSize = Math.max(0.001, windowSeconds);
-        if (duration <= windowSize) {
-            return [0, duration];
-        }
-
-        const clampedCenter = clampTime(center, 0, duration);
-        let min = clampedCenter - (windowSize / 2);
-        let max = clampedCenter + (windowSize / 2);
-
-        if (min < 0) {
-            max -= min;
-            min = 0;
-        }
-
-        if (max > duration) {
-            min -= (max - duration);
-            max = duration;
-        }
-
-        min = clampTime(min, 0, duration);
-        max = clampTime(max, min + 0.001, duration);
-        if (max <= min) {
-            return [0, duration];
-        }
-
-        return [min, max];
+        const safeCenter = Number.isFinite(center) ? center : 0;
+        const halfWindow = Math.max(0.0005, windowSeconds / 2);
+        return [safeCenter - halfWindow, safeCenter + halfWindow];
     }
 
     private resolveTempoPlotDomain(visibleTempoValues: number[]): [number, number] {
@@ -1775,21 +1831,18 @@ export class ViewRenderer {
             return [WARPING_MATRIX_FALLBACK_TEMPO_DOMAIN_MIN, WARPING_MATRIX_FALLBACK_TEMPO_DOMAIN_MAX];
         }
 
-        let min = Math.min(100, ...finiteValues);
-        let max = Math.max(100, ...finiteValues);
-        if (!Number.isFinite(min) || !Number.isFinite(max)) {
+        const maxDeviation = finiteValues.reduce((currentMax, value) => {
+            const deviation = Math.abs(value - 100);
+            return deviation > currentMax ? deviation : currentMax;
+        }, 0);
+        if (!Number.isFinite(maxDeviation)) {
             return [WARPING_MATRIX_FALLBACK_TEMPO_DOMAIN_MIN, WARPING_MATRIX_FALLBACK_TEMPO_DOMAIN_MAX];
         }
 
-        if (Math.abs(max - min) < 0.0001) {
-            const symmetricPadding = Math.max(2, Math.abs(min) * 0.05);
-            min -= symmetricPadding;
-            max += symmetricPadding;
-            return [min, max];
-        }
-
-        const padding = Math.max(2, (max - min) * 0.1);
-        return [min - padding, max + padding];
+        const spread = Math.max(5, maxDeviation);
+        const padding = Math.max(2, spread * 0.1);
+        const halfRange = spread + padding;
+        return [100 - halfRange, 100 + halfRange];
     }
 
     private buildWarpingMatrixData(

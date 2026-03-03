@@ -8,16 +8,25 @@
 .trackswitch .warping-matrix-host {
     width: 100%;
     min-height: 180px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    align-items: stretch;
     gap: 12px;
 }
 
 .trackswitch .warping-matrix-panel {
-    width: 100%;
+    width: auto;
     min-height: 180px;
     position: relative;
     background-color: #EEEEEE;
+}
+
+.trackswitch .warping-matrix-panel-main {
+    flex: 0 0 auto;
+}
+
+.trackswitch .warping-matrix-panel-tempo {
+    flex: 1 1 auto;
+    min-width: 220px;
 }
 
 .trackswitch .warping-plot-host {
@@ -124,7 +133,13 @@
 
 @media (max-width: 900px) {
     .trackswitch .warping-matrix-host {
-        grid-template-columns: 1fr;
+        flex-direction: column;
         gap: 10px;
+    }
+
+    .trackswitch .warping-matrix-panel-main,
+    .trackswitch .warping-matrix-panel-tempo {
+        flex: 1 1 auto;
+        min-width: 0;
     }
 }
