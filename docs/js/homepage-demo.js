@@ -480,7 +480,7 @@
 
       if (model.trackImageBySolo) {
         snippetLines.push(
-          "      { type: 'perTrackImage', seekable: false },"
+          "      { type: 'perTrackImage', seekable: true },"
         );
       }
 
@@ -583,7 +583,7 @@
 
       if (model.trackImageBySolo) {
         snippetLines.push(
-          "      { type: 'perTrackImage', seekable: false },"
+          "      { type: 'perTrackImage', seekable: true },"
         );
       }
 
@@ -760,7 +760,7 @@
       if (model.trackImageBySolo) {
         uiConfig.push({
           type: 'perTrackImage',
-          seekable: false,
+          seekable: true,
         });
       }
 
