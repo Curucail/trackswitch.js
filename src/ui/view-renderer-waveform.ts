@@ -1,17 +1,8 @@
-import { NormalizedTrackGroupLayout, TrackRuntime, TrackSwitchFeatures, TrackSwitchUiState } from '../domain/types';
-import { escapeHtml, sanitizeInlineStyle } from '../shared/dom';
+import { TrackRuntime, TrackSwitchFeatures } from '../domain/types';
+import { sanitizeInlineStyle } from '../shared/dom';
 import { formatSecondsToHHMMSSmmm } from '../shared/format';
 import { clampPercent } from '../shared/math';
-import { TrackTimelineProjector, WaveformEngine } from '../engine/waveform-engine';
-import * as d3 from 'd3';
-
-type SvgSelection = d3.Selection<SVGSVGElement, unknown, null, undefined>;
-type GroupSelection = d3.Selection<SVGGElement, unknown, null, undefined>;
-type PathSelection = d3.Selection<SVGPathElement, unknown, null, undefined>;
-type RectSelection = d3.Selection<SVGRectElement, unknown, null, undefined>;
-type LineSelection = d3.Selection<SVGLineElement, unknown, null, undefined>;
-type CircleSelection = d3.Selection<SVGCircleElement, unknown, null, undefined>;
-type TextSelection = d3.Selection<SVGTextElement, unknown, null, undefined>;
+import { TrackTimelineProjector } from '../engine/waveform-engine';
 
 export interface WaveformTimelineContext {
     enabled: boolean;
@@ -71,134 +62,9 @@ interface WaveformSeekSurfaceMetadata {
     normalizationCacheKey: string | null;
 }
 
-interface LatestWaveformRenderInput {
-    waveformEngine: WaveformEngine;
-    runtimes: TrackRuntime[];
-    timelineDuration: number;
-    trackTimelineProjector?: TrackTimelineProjector;
-    waveformTimelineContext?: WaveformTimelineContext;
-}
-
-interface WarpingMatrixPathPoint {
-    referenceTime: number;
-    trackTime: number;
-}
-
-interface WarpingMatrixPathSeriesData {
-    pointsByReferenceTime: WarpingMatrixPathPoint[];
-    pointsByTrackTime: WarpingMatrixPathPoint[];
-    trackDuration: number;
-}
-
-interface WarpingMatrixMatrixData {
-    byColumn: Map<string, WarpingMatrixPathSeriesData>;
-}
-
-interface WarpingMatrixTempoPoint {
-    trackTime: number;
-    referenceTime: number;
-    tempoPercent: number;
-}
-
-interface WarpingMatrixTempoData {
-    byColumn: Map<string, WarpingMatrixTempoPoint[]>;
-}
-
-interface WarpingPlotMargins {
-    top: number;
-    right: number;
-    bottom: number;
-    left: number;
-}
-
-interface WarpingMatrixPlotState {
-    svg: SvgSelection;
-    title: TextSelection;
-    xAxis: GroupSelection;
-    yAxis: GroupSelection;
-    xLabel: TextSelection;
-    yLabel: TextSelection;
-    plotRoot: GroupSelection;
-    pathLayer: GroupSelection;
-    clipRect: RectSelection;
-    pathByColumn: Map<string, PathSelection>;
-    guideDiagonal: LineSelection;
-    playhead: CircleSelection;
-    xScale: d3.ScaleLinear<number, number>;
-    yScale: d3.ScaleLinear<number, number>;
-    margins: WarpingPlotMargins;
-    innerWidth: number;
-    innerHeight: number;
-}
-
-interface WarpingTempoPlotState {
-    svg: SvgSelection;
-    title: TextSelection;
-    xAxis: GroupSelection;
-    yAxis: GroupSelection;
-    xLabel: TextSelection;
-    yLabel: TextSelection;
-    plotRoot: GroupSelection;
-    clipRect: RectSelection;
-    path: PathSelection;
-    baseline: LineSelection;
-    centerLine: LineSelection;
-    xScale: d3.ScaleLinear<number, number>;
-    yScale: d3.ScaleLinear<number, number>;
-    margins: WarpingPlotMargins;
-    innerWidth: number;
-    innerHeight: number;
-}
-
-interface WarpingMatrixHostMetadata {
-    wrapper: HTMLElement;
-    host: HTMLElement;
-    matrixPanel: HTMLElement;
-    matrixPlotHost: HTMLElement;
-    matrixPlot: WarpingMatrixPlotState | null;
-    matrixDisabledOverlay: HTMLElement;
-    tempoPanel: HTMLElement;
-    tempoPlotHost: HTMLElement;
-    tempoPlot: WarpingTempoPlotState | null;
-    tempoDisabledOverlay: HTMLElement;
-    tempoControls: HTMLElement;
-    tempoWindowSlider: HTMLInputElement;
-    tempoWindowValueNode: HTMLElement;
-    tempoYScaleSlider: HTMLInputElement;
-    tempoYScaleValueNode: HTMLElement;
-    matrixSeriesSignature: string | null;
-    matrixDataCache: WarpingMatrixMatrixData | null;
-    matrixDataCacheKey: string | null;
-    tempoDataCache: WarpingMatrixTempoData | null;
-    tempoDataCacheKey: string | null;
-    matrixDisabled: boolean;
-    matrixTrackDuration: number;
-    configuredHeight: number | null;
-    tempoWindowSeconds: number;
-    tempoYHalfRangePercent: number;
-    colorByColumn: Map<string, string>;
-    activeColumnKey: string | null;
-    referenceDuration: number;
-    currentReferenceTime: number;
-    currentTrackTime: number;
-    matrixActivePointerId: number | null;
-    lastSizeKey: string | null;
-}
-
 const MIN_WAVEFORM_ZOOM = 1;
 const DEFAULT_MAX_WAVEFORM_ZOOM = 20;
 const WAVEFORM_TILE_WIDTH_PX = 1024;
-const WARPING_MATRIX_PRIMARY_COLOR = '#ED8C01';
-const DEFAULT_WARPING_MATRIX_PATH_STROKE_WIDTH = 3;
-const DEFAULT_WARPING_MATRIX_LOCAL_TEMPO_WINDOW_SECONDS = 60;
-const WARPING_MATRIX_LOCAL_TEMPO_SLOPE_HALF_WINDOW_POINTS = 1;
-const WARPING_MATRIX_TEMPO_WINDOW_MIN_SECONDS = 10;
-const WARPING_MATRIX_TEMPO_WINDOW_MAX_SECONDS = 180;
-const WARPING_MATRIX_TEMPO_WINDOW_STEP_SECONDS = 0.5;
-const WARPING_MATRIX_TEMPO_Y_RANGE_MIN_PERCENT = 150;
-const WARPING_MATRIX_TEMPO_Y_RANGE_MAX_PERCENT = 500;
-const WARPING_MATRIX_TEMPO_Y_RANGE_STEP_PERCENT = 1;
-const DEFAULT_WARPING_MATRIX_TEMPO_Y_HALF_RANGE_PERCENT = 250;
 
 function buildSeekWrap(leftPercent: number, rightPercent: number): string {
     return '<div class="seekwrap" style="left: ' + leftPercent + '%; right: ' + rightPercent + '%;">'
@@ -237,60 +103,12 @@ function clampTime(value: number, minimum: number, maximum: number): number {
     return value;
 }
 
-function sanitizeVolume(value: number): number {
-    if (!Number.isFinite(value)) {
-        return 1;
-    }
-
-    return clampTime(value, 0, 1);
-}
-
-function sanitizePan(value: number): number {
-    if (!Number.isFinite(value)) {
-        return 0;
-    }
-
-    return clampTime(value, -1, 1);
-}
-
 function sanitizeDuration(value: number): number {
     if (!Number.isFinite(value) || value <= 0) {
         return 0;
     }
 
     return value;
-}
-
-function resolveWarpingMatrixTrackDuration(trackDuration: number, fallbackDuration: number): number {
-    const normalizedTrackDuration = sanitizeDuration(trackDuration);
-    if (normalizedTrackDuration > 0) {
-        return normalizedTrackDuration;
-    }
-
-    const normalizedFallbackDuration = sanitizeDuration(fallbackDuration);
-    if (normalizedFallbackDuration > 0) {
-        return normalizedFallbackDuration;
-    }
-
-    return 0.001;
-}
-
-function resolveWarpingMatrixSeriesMaxTrackTime(
-    points: WarpingMatrixDataPoint[],
-    fallbackDuration: number
-): number {
-    let maxTrackTime = Number.NEGATIVE_INFINITY;
-    points.forEach((point) => {
-        if (Number.isFinite(point.trackTime) && point.trackTime > maxTrackTime) {
-            maxTrackTime = point.trackTime;
-        }
-    });
-
-    if (Number.isFinite(maxTrackTime) && maxTrackTime > 0) {
-        return maxTrackTime;
-    }
-
-    return resolveWarpingMatrixTrackDuration(0, fallbackDuration);
 }
 
 function parseWaveformBarWidth(value: string | null, fallback: number): number {
@@ -349,120 +167,6 @@ function parseWaveformMaxZoom(value: string | null): number {
     }
 
     return parsed;
-}
-
-function parseSheetMusicString(value: string | null): string {
-    return typeof value === 'string' ? value.trim() : '';
-}
-
-function parseSheetMusicCursorColor(value: string | null): string {
-    const raw = parseSheetMusicString(value);
-    return raw || '#999999';
-}
-
-function parseSheetMusicCursorAlpha(value: string | null): number {
-    if (value === null) {
-        return 0.1;
-    }
-
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed)) {
-        return 0.1;
-    }
-
-    if (parsed < 0) {
-        return 0;
-    }
-
-    if (parsed > 1) {
-        return 1;
-    }
-
-    return parsed;
-}
-
-function parseSheetMusicMaxHeight(value: string | null): number | null {
-    if (value === null) {
-        return null;
-    }
-
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed) || parsed < 1) {
-        return null;
-    }
-
-    return Math.max(1, Math.round(parsed));
-}
-
-function parseSheetMusicMaxWidth(value: string | null): number | null {
-    if (value === null) {
-        return null;
-    }
-
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed) || parsed < 1) {
-        return null;
-    }
-
-    return Math.max(1, Math.round(parsed));
-}
-
-function parseSheetMusicRenderScale(value: string | null): number | null {
-    if (value === null) {
-        return null;
-    }
-
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-        return null;
-    }
-
-    return parsed;
-}
-
-function parseSheetMusicFollowPlayback(value: string | null): boolean {
-    if (value === null) {
-        return true;
-    }
-
-    return parseSheetMusicString(value).toLowerCase() !== 'false';
-}
-
-function parseWarpingMatrixHeight(value: string | null): number | null {
-    if (value === null) {
-        return null;
-    }
-
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed) || parsed < 1) {
-        return null;
-    }
-
-    return Math.max(1, Math.round(parsed));
-}
-
-function normalizeTempoWindowSeconds(value: number): number {
-    if (!Number.isFinite(value)) {
-        return DEFAULT_WARPING_MATRIX_LOCAL_TEMPO_WINDOW_SECONDS;
-    }
-
-    return clampTime(
-        Math.round(value / WARPING_MATRIX_TEMPO_WINDOW_STEP_SECONDS) * WARPING_MATRIX_TEMPO_WINDOW_STEP_SECONDS,
-        WARPING_MATRIX_TEMPO_WINDOW_MIN_SECONDS,
-        WARPING_MATRIX_TEMPO_WINDOW_MAX_SECONDS
-    );
-}
-
-function normalizeTempoYHalfRangePercent(value: number): number {
-    if (!Number.isFinite(value)) {
-        return DEFAULT_WARPING_MATRIX_TEMPO_Y_HALF_RANGE_PERCENT;
-    }
-
-    return clampTime(
-        Math.round(value / WARPING_MATRIX_TEMPO_Y_RANGE_STEP_PERCENT) * WARPING_MATRIX_TEMPO_Y_RANGE_STEP_PERCENT,
-        WARPING_MATRIX_TEMPO_Y_RANGE_MIN_PERCENT,
-        WARPING_MATRIX_TEMPO_Y_RANGE_MAX_PERCENT
-    );
 }
 
 function clampWaveformZoom(zoom: number, maximum: number): number {

@@ -1,8 +1,4 @@
-import { NormalizedTrackGroupLayout, TrackRuntime, TrackSwitchFeatures, TrackSwitchUiState } from '../domain/types';
-import { escapeHtml, sanitizeInlineStyle } from '../shared/dom';
-import { formatSecondsToHHMMSSmmm } from '../shared/format';
-import { clampPercent } from '../shared/math';
-import { TrackTimelineProjector, WaveformEngine } from '../engine/waveform-engine';
+import { sanitizeInlineStyle } from '../shared/dom';
 import * as d3 from 'd3';
 
 type SvgSelection = d3.Selection<SVGSVGElement, unknown, null, undefined>;
@@ -49,34 +45,6 @@ export interface WarpingMatrixRenderContext {
     currentReferenceTime: number;
     columnOrder: string[];
     trackSeries: WarpingMatrixTrackSeries[];
-}
-
-interface WaveformSeekSurfaceMetadata {
-    wrapper: HTMLElement;
-    scrollContainer: HTMLElement;
-    overlay: HTMLElement;
-    surface: HTMLElement;
-    tileLayer: HTMLElement;
-    seekWrap: HTMLElement;
-    waveformSource: 'audible' | number;
-    originalHeight: number;
-    barWidth: number;
-    maxZoom: number;
-    baseWidth: number;
-    zoom: number;
-    timingNode: HTMLElement | null;
-    zoomNode: HTMLElement;
-    tiles: Map<number, { canvas: HTMLCanvasElement; lastDrawKey: string | null }>;
-    normalizationPeak: number;
-    normalizationCacheKey: string | null;
-}
-
-interface LatestWaveformRenderInput {
-    waveformEngine: WaveformEngine;
-    runtimes: TrackRuntime[];
-    timelineDuration: number;
-    trackTimelineProjector?: TrackTimelineProjector;
-    waveformTimelineContext?: WaveformTimelineContext;
 }
 
 interface WarpingMatrixPathPoint {
@@ -185,9 +153,6 @@ interface WarpingMatrixHostMetadata {
     lastSizeKey: string | null;
 }
 
-const MIN_WAVEFORM_ZOOM = 1;
-const DEFAULT_MAX_WAVEFORM_ZOOM = 20;
-const WAVEFORM_TILE_WIDTH_PX = 1024;
 const WARPING_MATRIX_PRIMARY_COLOR = '#ED8C01';
 const DEFAULT_WARPING_MATRIX_PATH_STROKE_WIDTH = 3;
 const DEFAULT_WARPING_MATRIX_LOCAL_TEMPO_WINDOW_SECONDS = 60;
@@ -199,27 +164,6 @@ const WARPING_MATRIX_TEMPO_Y_RANGE_MIN_PERCENT = 150;
 const WARPING_MATRIX_TEMPO_Y_RANGE_MAX_PERCENT = 500;
 const WARPING_MATRIX_TEMPO_Y_RANGE_STEP_PERCENT = 1;
 const DEFAULT_WARPING_MATRIX_TEMPO_Y_HALF_RANGE_PERCENT = 250;
-
-function buildSeekWrap(leftPercent: number, rightPercent: number): string {
-    return '<div class="seekwrap" style="left: ' + leftPercent + '%; right: ' + rightPercent + '%;">'
-        + '<div class="loop-region"></div>'
-        + '<div class="loop-marker marker-a"></div>'
-        + '<div class="loop-marker marker-b"></div>'
-        + '<div class="seekhead"></div>'
-        + '</div>';
-}
-
-function setDisplay(element: Element, displayValue: string): void {
-    (element as HTMLElement).style.display = displayValue;
-}
-
-function setLeftPercent(element: Element, value: number): void {
-    (element as HTMLElement).style.left = value + '%';
-}
-
-function setWidthPercent(element: Element, value: number): void {
-    (element as HTMLElement).style.width = value + '%';
-}
 
 function clampTime(value: number, minimum: number, maximum: number): number {
     if (!Number.isFinite(value)) {
@@ -235,22 +179,6 @@ function clampTime(value: number, minimum: number, maximum: number): number {
     }
 
     return value;
-}
-
-function sanitizeVolume(value: number): number {
-    if (!Number.isFinite(value)) {
-        return 1;
-    }
-
-    return clampTime(value, 0, 1);
-}
-
-function sanitizePan(value: number): number {
-    if (!Number.isFinite(value)) {
-        return 0;
-    }
-
-    return clampTime(value, -1, 1);
 }
 
 function sanitizeDuration(value: number): number {
@@ -293,141 +221,6 @@ function resolveWarpingMatrixSeriesMaxTrackTime(
     return resolveWarpingMatrixTrackDuration(0, fallbackDuration);
 }
 
-function parseWaveformBarWidth(value: string | null, fallback: number): number {
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed) || parsed < 1) {
-        return fallback;
-    }
-
-    return Math.max(1, Math.floor(parsed));
-}
-
-function parseWaveformSource(value: string | null): 'audible' | number {
-    const raw = typeof value === 'string' ? value.trim() : '';
-    if (!raw || raw === 'audible') {
-        return 'audible';
-    }
-
-    const parsed = Number(raw);
-    if (!Number.isFinite(parsed) || parsed < 0) {
-        return 'audible';
-    }
-
-    return Math.floor(parsed);
-}
-
-function parseWaveformTimerEnabled(value: string | null, mode: TrackSwitchFeatures['mode']): boolean {
-    if (value === null) {
-        return mode === 'alignment';
-    }
-
-    return value.trim().toLowerCase() === 'true';
-}
-
-function parseWaveformMaxZoom(value: string | null): number {
-    if (value === null) {
-        return DEFAULT_MAX_WAVEFORM_ZOOM;
-    }
-
-    const trimmed = value.trim();
-    if (!trimmed) {
-        return DEFAULT_MAX_WAVEFORM_ZOOM;
-    }
-
-    if (trimmed.endsWith('%')) {
-        const percent = Number(trimmed.slice(0, -1).trim());
-        if (Number.isFinite(percent) && percent >= 100) {
-            return percent / 100;
-        }
-
-        return DEFAULT_MAX_WAVEFORM_ZOOM;
-    }
-
-    const parsed = Number(trimmed);
-    if (!Number.isFinite(parsed) || parsed < MIN_WAVEFORM_ZOOM) {
-        return DEFAULT_MAX_WAVEFORM_ZOOM;
-    }
-
-    return parsed;
-}
-
-function parseSheetMusicString(value: string | null): string {
-    return typeof value === 'string' ? value.trim() : '';
-}
-
-function parseSheetMusicCursorColor(value: string | null): string {
-    const raw = parseSheetMusicString(value);
-    return raw || '#999999';
-}
-
-function parseSheetMusicCursorAlpha(value: string | null): number {
-    if (value === null) {
-        return 0.1;
-    }
-
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed)) {
-        return 0.1;
-    }
-
-    if (parsed < 0) {
-        return 0;
-    }
-
-    if (parsed > 1) {
-        return 1;
-    }
-
-    return parsed;
-}
-
-function parseSheetMusicMaxHeight(value: string | null): number | null {
-    if (value === null) {
-        return null;
-    }
-
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed) || parsed < 1) {
-        return null;
-    }
-
-    return Math.max(1, Math.round(parsed));
-}
-
-function parseSheetMusicMaxWidth(value: string | null): number | null {
-    if (value === null) {
-        return null;
-    }
-
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed) || parsed < 1) {
-        return null;
-    }
-
-    return Math.max(1, Math.round(parsed));
-}
-
-function parseSheetMusicRenderScale(value: string | null): number | null {
-    if (value === null) {
-        return null;
-    }
-
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-        return null;
-    }
-
-    return parsed;
-}
-
-function parseSheetMusicFollowPlayback(value: string | null): boolean {
-    if (value === null) {
-        return true;
-    }
-
-    return parseSheetMusicString(value).toLowerCase() !== 'false';
-}
-
 function parseWarpingMatrixHeight(value: string | null): number | null {
     if (value === null) {
         return null;
@@ -463,14 +256,6 @@ function normalizeTempoYHalfRangePercent(value: number): number {
         WARPING_MATRIX_TEMPO_Y_RANGE_MIN_PERCENT,
         WARPING_MATRIX_TEMPO_Y_RANGE_MAX_PERCENT
     );
-}
-
-function clampWaveformZoom(zoom: number, maximum: number): number {
-    if (!Number.isFinite(zoom)) {
-        return MIN_WAVEFORM_ZOOM;
-    }
-
-    return clampTime(zoom, MIN_WAVEFORM_ZOOM, maximum);
 }
 
 export function getWarpingMatrixPathStrokeWidth(ctx: any): any {
