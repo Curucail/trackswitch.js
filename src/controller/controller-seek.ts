@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
     AlignmentOutOfRangeMode,
     LoopMarker,
@@ -661,7 +660,7 @@ export function getWaveformTimelineProjector(ctx: any): any {
         const trackIndexByRuntime = new Map<TrackRuntime, number>();
         const trackIndexByDefinition = new Map<object, number>();
 
-        this.runtimes.forEach(function(runtime, index) {
+        this.runtimes.forEach(function(runtime: TrackRuntime, index: number) {
             trackIndexByRuntime.set(runtime, index);
             trackIndexByDefinition.set(runtime.definition, index);
         });

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NormalizedTrackGroupLayout, TrackRuntime, TrackSwitchFeatures, TrackSwitchUiState } from '../domain/types';
 import { escapeHtml, sanitizeInlineStyle } from '../shared/dom';
 import { formatSecondsToHHMMSSmmm } from '../shared/format';
@@ -504,7 +503,7 @@ export function initialize(ctx: any, runtimes: any): any {
         this.renderTrackList(runtimes);
 
         if (this.query('.seekable:not(.seekable-img-wrap > .seekable)')) {
-            this.queryAll('.main-control .seekwrap').forEach(function(seekWrap) {
+            this.queryAll('.main-control .seekwrap').forEach(function(seekWrap: HTMLElement) {
                 setDisplay(seekWrap, 'none');
             });
         }
@@ -587,7 +586,7 @@ export function shouldRenderGlobalSync(ctx: any, runtimes: any): any {
             return false;
         }
 
-        return runtimes.some(function(runtime) {
+        return runtimes.some(function(runtime: TrackRuntime) {
             const sources = runtime.definition.alignment?.synchronizedSources
                 || runtime.definition.alignment?.sources;
             return Array.isArray(sources) && sources.length > 0;
@@ -599,8 +598,8 @@ export function shouldRenderGlobalSync(ctx: any, runtimes: any): any {
 export function buildTrackRow(ctx: any, runtime: any, index: any): any {
     return (function(this: any, runtime: any, index: any) {
         const tabviewClass = this.features.tabView ? ' tabs' : '';
-        const radioSoloClass = this.features.radiosolo ? ' radio' : '';
-        const wholeSoloClass = this.features.radiosolo ? ' solo' : '';
+        const radioSoloClass = this.features.exclusiveSolo ? ' radio' : '';
+        const wholeSoloClass = this.features.exclusiveSolo ? ' solo' : '';
 
         const track = document.createElement('li');
         track.className = 'track' + tabviewClass + wholeSoloClass;
@@ -671,7 +670,7 @@ export function buildTrackRow(ctx: any, runtime: any, index: any): any {
 
 export function renderTrackList(ctx: any, runtimes: any): any {
     return (function(this: any, runtimes: any) {
-        this.queryAll('.track_list').forEach(function(existing) {
+        this.queryAll('.track_list').forEach(function(existing: HTMLElement) {
             existing.remove();
         });
 
@@ -679,7 +678,7 @@ export function renderTrackList(ctx: any, runtimes: any): any {
             const list = document.createElement('ul');
             list.className = 'track_list';
 
-            runtimes.forEach((runtime, index) => {
+            runtimes.forEach((runtime: TrackRuntime, index: number) => {
                 list.appendChild(this.buildTrackRow(runtime, index));
             });
 
@@ -687,7 +686,7 @@ export function renderTrackList(ctx: any, runtimes: any): any {
             return;
         }
 
-        this.trackGroups.forEach((group) => {
+        this.trackGroups.forEach((group: NormalizedTrackGroupLayout) => {
             const list = document.createElement('ul');
             list.className = 'track_list';
             list.setAttribute('data-track-group-index', String(group.groupIndex));
@@ -718,7 +717,7 @@ export function wrapSeekableImages(ctx: any): any {
     return (function(this: any) {
         const candidates = this.queryAll('.seekable');
 
-        candidates.forEach((candidate) => {
+        candidates.forEach((candidate: HTMLElement) => {
             if (!(candidate instanceof HTMLImageElement)) {
                 return;
             }
@@ -759,7 +758,7 @@ export function wrapSheetMusicContainers(ctx: any): any {
         this.sheetMusicHosts.length = 0;
 
         const hosts = this.root.querySelectorAll('.sheetmusic');
-        hosts.forEach((hostElement) => {
+        hosts.forEach((hostElement: Element) => {
             if (!(hostElement instanceof HTMLElement)) {
                 return;
             }
@@ -848,7 +847,7 @@ export function wrapSheetMusicContainers(ctx: any): any {
 
 export function getPreparedSheetMusicHosts(ctx: any): any {
     return (function(this: any) {
-        return this.sheetMusicHosts.map((entry) => {
+        return this.sheetMusicHosts.map((entry: SheetMusicHostConfig) => {
             return {
                 host: entry.host,
                 scrollContainer: entry.scrollContainer,
@@ -868,21 +867,21 @@ export function updateMainControls(ctx: any, state: any, runtimes: any, waveform
     return (function(this: any, state: any, runtimes: any, waveformTimelineContext: any, warpingMatrixContext: any) {
         this.root.classList.toggle('sync-enabled', state.syncEnabled);
 
-        this.queryAll('.playpause').forEach(function(element) {
+        this.queryAll('.playpause').forEach(function(element: HTMLElement) {
             element.classList.toggle('checked', state.playing);
         });
 
-        this.queryAll('.repeat').forEach(function(element) {
+        this.queryAll('.repeat').forEach(function(element: HTMLElement) {
             element.classList.toggle('checked', state.repeat);
         });
 
-        this.queryAll('.sync-global').forEach(function(element) {
+        this.queryAll('.sync-global').forEach(function(element: HTMLElement) {
             element.classList.toggle('checked', state.syncEnabled);
             element.classList.toggle('disabled', !state.syncAvailable);
         });
 
         const seekWraps = this.queryAll('.seekwrap');
-        seekWraps.forEach((seekWrap) => {
+        seekWraps.forEach((seekWrap: HTMLElement) => {
             this.updateSeekWrapVisuals(seekWrap, state.position, state.longestDuration, state.loop);
         });
 
@@ -894,7 +893,7 @@ export function updateMainControls(ctx: any, state: any, runtimes: any, waveform
 
         this.updateWaveformTiming(state, runtimes, waveformTimelineContext);
         this.updateWaveformZoomIndicators();
-        this.warpingMatrixHosts.forEach((host) => {
+        this.warpingMatrixHosts.forEach((host: WarpingMatrixHostMetadata) => {
             this.updateWarpingMatrix(host, warpingMatrixContext);
         });
 
@@ -902,17 +901,17 @@ export function updateMainControls(ctx: any, state: any, runtimes: any, waveform
             return;
         }
 
-        this.queryAll('.loop-a').forEach(function(element) {
+        this.queryAll('.loop-a').forEach(function(element: HTMLElement) {
             element.classList.toggle('checked', state.loop.pointA !== null);
             element.classList.toggle('active', state.loop.enabled);
         });
 
-        this.queryAll('.loop-b').forEach(function(element) {
+        this.queryAll('.loop-b').forEach(function(element: HTMLElement) {
             element.classList.toggle('checked', state.loop.pointB !== null);
             element.classList.toggle('active', state.loop.enabled);
         });
 
-        this.queryAll('.loop-toggle').forEach(function(element) {
+        this.queryAll('.loop-toggle').forEach(function(element: HTMLElement) {
             element.classList.toggle('checked', state.loop.enabled);
         });
 
@@ -922,7 +921,7 @@ export function updateMainControls(ctx: any, state: any, runtimes: any, waveform
 
 export function updateTrackControls(ctx: any, runtimes: any, syncLockedTrackIndexes: any, effectiveSingleSoloMode: any, panSupported: any): any {
     return (function(this: any, runtimes: any, syncLockedTrackIndexes: any, effectiveSingleSoloMode: any, panSupported: any) {
-        runtimes.forEach((runtime, index) => {
+        runtimes.forEach((runtime: TrackRuntime, index: number) => {
             const row = this.query('.track[data-track-index="' + index + '"]');
             if (!row) {
                 return;
@@ -980,7 +979,7 @@ export function switchPosterImage(ctx: any, runtimes: any): any {
         let soloCount = 0;
         let imageSrc: string | undefined;
 
-        runtimes.forEach(function(runtime) {
+        runtimes.forEach(function(runtime: TrackRuntime) {
             if (runtime.state.solo) {
                 soloCount += 1;
                 imageSrc = runtime.definition.image;
@@ -995,7 +994,7 @@ export function switchPosterImage(ctx: any, runtimes: any): any {
             return;
         }
 
-        this.queryAll('.seekable').forEach(function(element) {
+        this.queryAll('.seekable').forEach(function(element: HTMLElement) {
             if (element instanceof HTMLImageElement) {
                 element.src = imageSrc as string;
             }
@@ -1053,7 +1052,7 @@ export function setTrackPanSlider(ctx: any, trackIndex: any, panMinusOneToOne: a
 
 export function updateVolumeIcon(ctx: any, volumeZeroToOne: any): any {
     return (function(this: any, volumeZeroToOne: any) {
-        this.queryAll('.main-control .volume-control .volume-icon').forEach((icon) => {
+        this.queryAll('.main-control .volume-control .volume-icon').forEach((icon: HTMLElement) => {
             this.applyVolumeIconState(icon, volumeZeroToOne);
         });
     
@@ -1078,12 +1077,12 @@ export function applyVolumeIconState(ctx: any, icon: any, volumeZeroToOne: any):
 
 export function setOverlayLoading(ctx: any, isLoading: any): any {
     return (function(this: any, isLoading: any) {
-        this.queryAll('.overlay .activate').forEach(function(activate) {
+        this.queryAll('.overlay .activate').forEach(function(activate: HTMLElement) {
             activate.classList.toggle('fa-spin', isLoading);
             activate.classList.toggle('loading', isLoading);
         });
 
-        this.queryAll('.overlay').forEach(function(overlay) {
+        this.queryAll('.overlay').forEach(function(overlay: HTMLElement) {
             overlay.classList.toggle('loading', isLoading);
         });
     
@@ -1092,11 +1091,11 @@ export function setOverlayLoading(ctx: any, isLoading: any): any {
 
 export function showOverlayInfoText(ctx: any): any {
     return (function(this: any) {
-        this.queryAll('.overlay .info').forEach(function(info) {
+        this.queryAll('.overlay .info').forEach(function(info: HTMLElement) {
             setDisplay(info, 'none');
         });
 
-        this.queryAll('.overlay .text').forEach(function(text) {
+        this.queryAll('.overlay .text').forEach(function(text: HTMLElement) {
             setDisplay(text, 'block');
         });
     
@@ -1105,7 +1104,7 @@ export function showOverlayInfoText(ctx: any): any {
 
 export function hideOverlayOnLoaded(ctx: any): any {
     return (function(this: any) {
-        this.queryAll('.overlay').forEach(function(overlay) {
+        this.queryAll('.overlay').forEach(function(overlay: HTMLElement) {
             overlay.remove();
         });
     
@@ -1116,7 +1115,7 @@ export function showError(ctx: any, message: any, runtimes: any): any {
     return (function(this: any, message: any, runtimes: any) {
         this.root.classList.add('error');
 
-        this.queryAll('.overlay .activate').forEach(function(activate) {
+        this.queryAll('.overlay .activate').forEach(function(activate: HTMLElement) {
             activate.classList.remove('fa-spin', 'loading');
         });
 
@@ -1125,7 +1124,7 @@ export function showError(ctx: any, message: any, runtimes: any): any {
             overlayText.textContent = message;
         }
 
-        runtimes.forEach((runtime, index) => {
+        runtimes.forEach((runtime: TrackRuntime, index: number) => {
             if (!runtime.errored) {
                 return;
             }
@@ -1141,11 +1140,11 @@ export function showError(ctx: any, message: any, runtimes: any): any {
 
 export function destroy(ctx: any): any {
     return (function(this: any) {
-        this.queryAll('.main-control').forEach(function(mainControl) {
+        this.queryAll('.main-control').forEach(function(mainControl: HTMLElement) {
             mainControl.remove();
         });
 
-        this.queryAll('.track_list').forEach(function(trackList) {
+        this.queryAll('.track_list').forEach(function(trackList: HTMLElement) {
             trackList.remove();
         });
 
@@ -1164,11 +1163,11 @@ export function getPresetCount(ctx: any): any {
 
 export function updateTiming(ctx: any, position: any, longestDuration: any): any {
     return (function(this: any, position: any, longestDuration: any) {
-        this.queryAll('.timing .time').forEach(function(node) {
+        this.queryAll('.timing .time').forEach(function(node: HTMLElement) {
             node.textContent = formatSecondsToHHMMSSmmm(position);
         });
 
-        this.queryAll('.timing .length').forEach(function(node) {
+        this.queryAll('.timing .length').forEach(function(node: HTMLElement) {
             node.textContent = formatSecondsToHHMMSSmmm(longestDuration);
         });
     

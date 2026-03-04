@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
     AlignmentOutOfRangeMode,
     LoopMarker,
@@ -93,7 +92,7 @@ export function applyTrackProperties(ctx: any): any {
     return (function(this: any) {
         const panSupported = this.audioEngine.supportsStereoPanning();
         if (!panSupported) {
-            this.runtimes.forEach((runtime) => {
+            this.runtimes.forEach((runtime: TrackRuntime) => {
                 runtime.state.pan = 0;
             });
         }
@@ -114,7 +113,7 @@ export function applyTrackProperties(ctx: any): any {
             this.getWaveformTimelineContext()
         );
 
-        this.runtimes.forEach((runtime, index) => {
+        this.runtimes.forEach((runtime: TrackRuntime, index: number) => {
             this.emit('trackState', {
                 index: index,
                 state: {
@@ -136,7 +135,7 @@ export function updateMainControls(ctx: any): any {
             longestDuration: this.longestDuration,
             syncEnabled: this.globalSyncEnabled,
             syncAvailable: this.isAlignmentMode()
-                && this.runtimes.some((runtime) => this.hasSyncedVariant(runtime)),
+                && this.runtimes.some((runtime: TrackRuntime) => this.hasSyncedVariant(runtime)),
             loop: {
                 pointA: this.state.loop.pointA,
                 pointB: this.state.loop.pointB,

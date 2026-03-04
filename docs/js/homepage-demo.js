@@ -64,7 +64,7 @@
     'waveform',
     'sheetNotePreview',
     'customImage',
-    'radiosolo',
+    'exclusiveSolo',
     'tabView',
     'repeatEnabled',
   ];
@@ -79,13 +79,13 @@
     'waveform',
     'sheetNotePreview',
     'customImage',
-    'radiosolo',
+    'exclusiveSolo',
     'tabView',
   ];
 
   var MODE_DISABLED_CONTROLS = {
     default: ['sheetNotePreview'],
-    alignment: ['customImage', 'presets', 'radiosolo'],
+    alignment: ['customImage', 'presets', 'exclusiveSolo'],
   };
 
   var DEFAULT_MODEL = {
@@ -98,7 +98,7 @@
     waveform: true,
     sheetNotePreview: false,
     customImage: false,
-    radiosolo: false,
+    exclusiveSolo: false,
     tabView: false,
     repeatEnabled: false,
   };
@@ -107,7 +107,7 @@
     presets: false,
     customImage: false,
     sheetNotePreview: true,
-    radiosolo: true,
+    exclusiveSolo: true,
   });
 
   document.addEventListener('DOMContentLoaded', function () {
@@ -371,15 +371,15 @@
           notes.push('Presets are unavailable in alignment mode.');
         }
 
-        if (!normalized.radiosolo) {
-          normalized.radiosolo = true;
+        if (!normalized.exclusiveSolo) {
+          normalized.exclusiveSolo = true;
           notes.push('Single solo mode is enforced in alignment mode.');
         }
       } else if (normalized.sheetNotePreview) {
         normalized.sheetNotePreview = false;
       }
 
-      if (normalized.radiosolo && normalized.presets) {
+      if (normalized.exclusiveSolo && normalized.presets) {
         normalized.presets = false;
         notes.push('Presets were turned off because single solo mode disables presets.');
       }
@@ -454,9 +454,9 @@
         '      timer: ' + Boolean(model.timer) + ',',
         '      keyboard: ' + Boolean(model.keyboard) + ',',
         '      waveform: ' + Boolean(model.waveform) + ',',
-        '      radiosolo: ' + Boolean(model.radiosolo) + ',',
+        '      exclusiveSolo: ' + Boolean(model.exclusiveSolo) + ',',
         '      tabView: ' + Boolean(model.tabView) + ',',
-        '      iosUnmute: true,',
+        '      iosAudioUnlock: true,',
         '    },',
         '  });',
         '});',
@@ -490,7 +490,7 @@
       if (model.sheetNotePreview) {
         snippetLines.push(
           '      {',
-          "        type: 'sheetmusic',",
+          "        type: 'sheetMusic',",
           "        src: 'Schubert_D911-03.xml',",
           "        measureCsv: 'Schubert_D911-03_HU33_measures.csv',",
           '        maxHeight: 380,',
@@ -546,9 +546,9 @@
         '      timer: ' + Boolean(model.timer) + ',',
         '      keyboard: ' + Boolean(model.keyboard) + ',',
         '      waveform: ' + Boolean(model.waveform) + ',',
-        '      radiosolo: ' + Boolean(model.radiosolo) + ',',
+        '      exclusiveSolo: ' + Boolean(model.exclusiveSolo) + ',',
         '      tabView: ' + Boolean(model.tabView) + ',',
-        '      iosUnmute: true,',
+        '      iosAudioUnlock: true,',
         '    },',
         '  });',
         '});',
@@ -680,7 +680,7 @@
 
       if (isAlignmentMode(currentMode) && model.sheetNotePreview) {
         uiConfig.push({
-          type: 'sheetmusic',
+          type: 'sheetMusic',
           src: basePath + '/Schubert_D911-03.xml',
           measureCsv: basePath + '/Schubert_D911-03_HU33_measures.csv',
           maxHeight: 380,
@@ -727,9 +727,9 @@
           timer: model.timer,
           keyboard: model.keyboard,
           waveform: model.waveform,
-          radiosolo: model.radiosolo,
+          exclusiveSolo: model.exclusiveSolo,
           tabView: model.tabView,
-          iosUnmute: true,
+          iosAudioUnlock: true,
         },
       };
 

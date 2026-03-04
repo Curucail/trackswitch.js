@@ -1,7 +1,7 @@
 import {
     NormalizedTrackGroupLayout,
+    NormalizedTrackSwitchConfig,
     TrackDefinition,
-    TrackSwitchConfig,
     TrackSwitchInit,
     TrackSwitchUiElement,
 } from '../domain/types';
@@ -68,7 +68,7 @@ function resolveTracksFromUi(
     return { tracks, trackGroups };
 }
 
-export function normalizeInit(root: HTMLElement, init: TrackSwitchInit | undefined): TrackSwitchConfig {
+export function normalizeInit(root: HTMLElement, init: TrackSwitchInit | undefined): NormalizedTrackSwitchConfig {
     const resolvedInit = init as TrackSwitchInit | undefined;
     const resolvedUi = Array.isArray(resolvedInit?.ui)
         ? resolvedInit.ui.map(normalizeUiElement)

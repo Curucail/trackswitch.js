@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
     AlignmentOutOfRangeMode,
     LoopMarker,
@@ -116,9 +115,9 @@ export function load(ctx: any): any {
         this.preSyncSoloTrackIndex = null;
         this.effectiveSingleSoloMode = this.isAlignmentMode()
             ? true
-            : this.features.radiosolo;
+            : this.features.exclusiveSolo;
 
-        this.runtimes.forEach(function(runtime) {
+        this.runtimes.forEach(function(runtime: TrackRuntime) {
             runtime.successful = false;
             runtime.errored = false;
             runtime.buffer = null;
@@ -146,7 +145,7 @@ export function load(ctx: any): any {
         this.isLoading = false;
         this.renderer.setOverlayLoading(false);
 
-        const erroredTracks = this.runtimes.filter(function(runtime) {
+        const erroredTracks = this.runtimes.filter(function(runtime: TrackRuntime) {
             return runtime.errored;
         });
 
@@ -517,7 +516,7 @@ export function toggleSolo(ctx: any, trackIndex: any, exclusive: any): any {
         const currentState = runtime.state.solo;
 
         if (exclusive || this.effectiveSingleSoloMode) {
-            this.runtimes.forEach(function(entry) {
+            this.runtimes.forEach(function(entry: TrackRuntime) {
                 entry.state.solo = false;
             });
         }
@@ -555,7 +554,7 @@ export function applyPreset(ctx: any, presetIndex: any): any {
             return;
         }
 
-        this.runtimes.forEach(function(runtime) {
+        this.runtimes.forEach(function(runtime: TrackRuntime) {
             const presets = runtime.definition.presets ?? [];
             runtime.state.solo = presets.indexOf(presetIndex) !== -1;
         });
@@ -713,7 +712,7 @@ export function findLongestDuration(ctx: any): any {
     return (function(this: any) {
         let longest = 0;
 
-        this.runtimes.forEach(function(runtime) {
+        this.runtimes.forEach(function(runtime: TrackRuntime) {
             const duration = (ctx.constructor as any).getRuntimeDuration(runtime);
 
             if (duration > longest) {
@@ -734,7 +733,7 @@ export function handleError(ctx: any, message: any): any {
         this.globalSyncEnabled = false;
         this.syncLockedTrackIndexes.clear();
         this.preSyncSoloTrackIndex = null;
-        this.effectiveSingleSoloMode = this.isAlignmentMode() ? true : this.features.radiosolo;
+        this.effectiveSingleSoloMode = this.isAlignmentMode() ? true : this.features.exclusiveSolo;
 
         this.stopAudio();
 

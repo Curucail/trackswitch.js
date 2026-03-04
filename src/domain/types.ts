@@ -44,13 +44,13 @@ export interface TrackDefinition {
 
 export interface TrackSwitchFeatures {
     mode: TrackSwitchMode;
-    radiosolo: boolean;
+    exclusiveSolo: boolean;
     muteOtherPlayerInstances: boolean;
     globalVolume: boolean;
     trackMixControls: boolean;
     repeat: boolean;
     tabView: boolean;
-    iosUnmute: boolean;
+    iosAudioUnlock: boolean;
     keyboard: boolean;
     looping: boolean;
     seekBar: boolean;
@@ -106,11 +106,11 @@ export interface TrackSwitchWaveformUiElement extends TrackSwitchWaveformConfig 
 }
 
 export interface TrackSwitchSheetMusicUiElement extends TrackSwitchSheetMusicConfig {
-    type: 'sheetmusic';
+    type: 'sheetMusic';
 }
 
 export interface TrackSwitchWarpingMatrixUiElement extends TrackSwitchWarpingMatrixConfig {
-    type: 'warping_matrix';
+    type: 'warpingMatrix';
 }
 
 export interface TrackSwitchTrackGroupUiElement {
@@ -138,7 +138,10 @@ export interface TrackSwitchConfig {
     features?: Partial<TrackSwitchFeatures>;
     alignment?: TrackAlignmentConfig;
     ui?: TrackSwitchUiConfig;
-    trackGroups?: NormalizedTrackGroupLayout[];
+}
+
+export interface NormalizedTrackSwitchConfig extends TrackSwitchConfig {
+    trackGroups: NormalizedTrackGroupLayout[];
 }
 
 export interface TrackSwitchInit {

@@ -1,11 +1,11 @@
 import {
     AlignmentOutOfRangeMode,
     LoopMarker,
+    NormalizedTrackSwitchConfig,
     PlayerState,
     TrackAlignmentConfig,
     TrackSourceVariant,
     TrackRuntime,
-    TrackSwitchConfig,
     TrackSwitchController,
     TrackSwitchEventHandler,
     TrackSwitchEventMap,
@@ -144,18 +144,18 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     public readonly instanceId: number;
     public readonly presetCount: number;
 
-    constructor(rootElement: HTMLElement, config: TrackSwitchConfig) {
+    constructor(rootElement: HTMLElement, config: NormalizedTrackSwitchConfig) {
         this.root = rootElement;
         this.alignmentConfig = config.alignment;
 
         this.features = normalizeFeatures(config.features);
         if (this.features.mode === 'alignment') {
-            this.features.radiosolo = true;
+            this.features.exclusiveSolo = true;
             this.features.presets = false;
         }
         this.effectiveSingleSoloMode = this.features.mode === 'alignment'
             ? true
-            : this.features.radiosolo;
+            : this.features.exclusiveSolo;
         this.state = createInitialPlayerState(this.features.repeat);
 
         this.runtimes = config.tracks.map(function(track, index) {
@@ -163,7 +163,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         });
 
         if (
-            this.features.radiosolo
+            this.features.exclusiveSolo
             && this.runtimes.length > 0
             && !this.runtimes.some(function(runtime) { return runtime.state.solo; })
         ) {
@@ -184,7 +184,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             this.root,
             this.features,
             presetNames,
-            config.trackGroups || [],
+            config.trackGroups,
             (referenceTime) => {
                 this.seekTo(referenceTime);
             }

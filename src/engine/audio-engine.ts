@@ -199,7 +199,7 @@ export class AudioEngine {
     }
 
     async unlockIOSPlayback(): Promise<void> {
-        if (!this.features.iosUnmute) {
+        if (!this.features.iosAudioUnlock) {
             return;
         }
 

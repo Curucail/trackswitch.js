@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
     AlignmentOutOfRangeMode,
     LoopMarker,
@@ -101,7 +100,7 @@ export function getState(ctx: any): any {
                 ...this.state,
                 loop: { ...this.state.loop },
             },
-            tracks: this.runtimes.map(function(runtime) {
+            tracks: this.runtimes.map(function(runtime: TrackRuntime) {
                 return {
                     solo: runtime.state.solo,
                     volume: runtime.state.volume,
@@ -127,7 +126,7 @@ export function off(ctx: any, eventName: any, handler: any): any {
 
 export function emit(ctx: any, eventName: any, payload: any): any {
     return (function(this: any, eventName: any, payload: any) {
-        this.listeners[eventName].forEach(function(handler) {
+        this.listeners[eventName].forEach(function(handler: (payload: unknown) => void) {
             handler(payload);
         });
     }).call(ctx, eventName, payload);

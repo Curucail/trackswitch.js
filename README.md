@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', function () {
         waveformSource: 'audible', // or a track index (e.g. 1) for a fixed track waveform
       },
       {
-        type: 'sheetmusic',
+        type: 'sheetMusic',
         src: 'score.musicxml',
         measureCsv: 'score_measures.csv',
         maxWidth: 960,
@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', function () {
         cursorAlpha: 0.1,
       },
       {
-        type: 'warping_matrix',
+        type: 'warpingMatrix',
         height: 240,
       },
     ],
@@ -144,17 +144,17 @@ Alignment mode behavior:
 - In `alignment`, the configured `referenceTimeColumn` defines the reference timeline axis
 - In `alignment`, timeline duration is derived from the maximum value in `referenceTimeColumn`
 - `seekTo`/seekbar/timer/`position` events stay on reference time in `alignment`
-- `alignment` starts with `SYNC` off and single-track solo behavior (`features.radiosolo`) enforced automatically
+- `alignment` starts with `SYNC` off and single-track solo behavior (`features.exclusiveSolo`) enforced automatically
 - `alignment`: switching solo track remaps position and restarts playback on the newly active track timeline
 - `alignment`: enabling global `SYNC` allows multi-track listening again, switches synced tracks to synchronized sources, and locks non-synced tracks muted
 - `alignment`: with `SYNC` off, fixed waveforms (`waveformSource: <trackIndex>`) render on their native track timeline and their waveform seek overlays (playhead + loop markers/region) use that same local axis; interactions are converted to reference time internally
 - `alignment`: with `SYNC` on, synced-track timeline mapping is bypassed (identity) and fixed waveforms return to shared reference-axis behavior
 - `alignment`: waveform containers show a top-right timer badge in `current / duration` format; fixed-source waveforms use the track-local axis when `SYNC` is off
-- `alignment`: optional `sheetmusic` UI entries render MusicXML via OpenSheetMusicDisplay and highlight the currently mapped measure using a measure-cursor overlay
+- `alignment`: optional `sheetMusic` UI entries render MusicXML via OpenSheetMusicDisplay and highlight the currently mapped measure using a measure-cursor overlay
 - `alignment`: clicking a rendered sheet-music measure seeks playback to that measure start on the reference timeline (resolved from `measureCsv`)
-- `alignment`: `sheetmusic` supports optional `maxWidth` (container max-width px), `renderScale` (OSMD zoom), and `maxHeight` (px) for internal score scrolling
-- `alignment`: `sheetmusic` supports optional `followPlayback` (default `true`) to auto-scroll vertically and keep the current highlighted measure in view
-- `alignment`: optional `warping_matrix` UI entries render two linked panels: the warping-path graph plus a local-tempo graph
+- `alignment`: `sheetMusic` supports optional `maxWidth` (container max-width px), `renderScale` (OSMD zoom), and `maxHeight` (px) for internal score scrolling
+- `alignment`: `sheetMusic` supports optional `followPlayback` (default `true`) to auto-scroll vertically and keep the current highlighted measure in view
+- `alignment`: optional `warpingMatrix` UI entries render two linked panels: the warping-path graph plus a local-tempo graph
 - `alignment`: the tempo panel computes finite-difference local tempo from DTW path neighborhoods, with `100` meaning equal local speed to the reference
 - `alignment`: the tempo panel shows a gray dashed `y = 100` reference line plus a fixed dashed vertical playhead guide at panel center; its x-axis is active-track time and it uses a centered moving track-time window (adjustable via the tempo controls)
 - `alignment`: the tempo panel renders one active-track curve using central finite differences (`w = 1`), supports click-to-seek, and switches to a visible dimmed non-interactive state while global `SYNC` is enabled

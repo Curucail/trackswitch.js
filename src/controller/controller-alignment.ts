@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
     AlignmentOutOfRangeMode,
     LoopMarker,
@@ -118,7 +117,7 @@ export function setEffectiveSoloMode(ctx: any, singleSoloMode: any): any {
         const previousSoloIndex = this.getActiveSoloTrackIndex();
         const targetSoloIndex = previousSoloIndex >= 0 ? previousSoloIndex : 0;
 
-        this.runtimes.forEach(function(runtime, index) {
+        this.runtimes.forEach(function(runtime: TrackRuntime, index: number) {
             runtime.state.solo = index === targetSoloIndex;
         });
     }).call(ctx, singleSoloMode);
@@ -130,7 +129,7 @@ export function toggleGlobalSync(ctx: any): any {
             return;
         }
 
-        const hasAnySyncedTrack = this.runtimes.some((runtime) => this.hasSyncedVariant(runtime));
+        const hasAnySyncedTrack = this.runtimes.some((runtime: TrackRuntime) => this.hasSyncedVariant(runtime));
         if (!hasAnySyncedTrack) {
             return;
         }
@@ -155,7 +154,7 @@ export function applyGlobalSyncState(ctx: any, syncOn: any): any {
             this.syncLockedTrackIndexes.clear();
             this.setEffectiveSoloMode(false);
 
-            this.runtimes.forEach((runtime, index) => {
+            this.runtimes.forEach((runtime: TrackRuntime, index: number) => {
                 if (this.hasSyncedVariant(runtime)) {
                     this.setRuntimeActiveVariant(runtime, 'synced');
                     runtime.state.solo = true;
@@ -170,7 +169,7 @@ export function applyGlobalSyncState(ctx: any, syncOn: any): any {
             this.globalSyncEnabled = false;
             this.syncLockedTrackIndexes.clear();
 
-            this.runtimes.forEach((runtime) => {
+            this.runtimes.forEach((runtime: TrackRuntime) => {
                 this.setRuntimeActiveVariant(runtime, 'base');
                 runtime.state.solo = false;
             });
@@ -185,7 +184,7 @@ export function applyGlobalSyncState(ctx: any, syncOn: any): any {
                 : fallbackIndex;
 
             if (restoreIndex >= 0) {
-                this.runtimes.forEach(function(runtime, index) {
+                this.runtimes.forEach(function(runtime: TrackRuntime, index: number) {
                     runtime.state.solo = index === restoreIndex;
                 });
             }
@@ -393,7 +392,7 @@ export function getWarpingMatrixContext(ctx: any): any {
             }
 
             seenColumns.add(normalizedColumn);
-            const points = converter.referenceToTrack.points.map((point) => {
+            const points = converter.referenceToTrack.points.map((point: { x: number; y: number }) => {
                 return {
                     referenceTime: point.x,
                     trackTime: point.y,
@@ -404,7 +403,7 @@ export function getWarpingMatrixContext(ctx: any): any {
                 ? runtime.baseSource.timing.effectiveDuration
                 : (runtime.baseSource.buffer ? runtime.baseSource.buffer.duration : 0);
             let maxMappedTrackTime = Number.NEGATIVE_INFINITY;
-            points.forEach((point) => {
+            points.forEach((point: { trackTime: number }) => {
                 if (Number.isFinite(point.trackTime) && point.trackTime > maxMappedTrackTime) {
                     maxMappedTrackTime = point.trackTime;
                 }
@@ -441,9 +440,9 @@ export function getWarpingMatrixContext(ctx: any): any {
 
 export function getAudibleTrackIndexesForWarpingMatrix(ctx: any): any {
     return (function(this: any) {
-        const selected = this.runtimes.map((runtime, index) => {
+        const selected = this.runtimes.map((runtime: TrackRuntime, index: number) => {
             return runtime.state.solo ? index : -1;
-        }).filter((index) => {
+        }).filter((index: number) => {
             return index >= 0;
         });
 
@@ -451,7 +450,7 @@ export function getAudibleTrackIndexesForWarpingMatrix(ctx: any): any {
             return selected;
         }
 
-        return this.runtimes.map(function(_, index) {
+        return this.runtimes.map(function(_: TrackRuntime, index: number) {
             return index;
         });
     }).call(ctx);
@@ -475,7 +474,7 @@ export function resolveReferenceDuration(ctx: any, rows: any, referenceColumn: a
     return (function(this: any, rows: any, referenceColumn: any) {
         let maxReference = Number.NEGATIVE_INFINITY;
 
-        rows.forEach(function(row) {
+        rows.forEach(function(row: Record<string, unknown>) {
             const value = Number(row[referenceColumn]);
             if (Number.isFinite(value) && value > maxReference) {
                 maxReference = value;
@@ -492,7 +491,7 @@ export function resolveReferenceDuration(ctx: any, rows: any, referenceColumn: a
 
 export function resolveAlignmentMappingsByTrack(ctx: any, config: any): any {
     return (function(this: any, config: any) {
-        const hasAnyTrackColumn = this.runtimes.some(function(runtime) {
+        const hasAnyTrackColumn = this.runtimes.some(function(runtime: TrackRuntime) {
             return runtime.definition.alignment
                 && Object.prototype.hasOwnProperty.call(runtime.definition.alignment, 'column');
         });

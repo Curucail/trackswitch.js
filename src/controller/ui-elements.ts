@@ -199,15 +199,24 @@ function normalizeTrackGroupConfig<T extends TrackSwitchTrackGroupUiElement>(gro
 }
 
 export function normalizeUiElement(element: TrackSwitchUiElement): TrackSwitchUiElement {
+    if (!element || typeof element !== 'object') {
+        throw new Error('Invalid ui element configuration.');
+    }
+
+    const elementType = (element as { type?: unknown }).type;
+    if (typeof elementType !== 'string') {
+        throw new Error('Invalid ui element type.');
+    }
+
     if (element.type === 'waveform') {
         return normalizeWaveformConfig(element);
     }
 
-    if (element.type === 'sheetmusic') {
+    if (element.type === 'sheetMusic') {
         return normalizeSheetMusicConfig(element);
     }
 
-    if (element.type === 'warping_matrix') {
+    if (element.type === 'warpingMatrix') {
         return normalizeWarpingMatrixConfig(element);
     }
 
@@ -215,7 +224,11 @@ export function normalizeUiElement(element: TrackSwitchUiElement): TrackSwitchUi
         return normalizeTrackGroupConfig(element);
     }
 
-    return element;
+    if (element.type === 'image') {
+        return element;
+    }
+
+    throw new Error('Invalid ui element type: ' + elementType);
 }
 
 function injectWarpingMatrix(root: HTMLElement, warpingMatrix: TrackSwitchWarpingMatrixConfig): void {
@@ -366,13 +379,16 @@ export function injectConfiguredUiElements(root: HTMLElement, uiElements: TrackS
             return;
         }
 
-        if (entry.type === 'sheetmusic') {
+        if (entry.type === 'sheetMusic') {
             injectSheetMusic(root, entry);
             return;
         }
 
-        if (entry.type === 'warping_matrix') {
+        if (entry.type === 'warpingMatrix') {
             injectWarpingMatrix(root, entry);
+            return;
         }
+
+        throw new Error('Invalid ui element type: ' + String((entry as { type?: unknown }).type));
     });
 }

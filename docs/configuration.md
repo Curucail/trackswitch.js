@@ -46,9 +46,9 @@ TrackSwitch.createTrackSwitch(rootElement, {
   ui: [
     { type: 'image', src: 'cover.jpg', seekable: true },
     { type: 'waveform', width: 1200, height: 150 },
-    { type: 'sheetmusic', src: 'score.musicxml', measureCsv: 'score_measures.csv', maxWidth: 960, renderScale: 0.75, maxHeight: 360, followPlayback: true },
+    { type: 'sheetMusic', src: 'score.musicxml', measureCsv: 'score_measures.csv', maxWidth: 960, renderScale: 0.75, maxHeight: 360, followPlayback: true },
     {
-      type: 'warping_matrix',
+      type: 'warpingMatrix',
       height: 240,
     },
   ],
@@ -168,7 +168,7 @@ Sheet music element:
 
 ```javascript
 {
-  type: 'sheetmusic',
+  type: 'sheetMusic',
   src: 'score.musicxml',
   measureCsv: 'score_measures.csv',
   maxWidth: 960,
@@ -199,7 +199,7 @@ Warping matrix element:
 
 ```javascript
 {
-  type: 'warping_matrix',
+  type: 'warpingMatrix',
   height: 240,
   style: 'margin: 12px 0;',
 }
@@ -222,13 +222,13 @@ Warping matrix element:
 Feature defaults:
 
 - `mode: 'default'`
-- `radiosolo: false`
+- `exclusiveSolo: false`
 - `muteOtherPlayerInstances: true`
 - `globalVolume: false`
 - `trackMixControls: false`
 - `repeat: false`
 - `tabView: false`
-- `iosUnmute: true`
+- `iosAudioUnlock: true`
 - `keyboard: true`
 - `looping: false`
 - `seekBar: true`
@@ -238,7 +238,7 @@ Feature defaults:
 
 Normalization rules:
 
-- `radiosolo: true` forces `presets: false`
+- `exclusiveSolo: true` forces `presets: false`
 - A configured waveform UI element forces `waveform: true`
 - In `alignment`, single-track solo behavior is enforced automatically at startup
 
@@ -281,9 +281,9 @@ Behavior:
 - `alignment`: with `SYNC` off, fixed-track waveforms (`waveformSource: <trackIndex>`) render on native track time and their waveform seek overlays (playhead + loop markers/region) use that local axis
 - `alignment`: with `SYNC` on, fixed-track waveforms return to shared reference-axis behavior; synced tracks bypass CSV mapping (identity)
 - `alignment`: waveform containers default to rendering a top-right timer badge in `current / duration` format; fixed-track waveforms use local track time while `SYNC` is off
-- `alignment`: sheet-music UI elements (`type: 'sheetmusic'`) highlight the currently mapped measure from `measureCsv` on the reference axis
-- `alignment`: `sheetmusic.followPlayback` (default `true`) auto-scrolls the internal sheet viewport vertically when the highlighted measure moves outside the visible area
-- `alignment`: `warping_matrix` UI elements render a warping-path panel plus a local-tempo-deviation panel; the tempo panel uses active-track x-axis time and becomes dimmed/non-interactive while `SYNC` is enabled
+- `alignment`: sheet-music UI elements (`type: 'sheetMusic'`) highlight the currently mapped measure from `measureCsv` on the reference axis
+- `alignment`: `sheetMusic.followPlayback` (default `true`) auto-scrolls the internal sheet viewport vertically when the highlighted measure moves outside the visible area
+- `alignment`: `warpingMatrix` UI elements render a warping-path panel plus a local-tempo-deviation panel; the tempo panel uses active-track x-axis time and becomes dimmed/non-interactive while `SYNC` is enabled
 
 Cross-player behavior:
 
@@ -301,8 +301,8 @@ When `features.keyboard` is enabled:
 - `Home` - jump to start
 - `ArrowUp` / `ArrowDown` - adjust volume (when `globalVolume` is enabled)
 - `1`-`0` - control tracks 1-10:
-  - if `radiosolo` is `true`: switch to the selected track
-  - if `radiosolo` is `false`: toggle the selected track mute state
+  - if `exclusiveSolo` is `true`: switch to the selected track
+  - if `exclusiveSolo` is `false`: toggle the selected track mute state
 
 When `features.looping` is enabled:
 

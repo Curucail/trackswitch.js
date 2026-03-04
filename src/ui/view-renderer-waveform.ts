@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NormalizedTrackGroupLayout, TrackRuntime, TrackSwitchFeatures, TrackSwitchUiState } from '../domain/types';
 import { escapeHtml, sanitizeInlineStyle } from '../shared/dom';
 import { formatSecondsToHHMMSSmmm } from '../shared/format';
@@ -493,7 +492,7 @@ export function wrapWaveformCanvases(ctx: any): any {
         }
 
         const canvases = this.root.querySelectorAll('canvas.waveform');
-        canvases.forEach((canvasElement) => {
+        canvases.forEach((canvasElement: Element) => {
             if (!(canvasElement instanceof HTMLCanvasElement)) {
                 return;
             }
@@ -705,7 +704,8 @@ export function forEachVisibleWaveformTile(ctx: any, surfaceMetadata: any, pixel
             needed.add(tileIndex);
         }
 
-        Array.from(surfaceMetadata.tiles.keys()).forEach((tileIndex) => {
+        const existingTileIndexes = Array.from(surfaceMetadata.tiles.keys()) as number[];
+        existingTileIndexes.forEach((tileIndex: number) => {
             if (needed.has(tileIndex)) {
                 return;
             }
@@ -787,7 +787,7 @@ export function computeNormalizationPeak(ctx: any, waveformEngine: any, sourceRu
 export function buildWaveformNormalizationCacheKey(ctx: any, surfaceMetadata: any, runtimes: any, sourceRuntimes: any, fullDuration: any, renderBarWidth: any, useLocalAxis: any, hasTimelineProjector: any): any {
     return (function(this: any, surfaceMetadata: any, runtimes: any, sourceRuntimes: any, fullDuration: any, renderBarWidth: any, useLocalAxis: any, hasTimelineProjector: any) {
         const sourceKey = surfaceMetadata.waveformSource === 'audible'
-            ? runtimes.map((runtime, index) => {
+            ? runtimes.map((runtime: TrackRuntime, index: number) => {
                 const duration = runtime.buffer ? runtime.buffer.duration : 0;
                 const timingDuration = runtime.timing ? runtime.timing.effectiveDuration : 0;
                 return [
@@ -797,7 +797,7 @@ export function buildWaveformNormalizationCacheKey(ctx: any, surfaceMetadata: an
                     Math.round(timingDuration * 1000),
                 ].join(':');
             }).join('|')
-            : sourceRuntimes.map((runtime, index) => {
+            : sourceRuntimes.map((runtime: TrackRuntime, index: number) => {
                 const duration = runtime.buffer ? runtime.buffer.duration : 0;
                 const timingDuration = runtime.timing ? runtime.timing.effectiveDuration : 0;
                 return [
@@ -840,7 +840,7 @@ export function findWaveformSurface(ctx: any, seekWrap: any): any {
 
 export function reflowWaveforms(ctx: any): any {
     return (function(this: any) {
-        this.waveformSeekSurfaces.forEach((surfaceMetadata) => {
+        this.waveformSeekSurfaces.forEach((surfaceMetadata: WaveformSeekSurfaceMetadata) => {
             const previousSurfaceWidth = Math.max(
                 1,
                 Math.round(surfaceMetadata.baseWidth * surfaceMetadata.zoom)
@@ -944,7 +944,11 @@ export function drawDummyWaveforms(ctx: any, waveformEngine: any): any {
 
         for (let i = 0; i < this.waveformSeekSurfaces.length; i += 1) {
             const surfaceMetadata = this.waveformSeekSurfaces[i];
-            this.forEachVisibleWaveformTile(surfaceMetadata, pixelRatio, (tile) => {
+            this.forEachVisibleWaveformTile(surfaceMetadata, pixelRatio, (tile: {
+                canvas: HTMLCanvasElement;
+                context: CanvasRenderingContext2D;
+                renderBarWidth: number;
+            }) => {
                 waveformEngine.drawPlaceholder(tile.canvas, tile.context, tile.renderBarWidth, 0.3);
             });
         }
@@ -1029,7 +1033,16 @@ export function renderWaveformsInternal(ctx: any, waveformEngine: any, runtimes:
 
             const normalizationPeak = surfaceMetadata.normalizationPeak;
 
-            this.forEachVisibleWaveformTile(surfaceMetadata, pixelRatio, (tile) => {
+            this.forEachVisibleWaveformTile(surfaceMetadata, pixelRatio, (tile: {
+                tileStartPx: number;
+                tileCssWidth: number;
+                surfaceWidth: number;
+                canvas: HTMLCanvasElement;
+                context: CanvasRenderingContext2D;
+                renderBarWidth: number;
+                isNew: boolean;
+                record: { lastDrawKey: string | null };
+            }) => {
                 const tileDrawKey = [
                     normalizationCacheKey,
                     Math.round(tile.tileStartPx),
@@ -1132,7 +1145,7 @@ export function resolveWaveformTrackIndex(ctx: any, runtimes: any, waveformSourc
 
 export function updateWaveformZoomIndicators(ctx: any): any {
     return (function(this: any) {
-        this.waveformSeekSurfaces.forEach((surface) => {
+        this.waveformSeekSurfaces.forEach((surface: WaveformSeekSurfaceMetadata) => {
             const zoomPercent = Math.round(clampWaveformZoom(surface.zoom, surface.maxZoom) * 100);
             if (zoomPercent === 100) {
                 surface.zoomNode.style.display = 'none';
@@ -1152,7 +1165,7 @@ export function applyFixedWaveformLocalSeekVisuals(ctx: any, state: any, wavefor
             return;
         }
 
-        this.waveformSeekSurfaces.forEach((surface) => {
+        this.waveformSeekSurfaces.forEach((surface: WaveformSeekSurfaceMetadata) => {
             if (surface.waveformSource === 'audible') {
                 return;
             }
@@ -1204,7 +1217,7 @@ export function getLongestWaveformSourceDuration(ctx: any, runtimes: any, wavefo
         if (waveformSource === 'audible') {
             // For audible source, find longest among all tracks
             let longest = 0;
-            runtimes.forEach(function(runtime) {
+            runtimes.forEach(function(runtime: TrackRuntime) {
                 const duration = getRuntimeDuration(runtime);
                 if (duration > longest) {
                     longest = duration;
@@ -1225,7 +1238,7 @@ export function getLongestWaveformSourceDuration(ctx: any, runtimes: any, wavefo
 
 export function updateWaveformTiming(ctx: any, state: any, runtimes: any, waveformTimelineContext: any): any {
     return (function(this: any, state: any, runtimes: any, waveformTimelineContext: any) {
-        this.waveformSeekSurfaces.forEach((surface) => {
+        this.waveformSeekSurfaces.forEach((surface: WaveformSeekSurfaceMetadata) => {
             if (!surface.timingNode) {
                 return;
             }

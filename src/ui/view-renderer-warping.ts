@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NormalizedTrackGroupLayout, TrackRuntime, TrackSwitchFeatures, TrackSwitchUiState } from '../domain/types';
 import { escapeHtml, sanitizeInlineStyle } from '../shared/dom';
 import { formatSecondsToHHMMSSmmm } from '../shared/format';
@@ -539,7 +538,7 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
         this.warpingMatrixHosts.length = 0;
 
         const hosts = this.root.querySelectorAll('.warping-matrix');
-        hosts.forEach((hostElement) => {
+        hosts.forEach((hostElement: Element) => {
             if (!(hostElement instanceof HTMLElement)) {
                 return;
             }
@@ -1253,14 +1252,14 @@ export function updateWarpingMatrix(ctx: any, host: any, context: any): any {
         host.colorByColumn.clear();
         const normalizedColumnOrder = context.columnOrder.length > 0
             ? context.columnOrder
-            : context.trackSeries.map((series) => series.columnKey);
-        normalizedColumnOrder.forEach((columnKey) => {
+            : context.trackSeries.map((series: WarpingMatrixTrackSeries) => series.columnKey);
+        normalizedColumnOrder.forEach((columnKey: string) => {
             host.colorByColumn.set(
                 columnKey,
                 this.resolveWarpingMatrixColumnColor(columnKey, normalizedColumnOrder)
             );
         });
-        context.trackSeries.forEach((series) => {
+        context.trackSeries.forEach((series: WarpingMatrixTrackSeries) => {
             if (host.colorByColumn.has(series.columnKey)) {
                 return;
             }
@@ -1280,7 +1279,7 @@ export function updateWarpingMatrix(ctx: any, host: any, context: any): any {
             )
             : Math.max(1, referenceDuration);
 
-        const matrixSeriesSignature = context.trackSeries.map((series) => {
+        const matrixSeriesSignature = context.trackSeries.map((series: WarpingMatrixTrackSeries) => {
             return [
                 series.columnKey,
                 host.colorByColumn.get(series.columnKey) || WARPING_MATRIX_PRIMARY_COLOR,
@@ -1309,7 +1308,7 @@ export function updateWarpingMatrix(ctx: any, host: any, context: any): any {
         }
         host.matrixSeriesSignature = matrixSeriesSignature;
 
-        const matrixDataCacheKey = context.trackSeries.map((series) => {
+        const matrixDataCacheKey = context.trackSeries.map((series: WarpingMatrixTrackSeries) => {
             const lastPoint = series.points.length > 0
                 ? series.points[series.points.length - 1]
                 : null;
@@ -1392,7 +1391,7 @@ export function renderWarpingMatrixPathPlot(ctx: any, host: any, pathStrokeWidth
 
         const availableColumns = new Set<string>();
         if (host.matrixDataCache) {
-            host.matrixDataCache.byColumn.forEach((seriesData, columnKey) => {
+            host.matrixDataCache.byColumn.forEach((seriesData: WarpingMatrixPathSeriesData, columnKey: string) => {
                 availableColumns.add(columnKey);
                 let path = plot.pathByColumn.get(columnKey);
                 if (!path) {
@@ -1409,7 +1408,8 @@ export function renderWarpingMatrixPathPlot(ctx: any, host: any, pathStrokeWidth
             });
         }
 
-        Array.from(plot.pathByColumn.keys()).forEach((columnKey) => {
+        const existingColumns = Array.from(plot.pathByColumn.keys()) as string[];
+        existingColumns.forEach((columnKey: string) => {
             if (availableColumns.has(columnKey)) {
                 return;
             }
@@ -1550,23 +1550,23 @@ export function buildWarpingMatrixData(ctx: any, trackSeries: any, referenceDura
     return (function(this: any, trackSeries: any, referenceDuration: any) {
         const byColumn = new Map<string, WarpingMatrixPathSeriesData>();
 
-        trackSeries.forEach((series) => {
+        trackSeries.forEach((series: WarpingMatrixTrackSeries) => {
             const trackDuration = Math.max(
                 resolveWarpingMatrixTrackDuration(series.trackDuration, referenceDuration),
                 resolveWarpingMatrixSeriesMaxTrackTime(series.points, referenceDuration)
             );
 
             const pointsByReferenceTime = series.points
-                .map((point) => {
+                .map((point: WarpingMatrixDataPoint): WarpingMatrixPathPoint => {
                     return {
                         referenceTime: clampTime(point.referenceTime, 0, referenceDuration),
                         trackTime: clampTime(point.trackTime, 0, trackDuration),
                     };
                 })
-                .filter((point) => {
+                .filter((point: WarpingMatrixPathPoint) => {
                     return Number.isFinite(point.referenceTime) && Number.isFinite(point.trackTime);
                 })
-                .sort((left, right) => {
+                .sort((left: WarpingMatrixPathPoint, right: WarpingMatrixPathPoint) => {
                     if (left.referenceTime === right.referenceTime) {
                         return left.trackTime - right.trackTime;
                     }
@@ -1597,7 +1597,7 @@ export function buildWarpingMatrixData(ctx: any, trackSeries: any, referenceDura
                 }
             }
 
-            const pointsByTrackTime = pointsByReferenceTime.slice().sort((left, right) => {
+            const pointsByTrackTime = pointsByReferenceTime.slice().sort((left: WarpingMatrixPathPoint, right: WarpingMatrixPathPoint) => {
                 if (left.trackTime === right.trackTime) {
                     return left.referenceTime - right.referenceTime;
                 }
@@ -1622,18 +1622,18 @@ export function buildWarpingTempoData(ctx: any, trackSeries: any, halfWindowPoin
         const byColumn = new Map<string, WarpingMatrixTempoPoint[]>();
         const normalizedHalfWindow = Math.max(1, Math.round(halfWindowPoints));
 
-        trackSeries.forEach((series) => {
+        trackSeries.forEach((series: WarpingMatrixTrackSeries) => {
             const points = series.points
-                .filter((point) => {
+                .filter((point: WarpingMatrixDataPoint) => {
                     return Number.isFinite(point.referenceTime) && Number.isFinite(point.trackTime);
                 })
-                .map((point) => {
+                .map((point: WarpingMatrixDataPoint): WarpingMatrixPathPoint => {
                     return {
                         referenceTime: point.referenceTime,
                         trackTime: point.trackTime,
                     };
                 })
-                .sort((left, right) => left.referenceTime - right.referenceTime);
+                .sort((left: WarpingMatrixPathPoint, right: WarpingMatrixPathPoint) => left.referenceTime - right.referenceTime);
 
             if (points.length < (normalizedHalfWindow * 2) + 1) {
                 byColumn.set(series.columnKey, []);
@@ -1664,7 +1664,7 @@ export function buildWarpingTempoData(ctx: any, trackSeries: any, halfWindowPoin
                 });
             }
 
-            tempoPoints.sort((left, right) => {
+            tempoPoints.sort((left: WarpingMatrixTempoPoint, right: WarpingMatrixTempoPoint) => {
                 if (left.trackTime === right.trackTime) {
                     return left.referenceTime - right.referenceTime;
                 }

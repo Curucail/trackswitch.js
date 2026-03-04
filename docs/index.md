@@ -81,7 +81,7 @@ title: trackswitch.js
         <h5>Track Behavior</h5>
         <label class="ts-control-row">
           <span>Single Solo Mode</span>
-          <input type="checkbox" name="radiosolo" />
+          <input type="checkbox" name="exclusiveSolo" />
         </label>
         <label class="ts-control-row">
           <span>Tab View</span>

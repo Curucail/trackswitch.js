@@ -604,7 +604,7 @@ private updateSeekWrapVisuals(
 updateTrackControls(
         runtimes: TrackRuntime[],
         syncLockedTrackIndexes?: ReadonlySet<number>,
-        effectiveSingleSoloMode = this.features.radiosolo,
+        effectiveSingleSoloMode = this.features.exclusiveSolo,
         panSupported = true
     ): void {
         return viewRendererCore.updateTrackControls(this, runtimes, syncLockedTrackIndexes, effectiveSingleSoloMode, panSupported);
