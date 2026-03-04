@@ -2,12 +2,29 @@ import {
     NormalizedTrackGroupLayout,
     NormalizedTrackSwitchConfig,
     TrackDefinition,
+    TrackSwitchFeatures,
     TrackSwitchInit,
     TrackSwitchUiElement,
 } from '../domain/types';
 import { injectConfiguredUiElements, normalizeUiElement } from './ui-elements';
+import { assertAllowedKeys, toConfigRecord } from './config-validation';
+import { normalizeFeatures } from '../domain/options';
 
 export const TRACKS_REQUIRED_ERROR = 'TrackSwitch requires at least one ui entry with type "trackGroup" and non-empty trackGroup.';
+const initAllowedKeys = ['presetNames', 'features', 'alignment', 'ui'] as const;
+const alignmentAllowedKeys = ['csv', 'referenceTimeColumn', 'outOfRange'] as const;
+
+function validateInitKeys(init: TrackSwitchInit): void {
+    const initRecord = toConfigRecord(init, 'init');
+    assertAllowedKeys(initRecord, initAllowedKeys, 'init');
+
+    if (init.alignment === undefined) {
+        return;
+    }
+
+    const alignmentRecord = toConfigRecord(init.alignment, 'alignment');
+    assertAllowedKeys(alignmentRecord, alignmentAllowedKeys, 'alignment');
+}
 
 function hasValidTrackSources(track: TrackDefinition): boolean {
     if (!Array.isArray(track.sources) || track.sources.length === 0) {
@@ -41,14 +58,6 @@ function resolveTracksFromUi(
 
         const startTrackIndex = tracks.length;
         entry.trackGroup.forEach(function(track) {
-            if (
-                track
-                && typeof track === 'object'
-                && Object.prototype.hasOwnProperty.call(track, 'id')
-            ) {
-                throw new Error('Track ids are no longer supported. Track order in ui trackGroup defines the track index.');
-            }
-
             if (!hasValidTrackSources(track)) {
                 throw new Error('Each track in ui trackGroup must define at least one valid source src.');
             }
@@ -68,7 +77,19 @@ function resolveTracksFromUi(
     return { tracks, trackGroups };
 }
 
+function hasPerTrackImageUi(resolvedUi: TrackSwitchUiElement[] | undefined): boolean {
+    if (!resolvedUi) {
+        return false;
+    }
+
+    return resolvedUi.some(function(entry) {
+        return entry.type === 'perTrackImage';
+    });
+}
+
 export function normalizeInit(root: HTMLElement, init: TrackSwitchInit): NormalizedTrackSwitchConfig {
+    validateInitKeys(init);
+
     const resolvedUi = Array.isArray(init.ui)
         ? init.ui.map(normalizeUiElement)
         : undefined;
@@ -78,6 +99,11 @@ export function normalizeInit(root: HTMLElement, init: TrackSwitchInit): Normali
     const resolvedFeatures = waveformRequiredByUi
         ? { ...(init.features ?? {}), waveform: true }
         : init.features;
+    const normalizedFeatures = normalizeFeatures(resolvedFeatures as Partial<TrackSwitchFeatures> | undefined);
+    if (hasPerTrackImageUi(resolvedUi) && !normalizedFeatures.exclusiveSolo) {
+        throw new Error('Invalid init configuration: perTrackImage requires features.exclusiveSolo to be true.');
+    }
+
     const resolvedTrackData = resolveTracksFromUi(resolvedUi);
 
     if (resolvedTrackData.tracks.length === 0) {

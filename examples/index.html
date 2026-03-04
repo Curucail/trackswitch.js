@@ -30,6 +30,10 @@
                         src: 'data/cover.png',
                     },
                     {
+                        type: 'perTrackImage',
+                        seekable: true,
+                    },
+                    {
                         type: 'waveform',
                         height: 150,
                         waveformBarWidth: 1,
@@ -66,7 +70,7 @@
                 ],
                 features: {
                     mode: 'default',
-                    exclusiveSolo: false,
+                    exclusiveSolo: true,
                     globalVolume: true,
                     trackMixControls: true,
                     repeat: false,
@@ -76,7 +80,7 @@
                     looping: true,
                     seekBar: true,
                     timer: true,
-                    presets: true,
+                    presets: false,
                     muteOtherPlayerInstances: true,
                 },
             });

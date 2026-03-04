@@ -192,7 +192,6 @@ export class ViewRenderer {
     public readonly presetNames: string[];
     public readonly trackGroups: NormalizedTrackGroupLayout[];
 
-    public originalImage = '';
     public readonly waveformSeekSurfaces: WaveformSeekSurfaceMetadata[] = [];
     public readonly sheetMusicHosts: SheetMusicHostConfig[] = [];
     public readonly warpingMatrixHosts: WarpingMatrixHostMetadata[] = [];

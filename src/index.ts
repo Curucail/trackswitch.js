@@ -32,6 +32,8 @@ export type {
     TrackSwitchInit,
     TrackSwitchImageConfig,
     TrackSwitchImageUiElement,
+    TrackSwitchPerTrackImageConfig,
+    TrackSwitchPerTrackImageUiElement,
     TrackSwitchSnapshot,
     TrackSwitchWarpingMatrixConfig,
     TrackSwitchWarpingMatrixUiElement,

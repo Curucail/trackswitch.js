@@ -54,7 +54,13 @@ export interface TrackSwitchFeatures {
 export interface TrackSwitchImageConfig {
     src: string;
     seekable?: boolean;
-    trackImageSwitch?: boolean;
+    style?: string;
+    seekMarginLeft?: number;
+    seekMarginRight?: number;
+}
+
+export interface TrackSwitchPerTrackImageConfig {
+    seekable?: boolean;
     style?: string;
     seekMarginLeft?: number;
     seekMarginRight?: number;
@@ -93,6 +99,10 @@ export interface TrackSwitchImageUiElement extends TrackSwitchImageConfig {
     type: 'image';
 }
 
+export interface TrackSwitchPerTrackImageUiElement extends TrackSwitchPerTrackImageConfig {
+    type: 'perTrackImage';
+}
+
 export interface TrackSwitchWaveformUiElement extends TrackSwitchWaveformConfig {
     type: 'waveform';
 }
@@ -118,6 +128,7 @@ export interface NormalizedTrackGroupLayout {
 
 export type TrackSwitchUiElement =
     | TrackSwitchImageUiElement
+    | TrackSwitchPerTrackImageUiElement
     | TrackSwitchWaveformUiElement
     | TrackSwitchSheetMusicUiElement
     | TrackSwitchWarpingMatrixUiElement

@@ -530,10 +530,6 @@ export function wrapSeekableImages(ctx: any): any {
                 return;
             }
 
-            if (!this.originalImage) {
-                this.originalImage = candidate.src;
-            }
-
             const wrapper = document.createElement('div');
             wrapper.className = 'seekable-img-wrap';
             wrapper.setAttribute('style', sanitizeInlineStyle(candidate.getAttribute('data-style')) + '; display: block;');
@@ -780,17 +776,18 @@ export function updateTrackControls(ctx: any, runtimes: any, syncLockedTrackInde
 export function switchPosterImage(ctx: any, runtimes: any): any {
     return (function(this: any, runtimes: any) {
         let soloCount = 0;
-        let imageSrc: string | undefined;
-        const explicitTrackImageTargets = this.queryAll('img[data-track-image-switch="true"]');
-        const fallbackSeekableTargets = this.queryAll('.seekable');
-        const switchTargets = explicitTrackImageTargets.length > 0
-            ? explicitTrackImageTargets
-            : fallbackSeekableTargets;
+        let imageSrc: string | null = null;
+        const switchTargets = this.queryAll('img[data-per-track-image="true"]');
 
         runtimes.forEach(function(runtime: TrackRuntime) {
             if (runtime.state.solo) {
                 soloCount += 1;
-                imageSrc = runtime.definition.image;
+                const configuredImage = typeof runtime.definition.image === 'string'
+                    ? runtime.definition.image.trim()
+                    : '';
+                if (configuredImage) {
+                    imageSrc = configuredImage;
+                }
             }
         });
 
@@ -799,21 +796,30 @@ export function switchPosterImage(ctx: any, runtimes: any): any {
         }
 
         switchTargets.forEach((element: HTMLElement) => {
-            if (element instanceof HTMLImageElement) {
-                const originalAttr = element.getAttribute('data-track-image-original-src');
-                if (!originalAttr) {
-                    element.setAttribute('data-track-image-original-src', element.src);
-                }
+            if (!(element instanceof HTMLImageElement)) {
+                return;
+            }
 
-                const fallbackSrc = element.getAttribute('data-track-image-original-src')
-                    || this.originalImage
-                    || element.src;
+            const nextSrc = soloCount === 1 && imageSrc
+                ? imageSrc
+                : null;
+            const container = element.parentElement?.classList.contains('seekable-img-wrap')
+                ? element.parentElement
+                : element;
 
-                if (soloCount === 1 && imageSrc) {
-                    element.src = imageSrc;
-                } else {
-                    element.src = fallbackSrc;
-                }
+            if (!nextSrc) {
+                setDisplay(container, 'none');
+                setDisplay(element, 'none');
+                return;
+            }
+
+            setDisplay(container, '');
+            setDisplay(element, '');
+
+            const currentSrc = element.getAttribute('data-per-track-current-src');
+            if (currentSrc !== nextSrc) {
+                element.src = nextSrc;
+                element.setAttribute('data-per-track-current-src', nextSrc);
             }
         });
     

@@ -88,7 +88,7 @@ Fix: you need at least 2 preset indices across tracks and `features.presets: tru
 Fix: in `alignment` mode, `alignment.csv`, `alignment.referenceTimeColumn`, and each track's `alignment.column` are required.
 
 5. Cover image is not seekable.
-Fix: only one image can be `seekable: true`, and the image must be in `ui` with `type: 'image'`.
+Fix: set `seekable: true` on the `ui` image element you want to scrub on (for example `type: 'image'` or `type: 'perTrackImage'`). `perTrackImage` also requires `features.exclusiveSolo: true`.
 
 ## Where to go next
 

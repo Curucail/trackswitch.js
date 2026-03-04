@@ -125,6 +125,7 @@ Required minimum:
 `ui` is rendered in array order. Supported element types:
 
 - `image`
+- `perTrackImage`
 - `waveform`
 - `trackGroup`
 - `sheetMusic`
@@ -211,16 +212,39 @@ Fields:
 
 - `src: string`
 - `seekable?: boolean`
-- `trackImageSwitch?: boolean`
 - `style?: string`
 - `seekMarginLeft?: number`
 - `seekMarginRight?: number`
 
 Notes:
 
-- Only one image may be `seekable: true`.
 - Seek margins are clamped to `0..100` percent.
-- `trackImageSwitch: true` marks a non-seekable image as the target for per-track cover switching.
+
+## Per-Track Image UI Element
+
+```javascript
+{ type: 'perTrackImage', seekable: false, style: 'margin: 12px auto;' }
+```
+
+Fields:
+
+- `seekable?: boolean`
+- `style?: string`
+- `seekMarginLeft?: number`
+- `seekMarginRight?: number`
+
+What it does:
+
+- Shows the currently selected track cover (`ui[].trackGroup[].image`) when exactly one track is active.
+- If no selected track image is available, this UI element is hidden.
+- Works in both `default` and `alignment` mode.
+
+Notes:
+
+- `perTrackImage` is independent from regular `image`.
+- Both `image` and `perTrackImage` may be `seekable: true`.
+- Seek margins are clamped to `0..100` percent.
+- `perTrackImage` requires `features.exclusiveSolo: true`.
 
 ## Waveform UI Element
 
@@ -484,17 +508,17 @@ Fix: ensure every `trackGroup` array is non-empty.
 3. `Each track in ui trackGroup must define at least one valid source src.`
 Fix: ensure each track has `sources: [{ src: '...' }]`.
 
-4. `Track ids are no longer supported. Track order in ui trackGroup defines the track index.`
-Fix: remove custom `id` from track objects.
+4. `Invalid init key: ...`, `Invalid alignment key: ...`, `Invalid ui.<type> key: ...`, `Invalid track key: ...`, `Invalid track alignment key: ...`, or `Invalid source key: ...`
+Fix: remove unknown keys and use only documented options for that section.
 
-5. `TrackSwitch UI config supports at most one seekable image.`
-Fix: only one image may use `seekable: true`.
+5. `Invalid ui element type: ...`
+Fix: use only `image`, `perTrackImage`, `waveform`, `trackGroup`, `sheetMusic`, `warpingMatrix`.
 
-6. `Invalid ui element type: ...`
-Fix: use only `image`, `waveform`, `trackGroup`, `sheetMusic`, `warpingMatrix`.
-
-7. `Invalid feature key: ...`
+6. `Invalid feature key: ...`
 Fix: use only documented `features` keys.
+
+7. `Invalid init configuration: perTrackImage requires features.exclusiveSolo to be true.`
+Fix: enable `features.exclusiveSolo` (default mode) or remove `perTrackImage`.
 
 8. `Alignment mode requires init.alignment configuration.`
 Fix: add `alignment` object when `features.mode = 'alignment'`.

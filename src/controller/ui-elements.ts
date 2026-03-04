@@ -1,5 +1,8 @@
 import {
+    TrackDefinitionAlignment,
+    TrackSourceDefinition,
     TrackSwitchImageConfig,
+    TrackSwitchPerTrackImageConfig,
     TrackSwitchSheetMusicConfig,
     TrackSwitchUiConfig,
     TrackSwitchUiElement,
@@ -8,6 +11,62 @@ import {
     TrackSwitchWarpingMatrixConfig,
 } from '../domain/types';
 import { clampPercent } from '../shared/math';
+import { assertAllowedKeys, toConfigRecord } from './config-validation';
+
+const uiImageAllowedKeys = ['type', 'src', 'seekable', 'style', 'seekMarginLeft', 'seekMarginRight'] as const;
+const uiPerTrackImageAllowedKeys = ['type', 'seekable', 'style', 'seekMarginLeft', 'seekMarginRight'] as const;
+const uiWaveformAllowedKeys = [
+    'type',
+    'width',
+    'height',
+    'waveformBarWidth',
+    'maxZoom',
+    'waveformSource',
+    'timer',
+    'style',
+    'seekMarginLeft',
+    'seekMarginRight',
+] as const;
+const uiTrackGroupAllowedKeys = ['type', 'trackGroup'] as const;
+const uiSheetMusicAllowedKeys = [
+    'type',
+    'src',
+    'measureCsv',
+    'maxWidth',
+    'maxHeight',
+    'renderScale',
+    'followPlayback',
+    'style',
+    'cursorColor',
+    'cursorAlpha',
+] as const;
+const uiWarpingMatrixAllowedKeys = ['type', 'style', 'height'] as const;
+
+const trackAllowedKeys = [
+    'title',
+    'solo',
+    'volume',
+    'pan',
+    'image',
+    'style',
+    'presets',
+    'seekMarginLeft',
+    'seekMarginRight',
+    'sources',
+    'alignment',
+] as const;
+
+const trackAlignmentAllowedKeys = ['column', 'synchronizedSources'] as const;
+const sourceAllowedKeys = ['src', 'type', 'startOffsetMs', 'endOffsetMs'] as const;
+
+const uiAllowedKeysByType: Record<string, readonly string[]> = {
+    image: uiImageAllowedKeys,
+    perTrackImage: uiPerTrackImageAllowedKeys,
+    waveform: uiWaveformAllowedKeys,
+    trackGroup: uiTrackGroupAllowedKeys,
+    sheetMusic: uiSheetMusicAllowedKeys,
+    warpingMatrix: uiWarpingMatrixAllowedKeys,
+};
 
 function toMarginString(value: number | undefined): string {
     return String(clampPercent(value));
@@ -162,24 +221,44 @@ function normalizeWarpingMatrixConfig<T extends TrackSwitchWarpingMatrixConfig>(
     };
 }
 
+function normalizeSourceConfig(source: TrackSourceDefinition): TrackSourceDefinition {
+    const sourceRecord = toConfigRecord(source, 'source');
+    assertAllowedKeys(sourceRecord, sourceAllowedKeys, 'source');
+    return { ...source };
+}
+
+function normalizeTrackAlignmentConfig(
+    alignment: TrackDefinitionAlignment | undefined
+): TrackDefinitionAlignment | undefined {
+    if (!alignment) {
+        return alignment;
+    }
+
+    const alignmentRecord = toConfigRecord(alignment, 'track alignment');
+    assertAllowedKeys(alignmentRecord, trackAlignmentAllowedKeys, 'track alignment');
+
+    return {
+        ...alignment,
+        synchronizedSources: Array.isArray(alignment.synchronizedSources)
+            ? alignment.synchronizedSources.map(function(source) {
+                return normalizeSourceConfig(source);
+            })
+            : alignment.synchronizedSources,
+    };
+}
+
 function normalizeTrackGroupConfig<T extends TrackSwitchTrackGroupUiElement>(group: T): T {
     const normalizedTracks = Array.isArray(group.trackGroup)
         ? group.trackGroup.map(function(track) {
+            const trackRecord = toConfigRecord(track, 'track');
+            assertAllowedKeys(trackRecord, trackAllowedKeys, 'track');
+
             return {
                 ...track,
                 sources: Array.isArray(track.sources) ? track.sources.map(function(source) {
-                    return { ...source };
+                    return normalizeSourceConfig(source);
                 }) : track.sources,
-                alignment: track.alignment
-                    ? {
-                        ...track.alignment,
-                        synchronizedSources: Array.isArray(track.alignment.synchronizedSources)
-                            ? track.alignment.synchronizedSources.map(function(source) {
-                                return { ...source };
-                            })
-                            : track.alignment.synchronizedSources,
-                    }
-                    : track.alignment,
+                alignment: normalizeTrackAlignmentConfig(track.alignment),
             };
         })
         : group.trackGroup;
@@ -191,14 +270,17 @@ function normalizeTrackGroupConfig<T extends TrackSwitchTrackGroupUiElement>(gro
 }
 
 export function normalizeUiElement(element: TrackSwitchUiElement): TrackSwitchUiElement {
-    if (!element || typeof element !== 'object') {
-        throw new Error('Invalid ui element configuration.');
-    }
-
-    const elementType = (element as { type?: unknown }).type;
+    const elementRecord = toConfigRecord(element, 'ui element');
+    const elementType = elementRecord.type;
     if (typeof elementType !== 'string') {
         throw new Error('Invalid ui element type.');
     }
+
+    const allowedElementKeys = uiAllowedKeysByType[elementType];
+    if (!allowedElementKeys) {
+        throw new Error('Invalid ui element type: ' + elementType);
+    }
+    assertAllowedKeys(elementRecord, allowedElementKeys, 'ui.' + elementType);
 
     if (element.type === 'waveform') {
         return normalizeWaveformConfig(element);
@@ -217,6 +299,10 @@ export function normalizeUiElement(element: TrackSwitchUiElement): TrackSwitchUi
     }
 
     if (element.type === 'image') {
+        return element;
+    }
+
+    if (element.type === 'perTrackImage') {
         return element;
     }
 
@@ -254,8 +340,29 @@ function injectImage(root: HTMLElement, image: TrackSwitchImageConfig): void {
         imageElement.classList.add('seekable');
     }
 
-    if (image.trackImageSwitch) {
-        imageElement.setAttribute('data-track-image-switch', 'true');
+    if (typeof image.style === 'string') {
+        imageElement.setAttribute('data-style', image.style);
+    }
+
+    if (typeof image.seekMarginLeft === 'number') {
+        imageElement.setAttribute('data-seek-margin-left', toMarginString(image.seekMarginLeft));
+    }
+
+    if (typeof image.seekMarginRight === 'number') {
+        imageElement.setAttribute('data-seek-margin-right', toMarginString(image.seekMarginRight));
+    }
+
+    root.appendChild(imageElement);
+}
+
+function injectPerTrackImage(root: HTMLElement, image: TrackSwitchPerTrackImageConfig): void {
+    const imageElement = document.createElement('img');
+    imageElement.classList.add('per-track-image');
+    imageElement.setAttribute('data-per-track-image', 'true');
+    imageElement.style.display = 'none';
+
+    if (image.seekable) {
+        imageElement.classList.add('seekable');
     }
 
     if (typeof image.style === 'string') {
@@ -347,14 +454,6 @@ export function injectConfiguredUiElements(root: HTMLElement, uiElements: TrackS
         return;
     }
 
-    const seekableCount = uiElements.filter(function(entry) {
-        return entry.type === 'image' && Boolean(entry.seekable);
-    }).length;
-
-    if (seekableCount > 1) {
-        throw new Error('TrackSwitch UI config supports at most one seekable image.');
-    }
-
     let trackGroupIndex = 0;
     uiElements.forEach(function(entry) {
         if (entry.type === 'trackGroup') {
@@ -365,6 +464,11 @@ export function injectConfiguredUiElements(root: HTMLElement, uiElements: TrackS
 
         if (entry.type === 'image') {
             injectImage(root, entry);
+            return;
+        }
+
+        if (entry.type === 'perTrackImage') {
+            injectPerTrackImage(root, entry);
             return;
         }
 

@@ -97,7 +97,7 @@
 
   var MODE_DISABLED_CONTROLS = {
     default: ['sheetNotePreview', 'warpingMatrix'],
-    alignment: ['customImage', 'seekableImage', 'trackImageBySolo', 'presets', 'exclusiveSolo'],
+    alignment: ['customImage', 'seekableImage', 'presets', 'exclusiveSolo'],
   };
 
   var DEFAULT_MODEL = {
@@ -404,11 +404,6 @@
           notes.push('Seekable cover image is unavailable in alignment mode.');
         }
 
-        if (normalized.trackImageBySolo) {
-          normalized.trackImageBySolo = false;
-          notes.push('Track-based cover image is unavailable in alignment mode.');
-        }
-
         if (normalized.presets) {
           normalized.presets = false;
           notes.push('Presets are unavailable in alignment mode.');
@@ -485,7 +480,7 @@
 
       if (model.trackImageBySolo) {
         snippetLines.push(
-          "      { type: 'image', src: 'mix.png', trackImageSwitch: true },"
+          "      { type: 'perTrackImage', seekable: false },"
         );
       }
 
@@ -583,6 +578,12 @@
       if (model.warpingMatrix) {
         snippetLines.push(
           "      { type: 'warpingMatrix', height: 240 },"
+        );
+      }
+
+      if (model.trackImageBySolo) {
+        snippetLines.push(
+          "      { type: 'perTrackImage', seekable: false },"
         );
       }
 
@@ -756,11 +757,10 @@
         });
       }
 
-      if (model.trackImageBySolo && !isAlignmentMode(currentMode)) {
+      if (model.trackImageBySolo) {
         uiConfig.push({
-          type: 'image',
-          src: basePath + '/mix.png',
-          trackImageSwitch: true,
+          type: 'perTrackImage',
+          seekable: false,
         });
       }
 
