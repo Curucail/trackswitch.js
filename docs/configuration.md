@@ -177,6 +177,7 @@ Track notes:
 
 - Track `id` values are not supported.
 - Track index is the order inside `ui[].trackGroup[]`.
+- In non-exclusive mode (`features.exclusiveSolo: false`), if no track `solo` state is explicitly configured, all tracks start enabled.
 - `seekMarginLeft` / `seekMarginRight` are accepted in the track definition for compatibility; seek margin behavior is primarily used by seekable UI elements (`image`, `waveform`).
 
 Source fields (`sources[]` and `alignment.synchronizedSources[]`):
@@ -380,6 +381,11 @@ Normalization rules:
 - Invalid `mode` values fall back to `'default'`.
 - `exclusiveSolo: true` forces `presets: false`.
 - In `alignment` mode, runtime enforces `exclusiveSolo: true` and `presets: false`.
+
+Solo interaction behavior:
+
+- In non-exclusive mode (`exclusiveSolo: false`), if no track is selected, playback is silent.
+- `Shift + click` keeps exclusive-select behavior, except when the clicked track is already the only selected track; in that case, all tracks are selected.
 
 # Alignment Mode
 

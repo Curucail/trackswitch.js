@@ -477,6 +477,7 @@ export class AudioEngine {
         const anySolos = runtimes.some(function(runtime) {
             return runtime.state.solo;
         });
+        const noSoloFallbackGate = this.features.exclusiveSolo ? 1 : 0;
 
         runtimes.forEach(function(runtime) {
             if (!runtime.gainNode) {
@@ -485,7 +486,7 @@ export class AudioEngine {
 
             const soloGate = anySolos
                 ? (runtime.state.solo ? 1 : 0)
-                : 1;
+                : noSoloFallbackGate;
             runtime.gainNode.gain.value = soloGate * clamp01(runtime.state.volume);
 
             if (runtime.pannerNode) {

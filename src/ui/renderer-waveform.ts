@@ -815,7 +815,15 @@ export function getWaveformSourceRuntimes(ctx: any, runtimes: any, waveformSourc
     return (function(this: any, runtimes: any, waveformSource: any) {
         const trackIndex = this.resolveWaveformTrackIndex(runtimes, waveformSource);
         if (trackIndex === null) {
-            return runtimes;
+            const selected = runtimes.filter(function(runtime: TrackRuntime) {
+                return runtime.state.solo;
+            });
+
+            if (selected.length > 0) {
+                return selected;
+            }
+
+            return this.features.exclusiveSolo ? runtimes : [];
         }
 
         const selected = runtimes[trackIndex];

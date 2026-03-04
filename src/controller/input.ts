@@ -270,6 +270,26 @@ export function onSolo(ctx: any, event: any): any {
 
         const index = this.trackIndexFromTarget(event.target ?? null);
         if (index >= 0) {
+            if (
+                event.shiftKey
+                && !this.features.exclusiveSolo
+                && this.runtimes[index]
+                && this.runtimes[index].state.solo
+            ) {
+                const selectedCount = this.runtimes.reduce(function(count: number, runtime: any) {
+                    return count + (runtime.state.solo ? 1 : 0);
+                }, 0);
+
+                if (selectedCount === 1) {
+                    this.runtimes.forEach(function(runtime: any) {
+                        runtime.state.solo = true;
+                    });
+                    this.applyTrackProperties();
+                    this.updateMainControls();
+                    return;
+                }
+            }
+
             this.toggleSolo(index, !!event.shiftKey);
         }
     }).call(ctx, event);

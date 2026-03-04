@@ -135,12 +135,23 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             return createTrackRuntime(track, index);
         });
 
-        if (
-            this.features.exclusiveSolo
-            && this.runtimes.length > 0
-            && !this.runtimes.some(function(runtime) { return runtime.state.solo; })
-        ) {
-            this.runtimes[0].state.solo = true;
+        const hasAnySelectedTrack = this.runtimes.some(function(runtime) {
+            return runtime.state.solo;
+        });
+        if (!hasAnySelectedTrack && this.runtimes.length > 0) {
+            if (this.features.exclusiveSolo) {
+                this.runtimes[0].state.solo = true;
+            } else {
+                const hasExplicitSoloConfiguration = config.tracks.some(function(track) {
+                    return typeof track.solo === 'boolean';
+                });
+
+                if (!hasExplicitSoloConfiguration) {
+                    this.runtimes.forEach(function(runtime) {
+                        runtime.state.solo = true;
+                    });
+                }
+            }
         }
 
         const presetNames = !this.features.presets
