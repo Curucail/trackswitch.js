@@ -1,8 +1,6 @@
 import { AlignmentOutOfRangeMode } from '../domain/types';
 import Papa from 'papaparse';
 
-type AlignmentTempoInterpolationMode = 'step' | 'linear';
-
 export interface CsvNumericRow {
     [column: string]: number;
 }
@@ -172,12 +170,6 @@ export function resolveAlignmentOutOfRangeMode(mode: AlignmentOutOfRangeMode | u
     return mode === 'linear' ? 'linear' : 'clamp';
 }
 
-export function resolveAlignmentTempoInterpolationMode(
-    mode: AlignmentTempoInterpolationMode | undefined
-): AlignmentTempoInterpolationMode {
-    return mode === 'linear' ? 'linear' : 'step';
-}
-
 export function mapTime(
     series: TimeMappingSeries,
     time: number,
@@ -222,164 +214,6 @@ export function mapTime(
     const right = points[rightIndex];
 
     return interpolate(left, right, time);
-}
-
-export function mapTimeSlope(
-    series: TimeMappingSeries,
-    time: number,
-    outOfRange: AlignmentOutOfRangeMode,
-    interpolationMode: AlignmentTempoInterpolationMode = 'step'
-): number {
-    const points = collapsePointsByX(series.points);
-    if (points.length < 2 || !Number.isFinite(time)) {
-        return 1;
-    }
-
-    if (interpolationMode === 'linear') {
-        return mapTimeSlopeLinear(points, time, outOfRange);
-    }
-
-    return mapTimeSlopeStep(points, time, outOfRange);
-}
-
-function mapTimeSlopeStep(
-    points: TimeMappingPoint[],
-    time: number,
-    outOfRange: AlignmentOutOfRangeMode
-): number {
-    const first = points[0];
-    const last = points[points.length - 1];
-
-    if (time < first.x) {
-        if (outOfRange === 'clamp') {
-            return 0;
-        }
-        return slope(points[0], points[1]);
-    }
-
-    if (time > last.x) {
-        if (outOfRange === 'clamp') {
-            return 0;
-        }
-        return slope(points[points.length - 2], points[points.length - 1]);
-    }
-
-    const rightIndex = firstIndexGreaterOrEqual(points, time);
-    if (rightIndex <= 0) {
-        return slope(points[0], points[1]);
-    }
-
-    const left = points[rightIndex - 1];
-    const right = points[rightIndex];
-    return slope(left, right);
-}
-
-function mapTimeSlopeLinear(
-    points: TimeMappingPoint[],
-    time: number,
-    outOfRange: AlignmentOutOfRangeMode
-): number {
-    const first = points[0];
-    const last = points[points.length - 1];
-    const segmentSlopes: number[] = [];
-
-    for (let index = 0; index < points.length - 1; index += 1) {
-        segmentSlopes.push(slope(points[index], points[index + 1]));
-    }
-
-    const knotSlopes = buildKnotSlopes(points, segmentSlopes);
-
-    if (time < first.x) {
-        return outOfRange === 'clamp' ? 0 : knotSlopes[0];
-    }
-
-    if (time > last.x) {
-        return outOfRange === 'clamp' ? 0 : knotSlopes[knotSlopes.length - 1];
-    }
-
-    const rightIndex = firstIndexGreaterOrEqual(points, time);
-    if (rightIndex <= 0) {
-        return knotSlopes[0];
-    }
-
-    if (points[rightIndex].x === time) {
-        return knotSlopes[rightIndex];
-    }
-
-    const leftIndex = rightIndex - 1;
-    const leftPoint = points[leftIndex];
-    const rightPoint = points[rightIndex];
-    const span = rightPoint.x - leftPoint.x;
-
-    if (span <= 0) {
-        return knotSlopes[leftIndex];
-    }
-
-    const t = (time - leftPoint.x) / span;
-    return knotSlopes[leftIndex] + t * (knotSlopes[rightIndex] - knotSlopes[leftIndex]);
-}
-
-function buildKnotSlopes(points: TimeMappingPoint[], segmentSlopes: number[]): number[] {
-    if (segmentSlopes.length === 0) {
-        return [1];
-    }
-
-    const knotSlopes: number[] = [];
-    knotSlopes.push(segmentSlopes[0]);
-
-    for (let index = 1; index < points.length - 1; index += 1) {
-        const leftSlope = segmentSlopes[index - 1];
-        const rightSlope = segmentSlopes[index];
-        const leftSpan = points[index].x - points[index - 1].x;
-        const rightSpan = points[index + 1].x - points[index].x;
-
-        if (leftSpan > 0 && rightSpan > 0) {
-            knotSlopes.push(
-                (leftSlope * rightSpan + rightSlope * leftSpan) / (leftSpan + rightSpan)
-            );
-        } else {
-            knotSlopes.push((leftSlope + rightSlope) / 2);
-        }
-    }
-
-    knotSlopes.push(segmentSlopes[segmentSlopes.length - 1]);
-    return knotSlopes;
-}
-
-function collapsePointsByX(points: TimeMappingPoint[]): TimeMappingPoint[] {
-    if (points.length <= 1) {
-        return points.slice();
-    }
-
-    const collapsed: TimeMappingPoint[] = [];
-    let activeX = points[0].x;
-    let sumY = points[0].y;
-    let count = 1;
-
-    for (let index = 1; index < points.length; index += 1) {
-        const point = points[index];
-        if (point.x === activeX) {
-            sumY += point.y;
-            count += 1;
-            continue;
-        }
-
-        collapsed.push({
-            x: activeX,
-            y: sumY / count,
-        });
-
-        activeX = point.x;
-        sumY = point.y;
-        count = 1;
-    }
-
-    collapsed.push({
-        x: activeX,
-        y: sumY / count,
-    });
-
-    return collapsed;
 }
 
 function firstIndexGreaterOrEqual(points: TimeMappingPoint[], value: number): number {
@@ -456,13 +290,4 @@ function interpolate(a: TimeMappingPoint, b: TimeMappingPoint, x: number): numbe
 
     const t = (x - a.x) / deltaX;
     return a.y + t * (b.y - a.y);
-}
-
-function slope(a: TimeMappingPoint, b: TimeMappingPoint): number {
-    const deltaX = b.x - a.x;
-    if (deltaX === 0) {
-        return 1;
-    }
-
-    return (b.y - a.y) / deltaX;
 }

@@ -1,9 +1,9 @@
 import { NormalizedTrackGroupLayout, TrackRuntime, TrackSwitchFeatures, TrackSwitchUiState } from '../domain/types';
 import { TrackTimelineProjector, WaveformEngine } from '../engine/waveform-engine';
 import * as d3 from 'd3';
-import * as viewRendererCore from './view-renderer-core';
-import * as viewRendererWaveform from './view-renderer-waveform';
-import * as viewRendererWarping from './view-renderer-warping';
+import * as viewRendererCore from './renderer-core';
+import * as viewRendererWaveform from './renderer-waveform';
+import * as viewRendererWarping from './renderer-warping';
 
 type SvgSelection = d3.Selection<SVGSVGElement, unknown, null, undefined>;
 type GroupSelection = d3.Selection<SVGGElement, unknown, null, undefined>;

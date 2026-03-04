@@ -68,17 +68,16 @@ function resolveTracksFromUi(
     return { tracks, trackGroups };
 }
 
-export function normalizeInit(root: HTMLElement, init: TrackSwitchInit | undefined): NormalizedTrackSwitchConfig {
-    const resolvedInit = init as TrackSwitchInit | undefined;
-    const resolvedUi = Array.isArray(resolvedInit?.ui)
-        ? resolvedInit.ui.map(normalizeUiElement)
+export function normalizeInit(root: HTMLElement, init: TrackSwitchInit): NormalizedTrackSwitchConfig {
+    const resolvedUi = Array.isArray(init.ui)
+        ? init.ui.map(normalizeUiElement)
         : undefined;
     const waveformRequiredByUi = Boolean(resolvedUi && resolvedUi.some(function(entry) {
         return entry.type === 'waveform';
     }));
     const resolvedFeatures = waveformRequiredByUi
-        ? { ...(resolvedInit?.features ?? {}), waveform: true }
-        : resolvedInit?.features;
+        ? { ...(init.features ?? {}), waveform: true }
+        : init.features;
     const resolvedTrackData = resolveTracksFromUi(resolvedUi);
 
     if (resolvedTrackData.tracks.length === 0) {
@@ -89,9 +88,9 @@ export function normalizeInit(root: HTMLElement, init: TrackSwitchInit | undefin
 
     return {
         tracks: resolvedTrackData.tracks,
-        presetNames: resolvedInit?.presetNames,
+        presetNames: init.presetNames,
         features: resolvedFeatures,
-        alignment: resolvedInit?.alignment,
+        alignment: init.alignment,
         ui: resolvedUi,
         trackGroups: resolvedTrackData.trackGroups,
     };

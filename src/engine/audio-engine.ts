@@ -328,8 +328,7 @@ export class AudioEngine {
         runtime.timing = runtime.baseSource.timing;
         runtime.sourceIndex = runtime.baseSource.sourceIndex;
 
-        const alignmentSources = runtime.definition.alignment?.synchronizedSources
-            || runtime.definition.alignment?.sources;
+        const alignmentSources = runtime.definition.alignment?.synchronizedSources;
         const shouldLoadSyncedSources = this.features.mode === 'alignment'
             && Array.isArray(alignmentSources)
             && alignmentSources.length > 0;

@@ -18,13 +18,13 @@ title: trackswitch.js
 
 Use `TrackSwitch.createTrackSwitch(rootElement, init)`.
 
-- `init.tracks` is required.
-- `init.tracks` must contain at least one track.
+- `init.ui` is required.
+- `init.ui` must contain at least one `trackGroup` entry with at least one track.
 
-If `tracks` is missing or empty, trackswitch throws:
+If `ui.trackGroup` is missing or empty, trackswitch throws:
 
 ```text
-TrackSwitch requires init.tracks with at least one track.
+TrackSwitch requires at least one ui entry with type "trackGroup" and non-empty trackGroup.
 ```
 
 # Configuration
@@ -33,19 +33,22 @@ Basic shape:
 
 ```javascript
 TrackSwitch.createTrackSwitch(rootElement, {
-  tracks: [
-    {
-      title: 'Drums',
-      sources: [{ src: 'drums.mp3' }],
-      alignment: {
-        column: 't1_sec',
-      },
-    },
-  ],
   presetNames: ['All Tracks'],
   ui: [
     { type: 'image', src: 'cover.jpg', seekable: true },
     { type: 'waveform', width: 1200, height: 150 },
+    {
+      type: 'trackGroup',
+      trackGroup: [
+        {
+          title: 'Drums',
+          sources: [{ src: 'drums.mp3' }],
+          alignment: {
+            column: 't1_sec',
+          },
+        },
+      ],
+    },
     { type: 'sheetMusic', src: 'score.musicxml', measureCsv: 'score_measures.csv', maxWidth: 960, renderScale: 0.75, maxHeight: 360, followPlayback: true },
     {
       type: 'warpingMatrix',
@@ -68,7 +71,7 @@ TrackSwitch.createTrackSwitch(rootElement, {
 
 ## Tracks
 
-`tracks` is an array of stems.
+Tracks are declared inside `ui` entries with `type: 'trackGroup'`.
 
 Track fields:
 
@@ -80,7 +83,7 @@ Track fields:
 - `style?: string`
 - `presets?: number[]`
 - `sources: TrackSourceDefinition[]` (required)
-- `alignment?: { column?: string; sources?: TrackSourceDefinition[] }`
+- `alignment?: { column?: string; synchronizedSources?: TrackSourceDefinition[] }`
 
 Notes:
 
@@ -111,9 +114,14 @@ Use `presetNames` and per-track `presets` indices.
 ```javascript
 TrackSwitch.createTrackSwitch(rootElement, {
   presetNames: ['All', 'Vocals'],
-  tracks: [
-    { title: 'Vocals', presets: [0, 1], sources: [{ src: 'vocals.mp3' }] },
-    { title: 'Drums', presets: [0], sources: [{ src: 'drums.mp3' }] },
+  ui: [
+    {
+      type: 'trackGroup',
+      trackGroup: [
+        { title: 'Vocals', presets: [0, 1], sources: [{ src: 'vocals.mp3' }] },
+        { title: 'Drums', presets: [0], sources: [{ src: 'drums.mp3' }] },
+      ],
+    },
   ],
 });
 ```
@@ -258,11 +266,7 @@ Alignment config lives at `init.alignment`.
 Per-track alignment fields live on `tracks[*].alignment`:
 
 - `column: string` - CSV column name for that track timeline
-- `sources?: TrackSourceDefinition[]` - optional synchronized source set used by the global `SYNC` toggle
-
-Legacy fallback:
-
-- `alignment.mappings` is still accepted when no track defines `alignment.column`
+- `synchronizedSources?: TrackSourceDefinition[]` - optional synchronized source set used by the global `SYNC` toggle
 
 `alignment` requirements:
 

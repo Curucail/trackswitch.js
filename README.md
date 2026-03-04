@@ -25,34 +25,6 @@ Initialization
 document.addEventListener('DOMContentLoaded', function () {
   TrackSwitch.createTrackSwitch(document.getElementById('player'), {
     presetNames: ['All Tracks', 'Violins & Synths', 'Drums & Bass', 'Drums Only'],
-    tracks: [
-      {
-        title: 'Violins',
-        volume: 0.9, // optional per-track volume (0..1)
-        pan: -0.2, // optional per-track pan (-1..1)
-        image: 'violins.png',
-        presets: [0, 1],
-        sources: [{ src: 'violins.mp3', type: 'audio/mpeg' }],
-      },
-      {
-        title: 'Synths',
-        image: 'synth.png',
-        presets: [0, 1],
-        sources: [{ src: 'synth.mp3', type: 'audio/mpeg' }],
-      },
-      {
-        title: 'Bass',
-        image: 'bass.png',
-        presets: [0, 2],
-        sources: [{ src: 'bass.mp3', type: 'audio/mpeg' }],
-      },
-      {
-        title: 'Drums',
-        image: 'drums.png',
-        presets: [0, 2, 3],
-        sources: [{ src: 'drums.mp3', type: 'audio/mpeg' }],
-      },
-    ],
     ui: [
       {
         type: 'image',
@@ -66,6 +38,37 @@ document.addEventListener('DOMContentLoaded', function () {
         height: 150,
         maxZoom: '2000%', // optional per-waveform zoom cap (20x)
         waveformSource: 'audible', // or a track index (e.g. 1) for a fixed track waveform
+      },
+      {
+        type: 'trackGroup',
+        trackGroup: [
+          {
+            title: 'Violins',
+            volume: 0.9, // optional per-track volume (0..1)
+            pan: -0.2, // optional per-track pan (-1..1)
+            image: 'violins.png',
+            presets: [0, 1],
+            sources: [{ src: 'violins.mp3', type: 'audio/mpeg' }],
+          },
+          {
+            title: 'Synths',
+            image: 'synth.png',
+            presets: [0, 1],
+            sources: [{ src: 'synth.mp3', type: 'audio/mpeg' }],
+          },
+          {
+            title: 'Bass',
+            image: 'bass.png',
+            presets: [0, 2],
+            sources: [{ src: 'bass.mp3', type: 'audio/mpeg' }],
+          },
+          {
+            title: 'Drums',
+            image: 'drums.png',
+            presets: [0, 2, 3],
+            sources: [{ src: 'drums.mp3', type: 'audio/mpeg' }],
+          },
+        ],
       },
       {
         type: 'sheetMusic',
@@ -159,10 +162,6 @@ Alignment mode behavior:
 - `alignment`: the tempo panel shows a gray dashed `y = 100` reference line plus a fixed dashed vertical playhead guide at panel center; its x-axis is active-track time and it uses a centered moving track-time window (adjustable via the tempo controls)
 - `alignment`: the tempo panel renders one active-track curve using central finite differences (`w = 1`), supports click-to-seek, and switches to a visible dimmed non-interactive state while global `SYNC` is enabled
 - Waveform zoom is configured per waveform via `maxZoom`; wheel/pinch zoom is enabled only when `maxZoom > 1` (or `> '100%'`)
-
-Legacy note:
-
-- `alignment.mappings` is still accepted when no track provides `alignment.column`
 
 Examples
 --------

@@ -392,8 +392,7 @@ export function shouldRenderGlobalSync(ctx: any, runtimes: any): any {
         }
 
         return runtimes.some(function(runtime: TrackRuntime) {
-            const sources = runtime.definition.alignment?.synchronizedSources
-                || runtime.definition.alignment?.sources;
+            const sources = runtime.definition.alignment?.synchronizedSources;
             return Array.isArray(sources) && sources.length > 0;
         });
     
@@ -600,7 +599,6 @@ export function wrapSheetMusicContainers(ctx: any): any {
 
             const maxWidth = parseSheetMusicMaxWidth(
                 hostElement.getAttribute('data-sheetmusic-max-width')
-                ?? hostElement.getAttribute('data-sheetmusic-width')
             );
             if (maxWidth !== null) {
                 wrapper.style.width = '100%';

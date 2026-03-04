@@ -1,4 +1,4 @@
-import { createTrackSwitch } from './controller/create-track-switch';
+import { createTrackSwitch } from './controller/create';
 import { normalizeFeatures, defaultFeatures } from './domain/options';
 import { createInitialPlayerState, playerStateReducer } from './domain/state';
 import { WaveformEngine } from './engine/waveform-engine';
@@ -15,7 +15,6 @@ export { inferSourceMimeType, formatSecondsToHHMMSSmmm, parsePresetIndices };
 export type {
     AlignmentOutOfRangeMode,
     TrackAlignmentConfig,
-    TrackAlignmentMapping,
     LoopMarker,
     PlayerState,
     TrackDefinitionAlignment,

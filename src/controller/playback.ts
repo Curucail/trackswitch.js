@@ -2,7 +2,7 @@ import { TrackRuntime } from '../domain/types';
 import { playerStateReducer } from '../domain/state';
 import { clamp } from '../shared/math';
 import { getSeekMetrics } from '../shared/seek';
-import { pauseOtherControllers, unregisterController } from './controller-registry';
+import { pauseOtherControllers, unregisterController } from './registry';
 
 
 export function load(ctx: any): any {

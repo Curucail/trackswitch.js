@@ -4,7 +4,7 @@ import { getSeekMetrics, isPrimaryInput } from '../shared/seek';
 import {
     isKeyboardControllerActive,
     setActiveKeyboardController,
-} from './controller-registry';
+} from './registry';
 
 function closestInRoot(root: HTMLElement, target: EventTarget | null | undefined, selector: string): HTMLElement | null {
     const element = eventTargetAsElement(target ?? null);

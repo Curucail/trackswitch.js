@@ -135,14 +135,11 @@ function normalizeSheetMusicFollowPlayback(value: boolean | undefined): boolean 
 }
 
 function normalizeSheetMusicConfig<T extends TrackSwitchSheetMusicConfig>(sheetmusic: T): T {
-    const normalizedMaxWidth = normalizeSheetMusicDimension(
-        sheetmusic.maxWidth !== undefined ? sheetmusic.maxWidth : sheetmusic.width
-    );
+    const normalizedMaxWidth = normalizeSheetMusicDimension(sheetmusic.maxWidth);
 
     return {
         ...sheetmusic,
         maxWidth: normalizedMaxWidth,
-        width: normalizeSheetMusicDimension(sheetmusic.width),
         maxHeight: normalizeSheetMusicDimension(sheetmusic.maxHeight),
         renderScale: normalizeSheetMusicRenderScale(sheetmusic.renderScale),
         followPlayback: normalizeSheetMusicFollowPlayback(sheetmusic.followPlayback),
@@ -181,11 +178,6 @@ function normalizeTrackGroupConfig<T extends TrackSwitchTrackGroupUiElement>(gro
                                 return { ...source };
                             })
                             : track.alignment.synchronizedSources,
-                        sources: Array.isArray(track.alignment.sources)
-                            ? track.alignment.sources.map(function(source) {
-                                return { ...source };
-                            })
-                            : track.alignment.sources,
                     }
                     : track.alignment,
             };
@@ -320,9 +312,7 @@ function injectSheetMusic(root: HTMLElement, sheetmusic: TrackSwitchSheetMusicCo
     );
     container.setAttribute('data-sheetmusic-cursor-alpha', String(normalizeCursorAlpha(sheetmusic.cursorAlpha)));
 
-    const maxWidth = normalizeSheetMusicDimension(
-        sheetmusic.maxWidth !== undefined ? sheetmusic.maxWidth : sheetmusic.width
-    );
+    const maxWidth = normalizeSheetMusicDimension(sheetmusic.maxWidth);
     if (maxWidth !== undefined) {
         container.setAttribute('data-sheetmusic-max-width', String(maxWidth));
     }

@@ -196,9 +196,9 @@ export function buildAlignmentContext(ctx: any): any {
             return mappingByTrack;
         }
 
-        const referenceColumn = this.resolveReferenceColumn(this.alignmentConfig);
-        if (!referenceColumn) {
-            return 'Alignment configuration requires alignment.referenceTimeColumn (or legacy alignment.referenceColumn).';
+        const referenceTimeColumn = this.resolveReferenceTimeColumn(this.alignmentConfig);
+        if (!referenceTimeColumn) {
+            return 'Alignment configuration requires alignment.referenceTimeColumn.';
         }
 
         let parsedCsv;
@@ -211,8 +211,8 @@ export function buildAlignmentContext(ctx: any): any {
         }
 
         const availableColumns = new Set(parsedCsv.headers);
-        if (!availableColumns.has(referenceColumn)) {
-            return 'Alignment CSV is missing configured referenceTimeColumn: ' + referenceColumn;
+        if (!availableColumns.has(referenceTimeColumn)) {
+            return 'Alignment CSV is missing configured referenceTimeColumn: ' + referenceTimeColumn;
         }
 
         for (const [, column] of mappingByTrack) {
@@ -221,7 +221,7 @@ export function buildAlignmentContext(ctx: any): any {
             }
         }
 
-        const referenceDuration = this.resolveReferenceDuration(parsedCsv.rows, referenceColumn);
+        const referenceDuration = this.resolveReferenceDuration(parsedCsv.rows, referenceTimeColumn);
         if (typeof referenceDuration === 'string') {
             return referenceDuration;
         }
@@ -229,8 +229,8 @@ export function buildAlignmentContext(ctx: any): any {
         const converters = new Map<number, TrackAlignmentConverter>();
         for (const [trackIndex, column] of mappingByTrack) {
             try {
-                const referenceToTrack = buildColumnTimeMapping(parsedCsv.rows, referenceColumn, column);
-                const trackToReference = buildColumnTimeMapping(parsedCsv.rows, column, referenceColumn);
+                const referenceToTrack = buildColumnTimeMapping(parsedCsv.rows, referenceTimeColumn, column);
+                const trackToReference = buildColumnTimeMapping(parsedCsv.rows, column, referenceTimeColumn);
 
                 converters.set(trackIndex, {
                     referenceToTrack: referenceToTrack,
@@ -381,104 +381,52 @@ export function getAudibleTrackIndexesForWarpingMatrix(ctx: any): any {
     }).call(ctx);
 }
 
-export function resolveReferenceColumn(ctx: any, config: any): any {
+export function resolveReferenceTimeColumn(ctx: any, config: any): any {
     return (function(this: any, config: any) {
-        const configuredReferenceColumn = typeof config.referenceTimeColumn === 'string'
+        const configuredReferenceTimeColumn = typeof config.referenceTimeColumn === 'string'
             ? config.referenceTimeColumn.trim()
-            : (typeof config.referenceColumn === 'string' ? config.referenceColumn.trim() : '');
+            : '';
 
-        if (!configuredReferenceColumn) {
+        if (!configuredReferenceTimeColumn) {
             return null;
         }
 
-        return configuredReferenceColumn;
+        return configuredReferenceTimeColumn;
     }).call(ctx, config);
 }
 
-export function resolveReferenceDuration(ctx: any, rows: any, referenceColumn: any): any {
-    return (function(this: any, rows: any, referenceColumn: any) {
+export function resolveReferenceDuration(ctx: any, rows: any, referenceTimeColumn: any): any {
+    return (function(this: any, rows: any, referenceTimeColumn: any) {
         let maxReference = Number.NEGATIVE_INFINITY;
 
         rows.forEach(function(row: Record<string, unknown>) {
-            const value = Number(row[referenceColumn]);
+            const value = Number(row[referenceTimeColumn]);
             if (Number.isFinite(value) && value > maxReference) {
                 maxReference = value;
             }
         });
 
         if (!Number.isFinite(maxReference)) {
-            return 'Alignment CSV does not contain valid numeric values for referenceTimeColumn: ' + referenceColumn;
+            return 'Alignment CSV does not contain valid numeric values for referenceTimeColumn: ' + referenceTimeColumn;
         }
 
         return Math.max(0, maxReference);
-    }).call(ctx, rows, referenceColumn);
+    }).call(ctx, rows, referenceTimeColumn);
 }
 
 export function resolveAlignmentMappingsByTrack(ctx: any, config: any): any {
-    return (function(this: any, config: any) {
-        const hasAnyTrackColumn = this.runtimes.some(function(runtime: TrackRuntime) {
-            return runtime.definition.alignment
-                && Object.prototype.hasOwnProperty.call(runtime.definition.alignment, 'column');
-        });
-
-        if (!hasAnyTrackColumn) {
-            return this.validateAndBuildLegacyAlignmentMappings(config);
-        }
-
+    return (function(this: any, _config: any) {
         const mappingByTrack = new Map<number, string>();
 
         for (let index = 0; index < this.runtimes.length; index += 1) {
             const rawColumn = this.runtimes[index].definition.alignment?.column;
             const column = typeof rawColumn === 'string' ? rawColumn.trim() : '';
             if (!column) {
-                return 'Per-track alignment columns are enabled, so every track requires alignment.column. Missing trackIndex '
+                return 'Alignment mode requires alignment.column for every track. Missing trackIndex '
                     + index + '.';
             }
 
             mappingByTrack.set(index, column);
-        }
-
-        return mappingByTrack;
-    }).call(ctx, config);
-}
-
-export function validateAndBuildLegacyAlignmentMappings(ctx: any, config: any): any {
-    return (function(this: any, config: any) {
-        if (!Array.isArray(config.mappings) || config.mappings.length === 0) {
-            return 'Alignment configuration requires alignment.mappings with one entry per track.';
-        }
-
-        if (config.mappings.length !== this.runtimes.length) {
-            return 'Alignment mappings must include exactly one mapping per track.';
-        }
-
-        const mappingByTrack = new Map<number, string>();
-
-        for (const entry of config.mappings) {
-            if (!entry || !Number.isInteger(entry.trackIndex)) {
-                return 'Alignment mapping entries require an integer trackIndex.';
-            }
-
-            if (entry.trackIndex < 0 || entry.trackIndex >= this.runtimes.length) {
-                return 'Alignment mapping trackIndex is out of range: ' + entry.trackIndex;
-            }
-
-            const column = typeof entry.column === 'string' ? entry.column.trim() : '';
-            if (!column) {
-                return 'Alignment mapping entries require a non-empty column name.';
-            }
-
-            if (mappingByTrack.has(entry.trackIndex)) {
-                return 'Alignment mappings contain duplicate trackIndex: ' + entry.trackIndex;
-            }
-
-            mappingByTrack.set(entry.trackIndex, column);
-        }
-
-        for (let index = 0; index < this.runtimes.length; index += 1) {
-            if (!mappingByTrack.has(index)) {
-                return 'Alignment mappings must cover all tracks. Missing trackIndex ' + index + '.';
-            }
         }
 
         return mappingByTrack;

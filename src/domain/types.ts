@@ -2,16 +2,9 @@ export type LoopMarker = 'A' | 'B';
 export type TrackSwitchMode = 'default' | 'alignment';
 export type AlignmentOutOfRangeMode = 'clamp' | 'linear';
 
-export interface TrackAlignmentMapping {
-    trackIndex: number;
-    column: string;
-}
-
 export interface TrackAlignmentConfig {
     csv: string;
-    mappings?: TrackAlignmentMapping[];
     referenceTimeColumn: string;
-    referenceColumn?: string;
     outOfRange?: AlignmentOutOfRangeMode;
 }
 
@@ -25,7 +18,6 @@ export interface TrackSourceDefinition {
 export interface TrackDefinitionAlignment {
     column?: string;
     synchronizedSources?: TrackSourceDefinition[];
-    sources?: TrackSourceDefinition[];
 }
 
 export interface TrackDefinition {
@@ -83,7 +75,6 @@ export interface TrackSwitchSheetMusicConfig {
     src: string;
     measureCsv: string;
     maxWidth?: number;
-    width?: number;
     maxHeight?: number;
     renderScale?: number;
     followPlayback?: boolean;
@@ -145,11 +136,10 @@ export interface NormalizedTrackSwitchConfig extends TrackSwitchConfig {
 }
 
 export interface TrackSwitchInit {
-    tracks?: TrackDefinition[];
     presetNames?: string[];
     features?: Partial<TrackSwitchFeatures>;
     alignment?: TrackAlignmentConfig;
-    ui?: TrackSwitchUiConfig;
+    ui: TrackSwitchUiConfig;
 }
 
 export interface TrackTiming {

@@ -1,5 +1,5 @@
 import type { MeasureMapPoint } from '../../shared/measure-map';
-import type { SheetMusicCursor, SheetMusicEntryModel } from './types';
+import type { SheetMusicEntryModel } from './types';
 import { sanitizePlaybackPosition } from './types';
 
 export function updatePosition(ctx: any, referencePosition: number): void {
@@ -200,8 +200,4 @@ export function resolveReferenceTimeForMeasure(measureMap: MeasureMapPoint[], cl
     }
 
     return measureMap[0].start;
-}
-
-export function asRuntimeCursor(entry: SheetMusicEntryModel): SheetMusicCursor | null {
-    return entry.measureCursor as SheetMusicCursor | null;
 }

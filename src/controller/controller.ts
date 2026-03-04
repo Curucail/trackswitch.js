@@ -19,7 +19,7 @@ import { createTrackRuntime } from '../domain/runtime';
 import { AudioEngine } from '../engine/audio-engine';
 import { SheetMusicEngine } from '../engine/sheet-music-engine';
 import { TrackTimelineProjector, WaveformEngine } from '../engine/waveform-engine';
-import { ViewRenderer, WarpingMatrixRenderContext, WaveformTimelineContext } from '../ui/view-renderer';
+import { ViewRenderer, WarpingMatrixRenderContext, WaveformTimelineContext } from '../ui/renderer';
 import { InputBinder, InputController } from '../input/input-binder';
 import { derivePresetNames } from '../shared/preset';
 import { ControllerPointerEvent } from '../shared/seek';
@@ -27,14 +27,14 @@ import { TimeMappingSeries } from '../shared/alignment';
 import {
     allocateInstanceId,
     registerController,
-} from './controller-registry';
+} from './registry';
 
-import * as controllerPlayback from './controller-playback';
-import * as controllerInput from './controller-input';
-import * as controllerSeek from './controller-seek';
-import * as controllerAlignment from './controller-alignment';
-import * as controllerUi from './controller-ui';
-import * as controllerEvents from './controller-events';
+import * as controllerPlayback from './playback';
+import * as controllerInput from './input';
+import * as controllerSeek from './seek';
+import * as controllerAlignment from './alignment';
+import * as controllerUi from './ui';
+import * as controllerEvents from './events';
 
 interface TrackAlignmentConverter {
     referenceToTrack: TimeMappingSeries;
@@ -528,20 +528,16 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         return controllerAlignment.getAudibleTrackIndexesForWarpingMatrix(this);
     }
 
-    public resolveReferenceColumn(config: TrackAlignmentConfig): string | null {
-        return controllerAlignment.resolveReferenceColumn(this, config);
+    public resolveReferenceTimeColumn(config: TrackAlignmentConfig): string | null {
+        return controllerAlignment.resolveReferenceTimeColumn(this, config);
     }
 
-    public resolveReferenceDuration(rows: Array<Record<string, number>>, referenceColumn: string): number | string {
-        return controllerAlignment.resolveReferenceDuration(this, rows, referenceColumn);
+    public resolveReferenceDuration(rows: Array<Record<string, number>>, referenceTimeColumn: string): number | string {
+        return controllerAlignment.resolveReferenceDuration(this, rows, referenceTimeColumn);
     }
 
     public resolveAlignmentMappingsByTrack(config: TrackAlignmentConfig): Map<number, string> | string {
         return controllerAlignment.resolveAlignmentMappingsByTrack(this, config);
-    }
-
-    public validateAndBuildLegacyAlignmentMappings(config: TrackAlignmentConfig): Map<number, string> | string {
-        return controllerAlignment.validateAndBuildLegacyAlignmentMappings(this, config);
     }
 
     public getActiveSoloTrackIndex(): number {
