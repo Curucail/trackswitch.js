@@ -36,19 +36,19 @@
   function createAlignmentTracks(basePath) {
     return [
       {
-        title: 'Schubert Winterreise - SC06',
-        sources: [{ src: basePath + '/Schubert_D911-03_SC06.wav' }],
+        title: 'Schubert: Winterreise, D. 911: No. 3 - HU33',
+        sources: [{ src: basePath + '/Schubert_D911-03_HU33.wav' }],
         alignment: {
           column: 't1_sec',
-          synchronizedSources: [{ src: basePath + '/Schubert_D911-03_SC06_syncronized.wav' }],
+          synchronizedSources: [{ src: basePath + '/Schubert_D911-03_HU33.wav' }],
         },
       },
       {
-        title: 'Schubert Winterreise - HU33',
-        sources: [{ src: basePath + '/Schubert_D911-03_HU33.wav' }],
+        title: 'Schubert: Winterreise, D. 911: No. 3 - SC06',
+        sources: [{ src: basePath + '/Schubert_D911-03_SC06.wav' }],
         alignment: {
           column: 't2_sec',
-          synchronizedSources: [{ src: basePath + '/Schubert_D911-03_HU33.wav' }],
+          synchronizedSources: [{ src: basePath + '/Schubert_D911-03_SC06_syncronized.wav' }],
         },
       },
     ];
@@ -67,6 +67,7 @@
     'warpingMatrix',
     'customImage',
     'seekableImage',
+    'trackImageBySolo',
     'exclusiveSolo',
     'tabView',
     'muteOtherPlayerInstances',
@@ -87,6 +88,7 @@
     'warpingMatrix',
     'customImage',
     'seekableImage',
+    'trackImageBySolo',
     'exclusiveSolo',
     'tabView',
     'muteOtherPlayerInstances',
@@ -95,7 +97,7 @@
 
   var MODE_DISABLED_CONTROLS = {
     default: ['sheetNotePreview', 'warpingMatrix'],
-    alignment: ['customImage', 'seekableImage', 'presets', 'exclusiveSolo'],
+    alignment: ['customImage', 'seekableImage', 'trackImageBySolo', 'presets', 'exclusiveSolo'],
   };
 
   var DEFAULT_MODEL = {
@@ -111,6 +113,7 @@
     warpingMatrix: false,
     customImage: false,
     seekableImage: false,
+    trackImageBySolo: false,
     exclusiveSolo: false,
     tabView: false,
     muteOtherPlayerInstances: true,
@@ -122,8 +125,9 @@
     presets: false,
     customImage: false,
     seekableImage: false,
+    trackImageBySolo: false,
     sheetNotePreview: true,
-    warpingMatrix: true,
+    warpingMatrix: false,
     exclusiveSolo: true,
   });
 
@@ -196,6 +200,14 @@
       }
 
       if (name === 'seekableImage' && !model.customImage) {
+        return true;
+      }
+
+      if (name === 'trackImageBySolo' && !model.exclusiveSolo) {
+        return true;
+      }
+
+      if (name === 'presets' && model.exclusiveSolo) {
         return true;
       }
 
@@ -392,6 +404,11 @@
           notes.push('Seekable cover image is unavailable in alignment mode.');
         }
 
+        if (normalized.trackImageBySolo) {
+          normalized.trackImageBySolo = false;
+          notes.push('Track-based cover image is unavailable in alignment mode.');
+        }
+
         if (normalized.presets) {
           normalized.presets = false;
           notes.push('Presets are unavailable in alignment mode.');
@@ -420,6 +437,11 @@
       if (!normalized.customImage && normalized.seekableImage) {
         normalized.seekableImage = false;
         notes.push('Seekable cover image requires custom cover image to be enabled.');
+      }
+
+      if (!normalized.exclusiveSolo && normalized.trackImageBySolo) {
+        normalized.trackImageBySolo = false;
+        notes.push('Track-based cover image requires single solo mode.');
       }
 
       return {
@@ -458,6 +480,12 @@
       if (model.customImage) {
         snippetLines.push(
           "      { type: 'image', src: 'cover.jpg', seekable: " + Boolean(model.seekableImage) + ", style: 'margin: 12px auto;' },"
+        );
+      }
+
+      if (model.trackImageBySolo) {
+        snippetLines.push(
+          "      { type: 'image', src: 'mix.png', trackImageSwitch: true },"
         );
       }
 
@@ -725,6 +753,14 @@
           type: 'image',
           src: basePath + '/cover.jpg',
           seekable: Boolean(model.seekableImage),
+        });
+      }
+
+      if (model.trackImageBySolo && !isAlignmentMode(currentMode)) {
+        uiConfig.push({
+          type: 'image',
+          src: basePath + '/mix.png',
+          trackImageSwitch: true,
         });
       }
 

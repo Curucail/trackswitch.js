@@ -38,11 +38,35 @@ title: trackswitch.js
       </div>
 
       <div class="ts-control-group">
-        <h5>Playback and UI</h5>
+        <h5>Playback</h5>
         <label class="ts-control-row">
           <span>Looping Controls</span>
           <input type="checkbox" name="looping" checked />
         </label>
+        <label class="ts-control-row">
+          <span>Global Volume</span>
+          <input type="checkbox" name="globalVolume" checked />
+        </label>
+        <label class="ts-control-row">
+          <span>Track Mix Controls</span>
+          <input type="checkbox" name="trackMixControls" checked />
+        </label>
+        <label class="ts-control-row">
+          <span>Presets</span>
+          <input type="checkbox" name="presets" checked />
+        </label>
+        <label class="ts-control-row">
+          <span>Repeat Enabled</span>
+          <input type="checkbox" name="repeatEnabled" />
+        </label>
+        <label class="ts-control-row">
+          <span>Solo Mode</span>
+          <input type="checkbox" name="exclusiveSolo" />
+        </label>
+      </div>
+
+      <div class="ts-control-group">
+        <h5>Visualizations</h5>
         <label class="ts-control-row">
           <span>Seekbar</span>
           <input type="checkbox" name="seekBar" checked />
@@ -56,52 +80,32 @@ title: trackswitch.js
           <input type="checkbox" name="waveform" checked />
         </label>
         <label class="ts-control-row">
-          <span>Repeat Enabled</span>
-          <input type="checkbox" name="repeatEnabled" />
-        </label>
-        <label class="ts-control-row">
           <span>Custom Cover Image</span>
           <input type="checkbox" name="customImage" />
         </label>
         <label class="ts-control-row">
-          <span>Seekable Cover Image</span>
+          <span>-> Seekable Cover Image</span>
           <input type="checkbox" name="seekableImage" />
+        </label>
+        <label class="ts-control-row">
+          <span>Track-Based Images</span>
+          <input type="checkbox" name="trackImageBySolo" />
         </label>
         <label class="ts-control-row">
           <span>Sheet Note Preview (Alignment)</span>
           <input type="checkbox" name="sheetNotePreview" checked />
         </label>
         <label class="ts-control-row">
-          <span>Warping Matrix (Alignment)</span>
+          <span>Warping Matrix + Local Tempo Deviation (Alignment)</span>
           <input type="checkbox" name="warpingMatrix" />
         </label>
       </div>
 
       <div class="ts-control-group">
-        <h5>Mix and Presets</h5>
-        <label class="ts-control-row">
-          <span>Global Volume</span>
-          <input type="checkbox" name="globalVolume" checked />
-        </label>
-        <label class="ts-control-row">
-          <span>Track Mix Controls</span>
-          <input type="checkbox" name="trackMixControls" checked />
-        </label>
-        <label class="ts-control-row">
-          <span>Presets</span>
-          <input type="checkbox" name="presets" checked />
-        </label>
-      </div>
-
-      <div class="ts-control-group">
-        <h5>Behavior and Safety</h5>
+        <h5>Utils</h5>
         <label class="ts-control-row">
           <span>Keyboard Shortcuts</span>
           <input type="checkbox" name="keyboard" checked />
-        </label>
-        <label class="ts-control-row">
-          <span>Single Solo Mode</span>
-          <input type="checkbox" name="exclusiveSolo" />
         </label>
         <label class="ts-control-row">
           <span>Tab View</span>

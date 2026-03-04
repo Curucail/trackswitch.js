@@ -211,6 +211,7 @@ Fields:
 
 - `src: string`
 - `seekable?: boolean`
+- `trackImageSwitch?: boolean`
 - `style?: string`
 - `seekMarginLeft?: number`
 - `seekMarginRight?: number`
@@ -219,6 +220,7 @@ Notes:
 
 - Only one image may be `seekable: true`.
 - Seek margins are clamped to `0..100` percent.
+- `trackImageSwitch: true` marks a non-seekable image as the target for per-track cover switching.
 
 ## Waveform UI Element
 

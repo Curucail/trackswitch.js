@@ -54,6 +54,7 @@ export interface TrackSwitchFeatures {
 export interface TrackSwitchImageConfig {
     src: string;
     seekable?: boolean;
+    trackImageSwitch?: boolean;
     style?: string;
     seekMarginLeft?: number;
     seekMarginRight?: number;

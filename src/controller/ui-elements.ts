@@ -254,6 +254,10 @@ function injectImage(root: HTMLElement, image: TrackSwitchImageConfig): void {
         imageElement.classList.add('seekable');
     }
 
+    if (image.trackImageSwitch) {
+        imageElement.setAttribute('data-track-image-switch', 'true');
+    }
+
     if (typeof image.style === 'string') {
         imageElement.setAttribute('data-style', image.style);
     }

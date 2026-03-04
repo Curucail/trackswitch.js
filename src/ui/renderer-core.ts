@@ -781,6 +781,11 @@ export function switchPosterImage(ctx: any, runtimes: any): any {
     return (function(this: any, runtimes: any) {
         let soloCount = 0;
         let imageSrc: string | undefined;
+        const explicitTrackImageTargets = this.queryAll('img[data-track-image-switch="true"]');
+        const fallbackSeekableTargets = this.queryAll('.seekable');
+        const switchTargets = explicitTrackImageTargets.length > 0
+            ? explicitTrackImageTargets
+            : fallbackSeekableTargets;
 
         runtimes.forEach(function(runtime: TrackRuntime) {
             if (runtime.state.solo) {
@@ -789,17 +794,26 @@ export function switchPosterImage(ctx: any, runtimes: any): any {
             }
         });
 
-        if (soloCount !== 1 || !imageSrc) {
-            imageSrc = this.originalImage;
-        }
-
-        if (!imageSrc) {
+        if (switchTargets.length === 0) {
             return;
         }
 
-        this.queryAll('.seekable').forEach(function(element: HTMLElement) {
+        switchTargets.forEach((element: HTMLElement) => {
             if (element instanceof HTMLImageElement) {
-                element.src = imageSrc as string;
+                const originalAttr = element.getAttribute('data-track-image-original-src');
+                if (!originalAttr) {
+                    element.setAttribute('data-track-image-original-src', element.src);
+                }
+
+                const fallbackSrc = element.getAttribute('data-track-image-original-src')
+                    || this.originalImage
+                    || element.src;
+
+                if (soloCount === 1 && imageSrc) {
+                    element.src = imageSrc;
+                } else {
+                    element.src = fallbackSrc;
+                }
             }
         });
     
