@@ -219,6 +219,7 @@ Fields:
 Notes:
 
 - Seek margins are clamped to `0..100` percent.
+- For seekable images, `seekMarginLeft + seekMarginRight` must be less than `100`.
 
 ## Per-Track Image UI Element
 
@@ -244,6 +245,7 @@ Notes:
 - `perTrackImage` is independent from regular `image`.
 - Both `image` and `perTrackImage` may be `seekable: true`.
 - Seek margins are clamped to `0..100` percent.
+- For seekable per-track images, `seekMarginLeft + seekMarginRight` must be less than `100`.
 - `perTrackImage` requires `features.exclusiveSolo: true`.
 
 ## Waveform UI Element
@@ -271,6 +273,7 @@ Normalization and behavior:
 - `maxZoom <= 1` (or `<= '100%'`) effectively disables waveform zoom.
 - `waveformSource: 'audible'` uses current audible mix.
 - `waveformSource: <trackIndex>` renders a fixed track waveform.
+- `seekMarginLeft + seekMarginRight` must be less than `100`.
 - `timer` default depends on mode if omitted:
   - `default` mode: off
   - `alignment` mode: on
@@ -520,14 +523,17 @@ Fix: use only documented `features` keys.
 7. `Invalid init configuration: perTrackImage requires features.exclusiveSolo to be true.`
 Fix: enable `features.exclusiveSolo` (default mode) or remove `perTrackImage`.
 
-8. `Alignment mode requires init.alignment configuration.`
+8. `Invalid ui.image configuration: seekMarginLeft + seekMarginRight must be less than 100.` (same rule for `ui.perTrackImage` and `ui.waveform`)
+Fix: reduce one or both margins so the sum is `< 100`.
+
+9. `Alignment mode requires init.alignment configuration.`
 Fix: add `alignment` object when `features.mode = 'alignment'`.
 
-9. `Alignment configuration requires alignment.referenceTimeColumn.`
+10. `Alignment configuration requires alignment.referenceTimeColumn.`
 Fix: set `alignment.referenceTimeColumn`.
 
-10. `Alignment mode requires alignment.column for every track. Missing trackIndex ...`
+11. `Alignment mode requires alignment.column for every track. Missing trackIndex ...`
 Fix: set `ui[].trackGroup[].alignment.column` for every track.
 
-11. `Alignment CSV is missing configured referenceTimeColumn: ...` or `Alignment CSV is missing configured column: ...`
+12. `Alignment CSV is missing configured referenceTimeColumn: ...` or `Alignment CSV is missing configured column: ...`
 Fix: verify CSV headers match your `referenceTimeColumn` and track columns.

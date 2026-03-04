@@ -143,14 +143,33 @@ function normalizeWaveformTimer(value: boolean | undefined): boolean | undefined
     return typeof value === 'boolean' ? value : undefined;
 }
 
+function validateSeekMargins(
+    config: { seekMarginLeft?: number; seekMarginRight?: number },
+    label: string
+): void {
+    const left = clampPercent(config.seekMarginLeft);
+    const right = clampPercent(config.seekMarginRight);
+
+    if (left + right >= 100) {
+        throw new Error(
+            'Invalid '
+            + label
+            + ' configuration: seekMarginLeft + seekMarginRight must be less than 100.'
+        );
+    }
+}
+
 function normalizeWaveformConfig<T extends TrackSwitchWaveformConfig>(waveform: T): T {
-    return {
+    const normalized = {
         ...waveform,
         waveformBarWidth: normalizeWaveformBarWidth(waveform.waveformBarWidth),
         maxZoom: normalizeWaveformMaxZoom(waveform.maxZoom),
         waveformSource: normalizeWaveformSource(waveform.waveformSource),
         timer: normalizeWaveformTimer(waveform.timer),
     };
+
+    validateSeekMargins(normalized, 'ui.waveform');
+    return normalized;
 }
 
 function normalizeCursorAlpha(value: number | undefined): number {
@@ -299,10 +318,16 @@ export function normalizeUiElement(element: TrackSwitchUiElement): TrackSwitchUi
     }
 
     if (element.type === 'image') {
+        if (element.seekable) {
+            validateSeekMargins(element, 'ui.image');
+        }
         return element;
     }
 
     if (element.type === 'perTrackImage') {
+        if (element.seekable) {
+            validateSeekMargins(element, 'ui.perTrackImage');
+        }
         return element;
     }
 
