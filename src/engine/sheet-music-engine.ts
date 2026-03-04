@@ -13,10 +13,10 @@ import type { SheetMusicEntryModel, SheetMusicHostConfig } from './sheet-music/t
 export type { SheetMusicHostConfig } from './sheet-music/types';
 
 export class SheetMusicEngine {
-    private readonly onSeekReferenceTime: ((referenceTime: number) => void) | null;
-    private entries: SheetMusicEntryModel[] = [];
-    private destroyed = false;
-    private lastPosition = 0;
+    public readonly onSeekReferenceTime: ((referenceTime: number) => void) | null;
+    public entries: SheetMusicEntryModel[] = [];
+    public destroyed = false;
+    public lastPosition = 0;
 
     constructor(onSeekReferenceTime?: (referenceTime: number) => void) {
         this.onSeekReferenceTime = typeof onSeekReferenceTime === 'function'
@@ -104,47 +104,47 @@ export class SheetMusicEngine {
         this.entries = [];
     }
 
-    private handleHostClick(entry: SheetMusicEntryModel, event: MouseEvent): void {
+    public handleHostClick(entry: SheetMusicEntryModel, event: MouseEvent): void {
         handleHostClick(this, entry, event);
     }
 
-    private handleHostTouchStart(entry: SheetMusicEntryModel, event: TouchEvent): void {
+    public handleHostTouchStart(entry: SheetMusicEntryModel, event: TouchEvent): void {
         handleHostTouchStart(this, entry, event);
     }
 
-    private handleHostTouchMove(entry: SheetMusicEntryModel, event: TouchEvent): void {
+    public handleHostTouchMove(entry: SheetMusicEntryModel, event: TouchEvent): void {
         handleHostTouchMove(this, entry, event);
     }
 
-    private handleHostTouch(entry: SheetMusicEntryModel, event: TouchEvent): void {
+    public handleHostTouch(entry: SheetMusicEntryModel, event: TouchEvent): void {
         handleHostTouch(this, entry, event);
     }
 
-    private refreshCursorElement(entry: SheetMusicEntryModel): void {
+    public refreshCursorElement(entry: SheetMusicEntryModel): void {
         refreshCursorElement(entry);
     }
 
-    private ensureCurrentMeasureVisible(entry: SheetMusicEntryModel): void {
+    public ensureCurrentMeasureVisible(entry: SheetMusicEntryModel): void {
         ensureCurrentMeasureVisible(this, entry);
     }
 
-    private centerCurrentMeasureInViewport(entry: SheetMusicEntryModel): void {
+    public centerCurrentMeasureInViewport(entry: SheetMusicEntryModel): void {
         centerCurrentMeasureInViewport(this, entry);
     }
 
-    private resolveAvailableMeasure(entry: SheetMusicEntryModel, desiredMeasure: number): number | null {
+    public resolveAvailableMeasure(entry: SheetMusicEntryModel, desiredMeasure: number): number | null {
         return resolveAvailableMeasure(entry, desiredMeasure);
     }
 
-    private moveCursorToMeasure(entry: SheetMusicEntryModel, targetMeasure: number): void {
+    public moveCursorToMeasure(entry: SheetMusicEntryModel, targetMeasure: number): void {
         moveCursorToMeasure(this, entry, targetMeasure);
     }
 
-    private rebindMeasureCursor(entry: SheetMusicEntryModel) {
+    public rebindMeasureCursor(entry: SheetMusicEntryModel) {
         return rebindMeasureCursor(entry);
     }
 
-    private resolveReferenceTimeForMeasure(measureMap: Array<{ measure: number; start: number }>, clickedMeasure: number): number {
+    public resolveReferenceTimeForMeasure(measureMap: Array<{ measure: number; start: number }>, clickedMeasure: number): number {
         return resolveReferenceTimeForMeasure(measureMap, clickedMeasure);
     }
 }

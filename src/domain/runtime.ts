@@ -16,7 +16,7 @@ function clampPan(value: number): number {
     return Math.max(-1, Math.min(1, value));
 }
 
-export function createTrackRuntime(definition: TrackDefinition, index: number): TrackRuntime {
+export function createTrackRuntime(definition: TrackDefinition, _index: number): TrackRuntime {
     return {
         definition: definition,
         state: {

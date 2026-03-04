@@ -17,7 +17,8 @@
     "dev:watch": "sh -c 'npm run build:css:watch & npm run build:js:watch & wait'",
     "dev:serve": "live-server --host=0.0.0.0 --port=8080 --watch=dist,examples,css,src",
     "prebuild": "npm run clean",
-    "typecheck": "tsc --project tsconfig.json"
+    "typecheck": "tsc --project tsconfig.json",
+    "typecheck:unused": "tsc --project tsconfig.json --noUnusedLocals --noUnusedParameters --pretty false"
   },
   "repository": {
     "type": "git",

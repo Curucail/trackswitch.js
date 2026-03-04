@@ -12,34 +12,21 @@ import {
     TrackSwitchEventName,
     TrackSwitchFeatures,
     TrackSwitchSnapshot,
-    TrackSwitchUiState,
 } from '../domain/types';
 import { normalizeFeatures } from '../domain/options';
-import { createInitialPlayerState, playerStateReducer, PlayerAction } from '../domain/state';
+import { createInitialPlayerState, PlayerAction } from '../domain/state';
 import { createTrackRuntime } from '../domain/runtime';
 import { AudioEngine } from '../engine/audio-engine';
 import { SheetMusicEngine } from '../engine/sheet-music-engine';
 import { TrackTimelineProjector, WaveformEngine } from '../engine/waveform-engine';
 import { ViewRenderer, WarpingMatrixRenderContext, WaveformTimelineContext } from '../ui/view-renderer';
 import { InputBinder, InputController } from '../input/input-binder';
-import { eventTargetAsElement } from '../shared/dom';
-import { clamp } from '../shared/math';
-import { derivePresetNames, parseStrictNonNegativeInt } from '../shared/preset';
-import { ControllerPointerEvent, getSeekMetrics, isPrimaryInput } from '../shared/seek';
-import {
-    buildColumnTimeMapping,
-    loadNumericCsv,
-    mapTime,
-    resolveAlignmentOutOfRangeMode,
-    TimeMappingSeries,
-} from '../shared/alignment';
+import { derivePresetNames } from '../shared/preset';
+import { ControllerPointerEvent } from '../shared/seek';
+import { TimeMappingSeries } from '../shared/alignment';
 import {
     allocateInstanceId,
-    isKeyboardControllerActive,
-    pauseOtherControllers,
     registerController,
-    setActiveKeyboardController,
-    unregisterController,
 } from './controller-registry';
 
 import * as controllerPlayback from './controller-playback';
@@ -48,20 +35,6 @@ import * as controllerSeek from './controller-seek';
 import * as controllerAlignment from './controller-alignment';
 import * as controllerUi from './controller-ui';
 import * as controllerEvents from './controller-events';
-
-function closestInRoot(root: HTMLElement, target: EventTarget | null | undefined, selector: string): HTMLElement | null {
-    const element = eventTargetAsElement(target ?? null);
-    if (!element) {
-        return null;
-    }
-
-    const matched = element.closest(selector);
-    if (!matched || !root.contains(matched)) {
-        return null;
-    }
-
-    return matched as HTMLElement;
-}
 
 interface TrackAlignmentConverter {
     referenceToTrack: TimeMappingSeries;
@@ -95,45 +68,45 @@ interface PendingWaveformTouchSeek {
 }
 
 export class TrackSwitchControllerImpl implements TrackSwitchController, InputController {
-    private readonly root: HTMLElement;
-    private readonly features: TrackSwitchFeatures;
-    private readonly audioEngine: AudioEngine;
-    private readonly waveformEngine: WaveformEngine;
-    private readonly sheetMusicEngine: SheetMusicEngine;
-    private readonly renderer: ViewRenderer;
-    private readonly inputBinder: InputBinder;
-    private readonly alignmentConfig: TrackAlignmentConfig | undefined;
+    public readonly root: HTMLElement;
+    public readonly features: TrackSwitchFeatures;
+    public readonly audioEngine: AudioEngine;
+    public readonly waveformEngine: WaveformEngine;
+    public readonly sheetMusicEngine: SheetMusicEngine;
+    public readonly renderer: ViewRenderer;
+    public readonly inputBinder: InputBinder;
+    public readonly alignmentConfig: TrackAlignmentConfig | undefined;
 
-    private state: PlayerState;
-    private longestDuration = 0;
-    private runtimes: TrackRuntime[];
+    public state: PlayerState;
+    public longestDuration = 0;
+    public runtimes: TrackRuntime[];
 
-    private isLoaded = false;
-    private isLoading = false;
-    private isDestroyed = false;
+    public isLoaded = false;
+    public isLoading = false;
+    public isDestroyed = false;
 
-    private timerMonitorPosition: ReturnType<typeof setInterval> | null = null;
-    private resizeDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+    public timerMonitorPosition: ReturnType<typeof setInterval> | null = null;
+    public resizeDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-    private seekingElement: HTMLElement | null = null;
-    private rightClickDragging = false;
-    private loopDragStart: number | null = null;
-    private draggingMarker: LoopMarker | null = null;
-    private pinchZoomState: PinchZoomState | null = null;
-    private pendingWaveformTouchSeek: PendingWaveformTouchSeek | null = null;
-    private waveformRenderFrameId: number | null = null;
-    private readonly loopMinDistance = 0.1;
-    private readonly touchSeekMoveThresholdPx = 10;
+    public seekingElement: HTMLElement | null = null;
+    public rightClickDragging = false;
+    public loopDragStart: number | null = null;
+    public draggingMarker: LoopMarker | null = null;
+    public pinchZoomState: PinchZoomState | null = null;
+    public pendingWaveformTouchSeek: PendingWaveformTouchSeek | null = null;
+    public waveformRenderFrameId: number | null = null;
+    public readonly loopMinDistance = 0.1;
+    public readonly touchSeekMoveThresholdPx = 10;
 
-    private iOSPlaybackUnlocked = false;
-    private alignmentContext: AlignmentContext | null = null;
-    private alignmentPlaybackTrackIndex: number | null = null;
-    private globalSyncEnabled = false;
-    private effectiveSingleSoloMode = false;
-    private readonly syncLockedTrackIndexes = new Set<number>();
-    private preSyncSoloTrackIndex: number | null = null;
+    public iOSPlaybackUnlocked = false;
+    public alignmentContext: AlignmentContext | null = null;
+    public alignmentPlaybackTrackIndex: number | null = null;
+    public globalSyncEnabled = false;
+    public effectiveSingleSoloMode = false;
+    public readonly syncLockedTrackIndexes = new Set<number>();
+    public preSyncSoloTrackIndex: number | null = null;
 
-    private readonly listeners: Record<TrackSwitchEventName, Set<(payload: unknown) => void>> = {
+    public readonly listeners: Record<TrackSwitchEventName, Set<(payload: unknown) => void>> = {
         loaded: new Set(),
         error: new Set(),
         position: new Set(),
@@ -386,7 +359,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         return controllerInput.onKeyboard(this, event);
     }
 
-    private getKeyboardTrackIndex(event: ControllerPointerEvent): number | null {
+    public getKeyboardTrackIndex(event: ControllerPointerEvent): number | null {
         return controllerInput.getKeyboardTrackIndex(this, event);
     }
 
@@ -394,224 +367,224 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         return controllerInput.onResize(this);
     }
 
-    private requestWaveformRender(): void {
+    public requestWaveformRender(): void {
         return controllerSeek.requestWaveformRender(this);
     }
 
-    private isWaveformSeekSurface(seekWrap: HTMLElement | null): boolean {
+    public isWaveformSeekSurface(seekWrap: HTMLElement | null): boolean {
         return controllerSeek.isWaveformSeekSurface(this, seekWrap);
     }
 
-    private startInteractiveSeek(event: ControllerPointerEvent, seekWrap: HTMLElement): void {
+    public startInteractiveSeek(event: ControllerPointerEvent, seekWrap: HTMLElement): void {
         return controllerSeek.startInteractiveSeek(this, event, seekWrap);
     }
 
-    private disableLoopWhenSeekOutsideRegion(): void {
+    public disableLoopWhenSeekOutsideRegion(): void {
         return controllerSeek.disableLoopWhenSeekOutsideRegion(this);
     }
 
-    private tryStartPendingWaveformTouchSeek(
+    public tryStartPendingWaveformTouchSeek(
         event: ControllerPointerEvent,
         seekWrap: HTMLElement | null
     ): boolean {
         return controllerSeek.tryStartPendingWaveformTouchSeek(this, event, seekWrap);
     }
 
-    private tryActivatePendingWaveformTouchSeek(event: ControllerPointerEvent): boolean {
+    public tryActivatePendingWaveformTouchSeek(event: ControllerPointerEvent): boolean {
         return controllerSeek.tryActivatePendingWaveformTouchSeek(this, event);
     }
 
-    private applyPendingWaveformTouchSeekTap(event: ControllerPointerEvent): void {
+    public applyPendingWaveformTouchSeekTap(event: ControllerPointerEvent): void {
         return controllerSeek.applyPendingWaveformTouchSeekTap(this, event);
     }
 
-    private getTouchPair(event: ControllerPointerEvent): [Touch, Touch] | null {
+    public getTouchPair(event: ControllerPointerEvent): [Touch, Touch] | null {
         return controllerSeek.getTouchPair(this, event);
     }
 
-    private getTouchDistance(event: ControllerPointerEvent): number | null {
+    public getTouchDistance(event: ControllerPointerEvent): number | null {
         return controllerSeek.getTouchDistance(this, event);
     }
 
-    private getTouchCenterPageX(event: ControllerPointerEvent): number | null {
+    public getTouchCenterPageX(event: ControllerPointerEvent): number | null {
         return controllerSeek.getTouchCenterPageX(this, event);
     }
 
-    private getActiveTouchCount(event: ControllerPointerEvent): number {
+    public getActiveTouchCount(event: ControllerPointerEvent): number {
         return controllerSeek.getActiveTouchCount(this, event);
     }
 
-    private tryStartPinchZoom(event: ControllerPointerEvent, seekWrap: HTMLElement | null): boolean {
+    public tryStartPinchZoom(event: ControllerPointerEvent, seekWrap: HTMLElement | null): boolean {
         return controllerSeek.tryStartPinchZoom(this, event, seekWrap);
     }
 
-    private updatePinchZoom(event: ControllerPointerEvent): boolean {
+    public updatePinchZoom(event: ControllerPointerEvent): boolean {
         return controllerSeek.updatePinchZoom(this, event);
     }
 
-    private endPinchZoom(): void {
+    public endPinchZoom(): void {
         return controllerSeek.endPinchZoom(this);
     }
 
-    private trackIndexFromTarget(target: EventTarget | null): number {
+    public trackIndexFromTarget(target: EventTarget | null): number {
         return controllerSeek.trackIndexFromTarget(this, target);
     }
 
-    private isAlignmentMode(): boolean {
+    public isAlignmentMode(): boolean {
         return controllerAlignment.isAlignmentMode(this);
     }
 
-    private hasSyncedVariant(runtime: TrackRuntime): boolean {
+    public hasSyncedVariant(runtime: TrackRuntime): boolean {
         return controllerAlignment.hasSyncedVariant(this, runtime);
     }
 
-    private isTrackSyncLocked(trackIndex: number): boolean {
+    public isTrackSyncLocked(trackIndex: number): boolean {
         return controllerAlignment.isTrackSyncLocked(this, trackIndex);
     }
 
-    private setEffectiveSoloMode(singleSoloMode: boolean): void {
+    public setEffectiveSoloMode(singleSoloMode: boolean): void {
         return controllerAlignment.setEffectiveSoloMode(this, singleSoloMode);
     }
 
-    private toggleGlobalSync(): void {
+    public toggleGlobalSync(): void {
         return controllerAlignment.toggleGlobalSync(this);
     }
 
-    private applyGlobalSyncState(syncOn: boolean): void {
+    public applyGlobalSyncState(syncOn: boolean): void {
         return controllerAlignment.applyGlobalSyncState(this, syncOn);
     }
 
-    private setRuntimeActiveVariant(runtime: TrackRuntime, variant: TrackSourceVariant): boolean {
+    public setRuntimeActiveVariant(runtime: TrackRuntime, variant: TrackSourceVariant): boolean {
         return controllerAlignment.setRuntimeActiveVariant(this, runtime, variant);
     }
 
-    private shouldBypassAlignmentMapping(trackIndex: number): boolean {
+    public shouldBypassAlignmentMapping(trackIndex: number): boolean {
         return controllerAlignment.shouldBypassAlignmentMapping(this, trackIndex);
     }
 
-    private applyTrackProperties(): void {
+    public applyTrackProperties(): void {
         return controllerUi.applyTrackProperties(this);
     }
 
-    private updateMainControls(): void {
+    public updateMainControls(): void {
         return controllerUi.updateMainControls(this);
     }
 
-    private async initializeSheetMusic(): Promise<void> {
+    public async initializeSheetMusic(): Promise<void> {
         return controllerPlayback.initializeSheetMusic(this);
     }
 
-    private dispatch(action: PlayerAction): void {
+    public dispatch(action: PlayerAction): void {
         return controllerPlayback.dispatch(this, action);
     }
 
-    private pauseOthers(): void {
+    public pauseOthers(): void {
         return controllerPlayback.pauseOthers(this);
     }
 
-    private startAudio(newPosition?: number, snippetDuration?: number): void {
+    public startAudio(newPosition?: number, snippetDuration?: number): void {
         return controllerPlayback.startAudio(this, newPosition, snippetDuration);
     }
 
-    private stopAudio(): void {
+    public stopAudio(): void {
         return controllerPlayback.stopAudio(this);
     }
 
-    private monitorPosition(): void {
+    public monitorPosition(): void {
         return controllerPlayback.monitorPosition(this);
     }
 
-    private seekFromEvent(event: ControllerPointerEvent, usePreviewSnippet = true): void {
+    public seekFromEvent(event: ControllerPointerEvent, usePreviewSnippet = true): void {
         return controllerPlayback.seekFromEvent(this, event, usePreviewSnippet);
     }
 
-    private findLongestDuration(): number {
+    public findLongestDuration(): number {
         return controllerPlayback.findLongestDuration(this);
     }
 
-    private static getRuntimeDuration(runtime: TrackRuntime): number {
+    public static getRuntimeDuration(runtime: TrackRuntime): number {
         return runtime.timing
             ? runtime.timing.effectiveDuration
             : (runtime.buffer ? runtime.buffer.duration : 0);
     }
 
-    private async initializeAlignmentMode(): Promise<string | null> {
+    public async initializeAlignmentMode(): Promise<string | null> {
         return controllerAlignment.initializeAlignmentMode(this);
     }
 
-    private async buildAlignmentContext(): Promise<AlignmentContext | string> {
+    public async buildAlignmentContext(): Promise<AlignmentContext | string> {
         return controllerAlignment.buildAlignmentContext(this);
     }
 
-    private collectUniqueAlignmentColumns(mappingByTrack: Map<number, string>): string[] {
+    public collectUniqueAlignmentColumns(mappingByTrack: Map<number, string>): string[] {
         return controllerAlignment.collectUniqueAlignmentColumns(this, mappingByTrack);
     }
 
-    private getWarpingMatrixContext(): WarpingMatrixRenderContext | undefined {
+    public getWarpingMatrixContext(): WarpingMatrixRenderContext | undefined {
         return controllerAlignment.getWarpingMatrixContext(this);
     }
 
-    private getAudibleTrackIndexesForWarpingMatrix(): number[] {
+    public getAudibleTrackIndexesForWarpingMatrix(): number[] {
         return controllerAlignment.getAudibleTrackIndexesForWarpingMatrix(this);
     }
 
-    private resolveReferenceColumn(config: TrackAlignmentConfig): string | null {
+    public resolveReferenceColumn(config: TrackAlignmentConfig): string | null {
         return controllerAlignment.resolveReferenceColumn(this, config);
     }
 
-    private resolveReferenceDuration(rows: Array<Record<string, number>>, referenceColumn: string): number | string {
+    public resolveReferenceDuration(rows: Array<Record<string, number>>, referenceColumn: string): number | string {
         return controllerAlignment.resolveReferenceDuration(this, rows, referenceColumn);
     }
 
-    private resolveAlignmentMappingsByTrack(config: TrackAlignmentConfig): Map<number, string> | string {
+    public resolveAlignmentMappingsByTrack(config: TrackAlignmentConfig): Map<number, string> | string {
         return controllerAlignment.resolveAlignmentMappingsByTrack(this, config);
     }
 
-    private validateAndBuildLegacyAlignmentMappings(config: TrackAlignmentConfig): Map<number, string> | string {
+    public validateAndBuildLegacyAlignmentMappings(config: TrackAlignmentConfig): Map<number, string> | string {
         return controllerAlignment.validateAndBuildLegacyAlignmentMappings(this, config);
     }
 
-    private getActiveSoloTrackIndex(): number {
+    public getActiveSoloTrackIndex(): number {
         return controllerAlignment.getActiveSoloTrackIndex(this);
     }
 
-    private currentPlaybackReferencePosition(): number {
+    public currentPlaybackReferencePosition(): number {
         return controllerAlignment.currentPlaybackReferencePosition(this);
     }
 
-    private isFixedWaveformLocalAxisEnabled(): boolean {
+    public isFixedWaveformLocalAxisEnabled(): boolean {
         return controllerSeek.isFixedWaveformLocalAxisEnabled(this);
     }
 
-    private getSeekTimelineContext(seekingElement: HTMLElement | null): SeekTimelineContext {
+    public getSeekTimelineContext(seekingElement: HTMLElement | null): SeekTimelineContext {
         return controllerSeek.getSeekTimelineContext(this, seekingElement);
     }
 
-    private getWaveformTimelineContext(): WaveformTimelineContext {
+    public getWaveformTimelineContext(): WaveformTimelineContext {
         return controllerSeek.getWaveformTimelineContext(this);
     }
 
-    private getWaveformTimelineProjector(): TrackTimelineProjector | undefined {
+    public getWaveformTimelineProjector(): TrackTimelineProjector | undefined {
         return controllerSeek.getWaveformTimelineProjector(this);
     }
 
-    private referenceToTrackTime(trackIndex: number, referenceTime: number): number {
+    public referenceToTrackTime(trackIndex: number, referenceTime: number): number {
         return controllerAlignment.referenceToTrackTime(this, trackIndex, referenceTime);
     }
 
-    private trackToReferenceTime(trackIndex: number, trackTime: number): number {
+    public trackToReferenceTime(trackIndex: number, trackTime: number): number {
         return controllerAlignment.trackToReferenceTime(this, trackIndex, trackTime);
     }
 
-    private handleAlignmentTrackSwitch(nextActiveTrackIndex: number): void {
+    public handleAlignmentTrackSwitch(nextActiveTrackIndex: number): void {
         return controllerAlignment.handleAlignmentTrackSwitch(this, nextActiveTrackIndex);
     }
 
-    private emit<K extends TrackSwitchEventName>(eventName: K, payload: TrackSwitchEventMap[K]): void {
+    public emit<K extends TrackSwitchEventName>(eventName: K, payload: TrackSwitchEventMap[K]): void {
         return controllerEvents.emit(this, eventName, payload);
     }
 
-    private handleError(message: string): void {
+    public handleError(message: string): void {
         return controllerPlayback.handleError(this, message);
     }
 }

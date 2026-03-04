@@ -1,45 +1,9 @@
-import {
-    AlignmentOutOfRangeMode,
-    LoopMarker,
-    PlayerState,
-    TrackAlignmentConfig,
-    TrackSourceVariant,
-    TrackRuntime,
-    TrackSwitchConfig,
-    TrackSwitchController,
-    TrackSwitchEventHandler,
-    TrackSwitchEventMap,
-    TrackSwitchEventName,
-    TrackSwitchFeatures,
-    TrackSwitchSnapshot,
-    TrackSwitchUiState,
-} from '../domain/types';
-import { normalizeFeatures } from '../domain/options';
-import { createInitialPlayerState, playerStateReducer, PlayerAction } from '../domain/state';
-import { createTrackRuntime } from '../domain/runtime';
-import { AudioEngine } from '../engine/audio-engine';
-import { SheetMusicEngine } from '../engine/sheet-music-engine';
-import { TrackTimelineProjector, WaveformEngine } from '../engine/waveform-engine';
-import { ViewRenderer, WarpingMatrixRenderContext, WaveformTimelineContext } from '../ui/view-renderer';
-import { InputBinder, InputController } from '../input/input-binder';
 import { eventTargetAsElement } from '../shared/dom';
-import { clamp } from '../shared/math';
-import { derivePresetNames, parseStrictNonNegativeInt } from '../shared/preset';
-import { ControllerPointerEvent, getSeekMetrics, isPrimaryInput } from '../shared/seek';
+import { parseStrictNonNegativeInt } from '../shared/preset';
+import { getSeekMetrics, isPrimaryInput } from '../shared/seek';
 import {
-    buildColumnTimeMapping,
-    loadNumericCsv,
-    mapTime,
-    resolveAlignmentOutOfRangeMode,
-    TimeMappingSeries,
-} from '../shared/alignment';
-import {
-    allocateInstanceId,
     isKeyboardControllerActive,
-    pauseOtherControllers,
-    registerController,
     setActiveKeyboardController,
-    unregisterController,
 } from './controller-registry';
 
 function closestInRoot(root: HTMLElement, target: EventTarget | null | undefined, selector: string): HTMLElement | null {
@@ -55,38 +19,6 @@ function closestInRoot(root: HTMLElement, target: EventTarget | null | undefined
 
     return matched as HTMLElement;
 }
-
-interface TrackAlignmentConverter {
-    referenceToTrack: TimeMappingSeries;
-    trackToReference: TimeMappingSeries;
-}
-
-interface AlignmentContext {
-    referenceDuration: number;
-    outOfRange: AlignmentOutOfRangeMode;
-    converters: Map<number, TrackAlignmentConverter>;
-    columnByTrack: Map<number, string>;
-    uniqueColumnOrder: string[];
-}
-
-interface SeekTimelineContext {
-    duration: number;
-    toReferenceTime(timelineTime: number): number;
-    fromReferenceTime(referenceTime: number): number;
-}
-
-interface PinchZoomState {
-    seekWrap: HTMLElement;
-    initialDistance: number;
-    initialZoom: number;
-}
-
-interface PendingWaveformTouchSeek {
-    seekWrap: HTMLElement;
-    startPageX: number;
-    startPageY: number;
-}
-
 
 export function setKeyboardActive(ctx: any): any {
     return (function(this: any) {

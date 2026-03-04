@@ -1,7 +1,4 @@
 import { NormalizedTrackGroupLayout, TrackRuntime, TrackSwitchFeatures, TrackSwitchUiState } from '../domain/types';
-import { escapeHtml, sanitizeInlineStyle } from '../shared/dom';
-import { formatSecondsToHHMMSSmmm } from '../shared/format';
-import { clampPercent } from '../shared/math';
 import { TrackTimelineProjector, WaveformEngine } from '../engine/waveform-engine';
 import * as d3 from 'd3';
 import * as viewRendererCore from './view-renderer-core';
@@ -190,20 +187,20 @@ interface WarpingMatrixHostMetadata {
 
 export class ViewRenderer {
 
-    private readonly root: HTMLElement;
-    private readonly features: TrackSwitchFeatures;
-    private readonly presetNames: string[];
-    private readonly trackGroups: NormalizedTrackGroupLayout[];
+    public readonly root: HTMLElement;
+    public readonly features: TrackSwitchFeatures;
+    public readonly presetNames: string[];
+    public readonly trackGroups: NormalizedTrackGroupLayout[];
 
-    private originalImage = '';
-    private readonly waveformSeekSurfaces: WaveformSeekSurfaceMetadata[] = [];
-    private readonly sheetMusicHosts: SheetMusicHostConfig[] = [];
-    private readonly warpingMatrixHosts: WarpingMatrixHostMetadata[] = [];
-    private waveformTileRefreshFrameId: number | null = null;
-    private latestWaveformRenderInput: LatestWaveformRenderInput | null = null;
-    private readonly onWarpingMatrixSeek?: (referenceTime: number) => void;
-    private warpingClipPathCounter = 0;
-    private readonly warpingMatrixTempoControlState = new WeakMap<
+    public originalImage = '';
+    public readonly waveformSeekSurfaces: WaveformSeekSurfaceMetadata[] = [];
+    public readonly sheetMusicHosts: SheetMusicHostConfig[] = [];
+    public readonly warpingMatrixHosts: WarpingMatrixHostMetadata[] = [];
+    public waveformTileRefreshFrameId: number | null = null;
+    public latestWaveformRenderInput: LatestWaveformRenderInput | null = null;
+    public readonly onWarpingMatrixSeek?: (referenceTime: number) => void;
+    public warpingClipPathCounter = 0;
+    public readonly warpingMatrixTempoControlState = new WeakMap<
         HTMLElement,
         { windowSeconds: number; yHalfRangePercent: number }
     >();
@@ -222,47 +219,47 @@ export class ViewRenderer {
         this.onWarpingMatrixSeek = onWarpingMatrixSeek;
     }
 
-private query(selector: string): HTMLElement | null {
+public query(selector: string): HTMLElement | null {
         return viewRendererCore.query(this, selector);
     }
 
-private queryAll(selector: string): HTMLElement[] {
+public queryAll(selector: string): HTMLElement[] {
         return viewRendererCore.queryAll(this, selector);
     }
 
-private getWarpingMatrixPathStrokeWidth(): number {
+public getWarpingMatrixPathStrokeWidth(): number {
         return viewRendererWarping.getWarpingMatrixPathStrokeWidth(this);
     }
 
-private getWarpingMatrixLocalTempoWindowSeconds(host: WarpingMatrixHostMetadata): number {
+public getWarpingMatrixLocalTempoWindowSeconds(host: WarpingMatrixHostMetadata): number {
         return viewRendererWarping.getWarpingMatrixLocalTempoWindowSeconds(this, host);
     }
 
-private getWarpingMatrixLocalTempoSlopeHalfWindowPoints(): number {
+public getWarpingMatrixLocalTempoSlopeHalfWindowPoints(): number {
         return viewRendererWarping.getWarpingMatrixLocalTempoSlopeHalfWindowPoints(this);
     }
 
-private getWarpingMatrixTempoYHalfRangePercent(host: WarpingMatrixHostMetadata): number {
+public getWarpingMatrixTempoYHalfRangePercent(host: WarpingMatrixHostMetadata): number {
         return viewRendererWarping.getWarpingMatrixTempoYHalfRangePercent(this, host);
     }
 
-private updateWarpingMatrixTempoControlLabels(host: WarpingMatrixHostMetadata): void {
+public updateWarpingMatrixTempoControlLabels(host: WarpingMatrixHostMetadata): void {
         return viewRendererWarping.updateWarpingMatrixTempoControlLabels(this, host);
     }
 
-private persistWarpingMatrixTempoControls(host: WarpingMatrixHostMetadata): void {
+public persistWarpingMatrixTempoControls(host: WarpingMatrixHostMetadata): void {
         return viewRendererWarping.persistWarpingMatrixTempoControls(this, host);
     }
 
-private getWarpingMatrixSquarePlotSize(plot: WarpingMatrixPlotState): number {
+public getWarpingMatrixSquarePlotSize(plot: WarpingMatrixPlotState): number {
         return viewRendererWarping.getWarpingMatrixSquarePlotSize(this, plot);
     }
 
-private resolveWarpingMatrixColumnColor(_columnKey: string, _columnOrder: string[]): string {
+public resolveWarpingMatrixColumnColor(_columnKey: string, _columnOrder: string[]): string {
         return viewRendererWarping.resolveWarpingMatrixColumnColor(this, _columnKey, _columnOrder);
     }
 
-private getCanvasPixelRatio(): number {
+public getCanvasPixelRatio(): number {
         return viewRendererWaveform.getCanvasPixelRatio(this);
     }
 
@@ -270,31 +267,31 @@ initialize(runtimes: TrackRuntime[]): void {
         return viewRendererCore.initialize(this, runtimes);
     }
 
-private buildMainControlHtml(runtimes: TrackRuntime[]): string {
+public buildMainControlHtml(runtimes: TrackRuntime[]): string {
         return viewRendererCore.buildMainControlHtml(this, runtimes);
     }
 
-private shouldRenderGlobalSync(runtimes: TrackRuntime[]): boolean {
+public shouldRenderGlobalSync(runtimes: TrackRuntime[]): boolean {
         return viewRendererCore.shouldRenderGlobalSync(this, runtimes);
     }
 
-private buildTrackRow(runtime: TrackRuntime, index: number): HTMLElement {
+public buildTrackRow(runtime: TrackRuntime, index: number): HTMLElement {
         return viewRendererCore.buildTrackRow(this, runtime, index);
     }
 
-private renderTrackList(runtimes: TrackRuntime[]): void {
+public renderTrackList(runtimes: TrackRuntime[]): void {
         return viewRendererCore.renderTrackList(this, runtimes);
     }
 
-private wrapSeekableImages(): void {
+public wrapSeekableImages(): void {
         return viewRendererCore.wrapSeekableImages(this);
     }
 
-private wrapWaveformCanvases(): void {
+public wrapWaveformCanvases(): void {
         return viewRendererWaveform.wrapWaveformCanvases(this);
     }
 
-private wrapSheetMusicContainers(): void {
+public wrapSheetMusicContainers(): void {
         return viewRendererCore.wrapSheetMusicContainers(this);
     }
 
@@ -302,11 +299,11 @@ getPreparedSheetMusicHosts(): SheetMusicHostConfig[] {
         return viewRendererCore.getPreparedSheetMusicHosts(this);
     }
 
-private wrapWarpingMatrixContainers(): void {
+public wrapWarpingMatrixContainers(): void {
         return viewRendererWarping.wrapWarpingMatrixContainers(this);
     }
 
-private createWarpingMatrixPlotState(
+public createWarpingMatrixPlotState(
         plotHost: HTMLElement,
         width: number,
         height: number
@@ -314,7 +311,7 @@ private createWarpingMatrixPlotState(
         return viewRendererWarping.createWarpingMatrixPlotState(this, plotHost, width, height);
     }
 
-private createWarpingTempoPlotState(
+public createWarpingTempoPlotState(
         plotHost: HTMLElement,
         width: number,
         height: number
@@ -322,7 +319,7 @@ private createWarpingTempoPlotState(
         return viewRendererWarping.createWarpingTempoPlotState(this, plotHost, width, height);
     }
 
-private applyWarpingMatrixPlotDimensions(
+public applyWarpingMatrixPlotDimensions(
         plot: WarpingMatrixPlotState,
         width: number,
         height: number
@@ -330,7 +327,7 @@ private applyWarpingMatrixPlotDimensions(
         return viewRendererWarping.applyWarpingMatrixPlotDimensions(this, plot, width, height);
     }
 
-private applyWarpingTempoPlotDimensions(
+public applyWarpingTempoPlotDimensions(
         plot: WarpingTempoPlotState,
         width: number,
         height: number
@@ -338,7 +335,7 @@ private applyWarpingTempoPlotDimensions(
         return viewRendererWarping.applyWarpingTempoPlotDimensions(this, plot, width, height);
     }
 
-private isPointerInsidePlotArea(
+public isPointerInsidePlotArea(
         plotHost: HTMLElement,
         margins: WarpingPlotMargins,
         innerWidth: number,
@@ -349,58 +346,58 @@ private isPointerInsidePlotArea(
         return viewRendererWarping.isPointerInsidePlotArea(this, plotHost, margins, innerWidth, innerHeight, clientX, clientY);
     }
 
-private onWarpingMatrixPointerDown(host: WarpingMatrixHostMetadata, event: PointerEvent): void {
+public onWarpingMatrixPointerDown(host: WarpingMatrixHostMetadata, event: PointerEvent): void {
         return viewRendererWarping.onWarpingMatrixPointerDown(this, host, event);
     }
 
-private onWarpingMatrixPointerMove(host: WarpingMatrixHostMetadata, event: PointerEvent): void {
+public onWarpingMatrixPointerMove(host: WarpingMatrixHostMetadata, event: PointerEvent): void {
         return viewRendererWarping.onWarpingMatrixPointerMove(this, host, event);
     }
 
-private onWarpingMatrixPointerUp(host: WarpingMatrixHostMetadata, event: PointerEvent): void {
+public onWarpingMatrixPointerUp(host: WarpingMatrixHostMetadata, event: PointerEvent): void {
         return viewRendererWarping.onWarpingMatrixPointerUp(this, host, event);
     }
 
-private seekWarpingMatrixFromPointerX(host: WarpingMatrixHostMetadata, clientX: number): void {
+public seekWarpingMatrixFromPointerX(host: WarpingMatrixHostMetadata, clientX: number): void {
         return viewRendererWarping.seekWarpingMatrixFromPointerX(this, host, clientX);
     }
 
-private onWarpingTempoPointerDown(host: WarpingMatrixHostMetadata, event: PointerEvent): void {
+public onWarpingTempoPointerDown(host: WarpingMatrixHostMetadata, event: PointerEvent): void {
         return viewRendererWarping.onWarpingTempoPointerDown(this, host, event);
     }
 
-private onWarpingTempoWheel(host: WarpingMatrixHostMetadata, event: WheelEvent): void {
+public onWarpingTempoWheel(host: WarpingMatrixHostMetadata, event: WheelEvent): void {
         return viewRendererWarping.onWarpingTempoWheel(this, host, event);
     }
 
-private seekWarpingMatrixFromTempoPointerX(host: WarpingMatrixHostMetadata, clientX: number): void {
+public seekWarpingMatrixFromTempoPointerX(host: WarpingMatrixHostMetadata, clientX: number): void {
         return viewRendererWarping.seekWarpingMatrixFromTempoPointerX(this, host, clientX);
     }
 
-private getPrimaryWarpingSeriesData(host: WarpingMatrixHostMetadata): WarpingMatrixPathSeriesData | null {
+public getPrimaryWarpingSeriesData(host: WarpingMatrixHostMetadata): WarpingMatrixPathSeriesData | null {
         return viewRendererWarping.getPrimaryWarpingSeriesData(this, host);
     }
 
-private getPrimaryTempoSeries(host: WarpingMatrixHostMetadata): WarpingMatrixTempoPoint[] {
+public getPrimaryTempoSeries(host: WarpingMatrixHostMetadata): WarpingMatrixTempoPoint[] {
         return viewRendererWarping.getPrimaryTempoSeries(this, host);
     }
 
-private updateWarpingMatrix(
+public updateWarpingMatrix(
         host: WarpingMatrixHostMetadata,
         context: WarpingMatrixRenderContext | undefined
     ): void {
         return viewRendererWarping.updateWarpingMatrix(this, host, context);
     }
 
-private renderWarpingMatrixPathPlot(host: WarpingMatrixHostMetadata, pathStrokeWidth: number): void {
+public renderWarpingMatrixPathPlot(host: WarpingMatrixHostMetadata, pathStrokeWidth: number): void {
         return viewRendererWarping.renderWarpingMatrixPathPlot(this, host, pathStrokeWidth);
     }
 
-private renderWarpingMatrixTempoPlot(host: WarpingMatrixHostMetadata): void {
+public renderWarpingMatrixTempoPlot(host: WarpingMatrixHostMetadata): void {
         return viewRendererWarping.renderWarpingMatrixTempoPlot(this, host);
     }
 
-private resolveCenteredWarpingWindow(
+public resolveCenteredWarpingWindow(
         center: number,
         windowSeconds: number,
         _maxTime: number
@@ -408,45 +405,45 @@ private resolveCenteredWarpingWindow(
         return viewRendererWarping.resolveCenteredWarpingWindow(this, center, windowSeconds, _maxTime);
     }
 
-private buildWarpingMatrixData(
+public buildWarpingMatrixData(
         trackSeries: WarpingMatrixTrackSeries[],
         referenceDuration: number
     ): WarpingMatrixMatrixData {
         return viewRendererWarping.buildWarpingMatrixData(this, trackSeries, referenceDuration);
     }
 
-private buildWarpingTempoData(
+public buildWarpingTempoData(
         trackSeries: WarpingMatrixTrackSeries[],
         halfWindowPoints: number
     ): WarpingMatrixTempoData {
         return viewRendererWarping.buildWarpingTempoData(this, trackSeries, halfWindowPoints);
     }
 
-private interpolateWarpingTrackTime(points: WarpingMatrixPathPoint[], referenceTime: number): number {
+public interpolateWarpingTrackTime(points: WarpingMatrixPathPoint[], referenceTime: number): number {
         return viewRendererWarping.interpolateWarpingTrackTime(this, points, referenceTime);
     }
 
-private interpolateWarpingReferenceTime(pointsByTrackTime: WarpingMatrixPathPoint[], trackTime: number): number {
+public interpolateWarpingReferenceTime(pointsByTrackTime: WarpingMatrixPathPoint[], trackTime: number): number {
         return viewRendererWarping.interpolateWarpingReferenceTime(this, pointsByTrackTime, trackTime);
     }
 
-private createWaveformTimingNode(overlay: HTMLElement): HTMLElement {
+public createWaveformTimingNode(overlay: HTMLElement): HTMLElement {
         return viewRendererWaveform.createWaveformTimingNode(this, overlay);
     }
 
-private createWaveformZoomNode(overlay: HTMLElement): HTMLElement {
+public createWaveformZoomNode(overlay: HTMLElement): HTMLElement {
         return viewRendererWaveform.createWaveformZoomNode(this, overlay);
     }
 
-private resolveWaveformBaseWidth(scrollContainer: HTMLElement, fallback: number): number {
+public resolveWaveformBaseWidth(scrollContainer: HTMLElement, fallback: number): number {
         return viewRendererWaveform.resolveWaveformBaseWidth(this, scrollContainer, fallback);
     }
 
-private setWaveformSurfaceWidth(surfaceMetadata: WaveformSeekSurfaceMetadata): void {
+public setWaveformSurfaceWidth(surfaceMetadata: WaveformSeekSurfaceMetadata): void {
         return viewRendererWaveform.setWaveformSurfaceWidth(this, surfaceMetadata);
     }
 
-private forEachVisibleWaveformTile(
+public forEachVisibleWaveformTile(
         surfaceMetadata: WaveformSeekSurfaceMetadata,
         pixelRatio: number,
         callback: (tile: {
@@ -464,15 +461,15 @@ private forEachVisibleWaveformTile(
         return viewRendererWaveform.forEachVisibleWaveformTile(this, surfaceMetadata, pixelRatio, callback);
     }
 
-private scheduleVisibleWaveformTileRefresh(): void {
+public scheduleVisibleWaveformTileRefresh(): void {
         return viewRendererWaveform.scheduleVisibleWaveformTileRefresh(this);
     }
 
-private refreshVisibleWaveformTilesFromLatestInput(): void {
+public refreshVisibleWaveformTilesFromLatestInput(): void {
         return viewRendererWaveform.refreshVisibleWaveformTilesFromLatestInput(this);
     }
 
-private computeNormalizationPeak(
+public computeNormalizationPeak(
         waveformEngine: WaveformEngine,
         sourceRuntimes: TrackRuntime[],
         renderBarWidth: number,
@@ -483,7 +480,7 @@ private computeNormalizationPeak(
         return viewRendererWaveform.computeNormalizationPeak(this, waveformEngine, sourceRuntimes, renderBarWidth, duration, baseProjector, baseWidth);
     }
 
-private buildWaveformNormalizationCacheKey(
+public buildWaveformNormalizationCacheKey(
         surfaceMetadata: WaveformSeekSurfaceMetadata,
         runtimes: TrackRuntime[],
         sourceRuntimes: TrackRuntime[],
@@ -495,7 +492,7 @@ private buildWaveformNormalizationCacheKey(
         return viewRendererWaveform.buildWaveformNormalizationCacheKey(this, surfaceMetadata, runtimes, sourceRuntimes, fullDuration, renderBarWidth, useLocalAxis, hasTimelineProjector);
     }
 
-private findWaveformSurface(
+public findWaveformSurface(
         seekWrap: HTMLElement | null
     ): WaveformSeekSurfaceMetadata | null {
         return viewRendererWaveform.findWaveformSurface(this, seekWrap);
@@ -531,7 +528,7 @@ renderWaveforms(
         return viewRendererWaveform.renderWaveforms(this, waveformEngine, runtimes, timelineDuration, trackTimelineProjector, waveformTimelineContext);
     }
 
-private renderWaveformsInternal(
+public renderWaveformsInternal(
         waveformEngine: WaveformEngine,
         runtimes: TrackRuntime[],
         timelineDuration: number,
@@ -543,14 +540,14 @@ private renderWaveformsInternal(
         return viewRendererWaveform.renderWaveformsInternal(this, waveformEngine, runtimes, timelineDuration, trackTimelineProjector, waveformTimelineContext, performReflow, forceRedrawVisibleTiles);
     }
 
-private getWaveformSourceRuntimes(
+public getWaveformSourceRuntimes(
         runtimes: TrackRuntime[],
         waveformSource: 'audible' | number
     ): TrackRuntime[] {
         return viewRendererWaveform.getWaveformSourceRuntimes(this, runtimes, waveformSource);
     }
 
-private resolveWaveformTrackIndex(
+public resolveWaveformTrackIndex(
         runtimes: TrackRuntime[],
         waveformSource: 'audible' | number
     ): number | null {
@@ -566,25 +563,25 @@ updateMainControls(
         return viewRendererCore.updateMainControls(this, state, runtimes, waveformTimelineContext, warpingMatrixContext);
     }
 
-private updateWaveformZoomIndicators(): void {
+public updateWaveformZoomIndicators(): void {
         return viewRendererWaveform.updateWaveformZoomIndicators(this);
     }
 
-private applyFixedWaveformLocalSeekVisuals(
+public applyFixedWaveformLocalSeekVisuals(
         state: TrackSwitchUiState,
         waveformTimelineContext?: WaveformTimelineContext
     ): void {
         return viewRendererWaveform.applyFixedWaveformLocalSeekVisuals(this, state, waveformTimelineContext);
     }
 
-private getLongestWaveformSourceDuration(
+public getLongestWaveformSourceDuration(
         runtimes: TrackRuntime[],
         waveformSource: 'audible' | number
     ): number {
         return viewRendererWaveform.getLongestWaveformSourceDuration(this, runtimes, waveformSource);
     }
 
-private updateWaveformTiming(
+public updateWaveformTiming(
         state: TrackSwitchUiState,
         runtimes: TrackRuntime[],
         waveformTimelineContext?: WaveformTimelineContext
@@ -592,7 +589,7 @@ private updateWaveformTiming(
         return viewRendererWaveform.updateWaveformTiming(this, state, runtimes, waveformTimelineContext);
     }
 
-private updateSeekWrapVisuals(
+public updateSeekWrapVisuals(
         seekWrap: Element,
         position: number,
         duration: number,
@@ -630,7 +627,7 @@ updateVolumeIcon(volumeZeroToOne: number): void {
         return viewRendererCore.updateVolumeIcon(this, volumeZeroToOne);
     }
 
-private applyVolumeIconState(icon: HTMLElement, volumeZeroToOne: number): void {
+public applyVolumeIconState(icon: HTMLElement, volumeZeroToOne: number): void {
         return viewRendererCore.applyVolumeIconState(this, icon, volumeZeroToOne);
     }
 
