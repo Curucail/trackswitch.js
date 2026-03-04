@@ -245,12 +245,23 @@ h1 a:visited {
     position: static;
     width: 320px;
     max-width: 100%;
+    max-height: min(78vh, 920px);
+    overflow-y: auto;
     border-radius: 16px;
     border: 1px solid rgba(42, 79, 112, 0.18);
     background: var(--ts-panel-bg);
     backdrop-filter: blur(8px);
     padding: 1rem;
     box-shadow: 0 14px 24px rgba(19, 45, 71, 0.13);
+}
+
+.ts-control-panel::-webkit-scrollbar {
+    width: 9px;
+}
+
+.ts-control-panel::-webkit-scrollbar-thumb {
+    background: rgba(43, 82, 112, 0.28);
+    border-radius: 10px;
 }
 
 .ts-control-panel h4 {
@@ -407,6 +418,8 @@ h1 a:visited {
         position: static;
         width: 100%;
         order: -1;
+        max-height: none;
+        overflow: visible;
     }
 
     .ts-showcase__code-row {
@@ -452,6 +465,8 @@ h1 a:visited {
     .ts-control-panel {
         order: -1;
         width: 100%;
+        max-height: none;
+        overflow: visible;
     }
 }
 

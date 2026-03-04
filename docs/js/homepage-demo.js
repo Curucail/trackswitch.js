@@ -36,19 +36,19 @@
   function createAlignmentTracks(basePath) {
     return [
       {
-        title: 'Schubert Winterreise - HU33',
-        sources: [{ src: basePath + '/Schubert_D911-03_HU33.wav' }],
-        alignment: {
-          column: 't1_sec',
-          sources: [{ src: basePath + '/Schubert_D911-03_HU33.wav' }],
-        },
-      },
-      {
         title: 'Schubert Winterreise - SC06',
         sources: [{ src: basePath + '/Schubert_D911-03_SC06.wav' }],
         alignment: {
+          column: 't1_sec',
+          synchronizedSources: [{ src: basePath + '/Schubert_D911-03_SC06_syncronized.wav' }],
+        },
+      },
+      {
+        title: 'Schubert Winterreise - HU33',
+        sources: [{ src: basePath + '/Schubert_D911-03_HU33.wav' }],
+        alignment: {
           column: 't2_sec',
-          sources: [{ src: basePath + '/Schubert_D911-03_SC06_syncronized.wav' }],
+          synchronizedSources: [{ src: basePath + '/Schubert_D911-03_HU33.wav' }],
         },
       },
     ];
@@ -57,56 +57,73 @@
   var CONTROL_NAMES = [
     'looping',
     'globalVolume',
+    'trackMixControls',
     'presets',
     'seekBar',
     'timer',
     'keyboard',
     'waveform',
     'sheetNotePreview',
+    'warpingMatrix',
     'customImage',
+    'seekableImage',
     'exclusiveSolo',
     'tabView',
+    'muteOtherPlayerInstances',
+    'iosAudioUnlock',
     'repeatEnabled',
   ];
 
   var REBUILD_TOGGLE_NAMES = [
     'looping',
     'globalVolume',
+    'trackMixControls',
     'presets',
     'seekBar',
     'timer',
     'keyboard',
     'waveform',
     'sheetNotePreview',
+    'warpingMatrix',
     'customImage',
+    'seekableImage',
     'exclusiveSolo',
     'tabView',
+    'muteOtherPlayerInstances',
+    'iosAudioUnlock',
   ];
 
   var MODE_DISABLED_CONTROLS = {
-    default: ['sheetNotePreview'],
-    alignment: ['customImage', 'presets', 'exclusiveSolo'],
+    default: ['sheetNotePreview', 'warpingMatrix'],
+    alignment: ['customImage', 'seekableImage', 'presets', 'exclusiveSolo'],
   };
 
   var DEFAULT_MODEL = {
     looping: true,
     globalVolume: true,
+    trackMixControls: true,
     presets: true,
     seekBar: true,
     timer: true,
     keyboard: true,
     waveform: true,
     sheetNotePreview: false,
+    warpingMatrix: false,
     customImage: false,
+    seekableImage: false,
     exclusiveSolo: false,
     tabView: false,
+    muteOtherPlayerInstances: true,
+    iosAudioUnlock: true,
     repeatEnabled: false,
   };
 
   var ALIGNMENT_DEFAULT_MODEL = Object.assign({}, DEFAULT_MODEL, {
     presets: false,
     customImage: false,
+    seekableImage: false,
     sheetNotePreview: true,
+    warpingMatrix: true,
     exclusiveSolo: true,
   });
 
@@ -175,6 +192,10 @@
 
     function isControlDisabled(name, model, mode) {
       if (getModeDisabledControlNames(mode).indexOf(name) !== -1) {
+        return true;
+      }
+
+      if (name === 'seekableImage' && !model.customImage) {
         return true;
       }
 
@@ -366,6 +387,11 @@
           notes.push('Custom cover image is unavailable in alignment mode.');
         }
 
+        if (normalized.seekableImage) {
+          normalized.seekableImage = false;
+          notes.push('Seekable cover image is unavailable in alignment mode.');
+        }
+
         if (normalized.presets) {
           normalized.presets = false;
           notes.push('Presets are unavailable in alignment mode.');
@@ -375,13 +401,25 @@
           normalized.exclusiveSolo = true;
           notes.push('Single solo mode is enforced in alignment mode.');
         }
-      } else if (normalized.sheetNotePreview) {
-        normalized.sheetNotePreview = false;
+      } else {
+        if (normalized.sheetNotePreview) {
+          normalized.sheetNotePreview = false;
+          notes.push('Sheet note preview is only available in alignment mode.');
+        }
+        if (normalized.warpingMatrix) {
+          normalized.warpingMatrix = false;
+          notes.push('Warping matrix is only available in alignment mode.');
+        }
       }
 
       if (normalized.exclusiveSolo && normalized.presets) {
         normalized.presets = false;
         notes.push('Presets were turned off because single solo mode disables presets.');
+      }
+
+      if (!normalized.customImage && normalized.seekableImage) {
+        normalized.seekableImage = false;
+        notes.push('Seekable cover image requires custom cover image to be enabled.');
       }
 
       return {
@@ -419,7 +457,7 @@
 
       if (model.customImage) {
         snippetLines.push(
-          "      { type: 'image', src: 'cover.jpg', seekable: false, style: 'margin: 12px auto;' },"
+          "      { type: 'image', src: 'cover.jpg', seekable: " + Boolean(model.seekableImage) + ", style: 'margin: 12px auto;' },"
         );
       }
 
@@ -448,7 +486,8 @@
         '      looping: ' + Boolean(model.looping) + ',',
         '      repeat: ' + Boolean(model.repeatEnabled) + ',',
         '      globalVolume: ' + Boolean(model.globalVolume) + ',',
-        '      muteOtherPlayerInstances: true,',
+        '      muteOtherPlayerInstances: ' + Boolean(model.muteOtherPlayerInstances) + ',',
+        '      trackMixControls: ' + Boolean(model.trackMixControls) + ',',
         '      presets: ' + Boolean(model.presets) + ',',
         '      seekBar: ' + Boolean(model.seekBar) + ',',
         '      timer: ' + Boolean(model.timer) + ',',
@@ -456,7 +495,7 @@
         '      waveform: ' + Boolean(model.waveform) + ',',
         '      exclusiveSolo: ' + Boolean(model.exclusiveSolo) + ',',
         '      tabView: ' + Boolean(model.tabView) + ',',
-        '      iosAudioUnlock: true,',
+        '      iosAudioUnlock: ' + Boolean(model.iosAudioUnlock) + ',',
         '    },',
         '  });',
         '});',
@@ -482,6 +521,7 @@
         "  TrackSwitch.createTrackSwitch(document.getElementById('player'), {",
         '    alignment: {',
         "      csv: 'dtw_alignment.csv',",
+        "      referenceTimeColumn: 't1_sec',",
         "      outOfRange: 'clamp',",
         '    },',
         '    ui: [',
@@ -512,6 +552,12 @@
         );
       }
 
+      if (model.warpingMatrix) {
+        snippetLines.push(
+          "      { type: 'warpingMatrix', height: 240 },"
+        );
+      }
+
       snippetLines.push(
         '      {',
         "        type: 'trackGroup',",
@@ -527,7 +573,10 @@
         '          {',
         "            title: 'HU33',",
         "            sources: [{ src: 'Schubert_D911-03_HU33.wav' }],",
-        "            alignment: { column: 't2_sec' },",
+        '            alignment: {',
+        "              column: 't2_sec',",
+        "              synchronizedSources: [{ src: 'Schubert_D911-03_HU33.wav' }],",
+        '            },',
         '          },',
         '        ],',
         '      },'
@@ -540,7 +589,8 @@
         '      looping: ' + Boolean(model.looping) + ',',
         '      repeat: ' + Boolean(model.repeatEnabled) + ',',
         '      globalVolume: ' + Boolean(model.globalVolume) + ',',
-        '      muteOtherPlayerInstances: true,',
+        '      muteOtherPlayerInstances: ' + Boolean(model.muteOtherPlayerInstances) + ',',
+        '      trackMixControls: ' + Boolean(model.trackMixControls) + ',',
         '      presets: ' + Boolean(model.presets) + ',',
         '      seekBar: ' + Boolean(model.seekBar) + ',',
         '      timer: ' + Boolean(model.timer) + ',',
@@ -548,7 +598,7 @@
         '      waveform: ' + Boolean(model.waveform) + ',',
         '      exclusiveSolo: ' + Boolean(model.exclusiveSolo) + ',',
         '      tabView: ' + Boolean(model.tabView) + ',',
-        '      iosAudioUnlock: true,',
+        '      iosAudioUnlock: ' + Boolean(model.iosAudioUnlock) + ',',
         '    },',
         '  });',
         '});',
@@ -674,7 +724,7 @@
         uiConfig.push({
           type: 'image',
           src: basePath + '/cover.jpg',
-          seekable: false,
+          seekable: Boolean(model.seekableImage),
         });
       }
 
@@ -714,6 +764,13 @@
         }
       }
 
+      if (isAlignmentMode(currentMode) && model.warpingMatrix) {
+        uiConfig.push({
+          type: 'warpingMatrix',
+          height: 240,
+        });
+      }
+
       init = {
         ui: uiConfig,
         features: {
@@ -721,7 +778,8 @@
           looping: model.looping,
           repeat: model.repeatEnabled,
           globalVolume: model.globalVolume,
-          muteOtherPlayerInstances: true,
+          muteOtherPlayerInstances: model.muteOtherPlayerInstances,
+          trackMixControls: model.trackMixControls,
           presets: model.presets,
           seekBar: model.seekBar,
           timer: model.timer,
@@ -729,7 +787,7 @@
           waveform: model.waveform,
           exclusiveSolo: model.exclusiveSolo,
           tabView: model.tabView,
-          iosAudioUnlock: true,
+          iosAudioUnlock: model.iosAudioUnlock,
         },
       };
 

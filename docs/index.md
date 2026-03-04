@@ -44,14 +44,6 @@ title: trackswitch.js
           <input type="checkbox" name="looping" checked />
         </label>
         <label class="ts-control-row">
-          <span>Global Volume</span>
-          <input type="checkbox" name="globalVolume" checked />
-        </label>
-        <label class="ts-control-row">
-          <span>Presets</span>
-          <input type="checkbox" name="presets" checked />
-        </label>
-        <label class="ts-control-row">
           <span>Seekbar</span>
           <input type="checkbox" name="seekBar" checked />
         </label>
@@ -60,25 +52,53 @@ title: trackswitch.js
           <input type="checkbox" name="timer" checked />
         </label>
         <label class="ts-control-row">
-          <span>Keyboard Shortcuts</span>
-          <input type="checkbox" name="keyboard" checked />
-        </label>
-        <label class="ts-control-row">
           <span>Waveform</span>
           <input type="checkbox" name="waveform" checked />
+        </label>
+        <label class="ts-control-row">
+          <span>Repeat Enabled</span>
+          <input type="checkbox" name="repeatEnabled" />
+        </label>
+        <label class="ts-control-row">
+          <span>Custom Cover Image</span>
+          <input type="checkbox" name="customImage" />
+        </label>
+        <label class="ts-control-row">
+          <span>Seekable Cover Image</span>
+          <input type="checkbox" name="seekableImage" />
         </label>
         <label class="ts-control-row">
           <span>Sheet Note Preview (Alignment)</span>
           <input type="checkbox" name="sheetNotePreview" checked />
         </label>
         <label class="ts-control-row">
-          <span>Custom Cover Image</span>
-          <input type="checkbox" name="customImage" />
+          <span>Warping Matrix (Alignment)</span>
+          <input type="checkbox" name="warpingMatrix" />
         </label>
       </div>
 
       <div class="ts-control-group">
-        <h5>Track Behavior</h5>
+        <h5>Mix and Presets</h5>
+        <label class="ts-control-row">
+          <span>Global Volume</span>
+          <input type="checkbox" name="globalVolume" checked />
+        </label>
+        <label class="ts-control-row">
+          <span>Track Mix Controls</span>
+          <input type="checkbox" name="trackMixControls" checked />
+        </label>
+        <label class="ts-control-row">
+          <span>Presets</span>
+          <input type="checkbox" name="presets" checked />
+        </label>
+      </div>
+
+      <div class="ts-control-group">
+        <h5>Behavior and Safety</h5>
+        <label class="ts-control-row">
+          <span>Keyboard Shortcuts</span>
+          <input type="checkbox" name="keyboard" checked />
+        </label>
         <label class="ts-control-row">
           <span>Single Solo Mode</span>
           <input type="checkbox" name="exclusiveSolo" />
@@ -86,14 +106,6 @@ title: trackswitch.js
         <label class="ts-control-row">
           <span>Tab View</span>
           <input type="checkbox" name="tabView" />
-        </label>
-      </div>
-
-      <div class="ts-control-group">
-        <h5>State</h5>
-        <label class="ts-control-row">
-          <span>Repeat Enabled</span>
-          <input type="checkbox" name="repeatEnabled" />
         </label>
       </div>
 
@@ -122,9 +134,10 @@ title: trackswitch.js
   </div>
 </section>
 
-## Configuration
+## Documentation
 
-See the [configuration guide](configuration.md).
+- New to trackswitch.js? Start here: [Getting Started](getting-started.md)
+- Full option reference: [Configuration Guide](configuration.md)
 
 ## Usage scenarios
 
