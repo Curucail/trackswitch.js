@@ -156,6 +156,18 @@
         font-size: 20px;
     }
 
+    .trackswitch .main-control .playback-group>.playback-controls {
+        gap: 16px;
+    }
+
+    .trackswitch .main-control .sync-global {
+        min-width: 68px;
+        height: 26px;
+        line-height: 26px;
+        font-size: 14px;
+        padding: 0 0px;
+    }
+
     .trackswitch .main-control .volume-control {
         position: relative;
         top: 2px;
@@ -190,6 +202,29 @@
         gap: 6px;
         position: relative;
         top: 2px;
+    }
+
+    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.button {
+        width: 28px;
+        height: 28px;
+    }
+
+    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-a:after,
+    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-b:after {
+        width: 22px;
+        height: 22px;
+        font-size: 13px;
+    }
+
+    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-toggle,
+    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-clear {
+        width: 24px;
+        height: 28px;
+    }
+
+    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-toggle:before,
+    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-clear:after {
+        font-size: 20px;
     }
 
     .trackswitch .main-control .preset-selector {
