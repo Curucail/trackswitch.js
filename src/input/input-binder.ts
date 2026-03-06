@@ -17,8 +17,11 @@ export interface InputController {
     onSolo(event: ControllerPointerEvent): void;
     onAlignmentSync(event: ControllerPointerEvent): void;
     onVolume(event: ControllerPointerEvent): void;
+    onVolumeReset(event: ControllerPointerEvent): void;
     onTrackVolume(event: ControllerPointerEvent): void;
+    onTrackVolumeReset(event: ControllerPointerEvent): void;
     onTrackPan(event: ControllerPointerEvent): void;
+    onTrackPanReset(event: ControllerPointerEvent): void;
     onPreset(event: ControllerPointerEvent): void;
     onPresetScroll(event: ControllerPointerEvent): void;
     onWaveformZoomWheel(event: ControllerPointerEvent): void;
@@ -213,6 +216,9 @@ export class InputBinder {
             this.addDelegatedListener('input', '.volume-slider', (event) => {
                 this.controller.onVolume(event);
             });
+            this.addDelegatedListener('dblclick', '.volume-slider', (event) => {
+                this.controller.onVolumeReset(event);
+            });
 
             const stopPropagationOnVolume = (event: Event) => {
                 const eventElement = eventTargetAsElement(event.target);
@@ -237,8 +243,14 @@ export class InputBinder {
             this.addDelegatedListener('input', '.track-volume-slider', (event) => {
                 this.controller.onTrackVolume(event);
             });
+            this.addDelegatedListener('dblclick', '.track-volume-slider', (event) => {
+                this.controller.onTrackVolumeReset(event);
+            });
             this.addDelegatedListener('input', '.track-pan-slider', (event) => {
                 this.controller.onTrackPan(event);
+            });
+            this.addDelegatedListener('dblclick', '.track-pan-slider', (event) => {
+                this.controller.onTrackPanReset(event);
             });
 
             const stopPropagationOnTrackMix = (event: Event) => {

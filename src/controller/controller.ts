@@ -326,12 +326,24 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         return controllerInput.onVolume(this, event);
     }
 
+    onVolumeReset(event: ControllerPointerEvent): void {
+        return controllerInput.onVolumeReset(this, event);
+    }
+
     onTrackVolume(event: ControllerPointerEvent): void {
         return controllerInput.onTrackVolume(this, event);
     }
 
+    onTrackVolumeReset(event: ControllerPointerEvent): void {
+        return controllerInput.onTrackVolumeReset(this, event);
+    }
+
     onTrackPan(event: ControllerPointerEvent): void {
         return controllerInput.onTrackPan(this, event);
+    }
+
+    onTrackPanReset(event: ControllerPointerEvent): void {
+        return controllerInput.onTrackPanReset(this, event);
     }
 
     onPreset(event: ControllerPointerEvent): void {

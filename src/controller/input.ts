@@ -319,6 +319,14 @@ export function onVolume(ctx: any, event: any): any {
     }).call(ctx, event);
 }
 
+export function onVolumeReset(ctx: any, event: any): any {
+    return (function(this: any, event: any) {
+        event.preventDefault();
+        this.setVolume(1);
+        event.stopPropagation();
+    }).call(ctx, event);
+}
+
 export function onTrackVolume(ctx: any, event: any): any {
     return (function(this: any, event: any) {
         const target = eventTargetAsElement(event.target ?? null);
@@ -336,6 +344,24 @@ export function onTrackVolume(ctx: any, event: any): any {
     }).call(ctx, event);
 }
 
+export function onTrackVolumeReset(ctx: any, event: any): any {
+    return (function(this: any, event: any) {
+        const target = eventTargetAsElement(event.target ?? null);
+        if (!(target instanceof HTMLInputElement)) {
+            return;
+        }
+
+        const trackIndex = this.trackIndexFromTarget(target);
+        if (trackIndex < 0) {
+            return;
+        }
+
+        event.preventDefault();
+        this.setTrackVolume(trackIndex, 1);
+        event.stopPropagation();
+    }).call(ctx, event);
+}
+
 export function onTrackPan(ctx: any, event: any): any {
     return (function(this: any, event: any) {
         const target = eventTargetAsElement(event.target ?? null);
@@ -350,6 +376,24 @@ export function onTrackPan(ctx: any, event: any): any {
 
         const pan = parseFloat(target.value || '0') / 100;
         this.setTrackPan(trackIndex, pan);
+    }).call(ctx, event);
+}
+
+export function onTrackPanReset(ctx: any, event: any): any {
+    return (function(this: any, event: any) {
+        const target = eventTargetAsElement(event.target ?? null);
+        if (!(target instanceof HTMLInputElement)) {
+            return;
+        }
+
+        const trackIndex = this.trackIndexFromTarget(target);
+        if (trackIndex < 0) {
+            return;
+        }
+
+        event.preventDefault();
+        this.setTrackPan(trackIndex, 0);
+        event.stopPropagation();
     }).call(ctx, event);
 }
 
