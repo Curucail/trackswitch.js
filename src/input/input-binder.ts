@@ -19,6 +19,7 @@ export interface InputController {
     onSeekMove(event: ControllerPointerEvent): void;
     onSeekEnd(event: ControllerPointerEvent): void;
     onSolo(event: ControllerPointerEvent): void;
+    onTrackRowToggle(event: ControllerPointerEvent): void;
     onAlignmentSync(event: ControllerPointerEvent): void;
     onVolume(event: ControllerPointerEvent): void;
     onVolumeReset(event: ControllerPointerEvent): void;
@@ -226,6 +227,12 @@ export class InputBinder {
         });
         this.addDelegatedListener('mousedown', '.track .control .solo', (event) => {
             this.controller.onSolo(event);
+        });
+        this.addDelegatedListener('touchstart', '.track', (event) => {
+            this.controller.onTrackRowToggle(event);
+        });
+        this.addDelegatedListener('mousedown', '.track', (event) => {
+            this.controller.onTrackRowToggle(event);
         });
 
         this.addDelegatedListener('touchstart', '.sync-global', (event) => {

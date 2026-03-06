@@ -56,6 +56,35 @@ function isShortcutSuppressedWhileHelpOpen(key: string, code: string, trackIndex
         || code === 'KeyC';
 }
 
+function toggleSoloFromPointerEvent(controller: any, event: any): void {
+    const index = controller.trackIndexFromTarget(event.target ?? null);
+    if (index < 0) {
+        return;
+    }
+
+    if (
+        event.shiftKey
+        && !controller.features.exclusiveSolo
+        && controller.runtimes[index]
+        && controller.runtimes[index].state.solo
+    ) {
+        const selectedCount = controller.runtimes.reduce(function(count: number, runtime: any) {
+            return count + (runtime.state.solo ? 1 : 0);
+        }, 0);
+
+        if (selectedCount === 1) {
+            controller.runtimes.forEach(function(runtime: any) {
+                runtime.state.solo = true;
+            });
+            controller.applyTrackProperties();
+            controller.updateMainControls();
+            return;
+        }
+    }
+
+    controller.toggleSolo(index, !!event.shiftKey);
+}
+
 export function setKeyboardActive(ctx: any): any {
     return (function(this: any) {
         setActiveKeyboardController(this.instanceId);
@@ -350,31 +379,23 @@ export function onSolo(ctx: any, event: any): any {
         }
 
         event.preventDefault();
+        toggleSoloFromPointerEvent(this, event);
+    }).call(ctx, event);
+}
 
-        const index = this.trackIndexFromTarget(event.target ?? null);
-        if (index >= 0) {
-            if (
-                event.shiftKey
-                && !this.features.exclusiveSolo
-                && this.runtimes[index]
-                && this.runtimes[index].state.solo
-            ) {
-                const selectedCount = this.runtimes.reduce(function(count: number, runtime: any) {
-                    return count + (runtime.state.solo ? 1 : 0);
-                }, 0);
-
-                if (selectedCount === 1) {
-                    this.runtimes.forEach(function(runtime: any) {
-                        runtime.state.solo = true;
-                    });
-                    this.applyTrackProperties();
-                    this.updateMainControls();
-                    return;
-                }
-            }
-
-            this.toggleSolo(index, !!event.shiftKey);
+export function onTrackRowToggle(ctx: any, event: any): any {
+    return (function(this: any, event: any) {
+        if (!isPrimaryInput(event)) {
+            return;
         }
+
+        const target = eventTargetAsElement(event.target ?? null);
+        if (target && (target.closest('.track-mix-controls') || target.closest('.control .solo'))) {
+            return;
+        }
+
+        event.preventDefault();
+        toggleSoloFromPointerEvent(this, event);
     }).call(ctx, event);
 }
 

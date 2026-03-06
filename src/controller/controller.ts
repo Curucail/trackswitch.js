@@ -344,6 +344,10 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         return controllerInput.onSolo(this, event);
     }
 
+    onTrackRowToggle(event: ControllerPointerEvent): void {
+        return controllerInput.onTrackRowToggle(this, event);
+    }
+
     onAlignmentSync(event: ControllerPointerEvent): void {
         return controllerInput.onAlignmentSync(this, event);
     }
