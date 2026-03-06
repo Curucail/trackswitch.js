@@ -76,35 +76,10 @@
 }
 
 .trackswitch .warping-tempo-slider {
-    -webkit-appearance: none;
-    appearance: none;
+    --ts-slider-track-color: var(--ts-color-surface-control);
     min-width: 80px;
-    width: 80px;
     max-width: 80px;
-    height: 4px;
-    background: var(--ts-color-surface-control);
-    outline: none;
-    cursor: pointer;
     margin: 0;
-}
-
-.trackswitch .warping-tempo-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 12px;
-    height: 12px;
-    background: var(--ts-color-accent);
-    cursor: pointer;
-    border-radius: 50%;
-}
-
-.trackswitch .warping-tempo-slider::-moz-range-thumb {
-    width: 12px;
-    height: 12px;
-    background: var(--ts-color-accent);
-    cursor: pointer;
-    border-radius: 50%;
-    border: none;
 }
 
 .trackswitch .warping-tempo-slider:disabled {

@@ -32,9 +32,9 @@
     background-color: var(--ts-color-surface-base);
 }
 
-/* NEVER USE IMPORTANT, SORT OUT THE SPECIFICITY PROBLEMS ------------------------------------------------------- TODO */
-.trackswitch li.track.error {
-    background-color: var(--ts-color-track-error-bg) !important;
+.trackswitch li.track.error,
+.trackswitch li.track.error:not(.tabs):nth-child(even) {
+    background-color: var(--ts-color-track-error-bg);
 }
 
 .trackswitch li.track .track-error-indicator {
@@ -104,28 +104,28 @@
     opacity: 1;
 }
 
-.trackswitch .control li.loop-a:after,
-.trackswitch .control li.loop-b:after {
+.trackswitch .control li.loop-a::after,
+.trackswitch .control li.loop-b::after {
     font-family: Arial, sans-serif;
     font-weight: bold;
     text-indent: 0;
     opacity: 0.5;
 }
 
-.trackswitch .control li.loop-a:after {
+.trackswitch .control li.loop-a::after {
     content: "A";
     /* Letter A */
 }
 
-.trackswitch .control li.loop-b:after {
+.trackswitch .control li.loop-b::after {
     content: "B";
     /* Letter B */
 }
 
-.trackswitch .control li.loop-a.checked:after,
-.trackswitch .control li.loop-a.active:after,
-.trackswitch .control li.loop-b.checked:after,
-.trackswitch .control li.loop-b.active:after {
+.trackswitch .control li.loop-a.checked::after,
+.trackswitch .control li.loop-a.active::after,
+.trackswitch .control li.loop-b.checked::after,
+.trackswitch .control li.loop-b.active::after {
     opacity: 1;
 }
 
@@ -174,7 +174,7 @@
 .trackswitch .control li.solo .ts-icon-slot[data-icon="circle-dot"] .ts-icon-svg path {
     stroke: currentColor;
     stroke-width: 14;
-} */
+}
 
 .trackswitch .control li.solo.radio {
     /* .radio bootstrap fix */
@@ -232,32 +232,7 @@
 }
 
 .trackswitch li.track .mix-slider {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 80px;
-    height: 4px;
-    background: var(--ts-color-border-mid);
-    outline: none;
-    cursor: pointer;
-}
-
-.trackswitch li.track .mix-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 12px;
-    height: 12px;
-    background: var(--ts-color-accent);
-    cursor: pointer;
-    border-radius: 50%;
-}
-
-.trackswitch li.track .mix-slider::-moz-range-thumb {
-    width: 12px;
-    height: 12px;
-    background: var(--ts-color-accent);
-    cursor: pointer;
-    border-radius: 50%;
-    border: none;
+    --ts-slider-track-color: var(--ts-color-border-mid);
 }
 
 .trackswitch li.track .mix-slider:disabled {

@@ -178,24 +178,9 @@
         margin-right: 12px;
     }
 
-    .trackswitch .main-control .volume-slider::-webkit-slider-thumb {
-        width: 16px;
-        height: 16px;
-    }
-
-    .trackswitch .warping-tempo-slider::-webkit-slider-thumb {
-        width: 16px;
-        height: 16px;
-    }
-
-    .trackswitch .main-control .volume-slider::-moz-range-thumb {
-        width: 16px;
-        height: 16px;
-    }
-
-    .trackswitch .warping-tempo-slider::-moz-range-thumb {
-        width: 16px;
-        height: 16px;
+    .trackswitch .main-control .volume-slider,
+    .trackswitch .warping-tempo-slider {
+        --ts-slider-thumb-size: 16px;
     }
 
     .trackswitch .main-control .control>li.loop-group>.loop-controls {
@@ -209,8 +194,8 @@
         height: 28px;
     }
 
-    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-a:after,
-    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-b:after {
+    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-a::after,
+    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-b::after {
         width: 22px;
         height: 22px;
         font-size: 13px;

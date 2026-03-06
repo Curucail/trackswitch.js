@@ -20,17 +20,13 @@
 
 .trackswitch .seekable-img-wrap .seekwrap {
     position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: 0;
+    inset: 0;
     cursor: pointer;
 }
 
 .trackswitch .seekable-img-wrap .seekwrap .seekhead {
     position: absolute;
-    top: 0;
-    bottom: 0;
+    inset-block: 0;
     border-left: 2px solid var(--ts-color-text-primary);
     border-right: 2px solid var(--ts-color-text-inverse);
 }
@@ -39,8 +35,7 @@
     position: absolute;
     width: 10px;
     /* Wider for click target */
-    top: 0;
-    bottom: 0;
+    inset-block: 0;
     display: none;
     /* Hidden by default, shown via JS */
     z-index: 2;
@@ -51,12 +46,11 @@
     background: transparent;
 }
 
-.trackswitch .seekable-img-wrap .seekwrap .loop-marker:after {
+.trackswitch .seekable-img-wrap .seekwrap .loop-marker::after {
     content: '';
     position: absolute;
     left: 50%;
-    top: 0;
-    bottom: 0;
+    inset-block: 0;
     width: 3px;
     background-color: var(--ts-color-surface-panel-dark);
     transform: translateX(-50%);
@@ -64,8 +58,7 @@
 
 .trackswitch .seekable-img-wrap .seekwrap .loop-region {
     position: absolute;
-    top: 0;
-    bottom: 0;
+    inset-block: 0;
     display: none;
     /* Hidden by default, shown via JS */
     background-color: var(--ts-color-accent-soft-15);

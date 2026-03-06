@@ -140,12 +140,11 @@
     background: transparent;
 }
 
-.trackswitch .main-control .seekwrap .seekbar .loop-marker:after {
+.trackswitch .main-control .seekwrap .seekbar .loop-marker::after {
     content: '';
     position: absolute;
     left: 50%;
-    top: 0;
-    bottom: 0;
+    inset-block: 0;
     width: 2px;
     background-color: var(--ts-color-surface-panel-dark);
     transform: translateX(-50%);
@@ -153,8 +152,7 @@
 
 .trackswitch .main-control .seekwrap .seekbar .loop-region {
     position: absolute;
-    height: 100%;
-    top: 0;
+    inset-block: 0;
     display: none;
     background-color: var(--ts-color-accent-soft-15);
     z-index: 1;
@@ -181,32 +179,7 @@
 }
 
 .trackswitch .main-control .volume-slider {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 80px;
-    height: 4px;
-    background: var(--ts-color-surface-control);
-    outline: none;
-    cursor: pointer;
-}
-
-.trackswitch .main-control .volume-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 12px;
-    height: 12px;
-    background: var(--ts-color-accent);
-    cursor: pointer;
-    border-radius: 50%;
-}
-
-.trackswitch .main-control .volume-slider::-moz-range-thumb {
-    width: 12px;
-    height: 12px;
-    background: var(--ts-color-accent);
-    cursor: pointer;
-    border-radius: 50%;
-    border: none;
+    --ts-slider-track-color: var(--ts-color-surface-control);
 }
 
 /* Loop group */
@@ -225,8 +198,8 @@
     justify-content: center;
 }
 
-.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-a:after,
-.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-b:after {
+.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-a::after,
+.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-b::after {
     width: 18px;
     height: 18px;
     margin: 0;
@@ -274,14 +247,9 @@
     touch-action: manipulation;
 }
 
-.trackswitch .main-control .preset-selector:hover {
-    background-color: var(--ts-color-surface-control);
-}
-
-.trackswitch .main-control .preset-selector:focus {
-    outline: none;
-    background-color: var(--ts-color-surface-control);
-    color: var(--ts-color-text-muted);
+.trackswitch .main-control .preset-selector:focus-visible {
+    outline: 2px solid var(--ts-focus-ring-color);
+    outline-offset: 2px;
 }
 
 .trackswitch .main-control .preset-selector option {
