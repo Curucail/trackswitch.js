@@ -55,14 +55,14 @@
 .trackswitch .volume-icon .ts-icon-slot {
     width: 100%;
     height: 100%;
-    justify-content: left;
+    justify-content: center;
 }
 
 .trackswitch .volume-icon .ts-icon-slot .ts-icon-svg {
     width: 1em;
     height: 1em;
     flex: 0 0 1em;
-    transform-origin: left;
+    transform-origin: center;
 }
 
 /* Normalize FA volume glyphs that ship with different viewBox widths. */

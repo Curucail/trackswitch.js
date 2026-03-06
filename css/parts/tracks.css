@@ -71,11 +71,12 @@
 }
 
 .trackswitch li.track ul.control li {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 24px;
     height: 24px;
     /*margin: 0; This realignes the controls with bootstrap (overridden) */
-    text-align: center;
 }
 
 .trackswitch .control li.button:not(.sync-global) {
