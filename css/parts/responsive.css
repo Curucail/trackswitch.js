@@ -235,26 +235,25 @@
     }
 
     .trackswitch .overlay-shortcuts {
-        padding: 10px;
+        padding: 8px;
     }
 
     .trackswitch .shortcut-help-panel {
-        padding: 12px 14px;
+        padding: 10px 12px;
         font-size: 12px;
     }
 
     .trackswitch .shortcut-help-header {
         flex-direction: column;
         align-items: stretch;
-    }
-
-    .trackswitch .shortcut-help-close {
-        justify-content: center;
+        gap: 6px;
+        margin-bottom: 6px;
     }
 
     .trackswitch .shortcut-help-item {
         grid-template-columns: 1fr;
-        gap: 4px;
+        gap: 2px;
+        padding: 5px 0;
     }
 
     .trackswitch .shortcut-help-keys {
@@ -262,13 +261,14 @@
         min-height: auto;
     }
 
-    .trackswitch .shortcut-help-heading h2 {
-        font-size: 16px;
+    .trackswitch .shortcut-help-title {
+        font-size: 15px;
     }
 
     .trackswitch .shortcut-help-heading p,
     .trackswitch .shortcut-help-footer {
         font-size: 11px;
+        line-height: 1.15;
     }
 
     .trackswitch li.track {

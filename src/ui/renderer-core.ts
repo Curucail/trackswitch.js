@@ -370,7 +370,7 @@ function buildShortcutHelpHtml(features: {
         + '<div class="shortcut-help-panel" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts help" tabindex="-1">'
         + '<div class="shortcut-help-header">'
         + '<div class="shortcut-help-heading">'
-        + '<h2>Keyboard Shortcuts</h2>'
+        + '<div class="shortcut-help-title">Help</div>'
         + '<p>Keyboard input applies to the last interacted TrackSwitch player.</p>'
         + '</div>'
         + '</div>'
