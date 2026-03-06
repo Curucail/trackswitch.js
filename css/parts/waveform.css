@@ -131,6 +131,7 @@
 
 .trackswitch .waveform-wrap .waveform-timing {
     right: 8px;
+    background: var(--ts-color-surface-panel-dark-50);
 }
 
 .trackswitch .waveform-wrap .waveform-zoom {
