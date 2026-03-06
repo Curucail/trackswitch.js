@@ -150,8 +150,10 @@ export class InputBinder {
         const activateKeyboard = () => {
             this.controller.setKeyboardActive();
         };
-        this.addListener(this.root, 'touchstart', activateKeyboard as EventListener);
-        this.addListener(this.root, 'mousedown', activateKeyboard as EventListener);
+        const keyboardActivationOptions = { capture: true } satisfies AddEventListenerOptions;
+        this.addListener(this.root, 'pointerdown', activateKeyboard as EventListener, keyboardActivationOptions);
+        this.addListener(this.root, 'touchstart', activateKeyboard as EventListener, keyboardActivationOptions);
+        this.addListener(this.root, 'mousedown', activateKeyboard as EventListener, keyboardActivationOptions);
 
         this.addDelegatedListener('touchstart', '.playpause', (event) => {
             this.controller.onPlayPause(event);
