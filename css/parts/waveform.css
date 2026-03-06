@@ -79,7 +79,7 @@
     top: 0;
     bottom: 0;
     width: 2px;
-    background-color: var(--ts-color-overlay-dim-seekhead);
+    background-color: var(--ts-color-surface-panel-dark);
     z-index: 3;
 }
 
@@ -137,7 +137,7 @@
     font-family: monospace;
     font-size: 11px;
     color: var(--ts-color-text-inverse);
-    background: var(--ts-color-overlay-dim-strong);
+    background: var(--ts-color-surface-panel-dark);
     pointer-events: none;
     user-select: none;
 }

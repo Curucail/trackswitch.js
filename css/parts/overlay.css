@@ -48,7 +48,7 @@
 
 
 .trackswitch.error .overlay {
-    background: var(--ts-color-overlay-dim-error);
+    background: var(--ts-color-surface-panel-dark);
 }
 
 .trackswitch.error .overlay>span {

@@ -5,7 +5,7 @@
 }
 
 .trackswitch {
-    /* Canonical palette only; this pass dedupes identical values by highest usage names. */
+    /* Canonical palette only; alpha color tokens are loop-region-only and info icon uses opacity. */
     --ts-color-text-primary: #000000;
     --ts-color-text-inverse: #FFFFFF;
     --ts-color-text-muted: #DDDDDD;
@@ -21,14 +21,8 @@
     --ts-color-accent: #ED8C01;
     --ts-color-accent-soft-15: rgba(237, 140, 1, 0.15);
     --ts-color-accent-soft-30: rgba(237, 140, 1, 0.3);
-
-    --ts-color-overlay-dim: rgba(0, 0, 0, 0.3);
-    --ts-color-overlay-dim-strong: rgba(0, 0, 0, 0.55);
-    --ts-color-overlay-dim-seekhead: rgba(0, 0, 0, 0.8);
-    --ts-color-overlay-dim-error: rgba(0, 0, 0, 0.6);
+    --ts-color-overlay-dim: rgba(0, 0, 0, 0.5);
     --ts-color-overlay-button: #F1C40F;
-
-    --ts-color-warning-bg: rgba(255, 220, 120, 0.95);
     --ts-color-track-error-bg: #DD9B9B;
 
     background: var(--ts-color-surface-base);

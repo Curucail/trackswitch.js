@@ -463,10 +463,10 @@
 
       snippetLines = [
         '<link rel="stylesheet" href="trackswitch.min.css" />',
+        '<script src="trackswitch.min.js"></script>',
         '',
         '<div id="player"></div>',
         '',
-        '<script src="trackswitch.min.js"></script>',
         '<script>',
         "document.addEventListener('DOMContentLoaded', function () {",
         "  TrackSwitch.createTrackSwitch(document.getElementById('player'), {",

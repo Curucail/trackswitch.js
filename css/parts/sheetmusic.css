@@ -58,7 +58,7 @@
     padding: 3px 6px;
     border-radius: 3px;
     font-size: 11px;
-    background: var(--ts-color-warning-bg);
+    background: var(--ts-color-overlay-button);
     color: var(--ts-color-surface-panel-dark);
     pointer-events: none;
 }
