@@ -34,16 +34,9 @@
     cursor: inherit;
 }
 
-.trackswitch .overlay>span:after {
-    content: "\f011";
-    /* fa-power-off */
-    padding-top: 7px;
+.trackswitch .overlay>span .ts-icon-slot {
     font-size: 28pt;
-}
-
-.trackswitch .overlay>span.loading:after {
-    content: "\f110";
-    /* fa-spinner */
+    padding-top: 7px;
 }
 
 
@@ -54,11 +47,6 @@
 .trackswitch.error .overlay>span {
     background: #C03328;
     cursor: inherit;
-}
-
-.trackswitch.error .overlay>span:after {
-    content: "\f12a";
-    /* fa-exclamation */
 }
 
 .trackswitch.error .overlay p {
@@ -84,15 +72,15 @@
     cursor: pointer;
     text-indent: -9999px;
     opacity: 0.4;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
 }
 
-.trackswitch .overlay #overlayinfo span.info:after {
-    content: "\f05a";
-    /* fa-info-circle */
-    position: absolute;
-    bottom: 0;
-    right: 0;
+.trackswitch .overlay #overlayinfo span.info .ts-icon-slot {
     font-size: 16pt;
+    width: auto;
+    height: auto;
 }
 
 .trackswitch .overlay #overlayinfo span.text {
@@ -109,4 +97,3 @@
     color: #EEEEEE;
     text-decoration: underline;
 }
-

@@ -60,16 +60,6 @@
     margin: 0;
 }
 
-.trackswitch .main-control .playback-group>.playback-controls>li.repeat:before {
-    position: absolute;
-    inset: 0px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1.0;
-    text-indent: 0;
-}
-
 /* Generic button styles within main-control */
 .trackswitch .main-control .button {
     width: 15px;
@@ -93,10 +83,6 @@
     padding: 0 6px;
     box-sizing: border-box;
     text-align: center;
-}
-
-.trackswitch .main-control .sync-global:after {
-    content: none;
 }
 
 .trackswitch .main-control .sync-global.checked {
@@ -189,8 +175,9 @@
     color: #DDDDDD;
     margin-right: 8px;
     width: 16px;
-    display: inline-block;
-    text-align: left;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
 }
 
 .trackswitch .main-control .volume-slider {
@@ -237,7 +224,8 @@
 }
 
 /* Normalize loop glyph geometry so A/B and icon buttons share size + centering */
-.trackswitch .main-control .control>li.loop-group>.loop-controls>li.button:after {
+.trackswitch .main-control .control>li.loop-group>.loop-controls>li.button:after,
+.trackswitch .main-control .control>li.loop-group>.loop-controls>li.button .ts-icon-slot {
     position: absolute;
     inset: 0;
     display: flex;
@@ -270,19 +258,8 @@
     height: 22px;
 }
 
-.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-toggle:before {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-    text-indent: 0;
-}
-
-.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-toggle:after,
-.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-toggle:before,
-.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-clear:after {
+.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-toggle .ts-icon-slot,
+.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-clear .ts-icon-slot {
     font-size: 16px;
 }
 

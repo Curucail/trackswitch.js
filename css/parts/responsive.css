@@ -152,8 +152,7 @@
         pointer-events: auto;
     }
 
-    .trackswitch .main-control .control li.button:after,
-    .trackswitch .main-control .control li.repeat:before {
+    .trackswitch .main-control .control li.button .ts-icon-slot {
         font-size: 20px;
     }
 
@@ -223,8 +222,8 @@
         height: 28px;
     }
 
-    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-toggle:before,
-    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-clear:after {
+    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-toggle .ts-icon-slot,
+    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-clear .ts-icon-slot {
         font-size: 20px;
     }
 
@@ -241,7 +240,7 @@
         bottom: 15px;
     }
 
-    .trackswitch .overlay #overlayinfo span.info:after {
+    .trackswitch .overlay #overlayinfo span.info .ts-icon-slot {
         font-size: 13pt;
     }
 

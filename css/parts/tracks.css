@@ -37,13 +37,29 @@
     background-color: #DD9B9B !important;
 }
 
-.trackswitch li.track.error:before {
-    content: "\f071  ERROR";
-    /* fa-exclamation-triangle */
-    display: inline;
-    padding-right: 10px;
+.trackswitch li.track .track-error-indicator {
+    display: none;
+    align-items: center;
+    gap: 8px;
     color: #7C2525;
-    cursor: inherit;
+    margin-right: 10px;
+    flex: 0 0 auto;
+}
+
+.trackswitch li.track .track-error-indicator .ts-icon-slot {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+.trackswitch li.track.error .track-error-indicator {
+    display: inline-flex;
+}
+
+.trackswitch li.track .track-error-text {
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 0.02em;
 }
 
 .trackswitch li.track ul.control {
@@ -69,37 +85,17 @@
     cursor: pointer;
 }
 
-.trackswitch .control li.button:after {
+.trackswitch .control li.button .ts-icon-slot {
     position: absolute;
-    top: 0;
+    inset: 0;
+    font-size: 16px;
 }
 
-.trackswitch .control li.playpause:after {
-    content: "\f04b";
-    /* fa-play */
-}
-
-.trackswitch .control li.playpause.checked:after {
-    content: "\f04c";
-    /* fa-pause */
-}
-
-.trackswitch .control li.stop:after {
-    content: "\f04d";
-    /* fa-stop */
-}
-
-.trackswitch .control li.repeat:after {
-    content: none;
-}
-
-.trackswitch .control li.repeat.fa-solid:before {
+.trackswitch .control li.repeat .ts-icon-slot {
     opacity: 0.5;
-    position: absolute;
-    top: 0;
 }
 
-.trackswitch .control li.repeat.checked.fa-solid:before {
+.trackswitch .control li.repeat.checked .ts-icon-slot {
     opacity: 1;
 }
 
@@ -128,40 +124,27 @@
     opacity: 1;
 }
 
-.trackswitch .control li.loop-toggle:after {
-    content: none;
-}
-
-.trackswitch .control li.loop-toggle.fa-solid:before {
+.trackswitch .control li.loop-toggle .ts-icon-slot {
     opacity: 0.5;
 }
 
-.trackswitch .control li.loop-toggle.checked.fa-solid:before {
+.trackswitch .control li.loop-toggle.checked .ts-icon-slot {
     opacity: 1;
 }
 
-.trackswitch .control li.loop-clear:after {
-    content: "\f00d";
-    /* fa-times / X icon */
+.trackswitch .control li.loop-clear .ts-icon-slot {
     opacity: 0.5;
 }
 
-.trackswitch .control li.loop-clear:hover:after {
+.trackswitch .control li.loop-clear:hover .ts-icon-slot {
     opacity: 1;
 }
 
-.trackswitch .control li.solo:after {
-    content: none;
-}
-
-.trackswitch .control li.solo.fa-regular:before,
-.trackswitch .control li.solo.fa-solid:before {
-    position: absolute;
+.trackswitch .control li.solo .ts-icon-slot {
     left: 4px;
-    font-size: 16px;
-    line-height: 1;
-    text-indent: 0;
+    right: auto;
     width: auto;
+    font-size: 16px;
 }
 
 .trackswitch .control li.solo.radio {
@@ -204,8 +187,9 @@
     color: #777777;
     margin-right: 8px;
     width: 16px;
-    display: inline-block;
-    text-align: left;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
 }
 
 .trackswitch li.track .track-pan-label {

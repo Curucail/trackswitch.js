@@ -34,16 +34,34 @@
     margin: 0;
 }
 
-/* Font Awesome icon hooks */
-.trackswitch .overlay span:after,
-.trackswitch li.track.error:before,
-.trackswitch .control li.button:after {
-    content: "";
-    display: block;
-    font-family: "Font Awesome 7 Free";
-    font-style: normal;
-    font-weight: 600;
-    font-size: 16px;
-    line-height: 1;
+/* Shared inline SVG icon geometry */
+.trackswitch .ts-icon-slot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
     text-indent: 0;
+    line-height: 1;
+    pointer-events: none;
+}
+
+.trackswitch .ts-icon-slot svg {
+    display: block;
+    width: 1em;
+    height: 1em;
+}
+
+.trackswitch .ts-icon-slot.is-spinning svg {
+    animation: trackswitch-icon-spin 1s linear infinite;
+}
+
+@keyframes trackswitch-icon-spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
 }

@@ -3,6 +3,7 @@ import { escapeHtml, sanitizeInlineStyle } from '../shared/dom';
 import { formatSecondsToHHMMSSmmm } from '../shared/format';
 import { clampPercent } from '../shared/math';
 import * as d3 from 'd3';
+import { getHostIconSlot, renderIconSlotHtml, setHostIcon } from './icons';
 
 type SvgSelection = d3.Selection<SVGSVGElement, unknown, null, undefined>;
 type GroupSelection = d3.Selection<SVGGElement, unknown, null, undefined>;
@@ -201,32 +202,23 @@ function sanitizePan(value: number): number {
     return clampTime(value, -1, 1);
 }
 
-function applySoloIconClassState(
+function applySoloIconState(
     soloButton: HTMLElement,
     isChecked: boolean,
     isRadio: boolean,
     syncEnabled: boolean
 ): void {
-    soloButton.classList.remove(
-        'fa-regular',
-        'fa-solid',
-        'fa-circle',
-        'fa-circle-check',
-        'fa-circle-dot',
-        'fa-dot-circle'
-    );
-
     if (!isChecked) {
-        soloButton.classList.add('fa-regular', 'fa-circle');
+        setHostIcon(soloButton, 'circle');
         return;
     }
 
     if (isRadio && !syncEnabled) {
-        soloButton.classList.add('fa-regular', 'fa-circle-dot');
+        setHostIcon(soloButton, 'circle-dot');
         return;
     }
 
-    soloButton.classList.add('fa-regular', 'fa-circle-check');
+    setHostIcon(soloButton, 'circle-check');
 }
 
 function parseSheetMusicString(value: string | null): string {
@@ -359,10 +351,12 @@ export function buildMainControlHtml(ctx: any, runtimes: any): any {
             presetDropdownHtml += '</select></li>';
         }
 
-        return '<div class="overlay"><span class="activate">Activate</span>'
+        return '<div class="overlay"><span class="activate">Activate'
+            + renderIconSlotHtml('power-off')
+            + '</span>'
             + '<p id="overlaytext"></p>'
             + '<p id="overlayinfo">'
-            + '<span class="info">Info</span>'
+            + '<span class="info">Info' + renderIconSlotHtml('circle-info') + '</span>'
             + '<span class="text">'
             + '<strong>trackswitch.js</strong> - open source multitrack audio player<br />'
             + '<a href="https://github.com/audiolabs/trackswitch.js">https://github.com/audiolabs/trackswitch.js</a>'
@@ -373,24 +367,36 @@ export function buildMainControlHtml(ctx: any, runtimes: any): any {
             + '<ul class="control">'
             + '<li class="playback-group">'
             + '<ul class="playback-controls">'
-            + '<li class="playpause button" title="Play/Pause (Spacebar)">Play</li>'
-            + '<li class="stop button" title="Stop (Esc)">Stop</li>'
-            + '<li class="repeat button fa-solid fa-rotate-right" title="Repeat (R)">Repeat</li>'
+            + '<li class="playpause button" title="Play/Pause (Spacebar)">Play'
+            + renderIconSlotHtml('play')
+            + '</li>'
+            + '<li class="stop button" title="Stop (Esc)">Stop'
+            + renderIconSlotHtml('stop')
+            + '</li>'
+            + '<li class="repeat button" title="Repeat (R)">Repeat'
+            + renderIconSlotHtml('rotate-right')
+            + '</li>'
             + (this.shouldRenderGlobalSync(runtimes)
                 ? '<li class="sync-global button" title="Use synchronized version">SYNC</li>'
                 : '')
             + '</ul>'
             + '</li>'
             + (this.features.globalVolume
-                ? '<li class="volume"><div class="volume-control"><i class="fa-solid fa-volume-high volume-icon"></i>'
+                ? '<li class="volume"><div class="volume-control"><i class="volume-icon">'
+                    + renderIconSlotHtml('volume-high')
+                    + '</i>'
                     + '<input type="range" class="volume-slider" min="0" max="100" value="100"></div></li>'
                 : '')
             + (this.features.looping
                 ? '<li class="loop-group"><ul class="loop-controls">'
                     + '<li class="loop-a button" title="Set Loop Point A (A)">Loop A</li>'
                     + '<li class="loop-b button" title="Set Loop Point B (B)">Loop B</li>'
-                    + '<li class="loop-toggle button fa-solid fa-repeat" title="Toggle Loop On/Off (L)">Loop</li>'
-                    + '<li class="loop-clear button" title="Clear Loop Points (C)">Clear</li>'
+                    + '<li class="loop-toggle button" title="Toggle Loop On/Off (L)">Loop'
+                    + renderIconSlotHtml('repeat')
+                    + '</li>'
+                    + '<li class="loop-clear button" title="Clear Loop Points (C)">Clear'
+                    + renderIconSlotHtml('xmark')
+                    + '</li>'
                     + '</ul></li>'
                 : '')
             + presetDropdownHtml
@@ -437,6 +443,13 @@ export function buildTrackRow(ctx: any, runtime: any, index: any): any {
         track.className = 'track' + tabviewClass + wholeSoloClass;
         track.setAttribute('style', sanitizeInlineStyle(runtime.definition.style || ''));
         track.setAttribute('data-track-index', String(index));
+
+        const errorIndicator = document.createElement('span');
+        errorIndicator.className = 'track-error-indicator';
+        errorIndicator.innerHTML = renderIconSlotHtml('triangle-exclamation')
+            + '<span class="track-error-text">ERROR</span>';
+        track.appendChild(errorIndicator);
+
         const title = document.createElement('span');
         title.className = 'track-title';
         title.textContent = runtime.definition.title || 'Track ' + (index + 1);
@@ -446,9 +459,10 @@ export function buildTrackRow(ctx: any, runtime: any, index: any): any {
         controls.className = 'control';
 
         const solo = document.createElement('li');
-        solo.className = 'solo button fa-regular fa-circle' + radioSoloClass;
+        solo.className = 'solo button' + radioSoloClass;
         solo.title = 'Solo';
         solo.textContent = 'Solo';
+        solo.insertAdjacentHTML('beforeend', renderIconSlotHtml('circle'));
         controls.appendChild(solo);
 
         track.appendChild(controls);
@@ -461,7 +475,8 @@ export function buildTrackRow(ctx: any, runtime: any, index: any): any {
             volumeControl.className = 'track-volume-control';
 
             const volumeIcon = document.createElement('i');
-            volumeIcon.className = 'volume-icon track-volume-icon fa-solid fa-volume-high';
+            volumeIcon.className = 'volume-icon track-volume-icon';
+            volumeIcon.innerHTML = renderIconSlotHtml('volume-high');
 
             const volumeSlider = document.createElement('input');
             volumeSlider.className = 'track-volume-slider mix-slider';
@@ -694,8 +709,9 @@ export function updateMainControls(ctx: any, state: any, runtimes: any, waveform
     return (function(this: any, state: any, runtimes: any, waveformTimelineContext: any, warpingMatrixContext: any) {
         this.root.classList.toggle('sync-enabled', state.syncEnabled);
 
-        this.queryAll('.playpause').forEach(function(element: HTMLElement) {
+        this.queryAll('.playpause').forEach((element: HTMLElement) => {
             element.classList.toggle('checked', state.playing);
+            setHostIcon(element, state.playing ? 'pause' : 'play');
         });
 
         this.queryAll('.repeat').forEach(function(element: HTMLElement) {
@@ -777,7 +793,7 @@ export function updateTrackControls(
                 solo.classList.toggle('checked', runtime.state.solo);
                 solo.classList.toggle('disabled', isLocked);
                 solo.classList.toggle('radio', effectiveSingleSoloMode);
-                applySoloIconClassState(
+                applySoloIconState(
                     solo,
                     runtime.state.solo,
                     effectiveSingleSoloMode,
@@ -932,25 +948,15 @@ export function updateVolumeIcon(ctx: any, volumeZeroToOne: any): any {
 
 export function applyVolumeIconState(ctx: any, icon: any, volumeZeroToOne: any): any {
     return (function(this: any, icon: any, volumeZeroToOne: any) {
-        icon.classList.remove(
-            'fa-volume-xmark',
-            'fa-volume-off',
-            'fa-volume-low',
-            'fa-volume-high',
-            'fa-volume-down',
-            'fa-volume-up',
-            'fa-volume',
-        );
-
         const volume = sanitizeVolume(volumeZeroToOne);
         if (volume === 0) {
-            icon.classList.add('fa-volume-xmark');
+            setHostIcon(icon, 'volume-xmark');
         } else if (volume <= (1 / 3)) {
-            icon.classList.add('fa-volume-low');
+            setHostIcon(icon, 'volume-off');
         } else if (volume <= (2 / 3)) {
-            icon.classList.add('fa-volume');
+            setHostIcon(icon, 'volume-low');
         } else {
-            icon.classList.add('fa-volume-high');
+            setHostIcon(icon, 'volume-high');
         }
     
     }).call(ctx, icon, volumeZeroToOne);
@@ -959,8 +965,13 @@ export function applyVolumeIconState(ctx: any, icon: any, volumeZeroToOne: any):
 export function setOverlayLoading(ctx: any, isLoading: any): any {
     return (function(this: any, isLoading: any) {
         this.queryAll('.overlay .activate').forEach(function(activate: HTMLElement) {
-            activate.classList.toggle('fa-spin', isLoading);
             activate.classList.toggle('loading', isLoading);
+            setHostIcon(activate, isLoading ? 'spinner' : 'power-off');
+
+            const iconSlot = getHostIconSlot(activate);
+            if (iconSlot) {
+                iconSlot.classList.toggle('is-spinning', isLoading);
+            }
         });
 
         this.queryAll('.overlay').forEach(function(overlay: HTMLElement) {
@@ -997,7 +1008,13 @@ export function showError(ctx: any, message: any, runtimes: any): any {
         this.root.classList.add('error');
 
         this.queryAll('.overlay .activate').forEach(function(activate: HTMLElement) {
-            activate.classList.remove('fa-spin', 'loading');
+            activate.classList.remove('loading');
+            setHostIcon(activate, 'exclamation');
+
+            const iconSlot = getHostIconSlot(activate);
+            if (iconSlot) {
+                iconSlot.classList.remove('is-spinning');
+            }
         });
 
         const overlayText = this.query('#overlaytext');

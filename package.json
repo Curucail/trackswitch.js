@@ -1,14 +1,14 @@
 {
   "name": "trackswitch",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "author": "Nils Werner (nils.werner@audiolabs-erlangen.de)",
   "description": "Multitrack Audio Player",
   "homepage": "https://github.com/audiolabs/trackswitch.js",
   "license": "MIT",
   "scripts": {
     "build": "npm run build:css && npm run build:js",
-    "build:css": "esbuild css/trackswitch.css --bundle --minify --loader:.woff=file --loader:.woff2=file --loader:.ttf=file --loader:.eot=file --loader:.otf=file --outfile=dist/css/trackswitch.min.css",
-    "build:css:watch": "esbuild css/trackswitch.css --bundle --loader:.woff=file --loader:.woff2=file --loader:.ttf=file --loader:.eot=file --loader:.otf=file --outfile=dist/css/trackswitch.min.css --watch=forever",
+    "build:css": "esbuild css/trackswitch.css --bundle --minify --outfile=dist/css/trackswitch.min.css",
+    "build:css:watch": "esbuild css/trackswitch.css --bundle --outfile=dist/css/trackswitch.min.css --watch=forever",
     "build:js": "node scripts/build-js.mjs",
     "build:js:watch": "esbuild src/index.ts --bundle --platform=browser --format=iife --global-name=TrackSwitch --target=es2017 --outfile=dist/js/trackswitch.js --watch=forever",
     "minify:js": "node scripts/build-js.mjs --minify-only",
@@ -39,7 +39,9 @@
   ],
   "dependencies": {
     "d3": "^7.9.0",
-    "@fortawesome/fontawesome-free": "^7.2.0",
+    "@fortawesome/fontawesome-svg-core": "^7.2.0",
+    "@fortawesome/free-regular-svg-icons": "^7.2.0",
+    "@fortawesome/free-solid-svg-icons": "^7.2.0",
     "opensheetmusicdisplay": "^1.9.7",
     "papaparse": "^5.5.3"
   },
