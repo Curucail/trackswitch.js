@@ -62,26 +62,28 @@
 }
 
 .trackswitch .overlay #overlayinfo {
-    height: 40px;
-    width: 100%;
-    bottom: 5px;
-    right: 10px;
+    min-height: 24px;
+    width: max-content;
+    max-width: min(92%, 420px);
+    top: calc(50% + 36px);
+    left: 50%;
+    transform: translateX(-50%);
+    padding-bottom: 8px;
     color: #000000;
-    text-align: right;
+    text-align: center;
     font-size: 14pt;
 }
 
 .trackswitch .overlay #overlayinfo span.info {
-    bottom: 0;
-    right: 0;
-    width: 380px;
-    cursor: pointer;
+    position: relative;
+    width: auto;
+    cursor: default;
     text-indent: 0;
     font-size: 0;
-    opacity: 0.4;
+    opacity: 0.45;
     display: flex;
-    align-items: flex-end;
-    justify-content: flex-end;
+    align-items: center;
+    justify-content: center;
 }
 
 .trackswitch .overlay #overlayinfo span.info .ts-icon-slot {
@@ -93,7 +95,23 @@
 .trackswitch .overlay #overlayinfo span.text {
     display: none;
     position: absolute;
-    right: 0;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.75);
+    color: #FFFFFF;
+    border-radius: 6px;
+    padding: 8px 10px;
+    white-space: nowrap;
+    line-height: 1.25;
+}
+
+.trackswitch .overlay #overlayinfo:hover span.info {
+    opacity: 0.95;
+}
+
+.trackswitch .overlay #overlayinfo:hover span.text {
+    display: block;
 }
 
 .trackswitch .overlay #overlayinfo span.text strong {

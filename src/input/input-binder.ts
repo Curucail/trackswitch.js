@@ -140,13 +140,6 @@ export class InputBinder {
             this.controller.onOverlayActivate(event);
         });
 
-        this.addDelegatedListener('touchstart', '.overlay #overlayinfo .info', (event) => {
-            this.controller.onOverlayInfo(event);
-        });
-        this.addDelegatedListener('mousedown', '.overlay #overlayinfo .info', (event) => {
-            this.controller.onOverlayInfo(event);
-        });
-
         const activateKeyboard = () => {
             this.controller.setKeyboardActive();
         };

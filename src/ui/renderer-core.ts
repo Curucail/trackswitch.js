@@ -358,7 +358,7 @@ export function buildMainControlHtml(ctx: any, runtimes: any): any {
             + '<p id="overlayinfo">'
             + '<span class="info">Info' + renderIconSlotHtml('circle-info') + '</span>'
             + '<span class="text">'
-            + '<strong>trackswitch.js</strong> - open source multitrack audio player<br />'
+            + '<strong>trackswitch.js</strong> - Open Source Multitrack Audio Player<br />'
             + '<a href="https://github.com/audiolabs/trackswitch.js">https://github.com/audiolabs/trackswitch.js</a>'
             + '</span>'
             + '</p>'
