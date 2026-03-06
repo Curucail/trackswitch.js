@@ -464,7 +464,7 @@ export function buildMainControlHtml(ctx: any, runtimes: any): any {
             + '</p>'
             + '</div>'
             + buildShortcutHelpHtml(this.features, runtimes.length)
-            + '<div class="main-control">'
+            + '<div class="main-control ts-stack-section">'
             + '<ul class="control">'
             + '<li class="playback-group">'
             + '<ul class="playback-controls">'
@@ -668,7 +668,7 @@ export function renderTrackList(ctx: any, runtimes: any): any {
 
 export function wrapSeekableImages(ctx: any): any {
     return (function(this: any) {
-        const candidates = this.queryAll('.seekable');
+        const candidates = this.queryAll('img:not(.per-track-image)');
 
         candidates.forEach((candidate: HTMLElement) => {
             if (!(candidate instanceof HTMLImageElement)) {
@@ -679,6 +679,9 @@ export function wrapSeekableImages(ctx: any): any {
                 return;
             }
 
+            const section = document.createElement('div');
+            section.className = 'seekable-section ts-stack-section';
+
             const wrapper = document.createElement('div');
             wrapper.className = 'seekable-img-wrap';
             wrapper.setAttribute('style', sanitizeInlineStyle(candidate.getAttribute('data-style')) + '; display: block;');
@@ -688,15 +691,19 @@ export function wrapSeekableImages(ctx: any): any {
                 return;
             }
 
-            parent.insertBefore(wrapper, candidate);
+            parent.insertBefore(section, candidate);
+            section.appendChild(wrapper);
             wrapper.appendChild(candidate);
-            wrapper.insertAdjacentHTML(
-                'beforeend',
-                buildSeekWrap(
-                    clampPercent(candidate.getAttribute('data-seek-margin-left')),
-                    clampPercent(candidate.getAttribute('data-seek-margin-right'))
-                )
-            );
+
+            if (candidate.classList.contains('seekable')) {
+                wrapper.insertAdjacentHTML(
+                    'beforeend',
+                    buildSeekWrap(
+                        clampPercent(candidate.getAttribute('data-seek-margin-left')),
+                        clampPercent(candidate.getAttribute('data-seek-margin-right'))
+                    )
+                );
+            }
         });
     
     }).call(ctx);
@@ -717,7 +724,7 @@ export function wrapSheetMusicContainers(ctx: any): any {
 
             if (!wrapper) {
                 wrapper = document.createElement('div');
-                wrapper.className = 'sheetmusic-wrap';
+                wrapper.className = 'sheetmusic-wrap ts-stack-section';
                 wrapper.setAttribute(
                     'style',
                     sanitizeInlineStyle(hostElement.getAttribute('data-sheetmusic-style')) + '; display: block;'

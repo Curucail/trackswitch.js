@@ -38,6 +38,10 @@
     margin: 0;
 }
 
+.trackswitch > .ts-stack-section:not(.main-control) + .ts-stack-section {
+    border-top: 1px solid var(--ts-color-border-mid);
+}
+
 /* Shared inline SVG icon geometry */
 .trackswitch .ts-icon-slot {
     display: inline-flex;

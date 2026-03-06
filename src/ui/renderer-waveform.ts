@@ -215,7 +215,7 @@ export function wrapWaveformCanvases(ctx: any): any {
             const originalHeight = canvasElement.height;
 
             const wrapper = document.createElement('div');
-            wrapper.className = 'waveform-wrap';
+            wrapper.className = 'waveform-wrap ts-stack-section';
             wrapper.setAttribute('style', sanitizeInlineStyle(canvasElement.getAttribute('data-waveform-style')) + '; display: block;');
             const scrollContainer = document.createElement('div');
             scrollContainer.className = 'waveform-scroll';

@@ -15,7 +15,11 @@
     width: fit-content;
     position: relative;
     margin: 0 auto;
-    border-bottom: 1px solid var(--ts-color-border-mid);
+}
+
+.trackswitch .seekable-section {
+    display: block;
+    width: 100%;
 }
 
 .trackswitch .seekable-img-wrap .seekwrap {

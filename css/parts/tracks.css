@@ -4,11 +4,6 @@
     padding: 0;
 }
 
-.trackswitch .track-group {
-    border-top: 1px solid var(--ts-color-border-mid);
-    border-bottom: 1px solid var(--ts-color-border-mid);
-}
-
 .trackswitch li.track {
     background-color: var(--ts-color-text-muted);
     position: relative;

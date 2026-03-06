@@ -331,7 +331,7 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
             let wrapper: HTMLElement | null = hostElement.closest('.warping-matrix-wrap') as HTMLElement | null;
             if (!wrapper) {
                 wrapper = document.createElement('div');
-                wrapper.className = 'warping-matrix-wrap';
+                wrapper.className = 'warping-matrix-wrap ts-stack-section';
                 wrapper.setAttribute(
                     'style',
                     sanitizeInlineStyle(hostElement.getAttribute('data-warping-matrix-style')) + '; display: block;'
@@ -344,6 +344,8 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
 
                 parent.insertBefore(wrapper, hostElement);
                 wrapper.appendChild(hostElement);
+            } else {
+                wrapper.classList.add('ts-stack-section');
             }
 
             const configuredHeight = parseWarpingMatrixHeight(hostElement.getAttribute('data-warping-matrix-height'));

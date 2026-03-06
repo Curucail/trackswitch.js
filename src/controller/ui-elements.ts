@@ -361,7 +361,7 @@ function injectWarpingMatrix(root: HTMLElement, warpingMatrix: TrackSwitchWarpin
 
 function injectTrackGroup(root: HTMLElement, trackGroupIndex: number): void {
     const container = document.createElement('div');
-    container.className = 'track-group';
+    container.className = 'track-group ts-stack-section';
     container.setAttribute('data-track-group-index', String(trackGroupIndex));
     root.appendChild(container);
 }
