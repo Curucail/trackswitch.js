@@ -134,6 +134,7 @@ title: trackswitch.js
         <li><code>trackswitch.min.css</code></li>
         <li><code>trackswitch.min.js</code></li>
       </ul>
+      <p class="ts-showcase__install-label">No separate Font Awesome CSS include is needed.</p>
     </aside>
   </div>
 </section>

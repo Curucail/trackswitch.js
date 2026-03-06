@@ -15,10 +15,13 @@ For manual usage, include:
 - `dist/css/trackswitch.min.css`
 - `dist/js/trackswitch.min.js`
 
+No separate Font Awesome stylesheet is required.
+
 Initialization
 --------------
 
 ```html
+<link rel="stylesheet" href="dist/css/trackswitch.min.css">
 <div id="player"></div>
 <script src="dist/js/trackswitch.min.js"></script>
 <script>

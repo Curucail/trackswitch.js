@@ -163,6 +163,7 @@
 
     .trackswitch .main-control .volume-control .volume-icon {
         font-size: 20px;
+        margin-right: 12px;
     }
 
     .trackswitch .main-control .volume-slider::-webkit-slider-thumb {
@@ -188,23 +189,15 @@
     .trackswitch .main-control .control>li.loop-group>.loop-controls {
         gap: 6px;
         position: relative;
-        top: 1px;
-    }
-
-    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-a,
-    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-b {
-        width: 26px;
-        height: 26px;
-    }
-
-    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-toggle,
-    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-clear {
-        width: 18px;
-        height: 26px;
+        top: 2px;
     }
 
     .trackswitch .main-control .preset-selector {
         font-size: 14px;
+    }
+
+    .trackswitch .main-control .timing {
+        font-size: 16px;
     }
 
     .trackswitch .overlay #overlayinfo {
@@ -236,6 +229,7 @@
 
     .trackswitch li.track .track-volume-icon {
         font-size: 18px;
+        margin-right: 10px;
     }
 
     .trackswitch li.track .mix-slider::-webkit-slider-thumb {
