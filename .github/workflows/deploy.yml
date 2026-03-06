@@ -41,6 +41,7 @@ jobs:
         run: |
           mkdir -p docs/css docs/js
           cp dist/css/trackswitch.min.css docs/css/
+          cp dist/css/fa-*.woff2 docs/css/
           cp dist/js/trackswitch.min.js docs/js/
       
       - name: Setup Pages
