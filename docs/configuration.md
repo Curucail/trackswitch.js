@@ -427,13 +427,14 @@ Alignment behavior summary:
 
 When `features.keyboard` is `true`:
 
+- `F1` - open/close the keyboard shortcut help overlay
 - `Space` - play/pause
 - `Escape` - stop + reset position
 - `R` - toggle repeat
-- `ArrowLeft` / `ArrowRight` - seek `-2s / +2s`
-- `Shift + ArrowLeft` / `Shift + ArrowRight` - seek `-5s / +5s`
+- `← / →` - seek `-2s / +2s`
+- `Shift + ← / →` - seek `-5s / +5s`
 - `Home` - jump to start
-- `ArrowUp` / `ArrowDown` - volume up/down (`globalVolume` only)
+- `↑ / ↓` - volume up/down (`globalVolume` only)
 - `1`..`0` - control tracks `1`..`10`
   - exclusive solo mode: activate selected track
   - non-exclusive mode: toggle selected track mute/solo state
@@ -446,6 +447,8 @@ When `features.looping` is `true`:
 - `C` - clear loop points
 
 Keyboard input goes to the last interacted player instance.
+
+The `F1` help overlay only shows shortcuts that are relevant to the current enabled feature set.
 
 # Looping Behavior
 

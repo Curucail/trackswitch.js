@@ -247,9 +247,10 @@
     touch-action: manipulation;
 }
 
+.trackswitch .main-control .preset-selector:focus,
 .trackswitch .main-control .preset-selector:focus-visible {
-    outline: 2px solid var(--ts-focus-ring-color);
-    outline-offset: 2px;
+    outline: none;
+    box-shadow: none;
 }
 
 .trackswitch .main-control .preset-selector option {

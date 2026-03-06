@@ -179,6 +179,7 @@ See [examples](https://audiolabs.github.io/trackswitch.js/examples.html).
 Keyboard Shortcuts
 ------------------
 
+- `F1` - Open or close the keyboard shortcut help overlay
 - `Space` - Play / Pause
 - `Escape` - Stop and reset position
 - `R` - Toggle repeat
@@ -192,6 +193,7 @@ Keyboard Shortcuts
 - `C` - Clear loop points (when `looping` is enabled)
 
 When multiple players exist on a page, the last-clicked player receives keyboard input.
+The `F1` help overlay only lists shortcuts that apply to the current player configuration.
 
 Whats included
 --------------

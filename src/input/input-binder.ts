@@ -6,8 +6,12 @@ export interface InputController {
     eventNamespace: string;
     presetCount: number;
     setKeyboardActive(): void;
+    openShortcutHelp(): void;
+    toggleShortcutHelp(): void;
+    closeShortcutHelp(): void;
     onOverlayActivate(event: ControllerPointerEvent): void;
     onOverlayInfo(event: ControllerPointerEvent): void;
+    onShortcutHelpOverlay(event: ControllerPointerEvent): void;
     onPlayPause(event: ControllerPointerEvent): void;
     onStop(event: ControllerPointerEvent): void;
     onRepeat(event: ControllerPointerEvent): void;
@@ -138,6 +142,9 @@ export class InputBinder {
     bind(): void {
         this.addDelegatedListener('click', '.overlay .activate', (event) => {
             this.controller.onOverlayActivate(event);
+        });
+        this.addDelegatedListener('click', '.overlay-shortcuts', (event) => {
+            this.controller.onShortcutHelpOverlay(event);
         });
 
         const activateKeyboard = () => {

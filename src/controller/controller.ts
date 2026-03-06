@@ -116,6 +116,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     public readonly eventNamespace: string;
     public readonly instanceId: number;
     public readonly presetCount: number;
+    public shortcutHelpOpen = false;
 
     constructor(rootElement: HTMLElement, config: NormalizedTrackSwitchConfig) {
         this.root = rootElement;
@@ -282,12 +283,28 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         return controllerInput.setKeyboardActive(this);
     }
 
+    openShortcutHelp(): void {
+        return controllerInput.openShortcutHelp(this);
+    }
+
+    toggleShortcutHelp(): void {
+        return controllerInput.toggleShortcutHelp(this);
+    }
+
+    closeShortcutHelp(): void {
+        return controllerInput.closeShortcutHelp(this);
+    }
+
     onOverlayActivate(event: ControllerPointerEvent): void {
         return controllerInput.onOverlayActivate(this, event);
     }
 
     onOverlayInfo(event: ControllerPointerEvent): void {
         return controllerInput.onOverlayInfo(this, event);
+    }
+
+    onShortcutHelpOverlay(event: ControllerPointerEvent): void {
+        return controllerInput.onShortcutHelpOverlay(this, event);
     }
 
     onPlayPause(event: ControllerPointerEvent): void {

@@ -220,18 +220,55 @@
         font-size: 16px;
     }
 
-    .trackswitch .overlay #overlayinfo {
+    .trackswitch .overlay-activation #overlayinfo {
         font-size: 8pt;
         top: calc(50% + 42px);
     }
 
-    .trackswitch .overlay #overlayinfo span.info .ts-icon-slot {
+    .trackswitch .overlay-activation #overlayinfo span.info .ts-icon-slot {
         font-size: 13pt;
     }
 
-    .trackswitch .overlay #overlayinfo span.text {
+    .trackswitch .overlay-activation #overlayinfo span.text {
         font-size: 11pt;
         line-height: 1.2;
+    }
+
+    .trackswitch .overlay-shortcuts {
+        padding: 10px;
+    }
+
+    .trackswitch .shortcut-help-panel {
+        padding: 12px 14px;
+        font-size: 12px;
+    }
+
+    .trackswitch .shortcut-help-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .trackswitch .shortcut-help-close {
+        justify-content: center;
+    }
+
+    .trackswitch .shortcut-help-item {
+        grid-template-columns: 1fr;
+        gap: 4px;
+    }
+
+    .trackswitch .shortcut-help-keys {
+        justify-content: flex-start;
+        min-height: auto;
+    }
+
+    .trackswitch .shortcut-help-heading h2 {
+        font-size: 16px;
+    }
+
+    .trackswitch .shortcut-help-heading p,
+    .trackswitch .shortcut-help-footer {
+        font-size: 11px;
     }
 
     .trackswitch li.track {

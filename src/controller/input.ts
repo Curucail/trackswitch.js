@@ -20,9 +20,78 @@ function closestInRoot(root: HTMLElement, target: EventTarget | null | undefined
     return matched as HTMLElement;
 }
 
+function isShortcutHelpToggleKey(event: { key?: string; code?: string }): boolean {
+    return event.key === 'F1' || event.code === 'F1';
+}
+
+function isShortcutSuppressedWhileHelpOpen(key: string, code: string, trackIndex: number | null): boolean {
+    if (trackIndex !== null) {
+        return true;
+    }
+
+    return key === ' '
+        || key === 'Spacebar'
+        || key === 'Space'
+        || key === 'Escape'
+        || key === 'Esc'
+        || key === 'ArrowLeft'
+        || key === 'ArrowRight'
+        || key === 'ArrowUp'
+        || key === 'ArrowDown'
+        || key === 'Home'
+        || key === 'r'
+        || key === 'R'
+        || key === 'a'
+        || key === 'A'
+        || key === 'b'
+        || key === 'B'
+        || key === 'l'
+        || key === 'L'
+        || key === 'c'
+        || key === 'C'
+        || code === 'KeyR'
+        || code === 'KeyA'
+        || code === 'KeyB'
+        || code === 'KeyL'
+        || code === 'KeyC';
+}
+
 export function setKeyboardActive(ctx: any): any {
     return (function(this: any) {
         setActiveKeyboardController(this.instanceId);
+    }).call(ctx);
+}
+
+export function openShortcutHelp(ctx: any): any {
+    return (function(this: any) {
+        if (this.shortcutHelpOpen) {
+            return;
+        }
+
+        this.shortcutHelpOpen = true;
+        this.renderer.setShortcutHelpVisible(true);
+    }).call(ctx);
+}
+
+export function toggleShortcutHelp(ctx: any): any {
+    return (function(this: any) {
+        if (this.shortcutHelpOpen) {
+            this.closeShortcutHelp();
+            return;
+        }
+
+        this.openShortcutHelp();
+    }).call(ctx);
+}
+
+export function closeShortcutHelp(ctx: any): any {
+    return (function(this: any) {
+        if (!this.shortcutHelpOpen) {
+            return;
+        }
+
+        this.shortcutHelpOpen = false;
+        this.renderer.setShortcutHelpVisible(false);
     }).call(ctx);
 }
 
@@ -44,6 +113,20 @@ export function onOverlayInfo(ctx: any, event: any): any {
     return (function(this: any, event: any) {
         event.preventDefault();
         this.renderer.showOverlayInfoText();
+        event.stopPropagation();
+    }).call(ctx, event);
+}
+
+export function onShortcutHelpOverlay(ctx: any, event: any): any {
+    return (function(this: any, event: any) {
+        const target = eventTargetAsElement(event.target ?? null);
+        if (target && target.closest('.shortcut-help-panel')) {
+            return;
+        }
+
+        event.preventDefault();
+        this.setKeyboardActive();
+        this.closeShortcutHelp();
         event.stopPropagation();
     }).call(ctx, event);
 }
@@ -523,9 +606,32 @@ export function onKeyboard(ctx: any, event: any): any {
         }
 
         const key = event.key || event.code;
+        const code = event.code || '';
+        const trackIndex = this.getKeyboardTrackIndex(event);
         let handled = false;
 
-        const trackIndex = this.getKeyboardTrackIndex(event);
+        if (isShortcutHelpToggleKey(event)) {
+            event.preventDefault();
+            this.toggleShortcutHelp();
+            event.stopPropagation();
+            return;
+        }
+
+        if (this.shortcutHelpOpen) {
+            if (key === 'Escape' || key === 'Esc') {
+                event.preventDefault();
+                this.closeShortcutHelp();
+                event.stopPropagation();
+                return;
+            }
+
+            if (isShortcutSuppressedWhileHelpOpen(key, code, trackIndex)) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            return;
+        }
+
         if (trackIndex !== null && trackIndex < this.runtimes.length) {
             event.preventDefault();
             this.toggleSolo(trackIndex, this.effectiveSingleSoloMode);

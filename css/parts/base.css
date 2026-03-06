@@ -6,7 +6,8 @@
 
 .trackswitch {
     --ts-slider-thumb-size: 12px;
-    --ts-slider-track-size: 4px;
+    --ts-slider-track-size: 5px;
+    --ts-slider-hit-size: 16px;
 
     background: var(--ts-color-surface-base);
     position: relative;
@@ -93,11 +94,11 @@
     -webkit-appearance: none;
     appearance: none;
     width: var(--ts-slider-width, 80px);
-    height: var(--ts-slider-track-size);
+    height: var(--ts-slider-hit-size);
     margin: 0;
     border: 0;
     border-radius: 999px;
-    background: var(--ts-slider-track-color, var(--ts-color-surface-control));
+    background: transparent;
     cursor: pointer;
 }
 

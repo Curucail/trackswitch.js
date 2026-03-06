@@ -157,6 +157,11 @@ interface WarpingMatrixHostMetadata {
     lastSizeKey: string | null;
 }
 
+interface ShortcutHelpEntry {
+    keys: string;
+    action: string;
+}
+
 function buildSeekWrap(leftPercent: number, rightPercent: number): string {
     return '<div class="seekwrap" style="left: ' + leftPercent + '%; right: ' + rightPercent + '%;">'
         + '<div class="loop-region"></div>'
@@ -298,6 +303,83 @@ function parseSheetMusicFollowPlayback(value: string | null): boolean {
     return parseSheetMusicString(value).toLowerCase() !== 'false';
 }
 
+function buildTrackShortcutAction(trackCount: number, singleSoloMode: boolean): string {
+    void trackCount;
+
+    return singleSoloMode
+        ? 'Switch between tracks 1-10 by number.'
+        : 'Toggle tracks 1-10 by number.';
+}
+
+function getShortcutHelpEntries(features: {
+    mode: string;
+    exclusiveSolo: boolean;
+    globalVolume: boolean;
+    looping: boolean;
+}, trackCount: number): ShortcutHelpEntry[] {
+    const entries: ShortcutHelpEntry[] = [
+        { keys: 'Space', action: 'Play or pause playback.' },
+        { keys: 'Escape', action: 'Stop playback and reset to the start.' },
+        { keys: 'R', action: 'Toggle repeat mode.' },
+        { keys: '← / →', action: 'Seek backward or forward by 2 seconds.' },
+        { keys: 'Shift + ← / Shift + →', action: 'Seek backward or forward by 5 seconds.' },
+        { keys: 'Home', action: 'Jump to the start.' },
+        {
+            keys: '1 .. 0',
+            action: buildTrackShortcutAction(
+                trackCount,
+                features.mode === 'alignment' || features.exclusiveSolo
+            ),
+        },
+    ];
+
+    if (features.globalVolume) {
+        entries.push({
+            keys: '↑ / ↓',
+            action: 'Increase or decrease the global volume by 10%.',
+        });
+    }
+
+    if (features.looping) {
+        entries.push(
+            { keys: 'A', action: 'Set loop point A at the current position.' },
+            { keys: 'B', action: 'Set loop point B at the current position.' },
+            { keys: 'L', action: 'Toggle the active loop region on or off.' },
+            { keys: 'C', action: 'Clear both loop points.' }
+        );
+    }
+
+    return entries;
+}
+
+function buildShortcutHelpHtml(features: {
+    mode: string;
+    exclusiveSolo: boolean;
+    globalVolume: boolean;
+    looping: boolean;
+}, trackCount: number): string {
+    const entries = getShortcutHelpEntries(features, trackCount);
+    const itemsHtml = entries.map(function(entry: ShortcutHelpEntry, index: number) {
+        return '<li class="shortcut-help-item" style="--ts-shortcut-delay: ' + String(40 + (index * 20)) + 'ms;">'
+            + '<span class="shortcut-help-keys">' + escapeHtml(entry.keys) + '</span>'
+            + '<span class="shortcut-help-action">' + escapeHtml(entry.action) + '</span>'
+            + '</li>';
+    }).join('');
+
+    return '<div class="overlay overlay-shortcuts is-hidden" aria-hidden="true">'
+        + '<div class="shortcut-help-panel" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts help" tabindex="-1">'
+        + '<div class="shortcut-help-header">'
+        + '<div class="shortcut-help-heading">'
+        + '<h2>Keyboard Shortcuts</h2>'
+        + '<p>Keyboard input applies to the last interacted TrackSwitch player.</p>'
+        + '</div>'
+        + '</div>'
+        + '<ul class="shortcut-help-list">' + itemsHtml + '</ul>'
+        + '<p class="shortcut-help-footer">Press <strong>F1</strong> or <strong>Escape</strong> to close.</p>'
+        + '</div>'
+        + '</div>';
+}
+
 export function query(ctx: any, selector: any): any {
     return (function(this: any, selector: any) {
         return this.root.querySelector(selector);
@@ -351,7 +433,7 @@ export function buildMainControlHtml(ctx: any, runtimes: any): any {
             presetDropdownHtml += '</select></li>';
         }
 
-        return '<div class="overlay"><span class="activate">Activate'
+        return '<div class="overlay overlay-activation"><span class="activate">Activate'
             + renderIconSlotHtml('power-off')
             + '</span>'
             + '<p id="overlaytext"></p>'
@@ -363,6 +445,7 @@ export function buildMainControlHtml(ctx: any, runtimes: any): any {
             + '</span>'
             + '</p>'
             + '</div>'
+            + buildShortcutHelpHtml(this.features, runtimes.length)
             + '<div class="main-control">'
             + '<ul class="control">'
             + '<li class="playback-group">'
@@ -969,7 +1052,7 @@ export function applyVolumeIconState(ctx: any, icon: any, volumeZeroToOne: any):
 
 export function setOverlayLoading(ctx: any, isLoading: any): any {
     return (function(this: any, isLoading: any) {
-        this.queryAll('.overlay .activate').forEach(function(activate: HTMLElement) {
+        this.queryAll('.overlay-activation .activate').forEach(function(activate: HTMLElement) {
             activate.classList.toggle('loading', isLoading);
             setHostIcon(activate, isLoading ? 'spinner' : 'power-off');
 
@@ -979,11 +1062,33 @@ export function setOverlayLoading(ctx: any, isLoading: any): any {
             }
         });
 
-        this.queryAll('.overlay').forEach(function(overlay: HTMLElement) {
+        this.queryAll('.overlay-activation').forEach(function(overlay: HTMLElement) {
             overlay.classList.toggle('loading', isLoading);
         });
     
     }).call(ctx, isLoading);
+}
+
+export function setShortcutHelpVisible(ctx: any, isVisible: any): any {
+    return (function(this: any, isVisible: any) {
+        this.queryAll('.overlay-shortcuts').forEach(function(overlay: HTMLElement) {
+            overlay.classList.toggle('is-hidden', !isVisible);
+            overlay.setAttribute('aria-hidden', isVisible ? 'false' : 'true');
+
+            if (isVisible) {
+                const panel = overlay.querySelector('.shortcut-help-panel');
+                if (panel instanceof HTMLElement) {
+                    panel.focus();
+                }
+                return;
+            }
+
+            const activeElement = document.activeElement;
+            if (activeElement instanceof HTMLElement && overlay.contains(activeElement)) {
+                activeElement.blur();
+            }
+        });
+    }).call(ctx, isVisible);
 }
 
 export function showOverlayInfoText(ctx: any): any {
@@ -1001,8 +1106,8 @@ export function showOverlayInfoText(ctx: any): any {
 
 export function hideOverlayOnLoaded(ctx: any): any {
     return (function(this: any) {
-        this.queryAll('.overlay').forEach(function(overlay: HTMLElement) {
-            overlay.remove();
+        this.queryAll('.overlay-activation').forEach(function(overlay: HTMLElement) {
+            overlay.classList.add('is-hidden');
         });
     
     }).call(ctx);
@@ -1012,7 +1117,11 @@ export function showError(ctx: any, message: any, runtimes: any): any {
     return (function(this: any, message: any, runtimes: any) {
         this.root.classList.add('error');
 
-        this.queryAll('.overlay .activate').forEach(function(activate: HTMLElement) {
+        this.queryAll('.overlay-activation').forEach(function(overlay: HTMLElement) {
+            overlay.classList.remove('is-hidden');
+        });
+
+        this.queryAll('.overlay-activation .activate').forEach(function(activate: HTMLElement) {
             activate.classList.remove('loading');
             setHostIcon(activate, 'exclamation');
 

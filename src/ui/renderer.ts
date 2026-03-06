@@ -642,6 +642,10 @@ setOverlayLoading(isLoading: boolean): void {
         return viewRendererCore.setOverlayLoading(this, isLoading);
     }
 
+setShortcutHelpVisible(isVisible: boolean): void {
+        return viewRendererCore.setShortcutHelpVisible(this, isVisible);
+    }
+
 showOverlayInfoText(): void {
         return viewRendererCore.showOverlayInfoText(this);
     }
