@@ -52,7 +52,7 @@
 }
 
 .trackswitch.error .overlay>span {
-    background: var(--ts-color-overlay-error-button);
+    background: var(--ts-color-text-error);
     cursor: inherit;
 }
 
@@ -101,7 +101,7 @@
     transform: translateX(-50%);
     background: var(--ts-color-surface-base);
     color: var(--ts-color-surface-panel-dark);
-    border: 1px solid var(--ts-color-surface-alt);
+    border: 1px solid var(--ts-color-text-muted);
     border-radius: 6px;
     padding: 8px 10px;
     white-space: nowrap;

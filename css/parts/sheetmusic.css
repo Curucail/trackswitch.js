@@ -59,6 +59,6 @@
     border-radius: 3px;
     font-size: 11px;
     background: var(--ts-color-warning-bg);
-    color: var(--ts-color-text-warning);
+    color: var(--ts-color-surface-panel-dark);
     pointer-events: none;
 }

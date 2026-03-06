@@ -10,7 +10,7 @@
 }
 
 .trackswitch li.track {
-    background-color: var(--ts-color-surface-alt);
+    background-color: var(--ts-color-text-muted);
     position: relative;
     min-height: 32px;
     /* Required if there is no title defined */
