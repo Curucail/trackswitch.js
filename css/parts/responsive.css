@@ -186,7 +186,7 @@
     }
 
     .trackswitch .main-control .control>li.loop-group>.loop-controls {
-        gap: 8px;
+        gap: 6px;
         position: relative;
         top: 1px;
     }
@@ -199,7 +199,7 @@
 
     .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-toggle,
     .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-clear {
-        width: 16px;
+        width: 18px;
         height: 26px;
     }
 

@@ -103,16 +103,8 @@
 .trackswitch .control li.loop-b:after {
     font-family: Arial, sans-serif;
     font-weight: bold;
-    font-size: 12px;
     text-indent: 0;
     opacity: 0.5;
-    border: 1.5px solid currentColor;
-    border-radius: 3px;
-    padding: 1px 4px;
-    line-height: 1.2;
-    position: absolute;
-    top: 0;
-    left: 0;
 }
 
 .trackswitch .control li.loop-a:after {
@@ -133,14 +125,14 @@
 }
 
 .trackswitch .control li.loop-toggle:after {
-    content: "\f021";
-    /* fa-refresh / loop icon */
-    opacity: 0.5;
-    position: absolute;
-    left: 0;
+    content: none;
 }
 
-.trackswitch .control li.loop-toggle.checked:after {
+.trackswitch .control li.loop-toggle.fa-solid:before {
+    opacity: 0.5;
+}
+
+.trackswitch .control li.loop-toggle.checked.fa-solid:before {
     opacity: 1;
 }
 
@@ -148,8 +140,6 @@
     content: "\f00d";
     /* fa-times / X icon */
     opacity: 0.5;
-    position: absolute;
-    left: -5px;
 }
 
 .trackswitch .control li.loop-clear:hover:after {
@@ -157,32 +147,22 @@
 }
 
 .trackswitch .control li.solo:after {
-    content: "\f10c";
-    /* fa-circle-o */
-    position: absolute;
-    bottom: 50%;
-    left: 4px;
-    /* Necessary to do it this way? and can we combine it ------------------------------- TODO */
+    content: none;
 }
 
-.trackswitch .control li.solo.checked:after {
-    content: "\f05d";
-    /* fa-check-circle-o */
+.trackswitch .control li.solo.fa-regular:before,
+.trackswitch .control li.solo.fa-solid:before {
+    position: absolute;
+    left: 4px;
+    font-size: 16px;
+    line-height: 1;
+    text-indent: 0;
+    width: auto;
 }
 
 .trackswitch .control li.solo.radio {
     /* .radio bootstrap fix */
     margin: 0;
-}
-
-.trackswitch .control li.solo.radio.checked:after {
-    content: "\f192";
-    /* fa-dot-circle-o */
-}
-
-.trackswitch.sync-enabled .control li.solo.radio.checked:after {
-    content: "\f05d";
-    /* fa-check-circle-o */
 }
 
 .trackswitch li.track .control li.button.disabled {
@@ -216,8 +196,6 @@
 }
 
 .trackswitch li.track .track-volume-icon {
-    font-family: FontAwesome;
-    font-style: normal;
     font-size: 16px;
     color: #777777;
     margin-right: 8px;

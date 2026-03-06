@@ -1,15 +1,16 @@
 # Third-Party Notices
 
-This project includes third-party software in the distributed browser bundle (`dist/js/trackswitch.min.js`).
+This project includes third-party software in distributed browser artifacts
+(`dist/js/trackswitch.min.js`, `dist/css/trackswitch.min.css`, and emitted webfonts in `dist/css/`).
 
 This document lists those dependencies and their licenses.
 
 ## Scope
 
-- This notice file applies to bundled JavaScript artifacts produced by this repository.
+- This notice file applies to bundled JavaScript and CSS artifacts produced by this repository.
 - The project code itself remains licensed under MIT (see `LICENSE`).
 
-## Included Third-Party Packages (Bundled JS)
+## Included Third-Party Packages (Bundled JS/CSS)
 
 | Package | Version | License |
 | --- | --- | --- |
@@ -24,15 +25,17 @@ This document lists those dependencies and their licenses.
 | setimmediate | 1.0.5 | MIT |
 | immediate | 3.0.6 | MIT |
 | papaparse | 5.5.3 | MIT |
+| @fortawesome/fontawesome-free | 7.2.0 | CC-BY-4.0 AND OFL-1.1 AND MIT |
 
 ## License Selection Notes
 
 - `jszip` is available under dual licensing (MIT OR GPL-3.0-or-later). For this distribution, the MIT option is used.
 - `pako` uses MIT and Zlib terms.
+- `@fortawesome/fontawesome-free` includes multiple license scopes: icon assets (CC-BY-4.0), webfonts (SIL OFL 1.1), and code/CSS (MIT).
 
 ## Full License Texts
 
-The full license texts below are embedded once per license type and apply to the packages listed in each section.
+The license texts below are embedded once per license type (or referenced via canonical license URLs where appropriate) and apply to the packages listed in each section.
 
 ### BSD-3-Clause (applies to: opensheetmusicdisplay)
 
@@ -48,7 +51,7 @@ Redistribution and use in source and binary forms, with or without modification,
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-### MIT (applies to: vexflow, jszip [MIT option], pako, loglevel, typescript-collections, lie, setimmediate, immediate, papaparse)
+### MIT (applies to: vexflow, jszip [MIT option], pako, loglevel, typescript-collections, lie, setimmediate, immediate, papaparse, @fortawesome/fontawesome-free [code/CSS])
 
 Applicable copyright notices:
 
@@ -61,6 +64,7 @@ Applicable copyright notices:
 - Copyright (c) 2012 Barnesandnoble.com, llc, Donavon West, and Domenic Denicola (setimmediate)
 - Copyright (c) 2012 Barnesandnoble.com, llc, Donavon West, Domenic Denicola, Brian Cavalier (immediate)
 - Copyright (c) Papa Parse LLC (papaparse)
+- Copyright 2026 Fonticons, Inc. (@fortawesome/fontawesome-free code/CSS)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -79,6 +83,110 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+
+### CC BY 4.0 (applies to: @fortawesome/fontawesome-free icon assets packaged as SVG/JS)
+
+Font Awesome Free icons are licensed under Creative Commons Attribution 4.0 International.
+
+- Canonical license text: https://creativecommons.org/licenses/by/4.0/legalcode
+- Human-readable summary: https://creativecommons.org/licenses/by/4.0/
+
+Copyright (c) 2026 Fonticons, Inc.
+
+### SIL OFL 1.1 (applies to: @fortawesome/fontawesome-free webfont files)
+
+Copyright (c) 2026 Fonticons, Inc. (https://fontawesome.com)
+with Reserved Font Name: "Font Awesome".
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+This license is copied below, and is also available with a FAQ at:
+http://scripts.sil.org/OFL
+
+SIL OPEN FONT LICENSE
+Version 1.1 - 26 February 2007
+
+PREAMBLE
+The goals of the Open Font License (OFL) are to stimulate worldwide
+development of collaborative font projects, to support the font creation
+efforts of academic and linguistic communities, and to provide a free and
+open framework in which fonts may be shared and improved in partnership
+with others.
+
+The OFL allows the licensed fonts to be used, studied, modified and
+redistributed freely as long as they are not sold by themselves. The
+fonts, including any derivative works, can be bundled, embedded,
+redistributed and/or sold with any software provided that any reserved
+names are not used by derivative works. The fonts and derivatives,
+however, cannot be released under any other type of license. The
+requirement for fonts to remain under this license does not apply
+to any document created using the fonts or their derivatives.
+
+DEFINITIONS
+"Font Software" refers to the set of files released by the Copyright
+Holder(s) under this license and clearly marked as such. This may
+include source files, build scripts and documentation.
+
+"Reserved Font Name" refers to any names specified as such after the
+copyright statement(s).
+
+"Original Version" refers to the collection of Font Software components as
+distributed by the Copyright Holder(s).
+
+"Modified Version" refers to any derivative made by adding to, deleting,
+or substituting - in part or in whole - any of the components of the
+Original Version, by changing formats or by porting the Font Software to a
+new environment.
+
+"Author" refers to any designer, engineer, programmer, technical
+writer or other person who contributed to the Font Software.
+
+PERMISSION & CONDITIONS
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of the Font Software, to use, study, copy, merge, embed, modify,
+redistribute, and sell modified and unmodified copies of the Font
+Software, subject to the following conditions:
+
+1) Neither the Font Software nor any of its individual components,
+in Original or Modified Versions, may be sold by itself.
+
+2) Original or Modified Versions of the Font Software may be bundled,
+redistributed and/or sold with any software, provided that each copy
+contains the above copyright notice and this license. These can be
+included either as stand-alone text files, human-readable headers or
+in the appropriate machine-readable metadata fields within text or
+binary files as long as those fields can be easily viewed by the user.
+
+3) No Modified Version of the Font Software may use the Reserved Font
+Name(s) unless explicit written permission is granted by the corresponding
+Copyright Holder. This restriction only applies to the primary font name as
+presented to the users.
+
+4) The name(s) of the Copyright Holder(s) or the Author(s) of the Font
+Software shall not be used to promote, endorse or advertise any
+Modified Version, except to acknowledge the contribution(s) of the
+Copyright Holder(s) and the Author(s) or with their explicit written
+permission.
+
+5) The Font Software, modified or unmodified, in part or in whole,
+must be distributed entirely under this license, and must not be
+distributed under any other license. The requirement for fonts to
+remain under this license does not apply to any document created
+using the Font Software.
+
+TERMINATION
+This license becomes null and void if any of the above conditions are
+not met.
+
+DISCLAIMER
+THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
+OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE
+COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
+DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
+OTHER DEALINGS IN THE FONT SOFTWARE.
 
 ### ISC (applies to: d3)
 

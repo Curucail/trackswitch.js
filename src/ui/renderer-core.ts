@@ -201,6 +201,34 @@ function sanitizePan(value: number): number {
     return clampTime(value, -1, 1);
 }
 
+function applySoloIconClassState(
+    soloButton: HTMLElement,
+    isChecked: boolean,
+    isRadio: boolean,
+    syncEnabled: boolean
+): void {
+    soloButton.classList.remove(
+        'fa-regular',
+        'fa-solid',
+        'fa-circle',
+        'fa-circle-check',
+        'fa-circle-dot',
+        'fa-dot-circle'
+    );
+
+    if (!isChecked) {
+        soloButton.classList.add('fa-regular', 'fa-circle');
+        return;
+    }
+
+    if (isRadio && !syncEnabled) {
+        soloButton.classList.add('fa-regular', 'fa-circle-dot');
+        return;
+    }
+
+    soloButton.classList.add('fa-regular', 'fa-circle-check');
+}
+
 function parseSheetMusicString(value: string | null): string {
     return typeof value === 'string' ? value.trim() : '';
 }
@@ -354,14 +382,14 @@ export function buildMainControlHtml(ctx: any, runtimes: any): any {
             + '</ul>'
             + '</li>'
             + (this.features.globalVolume
-                ? '<li class="volume"><div class="volume-control"><i class="fa-volume-up volume-icon"></i>'
+                ? '<li class="volume"><div class="volume-control"><i class="fa-solid fa-volume-high volume-icon"></i>'
                     + '<input type="range" class="volume-slider" min="0" max="100" value="100"></div></li>'
                 : '')
             + (this.features.looping
                 ? '<li class="loop-group"><ul class="loop-controls">'
                     + '<li class="loop-a button" title="Set Loop Point A (A)">Loop A</li>'
                     + '<li class="loop-b button" title="Set Loop Point B (B)">Loop B</li>'
-                    + '<li class="loop-toggle button" title="Toggle Loop On/Off (L)">Loop</li>'
+                    + '<li class="loop-toggle button fa-solid fa-repeat" title="Toggle Loop On/Off (L)">Loop</li>'
                     + '<li class="loop-clear button" title="Clear Loop Points (C)">Clear</li>'
                     + '</ul></li>'
                 : '')
@@ -418,7 +446,7 @@ export function buildTrackRow(ctx: any, runtime: any, index: any): any {
         controls.className = 'control';
 
         const solo = document.createElement('li');
-        solo.className = 'solo button' + radioSoloClass;
+        solo.className = 'solo button fa-regular fa-circle' + radioSoloClass;
         solo.title = 'Solo';
         solo.textContent = 'Solo';
         controls.appendChild(solo);
@@ -433,7 +461,7 @@ export function buildTrackRow(ctx: any, runtime: any, index: any): any {
             volumeControl.className = 'track-volume-control';
 
             const volumeIcon = document.createElement('i');
-            volumeIcon.className = 'volume-icon track-volume-icon fa-volume-up';
+            volumeIcon.className = 'volume-icon track-volume-icon fa-solid fa-volume-high';
 
             const volumeSlider = document.createElement('input');
             volumeSlider.className = 'track-volume-slider mix-slider';
@@ -718,8 +746,22 @@ export function updateMainControls(ctx: any, state: any, runtimes: any, waveform
     }).call(ctx, state, runtimes, waveformTimelineContext, warpingMatrixContext);
 }
 
-export function updateTrackControls(ctx: any, runtimes: any, syncLockedTrackIndexes: any, effectiveSingleSoloMode: any, panSupported: any): any {
-    return (function(this: any, runtimes: any, syncLockedTrackIndexes: any, effectiveSingleSoloMode: any, panSupported: any) {
+export function updateTrackControls(
+    ctx: any,
+    runtimes: any,
+    syncLockedTrackIndexes: any,
+    effectiveSingleSoloMode: any,
+    panSupported: any,
+    syncEnabled: any
+): any {
+    return (function(
+        this: any,
+        runtimes: any,
+        syncLockedTrackIndexes: any,
+        effectiveSingleSoloMode: any,
+        panSupported: any,
+        syncEnabled: any
+    ) {
         runtimes.forEach((runtime: TrackRuntime, index: number) => {
             const row = this.query('.track[data-track-index="' + index + '"]');
             if (!row) {
@@ -731,10 +773,16 @@ export function updateTrackControls(ctx: any, runtimes: any, syncLockedTrackInde
 
             row.classList.toggle('solo', effectiveSingleSoloMode);
 
-            if (solo) {
+            if (solo instanceof HTMLElement) {
                 solo.classList.toggle('checked', runtime.state.solo);
                 solo.classList.toggle('disabled', isLocked);
                 solo.classList.toggle('radio', effectiveSingleSoloMode);
+                applySoloIconClassState(
+                    solo,
+                    runtime.state.solo,
+                    effectiveSingleSoloMode,
+                    !!syncEnabled
+                );
             }
 
             if (!this.features.trackMixControls) {
@@ -770,7 +818,7 @@ export function updateTrackControls(ctx: any, runtimes: any, syncLockedTrackInde
             }
         });
     
-    }).call(ctx, runtimes, syncLockedTrackIndexes, effectiveSingleSoloMode, panSupported);
+    }).call(ctx, runtimes, syncLockedTrackIndexes, effectiveSingleSoloMode, panSupported, syncEnabled);
 }
 
 export function switchPosterImage(ctx: any, runtimes: any): any {
@@ -884,15 +932,25 @@ export function updateVolumeIcon(ctx: any, volumeZeroToOne: any): any {
 
 export function applyVolumeIconState(ctx: any, icon: any, volumeZeroToOne: any): any {
     return (function(this: any, icon: any, volumeZeroToOne: any) {
-        icon.classList.remove('fa-volume-off', 'fa-volume-down', 'fa-volume-up');
+        icon.classList.remove(
+            'fa-volume-xmark',
+            'fa-volume-off',
+            'fa-volume-low',
+            'fa-volume-high',
+            'fa-volume-down',
+            'fa-volume-up',
+            'fa-volume',
+        );
 
         const volume = sanitizeVolume(volumeZeroToOne);
         if (volume === 0) {
-            icon.classList.add('fa-volume-off');
-        } else if (volume < 0.5) {
-            icon.classList.add('fa-volume-down');
+            icon.classList.add('fa-volume-xmark');
+        } else if (volume <= (1 / 3)) {
+            icon.classList.add('fa-volume-low');
+        } else if (volume <= (2 / 3)) {
+            icon.classList.add('fa-volume');
         } else {
-            icon.classList.add('fa-volume-up');
+            icon.classList.add('fa-volume-high');
         }
     
     }).call(ctx, icon, volumeZeroToOne);

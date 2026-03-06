@@ -40,11 +40,10 @@
 .trackswitch .control li.button:after {
     content: "";
     display: block;
-    font-family: FontAwesome;
+    font-family: "Font Awesome 7 Free";
     font-style: normal;
-    font-weight: normal;
+    font-weight: 600;
     font-size: 16px;
     line-height: 1;
     text-indent: 0;
 }
-

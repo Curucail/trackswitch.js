@@ -7,3 +7,5 @@ dist/tmp/*
 .grunt
 _site/
 dist/
+example_ulli/
+example_dtw/

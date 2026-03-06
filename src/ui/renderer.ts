@@ -601,9 +601,17 @@ updateTrackControls(
         runtimes: TrackRuntime[],
         syncLockedTrackIndexes?: ReadonlySet<number>,
         effectiveSingleSoloMode = this.features.exclusiveSolo,
-        panSupported = true
+        panSupported = true,
+        syncEnabled = false
     ): void {
-        return viewRendererCore.updateTrackControls(this, runtimes, syncLockedTrackIndexes, effectiveSingleSoloMode, panSupported);
+        return viewRendererCore.updateTrackControls(
+            this,
+            runtimes,
+            syncLockedTrackIndexes,
+            effectiveSingleSoloMode,
+            panSupported,
+            syncEnabled
+        );
     }
 
 switchPosterImage(runtimes: TrackRuntime[]): void {

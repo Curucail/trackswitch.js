@@ -175,8 +175,6 @@
 }
 
 .trackswitch .main-control .volume-icon {
-    font-family: FontAwesome;
-    font-style: normal;
     font-size: 16px;
     color: #DDDDDD;
     margin-right: 8px;
@@ -218,7 +216,7 @@
 .trackswitch .main-control .control>li.loop-group>.loop-controls {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 3px;
 }
 
 .trackswitch .main-control .control>li.loop-group>.loop-controls>li.button {
@@ -240,26 +238,42 @@
 
 .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-a:after,
 .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-b:after {
-    width: calc(100% - 4px);
-    height: calc(100% - 4px);
+    width: 18px;
+    height: 18px;
     margin: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     border: 1px solid currentColor;
     border-radius: 3px;
     padding: 0;
-    font-size: 13px;
+    font-size: 12px;
     font-family: Arial, sans-serif;
     font-weight: bold;
+    line-height: 1;
+    text-indent: 0;
 }
 
 .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-toggle,
 .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-clear {
-    width: 16px;
-    height: 24px;
+    width: 18px;
+    height: 22px;
+}
+
+.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-toggle:before {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    text-indent: 0;
 }
 
 .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-toggle:after,
+.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-toggle:before,
 .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-clear:after {
-    font-size: 17px;
+    font-size: 16px;
 }
 
 /* Preset selector */

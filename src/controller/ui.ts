@@ -14,7 +14,8 @@ export function applyTrackProperties(ctx: any): any {
             this.runtimes,
             this.syncLockedTrackIndexes,
             this.effectiveSingleSoloMode,
-            panSupported
+            panSupported,
+            this.globalSyncEnabled
         );
         this.audioEngine.applyTrackStateGains(this.runtimes);
         this.renderer.switchPosterImage(this.runtimes);
