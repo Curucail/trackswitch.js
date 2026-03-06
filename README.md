@@ -15,8 +15,6 @@ For manual usage, include:
 - `dist/css/trackswitch.min.css`
 - `dist/js/trackswitch.min.js`
 
-No separate Font Awesome stylesheet is required.
-
 Initialization
 --------------
 

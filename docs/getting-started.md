@@ -31,7 +31,6 @@ Then use this minimal player:
 
 ```html
 <link rel="stylesheet" href="trackswitch.min.css" />
-<!-- Font Awesome icons are bundled in trackswitch.min.css -->
 <div id="player"></div>
 <script src="trackswitch.min.js"></script>
 <script>

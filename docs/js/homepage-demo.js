@@ -463,7 +463,6 @@
 
       snippetLines = [
         '<link rel="stylesheet" href="trackswitch.min.css" />',
-        '<!-- Font Awesome icons are bundled in trackswitch.min.css -->',
         '',
         '<div id="player"></div>',
         '',
@@ -540,7 +539,6 @@
 
       snippetLines = [
         '<link rel="stylesheet" href="trackswitch.min.css" />',
-        '<!-- Font Awesome icons are bundled in trackswitch.min.css -->',
         '',
         '<div id="player"></div>',
         '',
