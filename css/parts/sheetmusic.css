@@ -5,7 +5,7 @@
     position: relative;
     width: 100%;
     margin: 0;
-    background: #FFFFFF;
+    background: var(--ts-color-surface-sheetmusic);
 }
 
 .trackswitch .sheetmusic-wrap[data-sheetmusic-max-width-applied='true'] {
@@ -38,7 +38,7 @@
     display: block;
     padding: 12px;
     font-size: 12px;
-    color: #4D4D4D;
+    color: var(--ts-color-text-quaternary);
 }
 
 .trackswitch .sheetmusic.sheetmusic-error:empty::before {
@@ -46,7 +46,7 @@
     display: block;
     padding: 12px;
     font-size: 12px;
-    color: #9F1D1D;
+    color: var(--ts-color-text-error-muted);
 }
 
 .trackswitch .sheetmusic.sheetmusic-ready.sheetmusic-map-error::after {
@@ -58,7 +58,7 @@
     padding: 3px 6px;
     border-radius: 3px;
     font-size: 11px;
-    background: rgba(255, 220, 120, 0.95);
-    color: #3A2B00;
+    background: var(--ts-color-warning-bg);
+    color: var(--ts-color-text-warning);
     pointer-events: none;
 }

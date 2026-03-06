@@ -9,10 +9,10 @@
 }
 
 .trackswitch .main-control ul.control {
-    background-color: #333;
+    background-color: var(--ts-color-surface-panel-dark);
     min-height: 36px;
     padding: 4px 12px;
-    color: #DDDDDD;
+    color: var(--ts-color-text-muted);
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -112,15 +112,15 @@
 }
 
 .trackswitch .main-control .seekwrap .seekbar {
-    background-color: #ED8C01;
+    background-color: var(--ts-color-accent);
     height: 6px;
     margin: 11px 4px 0 0;
     position: relative;
-    box-shadow: 4px 0 0 0 #ED8C01;
+    box-shadow: 4px 0 0 0 var(--ts-color-accent);
 }
 
 .trackswitch .main-control .seekwrap .seekbar .seekhead {
-    background-color: #ED8C01;
+    background-color: var(--ts-color-accent);
     position: absolute;
     width: 4px;
     height: 22px;
@@ -147,7 +147,7 @@
     top: 0;
     bottom: 0;
     width: 2px;
-    background-color: #333;
+    background-color: var(--ts-color-surface-panel-dark);
     transform: translateX(-50%);
 }
 
@@ -156,12 +156,12 @@
     height: 100%;
     top: 0;
     display: none;
-    background-color: rgba(237, 140, 1, 0.1);
+    background-color: var(--ts-color-accent-soft-10);
     z-index: 1;
 }
 
 .trackswitch .main-control .seekwrap .seekbar .loop-region.active {
-    background-color: rgba(237, 140, 1, 0.4);
+    background-color: var(--ts-color-accent-soft-40);
 }
 
 /* Volume control */
@@ -172,7 +172,7 @@
 
 .trackswitch .main-control .volume-icon {
     font-size: 16px;
-    color: #DDDDDD;
+    color: var(--ts-color-text-muted);
     margin-right: 8px;
     width: 16px;
     display: inline-flex;
@@ -185,7 +185,7 @@
     appearance: none;
     width: 80px;
     height: 4px;
-    background: #555;
+    background: var(--ts-color-surface-control);
     outline: none;
     cursor: pointer;
 }
@@ -195,7 +195,7 @@
     appearance: none;
     width: 12px;
     height: 12px;
-    background: #ED8C01;
+    background: var(--ts-color-accent);
     cursor: pointer;
     border-radius: 50%;
 }
@@ -203,7 +203,7 @@
 .trackswitch .main-control .volume-slider::-moz-range-thumb {
     width: 12px;
     height: 12px;
-    background: #ED8C01;
+    background: var(--ts-color-accent);
     cursor: pointer;
     border-radius: 50%;
     border: none;
@@ -263,9 +263,9 @@
 }
 
 .trackswitch .main-control .preset-selector {
-    background-color: #555;
-    color: #DDDDDD;
-    border: 1px solid #333;
+    background-color: var(--ts-color-surface-control);
+    color: var(--ts-color-text-muted);
+    border: 1px solid var(--ts-color-surface-panel-dark);
     padding: 4px 6px 4px 8px;
     font-size: 13px;
     cursor: pointer;
@@ -275,16 +275,16 @@
 }
 
 .trackswitch .main-control .preset-selector:hover {
-    background-color: #666;
+    background-color: var(--ts-color-surface-control-hover);
 }
 
 .trackswitch .main-control .preset-selector:focus {
     outline: none;
-    background-color: #666;
-    color: #DDDDDD;
+    background-color: var(--ts-color-surface-control-hover);
+    color: var(--ts-color-text-muted);
 }
 
 .trackswitch .main-control .preset-selector option {
-    background-color: #333;
-    color: #DDDDDD;
+    background-color: var(--ts-color-surface-panel-dark);
+    color: var(--ts-color-text-muted);
 }

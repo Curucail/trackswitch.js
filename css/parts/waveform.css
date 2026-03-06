@@ -5,8 +5,8 @@
     position: relative;
     width: 100%;
     margin: 0;
-    border-top: 1px solid rgba(124, 124, 124, 1.0);
-    border-bottom: 1px solid rgba(124, 124, 124, 1.0);
+    border-top: 1px solid var(--ts-color-border-contrast);
+    border-bottom: 1px solid var(--ts-color-border-contrast);
 }
 
 .trackswitch .waveform-wrap .waveform-scroll {
@@ -56,9 +56,9 @@
 .trackswitch canvas.waveform {
     display: block;
     width: 100%;
-    background-color: rgb(228, 228, 228);
+    background-color: var(--ts-color-surface-waveform);
     /* Subtle background */
-    --waveform-color: #ED8C01;
+    --waveform-color: var(--ts-color-accent);
     /* CSS custom property for waveform color (orange) */
 }
 
@@ -79,7 +79,7 @@
     top: 0;
     bottom: 0;
     width: 2px;
-    background-color: rgba(0, 0, 0, 0.8);
+    background-color: var(--ts-color-overlay-dim-seekhead);
     z-index: 3;
 }
 
@@ -106,7 +106,7 @@
     top: 0;
     bottom: 0;
     width: 3px;
-    background-color: #333;
+    background-color: var(--ts-color-surface-panel-dark);
     transform: translateX(-50%);
 }
 
@@ -116,13 +116,13 @@
     bottom: 0;
     display: none;
     /* Hidden by default, shown via JS */
-    background-color: rgba(237, 140, 1, 0.15);
+    background-color: var(--ts-color-accent-soft-15);
     /* Semi-transparent orange */
     z-index: 1;
 }
 
 .trackswitch .waveform-wrap .seekwrap .loop-region.active {
-    background-color: rgba(237, 140, 1, 0.3);
+    background-color: var(--ts-color-accent-soft-30);
     /* Brighter orange when looping is active */
 }
 
@@ -136,8 +136,8 @@
     border-radius: 4px;
     font-family: monospace;
     font-size: 11px;
-    color: #F3F3F3;
-    background: rgba(0, 0, 0, 0.55);
+    color: var(--ts-color-text-overlay);
+    background: var(--ts-color-overlay-dim-strong);
     pointer-events: none;
     user-select: none;
 }

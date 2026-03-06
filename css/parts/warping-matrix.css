@@ -17,7 +17,7 @@
     width: auto;
     min-height: 180px;
     position: relative;
-    background-color: #EEEEEE;
+    background-color: var(--ts-color-surface-base);
 }
 
 .trackswitch .warping-matrix-panel-main {
@@ -36,7 +36,7 @@
     height: 100%;
     position: relative;
     font-family: monospace;
-    background-color: #EEEEEE;
+    background-color: var(--ts-color-surface-base);
 }
 
 .trackswitch .warping-plot-host-tempo {
@@ -53,11 +53,11 @@
     justify-content: flex-start;
     gap: 12px;
     padding: 6px 10px 4px 10px;
-    border-bottom: 1px solid #DDDDDD;
-    background-color: #EAEAEA;
+    border-bottom: 1px solid var(--ts-color-border-muted);
+    background-color: var(--ts-color-surface-subtle);
     font-family: monospace;
     font-size: 12px;
-    color: #666666;
+    color: var(--ts-color-text-secondary);
     position: relative;
     z-index: 2;
 }
@@ -72,7 +72,7 @@
 
 .trackswitch .warping-tempo-control-label {
     white-space: nowrap;
-    color: #777777;
+    color: var(--ts-color-text-subtle);
 }
 
 .trackswitch .warping-tempo-slider {
@@ -82,7 +82,7 @@
     width: 80px;
     max-width: 80px;
     height: 4px;
-    background: #555555;
+    background: var(--ts-color-surface-control);
     outline: none;
     cursor: pointer;
     margin: 0;
@@ -93,7 +93,7 @@
     appearance: none;
     width: 12px;
     height: 12px;
-    background: #ED8C01;
+    background: var(--ts-color-accent);
     cursor: pointer;
     border-radius: 50%;
 }
@@ -101,7 +101,7 @@
 .trackswitch .warping-tempo-slider::-moz-range-thumb {
     width: 12px;
     height: 12px;
-    background: #ED8C01;
+    background: var(--ts-color-accent);
     cursor: pointer;
     border-radius: 50%;
     border: none;
@@ -115,7 +115,7 @@
 .trackswitch .warping-tempo-value {
     min-width: 46px;
     text-align: right;
-    color: #555555;
+    color: var(--ts-color-text-tertiary);
 }
 
 .trackswitch .warping-plot-host .warping-plot-svg {
@@ -125,49 +125,49 @@
 }
 
 .trackswitch .warping-plot-title {
-    fill: #666666;
+    fill: var(--ts-color-text-secondary);
     font-size: 15px;
     font-weight: 600;
 }
 
 .trackswitch .warping-plot-axis path,
 .trackswitch .warping-plot-axis line {
-    stroke: #666666;
+    stroke: var(--ts-color-text-secondary);
 }
 
 .trackswitch .warping-plot-axis text {
-    fill: #BBBBBB;
+    fill: var(--ts-color-text-axis-light);
     font-size: 14px;
 }
 
 .trackswitch .warping-plot-axis-label {
-    fill: #888888;
+    fill: var(--ts-color-text-axis);
     font-size: 12px;
 }
 
 .trackswitch .warping-path-line {
     fill: none;
-    stroke: #ED8C01;
+    stroke: var(--ts-color-accent);
     stroke-linecap: round;
     stroke-linejoin: round;
 }
 
 .trackswitch .warping-guide-line {
     fill: none;
-    stroke: #888888;
+    stroke: var(--ts-color-text-axis);
     stroke-width: 1.3px;
     stroke-dasharray: 6 4;
 }
 
 .trackswitch .warping-playhead-dot {
-    fill: #777777;
-    stroke: #EEEEEE;
+    fill: var(--ts-color-text-subtle);
+    stroke: var(--ts-color-surface-base);
     stroke-width: 1px;
 }
 
 .trackswitch .warping-tempo-line {
     fill: none;
-    stroke: #ED8C01;
+    stroke: var(--ts-color-accent);
     stroke-width: 2px;
     stroke-linecap: round;
     stroke-linejoin: round;
@@ -175,14 +175,14 @@
 
 .trackswitch .warping-tempo-reference-line {
     fill: none;
-    stroke: #888888;
+    stroke: var(--ts-color-text-axis);
     stroke-width: 1.3px;
     stroke-dasharray: 6 4;
 }
 
 .trackswitch .warping-tempo-center-line {
     fill: none;
-    stroke: #777777;
+    stroke: var(--ts-color-text-subtle);
     stroke-width: 1.3px;
     stroke-dasharray: 5 5;
 }
@@ -194,7 +194,7 @@
     align-items: flex-start;
     justify-content: flex-end;
     padding: 8px 10px;
-    color: #666666;
+    color: var(--ts-color-text-secondary);
     font-family: monospace;
     font-size: 11px;
     letter-spacing: 0.03em;

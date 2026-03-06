@@ -5,11 +5,58 @@
 }
 
 .trackswitch {
-    background: #EEEEEE;
+    /* Centralized player palette tokens: adjust these for theme changes. */
+    --ts-color-text-primary: #000000;
+    --ts-color-text-inverse: #FFFFFF;
+    --ts-color-text-muted: #DDDDDD;
+    --ts-color-text-subtle: #777777;
+    --ts-color-text-secondary: #666666;
+    --ts-color-text-tertiary: #555555;
+    --ts-color-text-quaternary: #4D4D4D;
+    --ts-color-text-axis: #888888;
+    --ts-color-text-axis-light: #BBBBBB;
+    --ts-color-text-overlay: #F3F3F3;
+    --ts-color-text-error: #7C2525;
+    --ts-color-text-error-muted: #9F1D1D;
+    --ts-color-text-warning: #3A2B00;
+
+    --ts-color-surface-base: #EEEEEE;
+    --ts-color-surface-alt: #DDDDDD;
+    --ts-color-surface-subtle: #EAEAEA;
+    --ts-color-surface-panel-dark: #333333;
+    --ts-color-surface-control: #555555;
+    --ts-color-surface-control-hover: #666666;
+    --ts-color-surface-track-slider: #A9A9A9;
+    --ts-color-surface-waveform: #E4E4E4;
+    --ts-color-surface-sheetmusic: #FFFFFF;
+
+    --ts-color-border-muted: #DDDDDD;
+    --ts-color-border-mid: #999999;
+    --ts-color-border-contrast: rgba(124, 124, 124, 1);
+    --ts-color-border-inverse: #FFFFFF;
+    --ts-color-border-primary: #000000;
+
+    --ts-color-accent: #ED8C01;
+    --ts-color-accent-soft-10: rgba(237, 140, 1, 0.1);
+    --ts-color-accent-soft-15: rgba(237, 140, 1, 0.15);
+    --ts-color-accent-soft-30: rgba(237, 140, 1, 0.3);
+    --ts-color-accent-soft-40: rgba(237, 140, 1, 0.4);
+
+    --ts-color-overlay-dim: rgba(0, 0, 0, 0.3);
+    --ts-color-overlay-dim-strong: rgba(0, 0, 0, 0.55);
+    --ts-color-overlay-dim-seekhead: rgba(0, 0, 0, 0.8);
+    --ts-color-overlay-dim-error: rgba(0, 0, 0, 0.6);
+
+    --ts-color-overlay-button: #F1C40F;
+    --ts-color-overlay-error-button: #C03328;
+    --ts-color-warning-bg: rgba(255, 220, 120, 0.95);
+    --ts-color-track-error-bg: #DD9B9B;
+
+    background: var(--ts-color-surface-base);
     position: relative;
     margin: 10px;
     overflow: hidden;
-    color: #000000;
+    color: var(--ts-color-text-primary);
     line-height: 1;
     /* Reset line-height to stop it inheriting from page */
 }

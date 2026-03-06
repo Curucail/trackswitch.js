@@ -1,7 +1,7 @@
 /* OVERLAY STYLES ----------------------------------------------------------- */
 
 .trackswitch .overlay {
-    background-color: rgba(0, 0, 0, 0.3);
+    background-color: var(--ts-color-overlay-dim);
     position: absolute;
     top: 0;
     right: 0;
@@ -19,7 +19,7 @@
 }
 
 .trackswitch .overlay>span {
-    background-color: #F1C40F;
+    background-color: var(--ts-color-overlay-button);
     width: 56px;
     height: 56px;
     top: 50%;
@@ -43,23 +43,23 @@
     font-size: 30pt;
     width: auto;
     height: auto;
-    color: #000000;
+    color: var(--ts-color-text-primary);
 }
 
 
 .trackswitch.error .overlay {
-    background: rgba(0, 0, 0, 0.6);
+    background: var(--ts-color-overlay-dim-error);
 }
 
 .trackswitch.error .overlay>span {
-    background: #C03328;
+    background: var(--ts-color-overlay-error-button);
     cursor: inherit;
 }
 
 .trackswitch.error .overlay p {
     width: 100%;
     top: calc(50% + 35px);
-    color: #FFFFFF;
+    color: var(--ts-color-text-inverse);
 }
 
 .trackswitch .overlay #overlayinfo {
@@ -70,7 +70,7 @@
     left: 50%;
     transform: translateX(-50%);
     padding-bottom: 8px;
-    color: #000000;
+    color: var(--ts-color-text-primary);
     text-align: center;
     font-size: 14pt;
 }
@@ -99,9 +99,9 @@
     top: 100%;
     left: 50%;
     transform: translateX(-50%);
-    background: #EEEEEE;
-    color: #333333;
-    border: 1px solid #DDDDDD;
+    background: var(--ts-color-surface-base);
+    color: var(--ts-color-surface-panel-dark);
+    border: 1px solid var(--ts-color-border-muted);
     border-radius: 6px;
     padding: 8px 10px;
     white-space: nowrap;
@@ -122,6 +122,6 @@
 }
 
 .trackswitch .overlay #overlayinfo a {
-    color: #ED8C01;
+    color: var(--ts-color-accent);
     text-decoration: underline;
 }

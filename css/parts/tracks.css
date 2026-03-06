@@ -5,12 +5,12 @@
 }
 
 .trackswitch .track-group {
-    border-top: 1px solid rgba(124, 124, 124, 1.0);
-    border-bottom: 1px solid rgba(124, 124, 124, 1.0);
+    border-top: 1px solid var(--ts-color-border-contrast);
+    border-bottom: 1px solid var(--ts-color-border-contrast);
 }
 
 .trackswitch li.track {
-    background-color: #DDDDDD;
+    background-color: var(--ts-color-surface-alt);
     position: relative;
     min-height: 32px;
     /* Required if there is no title defined */
@@ -24,24 +24,24 @@
     display: inline-flex;
     align-items: center;
     padding-right: 12px;
-    border: 1px solid #999;
+    border: 1px solid var(--ts-color-border-mid);
 }
 
 /* SPECIFICITY PROBLEMS!!!!!!!!! -------------------------------------------------------------------------------- TODO */
 .trackswitch li.track:not(.tabs):nth-child(even) {
-    background-color: #EEEEEE;
+    background-color: var(--ts-color-surface-base);
 }
 
 /* NEVER USE IMPORTANT, SORT OUT THE SPECIFICITY PROBLEMS ------------------------------------------------------- TODO */
 .trackswitch li.track.error {
-    background-color: #DD9B9B !important;
+    background-color: var(--ts-color-track-error-bg) !important;
 }
 
 .trackswitch li.track .track-error-indicator {
     display: none;
     align-items: center;
     gap: 8px;
-    color: #7C2525;
+    color: var(--ts-color-text-error);
     margin-right: 10px;
     flex: 0 0 auto;
 }
@@ -190,7 +190,7 @@
 
 .trackswitch li.track .track-volume-icon {
     font-size: 16px;
-    color: #777777;
+    color: var(--ts-color-text-subtle);
     margin-right: 8px;
     width: 16px;
     display: inline-flex;
@@ -199,7 +199,7 @@
 }
 
 .trackswitch li.track .track-pan-label {
-    color: #777777;
+    color: var(--ts-color-text-subtle);
     font-family: Arial, sans-serif;
     font-size: 12px;
     font-weight: 600;
@@ -213,7 +213,7 @@
     appearance: none;
     width: 80px;
     height: 4px;
-    background: #A9A9A9;
+    background: var(--ts-color-surface-track-slider);
     outline: none;
     cursor: pointer;
 }
@@ -223,7 +223,7 @@
     appearance: none;
     width: 12px;
     height: 12px;
-    background: #ED8C01;
+    background: var(--ts-color-accent);
     cursor: pointer;
     border-radius: 50%;
 }
@@ -231,7 +231,7 @@
 .trackswitch li.track .mix-slider::-moz-range-thumb {
     width: 12px;
     height: 12px;
-    background: #ED8C01;
+    background: var(--ts-color-accent);
     cursor: pointer;
     border-radius: 50%;
     border: none;
