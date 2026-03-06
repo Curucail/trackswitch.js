@@ -11,6 +11,7 @@
     display: flex;
     align-items: stretch;
     gap: 12px;
+    position: relative;
 }
 
 .trackswitch .warping-matrix-panel {
@@ -162,31 +163,31 @@
     stroke-dasharray: 5 5;
 }
 
-.trackswitch .warping-matrix-disabled-overlay {
+.trackswitch .warping-matrix-sync-overlay {
     position: absolute;
     inset: 0;
     display: none;
-    align-items: flex-start;
-    justify-content: flex-end;
-    padding: 8px 10px;
-    color: var(--ts-color-text-secondary);
-    font-family: monospace;
-    font-size: 11px;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--ts-color-overlay-dim);
+    color: var(--ts-color-text-inverse);
+    font-size: 20px;
+    font-weight: 700;
     letter-spacing: 0.03em;
     text-transform: uppercase;
-    pointer-events: none;
+    pointer-events: auto;
+    z-index: 4;
 }
 
 .trackswitch .warping-matrix-host.warping-matrix-sync-disabled .warping-plot-host {
     pointer-events: none;
-    opacity: 0.55;
 }
 
 .trackswitch .warping-matrix-host.warping-matrix-sync-disabled .warping-tempo-controls {
-    opacity: 0.55;
+    pointer-events: none;
 }
 
-.trackswitch .warping-matrix-host.warping-matrix-sync-disabled .warping-matrix-disabled-overlay {
+.trackswitch .warping-matrix-host.warping-matrix-sync-disabled .warping-matrix-sync-overlay {
     display: flex;
 }
 

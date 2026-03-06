@@ -121,14 +121,13 @@ interface WarpingTempoPlotState {
 interface WarpingMatrixHostMetadata {
     wrapper: HTMLElement;
     host: HTMLElement;
+    syncDisabledOverlay: HTMLElement;
     matrixPanel: HTMLElement;
     matrixPlotHost: HTMLElement;
     matrixPlot: WarpingMatrixPlotState | null;
-    matrixDisabledOverlay: HTMLElement;
     tempoPanel: HTMLElement;
     tempoPlotHost: HTMLElement;
     tempoPlot: WarpingTempoPlotState | null;
-    tempoDisabledOverlay: HTMLElement;
     tempoControls: HTMLElement;
     tempoWindowSlider: HTMLInputElement;
     tempoWindowValueNode: HTMLElement;
@@ -354,6 +353,11 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
             hostElement.classList.add('warping-matrix-host');
             hostElement.textContent = '';
 
+            const syncDisabledOverlay = document.createElement('div');
+            syncDisabledOverlay.className = 'warping-matrix-sync-overlay';
+            syncDisabledOverlay.textContent = 'SYNC MODE';
+            hostElement.appendChild(syncDisabledOverlay);
+
             const matrixPanel = document.createElement('div');
             matrixPanel.className = 'warping-matrix-panel warping-matrix-panel-main';
             hostElement.appendChild(matrixPanel);
@@ -361,11 +365,6 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
             const matrixPlotHost = document.createElement('div');
             matrixPlotHost.className = 'warping-plot-host warping-plot-host-main';
             matrixPanel.appendChild(matrixPlotHost);
-
-            const matrixDisabledOverlay = document.createElement('div');
-            matrixDisabledOverlay.className = 'warping-matrix-disabled-overlay';
-            matrixDisabledOverlay.textContent = 'SYNC mode';
-            matrixPanel.appendChild(matrixDisabledOverlay);
 
             const tempoPanel = document.createElement('div');
             tempoPanel.className = 'warping-matrix-panel warping-matrix-panel-tempo';
@@ -416,11 +415,6 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
             tempoControls.appendChild(yScaleControl);
             tempoPanel.appendChild(tempoControls);
 
-            const tempoDisabledOverlay = document.createElement('div');
-            tempoDisabledOverlay.className = 'warping-matrix-disabled-overlay';
-            tempoDisabledOverlay.textContent = 'SYNC mode';
-            tempoPanel.appendChild(tempoDisabledOverlay);
-
             const persistedTempoControls = this.warpingMatrixTempoControlState.get(hostElement);
             const initialTempoWindowSeconds = normalizeTempoWindowSeconds(
                 persistedTempoControls ? persistedTempoControls.windowSeconds : DEFAULT_WARPING_MATRIX_LOCAL_TEMPO_WINDOW_SECONDS
@@ -434,14 +428,13 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
             const metadata: WarpingMatrixHostMetadata = {
                 wrapper: wrapper,
                 host: hostElement,
+                syncDisabledOverlay: syncDisabledOverlay,
                 matrixPanel: matrixPanel,
                 matrixPlotHost: matrixPlotHost,
                 matrixPlot: null,
-                matrixDisabledOverlay: matrixDisabledOverlay,
                 tempoPanel: tempoPanel,
                 tempoPlotHost: tempoPlotHost,
                 tempoPlot: null,
-                tempoDisabledOverlay: tempoDisabledOverlay,
                 tempoControls: tempoControls,
                 tempoWindowSlider: tempoWindowSlider,
                 tempoWindowValueNode: tempoWindowValueNode,
@@ -972,8 +965,7 @@ export function updateWarpingMatrix(ctx: any, host: any, context: any): any {
         const pathStrokeWidth = this.getWarpingMatrixPathStrokeWidth();
         host.matrixDisabled = context.syncEnabled;
         host.host.classList.toggle('warping-matrix-sync-disabled', host.matrixDisabled);
-        host.matrixDisabledOverlay.style.display = host.matrixDisabled ? 'flex' : 'none';
-        host.tempoDisabledOverlay.style.display = host.matrixDisabled ? 'flex' : 'none';
+        host.syncDisabledOverlay.style.display = host.matrixDisabled ? 'flex' : 'none';
         host.tempoWindowSeconds = normalizeTempoWindowSeconds(Number(host.tempoWindowSlider.value));
         host.tempoYHalfRangePercent = normalizeTempoYHalfRangePercent(Number(host.tempoYScaleSlider.value));
         if (host.tempoWindowSlider.value !== String(host.tempoWindowSeconds)) {
@@ -1037,16 +1029,17 @@ export function updateWarpingMatrix(ctx: any, host: any, context: any): any {
         host.lastSizeKey = sizeKey;
 
         host.colorByColumn.clear();
-        const normalizedColumnOrder = context.columnOrder.length > 0
+        const effectiveTrackSeries = host.matrixDisabled ? [] : context.trackSeries;
+        const normalizedColumnOrder = effectiveTrackSeries.length > 0 && context.columnOrder.length > 0
             ? context.columnOrder
-            : context.trackSeries.map((series: WarpingMatrixTrackSeries) => series.columnKey);
+            : effectiveTrackSeries.map((series: WarpingMatrixTrackSeries) => series.columnKey);
         normalizedColumnOrder.forEach((columnKey: string) => {
             host.colorByColumn.set(
                 columnKey,
                 this.resolveWarpingMatrixColumnColor(columnKey, normalizedColumnOrder)
             );
         });
-        context.trackSeries.forEach((series: WarpingMatrixTrackSeries) => {
+        effectiveTrackSeries.forEach((series: WarpingMatrixTrackSeries) => {
             if (host.colorByColumn.has(series.columnKey)) {
                 return;
             }
@@ -1057,7 +1050,7 @@ export function updateWarpingMatrix(ctx: any, host: any, context: any): any {
             );
         });
 
-        const matrixPrimarySeries = context.trackSeries.length > 0 ? context.trackSeries[0] : null;
+        const matrixPrimarySeries = effectiveTrackSeries.length > 0 ? effectiveTrackSeries[0] : null;
         host.activeColumnKey = matrixPrimarySeries ? matrixPrimarySeries.columnKey : null;
         host.matrixTrackDuration = matrixPrimarySeries
             ? Math.max(
@@ -1066,7 +1059,7 @@ export function updateWarpingMatrix(ctx: any, host: any, context: any): any {
             )
             : Math.max(1, referenceDuration);
 
-        const matrixSeriesSignature = context.trackSeries.map((series: WarpingMatrixTrackSeries) => {
+        const matrixSeriesSignature = effectiveTrackSeries.map((series: WarpingMatrixTrackSeries) => {
             return [
                 series.columnKey,
                 host.colorByColumn.get(series.columnKey) || WARPING_MATRIX_PRIMARY_COLOR,
@@ -1095,7 +1088,7 @@ export function updateWarpingMatrix(ctx: any, host: any, context: any): any {
         }
         host.matrixSeriesSignature = matrixSeriesSignature;
 
-        const matrixDataCacheKey = context.trackSeries.map((series: WarpingMatrixTrackSeries) => {
+        const matrixDataCacheKey = effectiveTrackSeries.map((series: WarpingMatrixTrackSeries) => {
             const lastPoint = series.points.length > 0
                 ? series.points[series.points.length - 1]
                 : null;
@@ -1110,14 +1103,14 @@ export function updateWarpingMatrix(ctx: any, host: any, context: any): any {
         }).join('|') + '#' + Math.round(referenceDuration * 1000);
 
         if (host.matrixDataCacheKey !== matrixDataCacheKey) {
-            host.matrixDataCache = this.buildWarpingMatrixData(context.trackSeries, referenceDuration);
+            host.matrixDataCache = this.buildWarpingMatrixData(effectiveTrackSeries, referenceDuration);
             host.matrixDataCacheKey = matrixDataCacheKey;
         }
 
         const localTempoSlopeHalfWindowPoints = this.getWarpingMatrixLocalTempoSlopeHalfWindowPoints();
         const tempoDataCacheKey = matrixDataCacheKey + '#w' + localTempoSlopeHalfWindowPoints;
         if (host.tempoDataCacheKey !== tempoDataCacheKey) {
-            host.tempoDataCache = this.buildWarpingTempoData(context.trackSeries, localTempoSlopeHalfWindowPoints);
+            host.tempoDataCache = this.buildWarpingTempoData(effectiveTrackSeries, localTempoSlopeHalfWindowPoints);
             host.tempoDataCacheKey = tempoDataCacheKey;
         }
 

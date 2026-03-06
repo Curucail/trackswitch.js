@@ -159,14 +159,13 @@ interface WarpingTempoPlotState {
 interface WarpingMatrixHostMetadata {
     wrapper: HTMLElement;
     host: HTMLElement;
+    syncDisabledOverlay: HTMLElement;
     matrixPanel: HTMLElement;
     matrixPlotHost: HTMLElement;
     matrixPlot: WarpingMatrixPlotState | null;
-    matrixDisabledOverlay: HTMLElement;
     tempoPanel: HTMLElement;
     tempoPlotHost: HTMLElement;
     tempoPlot: WarpingTempoPlotState | null;
-    tempoDisabledOverlay: HTMLElement;
     tempoControls: HTMLElement;
     tempoWindowSlider: HTMLInputElement;
     tempoWindowValueNode: HTMLElement;

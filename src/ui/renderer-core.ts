@@ -125,14 +125,13 @@ interface WarpingTempoPlotState {
 interface WarpingMatrixHostMetadata {
     wrapper: HTMLElement;
     host: HTMLElement;
+    syncDisabledOverlay: HTMLElement;
     matrixPanel: HTMLElement;
     matrixPlotHost: HTMLElement;
     matrixPlot: WarpingMatrixPlotState | null;
-    matrixDisabledOverlay: HTMLElement;
     tempoPanel: HTMLElement;
     tempoPlotHost: HTMLElement;
     tempoPlot: WarpingTempoPlotState | null;
-    tempoDisabledOverlay: HTMLElement;
     tempoControls: HTMLElement;
     tempoWindowSlider: HTMLInputElement;
     tempoWindowValueNode: HTMLElement;
@@ -370,7 +369,7 @@ function buildShortcutHelpHtml(features: {
         + '<div class="shortcut-help-panel" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts help" tabindex="-1">'
         + '<div class="shortcut-help-header">'
         + '<div class="shortcut-help-heading">'
-        + '<div class="shortcut-help-title">Help</div>'
+        + '<div class="shortcut-help-title">Keyboard Shortcuts</div>'
         + '<p>Keyboard input applies to the last interacted TrackSwitch player.</p>'
         + '</div>'
         + '</div>'
