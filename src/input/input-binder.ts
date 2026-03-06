@@ -102,6 +102,24 @@ export class InputBinder {
         this.controller = controller;
     }
 
+    private isManagedFormControl(target: EventTarget | null | undefined): target is HTMLElement {
+        const element = eventTargetAsElement(target ?? null);
+        return !!element && !!element.closest('input, textarea, select, [contenteditable="true"], [contenteditable=""], [role="textbox"]');
+    }
+
+    private blurFocusedManagedControl(): void {
+        const activeElement = document.activeElement;
+        if (!(activeElement instanceof HTMLElement)) {
+            return;
+        }
+
+        if (!this.root.contains(activeElement) || !this.isManagedFormControl(activeElement)) {
+            return;
+        }
+
+        activeElement.blur();
+    }
+
     private addListener(target: EventTarget, type: string, listener: EventListener, options?: AddEventListenerOptions): void {
         target.addEventListener(type, listener, options);
         this.unbinders.push(function() {
@@ -147,8 +165,11 @@ export class InputBinder {
             this.controller.onShortcutHelpOverlay(event);
         });
 
-        const activateKeyboard = () => {
+        const activateKeyboard = (event: Event) => {
             this.controller.setKeyboardActive();
+            if (!this.isManagedFormControl(event.target)) {
+                this.blurFocusedManagedControl();
+            }
         };
         const keyboardActivationOptions = { capture: true } satisfies AddEventListenerOptions;
         this.addListener(this.root, 'pointerdown', activateKeyboard as EventListener, keyboardActivationOptions);
@@ -218,8 +239,12 @@ export class InputBinder {
             this.addDelegatedListener('input', '.volume-slider', (event) => {
                 this.controller.onVolume(event);
             });
+            this.addDelegatedListener('change', '.volume-slider', () => {
+                this.blurFocusedManagedControl();
+            });
             this.addDelegatedListener('dblclick', '.volume-slider', (event) => {
                 this.controller.onVolumeReset(event);
+                this.blurFocusedManagedControl();
             });
 
             const stopPropagationOnVolume = (event: Event) => {
@@ -245,14 +270,22 @@ export class InputBinder {
             this.addDelegatedListener('input', '.track-volume-slider', (event) => {
                 this.controller.onTrackVolume(event);
             });
+            this.addDelegatedListener('change', '.track-volume-slider', () => {
+                this.blurFocusedManagedControl();
+            });
             this.addDelegatedListener('dblclick', '.track-volume-slider', (event) => {
                 this.controller.onTrackVolumeReset(event);
+                this.blurFocusedManagedControl();
             });
             this.addDelegatedListener('input', '.track-pan-slider', (event) => {
                 this.controller.onTrackPan(event);
             });
+            this.addDelegatedListener('change', '.track-pan-slider', () => {
+                this.blurFocusedManagedControl();
+            });
             this.addDelegatedListener('dblclick', '.track-pan-slider', (event) => {
                 this.controller.onTrackPanReset(event);
+                this.blurFocusedManagedControl();
             });
 
             const stopPropagationOnTrackMix = (event: Event) => {
@@ -277,6 +310,7 @@ export class InputBinder {
         if (this.features.presets && this.controller.presetCount >= 2) {
             this.addDelegatedListener('change', '.preset-selector', (event) => {
                 this.controller.onPreset(event);
+                this.blurFocusedManagedControl();
             });
 
             this.addDelegatedListener(
