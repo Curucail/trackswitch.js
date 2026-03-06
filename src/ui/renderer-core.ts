@@ -1,6 +1,6 @@
-import { NormalizedTrackGroupLayout, TrackRuntime } from '../domain/types';
+import { AudioDownloadSizeInfo, NormalizedTrackGroupLayout, TrackRuntime } from '../domain/types';
 import { escapeHtml, sanitizeInlineStyle } from '../shared/dom';
-import { formatSecondsToHHMMSSmmm } from '../shared/format';
+import { formatBytesToHumanReadable, formatSecondsToHHMMSSmmm } from '../shared/format';
 import { clampPercent } from '../shared/math';
 import * as d3 from 'd3';
 import { getHostIconSlot, renderIconSlotHtml, setHostIcon } from './icons';
@@ -380,6 +380,23 @@ function buildShortcutHelpHtml(features: {
         + '</div>';
 }
 
+function renderOverlayDownloadInfoText(info: AudioDownloadSizeInfo): string {
+    if (info.status === 'calculating') {
+        return 'Expected download size for this player: calculating...';
+    }
+
+    if ((info.status === 'known' || info.status === 'partial') && info.totalBytes !== null && info.totalBytes > 0) {
+        const formatted = formatBytesToHumanReadable(info.totalBytes);
+        if (info.status === 'partial') {
+            return 'Expected download size for this player: ' + formatted + ' known (' + info.resolvedSourceCount + '/' + info.totalSourceCount + ' sources)';
+        }
+
+        return 'Expected download size for this player: ' + formatted;
+    }
+
+    return 'Expected download size for this player: unavailable';
+}
+
 export function query(ctx: any, selector: any): any {
     return (function(this: any, selector: any) {
         return this.root.querySelector(selector);
@@ -442,6 +459,7 @@ export function buildMainControlHtml(ctx: any, runtimes: any): any {
             + '<span class="text">'
             + '<strong>trackswitch.js</strong> - Open Source Multitrack Audio Player<br />'
             + '<a href="https://github.com/audiolabs/trackswitch.js">https://github.com/audiolabs/trackswitch.js</a>'
+            + '<br /><br /><span class="overlay-download-info">Expected download size for this player: calculating...</span>'
             + '</span>'
             + '</p>'
             + '</div>'
@@ -1102,6 +1120,17 @@ export function showOverlayInfoText(ctx: any): any {
         });
     
     }).call(ctx);
+}
+
+export function updateOverlayDownloadInfo(ctx: any, info: any): any {
+    return (function(this: any, info: AudioDownloadSizeInfo) {
+        const downloadInfo = this.query('.overlay-download-info');
+        if (!downloadInfo) {
+            return;
+        }
+
+        downloadInfo.textContent = renderOverlayDownloadInfoText(info);
+    }).call(ctx, info);
 }
 
 export function hideOverlayOnLoaded(ctx: any): any {

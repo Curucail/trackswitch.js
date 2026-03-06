@@ -1,4 +1,5 @@
 import {
+    AudioDownloadSizeInfo,
     TrackRuntime,
     TrackSourceDefinition,
     TrackSwitchFeatures,
@@ -41,6 +42,10 @@ interface LoadSourceSelectionResult {
     success: boolean;
     selection: LoadedSourceSelection | null;
     error: string | null;
+}
+
+interface AudioSourceSizeProbeResult {
+    bytes: number | null;
 }
 
 const RESUME_WAIT_TIMEOUT_MS = 250;
@@ -269,6 +274,47 @@ export class AudioEngine {
         });
     }
 
+    async estimateAudioDownloadSize(runtimes: TrackRuntime[]): Promise<AudioDownloadSizeInfo> {
+        const sources = this.collectActivationSources(runtimes);
+        if (sources.length === 0) {
+            return {
+                status: 'unavailable',
+                totalBytes: null,
+                resolvedSourceCount: 0,
+                totalSourceCount: 0,
+            };
+        }
+
+        const probeResults = await Promise.all(sources.map(async (source) => this.requestSourceSize(source.src)));
+        let totalBytes = 0;
+        let resolvedSourceCount = 0;
+
+        probeResults.forEach(function(result) {
+            if (!Number.isFinite(result.bytes) || result.bytes === null || result.bytes < 0) {
+                return;
+            }
+
+            totalBytes += result.bytes;
+            resolvedSourceCount += 1;
+        });
+
+        if (resolvedSourceCount === 0) {
+            return {
+                status: 'unavailable',
+                totalBytes: null,
+                resolvedSourceCount: 0,
+                totalSourceCount: sources.length,
+            };
+        }
+
+        return {
+            status: resolvedSourceCount === sources.length ? 'known' : 'partial',
+            totalBytes: totalBytes,
+            resolvedSourceCount: resolvedSourceCount,
+            totalSourceCount: sources.length,
+        };
+    }
+
     private async loadTrack(runtime: TrackRuntime, audioElement: HTMLAudioElement): Promise<LoadTrackResult> {
         if (!this.context || !this.gainNodeMaster) {
             return {
@@ -400,6 +446,71 @@ export class AudioEngine {
             selection: null,
             error: 'No playable source found',
         };
+    }
+
+    private collectActivationSources(runtimes: TrackRuntime[]): TrackSourceDefinition[] {
+        const collected: TrackSourceDefinition[] = [];
+
+        runtimes.forEach((runtime) => {
+            collected.push(...this.filterPlayableSources(runtime.definition.sources || []));
+
+            const alignmentSources = runtime.definition.alignment?.synchronizedSources;
+            const shouldLoadSyncedSources = this.features.mode === 'alignment'
+                && Array.isArray(alignmentSources)
+                && alignmentSources.length > 0;
+
+            if (shouldLoadSyncedSources) {
+                collected.push(...this.filterPlayableSources(alignmentSources || []));
+            }
+        });
+
+        return collected;
+    }
+
+    private filterPlayableSources(sources: TrackSourceDefinition[]): TrackSourceDefinition[] {
+        const audioElement = document.createElement('audio');
+        return sources.filter((source) => {
+            if (!source || !source.src) {
+                return false;
+            }
+
+            const mime = inferSourceMimeType(source.src, source.type, MIME_TYPE_TABLE);
+            return !!(audioElement.canPlayType && audioElement.canPlayType(mime).replace(/no/, ''));
+        });
+    }
+
+    private requestSourceSize(url: string): Promise<AudioSourceSizeProbeResult> {
+        return new Promise((resolve) => {
+            const request = new XMLHttpRequest();
+            request.open('HEAD', url, true);
+
+            request.onreadystatechange = function() {
+                if (request.readyState !== 4) {
+                    return;
+                }
+
+                if (request.status >= 200 && request.status < 300) {
+                    const rawLength = request.getResponseHeader('Content-Length');
+                    const parsedLength = rawLength === null ? NaN : Number(rawLength);
+                    if (Number.isFinite(parsedLength) && parsedLength >= 0) {
+                        resolve({ bytes: parsedLength });
+                        return;
+                    }
+                }
+
+                resolve({ bytes: null });
+            };
+
+            request.onerror = function() {
+                resolve({ bytes: null });
+            };
+
+            try {
+                request.send();
+            } catch (_error) {
+                resolve({ bytes: null });
+            }
+        });
     }
 
     private requestArrayBuffer(url: string): Promise<ArrayBuffer> {

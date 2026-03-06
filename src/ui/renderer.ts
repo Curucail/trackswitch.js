@@ -1,4 +1,10 @@
-import { NormalizedTrackGroupLayout, TrackRuntime, TrackSwitchFeatures, TrackSwitchUiState } from '../domain/types';
+import {
+    AudioDownloadSizeInfo,
+    NormalizedTrackGroupLayout,
+    TrackRuntime,
+    TrackSwitchFeatures,
+    TrackSwitchUiState,
+} from '../domain/types';
 import { TrackTimelineProjector, WaveformEngine } from '../engine/waveform-engine';
 import * as d3 from 'd3';
 import * as viewRendererCore from './renderer-core';
@@ -644,6 +650,10 @@ setOverlayLoading(isLoading: boolean): void {
 
 setShortcutHelpVisible(isVisible: boolean): void {
         return viewRendererCore.setShortcutHelpVisible(this, isVisible);
+    }
+
+updateOverlayDownloadInfo(info: AudioDownloadSizeInfo): void {
+        return viewRendererCore.updateOverlayDownloadInfo(this, info);
     }
 
 showOverlayInfoText(): void {

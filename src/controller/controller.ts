@@ -1,5 +1,6 @@
 import {
     AlignmentOutOfRangeMode,
+    AudioDownloadSizeInfo,
     LoopMarker,
     NormalizedTrackSwitchConfig,
     PlayerState,
@@ -117,6 +118,13 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     public readonly instanceId: number;
     public readonly presetCount: number;
     public shortcutHelpOpen = false;
+    public audioDownloadSizeInfo: AudioDownloadSizeInfo = {
+        status: 'calculating',
+        totalBytes: null,
+        resolvedSourceCount: 0,
+        totalSourceCount: 0,
+    };
+    public audioDownloadSizeRequest: Promise<void> | null = null;
 
     constructor(rootElement: HTMLElement, config: NormalizedTrackSwitchConfig) {
         this.root = rootElement;
@@ -184,6 +192,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
         this.inputBinder = new InputBinder(this.root, this.features, this);
         this.inputBinder.bind();
+        this.prefetchAudioDownloadSize();
 
         if (this.presetCount > 0) {
             this.applyPreset(0);
@@ -405,6 +414,37 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
     onResize(): void {
         return controllerInput.onResize(this);
+    }
+
+    public prefetchAudioDownloadSize(): Promise<void> {
+        if (this.audioDownloadSizeRequest) {
+            return this.audioDownloadSizeRequest;
+        }
+
+        this.audioDownloadSizeRequest = this.audioEngine.estimateAudioDownloadSize(this.runtimes)
+            .then((info) => {
+                if (this.isDestroyed) {
+                    return;
+                }
+
+                this.audioDownloadSizeInfo = info;
+                this.renderer.updateOverlayDownloadInfo(info);
+            })
+            .catch(() => {
+                if (this.isDestroyed) {
+                    return;
+                }
+
+                this.audioDownloadSizeInfo = {
+                    status: 'unavailable',
+                    totalBytes: null,
+                    resolvedSourceCount: 0,
+                    totalSourceCount: 0,
+                };
+                this.renderer.updateOverlayDownloadInfo(this.audioDownloadSizeInfo);
+            });
+
+        return this.audioDownloadSizeRequest;
     }
 
     public requestWaveformRender(): void {

@@ -163,6 +163,15 @@ export interface TrackTiming {
     effectiveDuration: number;
 }
 
+export type AudioDownloadSizeStatus = 'calculating' | 'known' | 'partial' | 'unavailable';
+
+export interface AudioDownloadSizeInfo {
+    status: AudioDownloadSizeStatus;
+    totalBytes: number | null;
+    resolvedSourceCount: number;
+    totalSourceCount: number;
+}
+
 export interface TrackState {
     solo: boolean;
     volume: number;
