@@ -516,7 +516,7 @@ export function startAudio(ctx: any, newPosition: any, snippetDuration: any): an
         let nextReferencePosition = requestedPosition;
 
         if (this.features.mode === 'alignment' && this.alignmentContext) {
-            const activeTrackIndex = this.getActiveSoloTrackIndex();
+            const activeTrackIndex = this.getAlignmentPlaybackTrackIndex();
             if (activeTrackIndex < 0) {
                 return;
             }

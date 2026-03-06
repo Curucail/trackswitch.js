@@ -4,6 +4,7 @@ import { TrackRuntime, TrackSwitchUiState } from '../domain/types';
 export function applyTrackProperties(ctx: any): any {
     return (function(this: any) {
         const panSupported = this.audioEngine.supportsStereoPanning();
+        const noSoloFallbackGate = this.isAlignmentMode() && this.globalSyncEnabled ? 0 : undefined;
         if (!panSupported) {
             this.runtimes.forEach((runtime: TrackRuntime) => {
                 runtime.state.pan = 0;
@@ -17,7 +18,7 @@ export function applyTrackProperties(ctx: any): any {
             panSupported,
             this.globalSyncEnabled
         );
-        this.audioEngine.applyTrackStateGains(this.runtimes);
+        this.audioEngine.applyTrackStateGains(this.runtimes, noSoloFallbackGate);
         this.renderer.switchPosterImage(this.runtimes);
         this.renderer.renderWaveforms(
             this.waveformEngine,

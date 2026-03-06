@@ -624,6 +624,10 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         return controllerAlignment.getActiveSoloTrackIndex(this);
     }
 
+    public getAlignmentPlaybackTrackIndex(): number {
+        return controllerAlignment.getAlignmentPlaybackTrackIndex(this);
+    }
+
     public currentPlaybackReferencePosition(): number {
         return controllerAlignment.currentPlaybackReferencePosition(this);
     }

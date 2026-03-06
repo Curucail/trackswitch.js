@@ -584,11 +584,13 @@ export class AudioEngine {
         this.gainNodeVolume.gain.value = this.features.globalVolume ? nextVolume : 1;
     }
 
-    applyTrackStateGains(runtimes: TrackRuntime[]): void {
+    applyTrackStateGains(runtimes: TrackRuntime[], noSoloFallbackGate?: number): void {
         const anySolos = runtimes.some(function(runtime) {
             return runtime.state.solo;
         });
-        const noSoloFallbackGate = this.features.exclusiveSolo ? 1 : 0;
+        const resolvedNoSoloFallbackGate = typeof noSoloFallbackGate === 'number'
+            ? clamp01(noSoloFallbackGate)
+            : (this.features.exclusiveSolo ? 1 : 0);
 
         runtimes.forEach(function(runtime) {
             if (!runtime.gainNode) {
@@ -597,7 +599,7 @@ export class AudioEngine {
 
             const soloGate = anySolos
                 ? (runtime.state.solo ? 1 : 0)
-                : noSoloFallbackGate;
+                : resolvedNoSoloFallbackGate;
             runtime.gainNode.gain.value = soloGate * clamp01(runtime.state.volume);
 
             if (runtime.pannerNode) {

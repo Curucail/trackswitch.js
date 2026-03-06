@@ -441,7 +441,37 @@ export function getActiveSoloTrackIndex(ctx: any): any {
             }
         }
 
-        return this.runtimes.length > 0 ? 0 : -1;
+        if (this.effectiveSingleSoloMode && this.runtimes.length > 0) {
+            return 0;
+        }
+
+        return -1;
+    }).call(ctx);
+}
+
+export function getAlignmentPlaybackTrackIndex(ctx: any): any {
+    return (function(this: any) {
+        const activeSoloTrackIndex = this.getActiveSoloTrackIndex();
+        if (activeSoloTrackIndex >= 0) {
+            return activeSoloTrackIndex;
+        }
+
+        if (!this.globalSyncEnabled) {
+            return -1;
+        }
+
+        for (let index = 0; index < this.runtimes.length; index += 1) {
+            const runtime = this.runtimes[index];
+            if (!runtime || this.syncLockedTrackIndexes.has(index)) {
+                continue;
+            }
+
+            if (runtime.activeVariant === 'synced' && runtime.buffer) {
+                return index;
+            }
+        }
+
+        return -1;
     }).call(ctx);
 }
 
