@@ -237,7 +237,7 @@
 
     .trackswitch .overlay #overlayinfo {
         font-size: 8pt;
-        top: calc(50% + 34px);
+        top: calc(50% + 42px);
     }
 
     .trackswitch .overlay #overlayinfo span.info .ts-icon-slot {
