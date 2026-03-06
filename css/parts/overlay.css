@@ -24,10 +24,14 @@
     height: 50px;
     top: calc(50% - 25px);
     left: calc(50% - 25px);
-    text-indent: -9999px;
-    line-height: 0;
+    text-indent: 0;
+    line-height: 1;
+    font-size: 0;
     border-radius: 100%;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .trackswitch .overlay>span.loading {
@@ -36,7 +40,9 @@
 
 .trackswitch .overlay>span .ts-icon-slot {
     font-size: 28pt;
-    padding-top: 7px;
+    width: auto;
+    height: auto;
+    color: #000000;
 }
 
 
@@ -70,7 +76,8 @@
     right: 0;
     width: 380px;
     cursor: pointer;
-    text-indent: -9999px;
+    text-indent: 0;
+    font-size: 0;
     opacity: 0.4;
     display: flex;
     align-items: flex-end;
