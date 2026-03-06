@@ -90,12 +90,16 @@
 }
 
 .trackswitch .control li.repeat:after {
-    content: "\f01e";
-    /* fa-repeat */
-    opacity: 0.5;
+    content: none;
 }
 
-.trackswitch .control li.repeat.checked:after {
+.trackswitch .control li.repeat.fa-solid:before {
+    opacity: 0.5;
+    position: absolute;
+    top: 0;
+}
+
+.trackswitch .control li.repeat.checked.fa-solid:before {
     opacity: 1;
 }
 

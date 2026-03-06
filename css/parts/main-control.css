@@ -60,6 +60,16 @@
     margin: 0;
 }
 
+.trackswitch .main-control .playback-group>.playback-controls>li.repeat:before {
+    position: absolute;
+    inset: 0px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.0;
+    text-indent: 0;
+}
+
 /* Generic button styles within main-control */
 .trackswitch .main-control .button {
     width: 15px;

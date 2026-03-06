@@ -375,7 +375,7 @@ export function buildMainControlHtml(ctx: any, runtimes: any): any {
             + '<ul class="playback-controls">'
             + '<li class="playpause button" title="Play/Pause (Spacebar)">Play</li>'
             + '<li class="stop button" title="Stop (Esc)">Stop</li>'
-            + '<li class="repeat button" title="Repeat (R)">Repeat</li>'
+            + '<li class="repeat button fa-solid fa-rotate-right" title="Repeat (R)">Repeat</li>'
             + (this.shouldRenderGlobalSync(runtimes)
                 ? '<li class="sync-global button" title="Use synchronized version">SYNC</li>'
                 : '')

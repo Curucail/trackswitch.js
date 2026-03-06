@@ -152,7 +152,8 @@
         pointer-events: auto;
     }
 
-    .trackswitch .main-control .control li.button:after {
+    .trackswitch .main-control .control li.button:after,
+    .trackswitch .main-control .control li.repeat:before {
         font-size: 20px;
     }
 
