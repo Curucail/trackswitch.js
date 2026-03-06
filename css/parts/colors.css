@@ -14,8 +14,8 @@
     --ts-color-border-mid: #999999;
 
     --ts-color-accent: #ED8C01;
-    --ts-color-accent-soft-15: rgba(237, 140, 1, 0.15);
-    --ts-color-accent-soft-30: rgba(237, 140, 1, 0.3);
+    --ts-color-accent-soft-15: rgba(237, 140, 1, 0.12);
+    --ts-color-accent-soft-30: rgba(237, 140, 1, 0.2);
     --ts-color-overlay-dim: rgba(0, 0, 0, 0.5);
     --ts-color-overlay-button: #F1C40F;
     --ts-color-track-error-bg: #DD9B9B;

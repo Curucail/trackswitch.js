@@ -31,8 +31,9 @@
 .trackswitch .seekable-img-wrap .seekwrap .seekhead {
     position: absolute;
     inset-block: 0;
-    border-left: 2px solid var(--ts-color-text-primary);
-    border-right: 2px solid var(--ts-color-text-inverse);
+    width: 2px;
+    background-color: var(--ts-color-text-primary);
+    z-index: 4;
 }
 
 .trackswitch .seekable-img-wrap .seekwrap .loop-marker {
@@ -55,8 +56,12 @@
     position: absolute;
     left: 50%;
     inset-block: 0;
-    width: 3px;
-    background-color: var(--ts-color-surface-panel-dark);
+    width: 2px;
+    background: repeating-linear-gradient(
+        to bottom,
+        var(--ts-color-surface-panel-dark) 0 6px,
+        transparent 6px 8px
+    );
     transform: translateX(-50%);
 }
 

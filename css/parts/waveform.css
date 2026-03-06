@@ -68,7 +68,7 @@
     inset-block: 0;
     width: 2px;
     background-color: var(--ts-color-surface-panel-dark);
-    z-index: 3;
+    z-index: 4; 
 }
 
 .trackswitch .waveform-wrap .seekwrap .loop-marker {
@@ -91,8 +91,12 @@
     position: absolute;
     left: 50%;
     inset-block: 0;
-    width: 3px;
-    background-color: var(--ts-color-surface-panel-dark);
+    width: 2px;
+    background: repeating-linear-gradient(
+        to bottom,
+        var(--ts-color-surface-panel-dark) 0 6px,
+        transparent 6px 8px
+    );
     transform: translateX(-50%);
 }
 
