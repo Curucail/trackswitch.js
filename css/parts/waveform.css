@@ -5,8 +5,8 @@
     position: relative;
     width: 100%;
     margin: 0;
-    border-top: 1px solid var(--ts-color-border-contrast);
-    border-bottom: 1px solid var(--ts-color-border-contrast);
+    border-top: 1px solid var(--ts-color-border-mid);
+    border-bottom: 1px solid var(--ts-color-border-mid);
 }
 
 .trackswitch .waveform-wrap .waveform-scroll {
@@ -56,7 +56,7 @@
 .trackswitch canvas.waveform {
     display: block;
     width: 100%;
-    background-color: var(--ts-color-surface-waveform);
+    background-color: var(--ts-color-surface-base);
     /* Subtle background */
     --waveform-color: var(--ts-color-accent);
     /* CSS custom property for waveform color (orange) */
@@ -136,7 +136,7 @@
     border-radius: 4px;
     font-family: monospace;
     font-size: 11px;
-    color: var(--ts-color-text-overlay);
+    color: var(--ts-color-text-inverse);
     background: var(--ts-color-overlay-dim-strong);
     pointer-events: none;
     user-select: none;

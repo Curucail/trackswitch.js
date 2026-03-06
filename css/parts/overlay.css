@@ -101,7 +101,7 @@
     transform: translateX(-50%);
     background: var(--ts-color-surface-base);
     color: var(--ts-color-surface-panel-dark);
-    border: 1px solid var(--ts-color-border-muted);
+    border: 1px solid var(--ts-color-surface-alt);
     border-radius: 6px;
     padding: 8px 10px;
     white-space: nowrap;

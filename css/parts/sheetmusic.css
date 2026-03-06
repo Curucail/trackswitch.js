@@ -5,7 +5,7 @@
     position: relative;
     width: 100%;
     margin: 0;
-    background: var(--ts-color-surface-sheetmusic);
+    background: var(--ts-color-text-inverse);
 }
 
 .trackswitch .sheetmusic-wrap[data-sheetmusic-max-width-applied='true'] {
@@ -38,7 +38,7 @@
     display: block;
     padding: 12px;
     font-size: 12px;
-    color: var(--ts-color-text-quaternary);
+    color: var(--ts-color-text-secondary);
 }
 
 .trackswitch .sheetmusic.sheetmusic-error:empty::before {
@@ -46,7 +46,7 @@
     display: block;
     padding: 12px;
     font-size: 12px;
-    color: var(--ts-color-text-error-muted);
+    color: var(--ts-color-text-error);
 }
 
 .trackswitch .sheetmusic.sheetmusic-ready.sheetmusic-map-error::after {

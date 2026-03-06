@@ -53,8 +53,8 @@
     justify-content: flex-start;
     gap: 12px;
     padding: 6px 10px 4px 10px;
-    border-bottom: 1px solid var(--ts-color-border-muted);
-    background-color: var(--ts-color-surface-subtle);
+    border-bottom: 1px solid var(--ts-color-surface-alt);
+    background-color: var(--ts-color-surface-base);
     font-family: monospace;
     font-size: 12px;
     color: var(--ts-color-text-secondary);
@@ -72,7 +72,7 @@
 
 .trackswitch .warping-tempo-control-label {
     white-space: nowrap;
-    color: var(--ts-color-text-subtle);
+    color: var(--ts-color-text-secondary);
 }
 
 .trackswitch .warping-tempo-slider {
@@ -115,7 +115,7 @@
 .trackswitch .warping-tempo-value {
     min-width: 46px;
     text-align: right;
-    color: var(--ts-color-text-tertiary);
+    color: var(--ts-color-text-secondary);
 }
 
 .trackswitch .warping-plot-host .warping-plot-svg {
@@ -136,12 +136,12 @@
 }
 
 .trackswitch .warping-plot-axis text {
-    fill: var(--ts-color-text-axis-light);
+    fill: var(--ts-color-text-secondary);
     font-size: 14px;
 }
 
 .trackswitch .warping-plot-axis-label {
-    fill: var(--ts-color-text-axis);
+    fill: var(--ts-color-text-secondary);
     font-size: 12px;
 }
 
@@ -154,13 +154,13 @@
 
 .trackswitch .warping-guide-line {
     fill: none;
-    stroke: var(--ts-color-text-axis);
+    stroke: var(--ts-color-text-secondary);
     stroke-width: 1.3px;
     stroke-dasharray: 6 4;
 }
 
 .trackswitch .warping-playhead-dot {
-    fill: var(--ts-color-text-subtle);
+    fill: var(--ts-color-text-secondary);
     stroke: var(--ts-color-surface-base);
     stroke-width: 1px;
 }
@@ -175,14 +175,14 @@
 
 .trackswitch .warping-tempo-reference-line {
     fill: none;
-    stroke: var(--ts-color-text-axis);
+    stroke: var(--ts-color-text-secondary);
     stroke-width: 1.3px;
     stroke-dasharray: 6 4;
 }
 
 .trackswitch .warping-tempo-center-line {
     fill: none;
-    stroke: var(--ts-color-text-subtle);
+    stroke: var(--ts-color-text-secondary);
     stroke-width: 1.3px;
     stroke-dasharray: 5 5;
 }

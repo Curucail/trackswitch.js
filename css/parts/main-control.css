@@ -156,12 +156,12 @@
     height: 100%;
     top: 0;
     display: none;
-    background-color: var(--ts-color-accent-soft-10);
+    background-color: var(--ts-color-accent-soft-15);
     z-index: 1;
 }
 
 .trackswitch .main-control .seekwrap .seekbar .loop-region.active {
-    background-color: var(--ts-color-accent-soft-40);
+    background-color: var(--ts-color-accent-soft-30);
 }
 
 /* Volume control */
@@ -275,12 +275,12 @@
 }
 
 .trackswitch .main-control .preset-selector:hover {
-    background-color: var(--ts-color-surface-control-hover);
+    background-color: var(--ts-color-surface-control);
 }
 
 .trackswitch .main-control .preset-selector:focus {
     outline: none;
-    background-color: var(--ts-color-surface-control-hover);
+    background-color: var(--ts-color-surface-control);
     color: var(--ts-color-text-muted);
 }
 
