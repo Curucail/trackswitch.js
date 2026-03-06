@@ -545,7 +545,12 @@ export function renderTrackList(ctx: any, runtimes: any): any {
                     continue;
                 }
 
-                list.appendChild(this.buildTrackRow(runtime, trackIndex));
+                const row = this.buildTrackRow(runtime, trackIndex);
+                if (typeof group.rowHeight === 'number' && Number.isFinite(group.rowHeight) && group.rowHeight > 0) {
+                    row.style.minHeight = String(Math.round(group.rowHeight)) + 'px';
+                }
+
+                list.appendChild(row);
             }
 
             const container = this.query('.track-group[data-track-group-index="' + group.groupIndex + '"]');

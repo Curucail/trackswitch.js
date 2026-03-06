@@ -69,6 +69,7 @@ function resolveTracksFromUi(
             groupIndex: groupIndex,
             startTrackIndex: startTrackIndex,
             trackCount: entry.trackGroup.length,
+            rowHeight: entry.rowHeight,
         });
 
         groupIndex += 1;

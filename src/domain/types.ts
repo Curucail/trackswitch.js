@@ -117,6 +117,7 @@ export interface TrackSwitchWarpingMatrixUiElement extends TrackSwitchWarpingMat
 
 export interface TrackSwitchTrackGroupUiElement {
     type: 'trackGroup';
+    rowHeight?: number;
     trackGroup: TrackDefinition[];
 }
 
@@ -124,6 +125,7 @@ export interface NormalizedTrackGroupLayout {
     groupIndex: number;
     startTrackIndex: number;
     trackCount: number;
+    rowHeight?: number;
 }
 
 export type TrackSwitchUiElement =

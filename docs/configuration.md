@@ -32,6 +32,7 @@ TrackSwitch.createTrackSwitch(rootElement, {
     { type: 'waveform', width: 1200, height: 150 },
     {
       type: 'trackGroup',
+      rowHeight: 44,
       trackGroup: [
         { title: 'Vocals', presets: [0, 1], sources: [{ src: 'vocals.mp3' }] },
         { title: 'Drums', presets: [0], sources: [{ src: 'drums.mp3' }] },
@@ -60,6 +61,7 @@ TrackSwitch.createTrackSwitch(rootElement, {
     { type: 'waveform', width: 1200, height: 150 },
     {
       type: 'trackGroup',
+      rowHeight: 40,
       trackGroup: [
         {
           title: 'Track 1',
@@ -138,6 +140,7 @@ Tracks live in `ui` entries with `type: 'trackGroup'`:
 ```javascript
 {
   type: 'trackGroup',
+  rowHeight: 44,
   trackGroup: [
     {
       title: 'Drums',
@@ -158,6 +161,11 @@ Tracks live in `ui` entries with `type: 'trackGroup'`:
   ],
 }
 ```
+
+Track group fields:
+
+- `rowHeight?: number` (pixels, rounded to nearest integer, minimum `1`)
+- `trackGroup: TrackDefinition[]` (required, non-empty)
 
 Track fields:
 

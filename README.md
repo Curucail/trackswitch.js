@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', function () {
       },
       {
         type: 'trackGroup',
+        rowHeight: 44, // optional per-group track row min-height in px
         trackGroup: [
           {
             title: 'Violins',

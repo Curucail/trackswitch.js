@@ -27,7 +27,7 @@ const uiWaveformAllowedKeys = [
     'seekMarginLeft',
     'seekMarginRight',
 ] as const;
-const uiTrackGroupAllowedKeys = ['type', 'trackGroup'] as const;
+const uiTrackGroupAllowedKeys = ['type', 'rowHeight', 'trackGroup'] as const;
 const uiSheetMusicAllowedKeys = [
     'type',
     'src',
@@ -267,6 +267,14 @@ function normalizeTrackAlignmentConfig(
 }
 
 function normalizeTrackGroupConfig<T extends TrackSwitchTrackGroupUiElement>(group: T): T {
+    const normalizeTrackGroupRowHeight = function(value: number | undefined): number | undefined {
+        if (typeof value !== 'number' || !Number.isFinite(value) || value < 1) {
+            return undefined;
+        }
+
+        return Math.max(1, Math.round(value));
+    };
+
     const normalizedTracks = Array.isArray(group.trackGroup)
         ? group.trackGroup.map(function(track) {
             const trackRecord = toConfigRecord(track, 'track');
@@ -284,6 +292,7 @@ function normalizeTrackGroupConfig<T extends TrackSwitchTrackGroupUiElement>(gro
 
     return {
         ...group,
+        rowHeight: normalizeTrackGroupRowHeight(group.rowHeight),
         trackGroup: normalizedTracks,
     };
 }
