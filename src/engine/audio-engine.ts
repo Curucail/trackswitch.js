@@ -216,7 +216,7 @@ export class AudioEngine {
             unlockAudio.setAttribute('playsinline', 'playsinline');
             unlockAudio.preload = 'auto';
             unlockAudio.volume = 0.0001;
-            unlockAudio.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQAAAAA=';
+            unlockAudio.src = 'data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQIAAAAAAA==';
 
             const playPromise = unlockAudio.play();
             const cleanup = function() {
