@@ -952,9 +952,9 @@ export function applyVolumeIconState(ctx: any, icon: any, volumeZeroToOne: any):
         if (volume === 0) {
             setHostIcon(icon, 'volume-xmark');
         } else if (volume <= (1 / 3)) {
-            setHostIcon(icon, 'volume-off');
-        } else if (volume <= (2 / 3)) {
             setHostIcon(icon, 'volume-low');
+        } else if (volume <= (2 / 3)) {
+            setHostIcon(icon, 'volume');
         } else {
             setHostIcon(icon, 'volume-high');
         }

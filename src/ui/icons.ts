@@ -15,9 +15,9 @@ import {
     faSpinner,
     faStop,
     faTriangleExclamation,
+    faVolume,
     faVolumeHigh,
     faVolumeLow,
-    faVolumeOff,
     faVolumeXmark,
     faXmark,
 } from '@fortawesome/free-solid-svg-icons';
@@ -38,7 +38,7 @@ export type TrackSwitchIconName =
     | 'circle-check'
     | 'circle-dot'
     | 'volume-xmark'
-    | 'volume-off'
+    | 'volume'
     | 'volume-low'
     | 'volume-high';
 
@@ -58,7 +58,7 @@ const ICON_DEFINITION_BY_NAME: Record<TrackSwitchIconName, IconDefinition> = {
     'circle-check': faCircleCheck,
     'circle-dot': faCircleDot,
     'volume-xmark': faVolumeXmark,
-    'volume-off': faVolumeOff,
+    volume: faVolume,
     'volume-low': faVolumeLow,
     'volume-high': faVolumeHigh,
 };
@@ -98,7 +98,7 @@ const ICON_SVG_BY_NAME: Record<TrackSwitchIconName, string> = {
     'circle-check': renderIconSvgMarkup(ICON_DEFINITION_BY_NAME['circle-check']),
     'circle-dot': renderIconSvgMarkup(ICON_DEFINITION_BY_NAME['circle-dot']),
     'volume-xmark': renderIconSvgMarkup(ICON_DEFINITION_BY_NAME['volume-xmark']),
-    'volume-off': renderIconSvgMarkup(ICON_DEFINITION_BY_NAME['volume-off']),
+    volume: renderIconSvgMarkup(ICON_DEFINITION_BY_NAME.volume),
     'volume-low': renderIconSvgMarkup(ICON_DEFINITION_BY_NAME['volume-low']),
     'volume-high': renderIconSvgMarkup(ICON_DEFINITION_BY_NAME['volume-high']),
 };
