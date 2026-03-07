@@ -10,7 +10,7 @@
     "build:css": "esbuild css/trackswitch.css --bundle --minify --outfile=dist/css/trackswitch.min.css",
     "build:css:watch": "esbuild css/trackswitch.css --bundle --outfile=dist/css/trackswitch.min.css --watch=forever",
     "build:js": "node scripts/build-js.mjs",
-    "build:js:watch": "esbuild src/index.ts --bundle --platform=browser --format=iife --global-name=TrackSwitch --target=es2017 --outfile=dist/js/trackswitch.js --watch=forever",
+    "build:js:watch": "node scripts/build-js.mjs --watch",
     "minify:js": "node scripts/build-js.mjs --minify-only",
     "clean": "rimraf dist",
     "dev": "npm run build && sh -c 'npm run dev:watch & npm run dev:serve & wait'",
