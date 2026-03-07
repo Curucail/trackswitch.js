@@ -4,44 +4,6 @@ import { formatSecondsToHHMMSSmmm } from '../shared/format';
 import { clampPercent } from '../shared/math';
 import { TrackTimelineProjector } from '../engine/waveform-engine';
 
-export interface WaveformTimelineContext {
-    enabled: boolean;
-    referenceToTrackTime(trackIndex: number, referenceTime: number): number;
-    getTrackDuration(trackIndex: number): number;
-}
-
-export interface SheetMusicHostConfig {
-    host: HTMLElement;
-    scrollContainer: HTMLElement;
-    source: string;
-    measureCsv: string;
-    renderScale: number | null;
-    followPlayback: boolean;
-    cursorColor: string;
-    cursorAlpha: number;
-}
-
-export interface WarpingMatrixDataPoint {
-    referenceTime: number;
-    trackTime: number;
-}
-
-export interface WarpingMatrixTrackSeries {
-    trackIndex: number;
-    columnKey: string;
-    points: WarpingMatrixDataPoint[];
-    trackDuration: number;
-}
-
-export interface WarpingMatrixRenderContext {
-    enabled: boolean;
-    syncEnabled: boolean;
-    referenceDuration: number;
-    currentReferenceTime: number;
-    columnOrder: string[];
-    trackSeries: WarpingMatrixTrackSeries[];
-}
-
 interface WaveformSeekSurfaceMetadata {
     wrapper: HTMLElement;
     scrollContainer: HTMLElement;

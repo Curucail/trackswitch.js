@@ -4,6 +4,7 @@ declare module 'papaparse' {
         dynamicTyping?: boolean;
         delimiter?: string;
         skipEmptyLines?: boolean | 'greedy';
+        transformHeader?: (header: string, index: number) => string;
     }
 
     export interface ParseError {

@@ -13,13 +13,7 @@ type LineSelection = d3.Selection<SVGLineElement, unknown, null, undefined>;
 type CircleSelection = d3.Selection<SVGCircleElement, unknown, null, undefined>;
 type TextSelection = d3.Selection<SVGTextElement, unknown, null, undefined>;
 
-export interface WaveformTimelineContext {
-    enabled: boolean;
-    referenceToTrackTime(trackIndex: number, referenceTime: number): number;
-    getTrackDuration(trackIndex: number): number;
-}
-
-export interface SheetMusicHostConfig {
+interface SheetMusicHostConfig {
     host: HTMLElement;
     scrollContainer: HTMLElement;
     source: string;
@@ -28,27 +22,6 @@ export interface SheetMusicHostConfig {
     followPlayback: boolean;
     cursorColor: string;
     cursorAlpha: number;
-}
-
-export interface WarpingMatrixDataPoint {
-    referenceTime: number;
-    trackTime: number;
-}
-
-export interface WarpingMatrixTrackSeries {
-    trackIndex: number;
-    columnKey: string;
-    points: WarpingMatrixDataPoint[];
-    trackDuration: number;
-}
-
-export interface WarpingMatrixRenderContext {
-    enabled: boolean;
-    syncEnabled: boolean;
-    referenceDuration: number;
-    currentReferenceTime: number;
-    columnOrder: string[];
-    trackSeries: WarpingMatrixTrackSeries[];
 }
 
 interface WarpingMatrixPathPoint {

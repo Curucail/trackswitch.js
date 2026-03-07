@@ -1,3 +1,5 @@
+import Papa from 'papaparse';
+
 export interface MeasureMapPoint {
     start: number;
     measure: number;
@@ -36,38 +38,45 @@ function requestText(url: string): Promise<string> {
 
 export function parseMeasureMapCsv(csvText: string): MeasureMapPoint[] {
     const normalizedText = String(csvText || '').replace(/^\uFEFF/, '');
-    const lines = normalizedText.split(/\r?\n/).map(function(line) {
-        return line.trim();
-    }).filter(function(line) {
-        return line.length > 0;
+    const parsed = Papa.parse<Record<string, unknown>>(normalizedText, {
+        header: true,
+        dynamicTyping: true,
+        skipEmptyLines: 'greedy',
+        transformHeader: function(header) {
+            return String(header ?? '').trim().toLowerCase();
+        },
     });
 
-    if (lines.length < 2) {
+    if (parsed.errors.length > 0) {
+        const papaErrors = parsed.errors.map(function(error) {
+            const rowSuffix = typeof error.row === 'number' ? ' (row ' + error.row + ')' : '';
+            return error.message + rowSuffix;
+        }).join('; ');
+        throw new Error(papaErrors);
+    }
+
+    const headers = Array.isArray(parsed.meta.fields)
+        ? parsed.meta.fields.map(function(field) {
+            return String(field ?? '').trim().toLowerCase();
+        }).filter(function(field) {
+            return field.length > 0;
+        })
+        : [];
+
+    if (headers.length === 0 || parsed.data.length === 0) {
         throw new Error('Measure map CSV must include a header and at least one data row.');
     }
 
-    const delimiter = detectDelimiter(lines[0]);
-    const headers = splitLine(lines[0], delimiter).map(function(header) {
-        return header.trim().toLowerCase();
-    });
-
-    const startIndex = headers.indexOf('start');
-    const measureIndex = headers.indexOf('measure');
-
-    if (startIndex < 0 || measureIndex < 0) {
+    if (headers.indexOf('start') < 0 || headers.indexOf('measure') < 0) {
         throw new Error('Measure map CSV header must include "start" and "measure" columns.');
     }
 
     const points: MeasureMapPoint[] = [];
 
-    for (let lineIndex = 1; lineIndex < lines.length; lineIndex += 1) {
-        const cells = splitLine(lines[lineIndex], delimiter);
-        if (cells.length !== headers.length) {
-            continue;
-        }
-
-        const start = Number(cells[startIndex].trim());
-        const measure = Number(cells[measureIndex].trim());
+    for (let lineIndex = 0; lineIndex < parsed.data.length; lineIndex += 1) {
+        const sourceRow = parsed.data[lineIndex] || {};
+        const start = Number(sourceRow.start);
+        const measure = Number(sourceRow.measure);
         if (!Number.isFinite(start) || !Number.isFinite(measure)) {
             continue;
         }
@@ -90,20 +99,4 @@ export function parseMeasureMapCsv(csvText: string): MeasureMapPoint[] {
     });
 
     return points;
-}
-
-function detectDelimiter(headerLine: string): ';' | ',' {
-    const semicolonCount = (headerLine.match(/;/g) || []).length;
-    const commaCount = (headerLine.match(/,/g) || []).length;
-
-    if (semicolonCount === 0 && commaCount === 0) {
-        throw new Error('Measure map CSV header must use ";" or "," as delimiter.');
-    }
-
-    return semicolonCount >= commaCount ? ';' : ',';
-}
-
-function splitLine(line: string, delimiter: ';' | ','): string[] {
-    // Measure map files are expected to be simple numeric CSV without quoted delimiters.
-    return line.split(delimiter);
 }
