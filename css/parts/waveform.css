@@ -118,25 +118,70 @@
 .trackswitch .waveform-wrap .waveform-timing,
 .trackswitch .waveform-wrap .waveform-zoom {
     position: absolute;
-    top: 8px;
+    top: 4px;
     width: max-content;
     z-index: 1;
-    padding: 4px 6px;
     border-radius: 4px;
     font-family: monospace;
     font-size: 11px;
     color: var(--ts-color-text-inverse);
     background: var(--ts-color-surface-panel-dark);
-    pointer-events: none;
     user-select: none;
 }
 
 .trackswitch .waveform-wrap .waveform-timing {
     right: 8px;
+    padding: 4px 6px;
     background: var(--ts-color-surface-panel-dark-50);
+    pointer-events: none;
 }
 
 .trackswitch .waveform-wrap .waveform-zoom {
-    left: 8px;
+    left: 6px;
+    display: none;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 3px;
     background: var(--ts-color-surface-panel-dark-50);
+    pointer-events: auto;
+}
+
+.trackswitch .waveform-wrap .waveform-zoom .waveform-zoom-label {
+    pointer-events: none;
+}
+
+.trackswitch .waveform-wrap .waveform-zoom .waveform-zoom-minimap {
+    position: relative;
+    width: clamp(50px, 16cqw, 220px);
+    height: 22px;
+    overflow: hidden;
+    border-radius: 5px;
+    /* background: var(--ts-color-accent-soft-15); */
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+    pointer-events: auto;
+    cursor: grab;
+}
+
+.trackswitch .waveform-wrap .waveform-zoom .waveform-zoom-minimap:active {
+    cursor: grabbing;
+}
+
+.trackswitch .waveform-wrap .waveform-zoom .waveform-zoom-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    opacity: 0.95;
+    pointer-events: none;
+}
+
+.trackswitch .waveform-wrap .waveform-zoom .waveform-zoom-viewport {
+    position: absolute;
+    top: 1px;
+    bottom: 1px;
+    min-width: 0;
+    border-radius: 4px;
+    border: 1px solid var(--ts-color-text-inverse);
+    background: rgba(255, 255, 255, 0.16);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18);
+    pointer-events: none;
 }

@@ -67,11 +67,15 @@ interface WaveformSeekSurfaceMetadata {
     waveformSource: 'audible' | number;
     originalHeight: number;
     barWidth: number;
-    maxZoom: number;
+    maxZoomSeconds: number;
     baseWidth: number;
     zoom: number;
     timingNode: HTMLElement | null;
     zoomNode: HTMLElement;
+    zoomMinimapNode: HTMLElement;
+    zoomCanvas: HTMLCanvasElement;
+    zoomViewportNode: HTMLElement;
+    zoomCanvasLastDrawKey: string | null;
     tiles: Map<number, { canvas: HTMLCanvasElement; lastDrawKey: string | null }>;
     normalizationPeak: number;
     normalizationCacheKey: string | null;
@@ -510,12 +514,22 @@ getWaveformZoom(seekWrap: HTMLElement): number | null {
         return viewRendererWaveform.getWaveformZoom(this, seekWrap);
     }
 
-isWaveformZoomEnabled(seekWrap: HTMLElement): boolean {
-        return viewRendererWaveform.isWaveformZoomEnabled(this, seekWrap);
+    isWaveformZoomEnabled(seekWrap: HTMLElement, durationSeconds: number): boolean {
+        return viewRendererWaveform.isWaveformZoomEnabled(this, seekWrap, durationSeconds);
     }
 
-setWaveformZoom(seekWrap: HTMLElement, zoom: number, anchorPageX?: number): boolean {
-        return viewRendererWaveform.setWaveformZoom(this, seekWrap, zoom, anchorPageX);
+    public getWaveformMinimapViewport(
+        seekWrap: HTMLElement
+    ): { startRatio: number; widthRatio: number } | null {
+        return viewRendererWaveform.getWaveformMinimapViewport(this, seekWrap);
+    }
+
+    setWaveformMinimapViewportStart(seekWrap: HTMLElement, startRatio: number): boolean {
+        return viewRendererWaveform.setWaveformMinimapViewportStart(this, seekWrap, startRatio);
+    }
+
+    setWaveformZoom(seekWrap: HTMLElement, zoom: number, durationSeconds: number, anchorPageX?: number): boolean {
+        return viewRendererWaveform.setWaveformZoom(this, seekWrap, zoom, durationSeconds, anchorPageX);
     }
 
 drawDummyWaveforms(waveformEngine: WaveformEngine): void {

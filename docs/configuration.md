@@ -260,7 +260,7 @@ Notes:
 ## Waveform UI Element
 
 ```javascript
-{ type: 'waveform', width: 1200, height: 150, waveformBarWidth: 2, maxZoom: 20, waveformSource: 'audible', timer: true }
+{ type: 'waveform', width: 1200, height: 150, waveformBarWidth: 2, maxZoom: 5, waveformSource: 'audible', timer: true }
 ```
 
 Fields:
@@ -268,7 +268,7 @@ Fields:
 - `width?: number` (default `1200`)
 - `height?: number` (default `150`)
 - `waveformBarWidth?: number` (default `1`)
-- `maxZoom?: number | string` (default `20`)
+- `maxZoom?: number` (default `5`)
 - `waveformSource?: 'audible' | number` (default `'audible'`)
 - `timer?: boolean`
 - `style?: string`
@@ -278,8 +278,9 @@ Fields:
 Normalization and behavior:
 
 - Invalid `waveformBarWidth` values are normalized to `1`.
-- `maxZoom` accepts a factor (`20`) or a percent string (`'2000%'`, where `100% = 1x`).
-- `maxZoom <= 1` (or `<= '100%'`) effectively disables waveform zoom.
+- `maxZoom` is the minimum visible waveform window in seconds.
+- `maxZoom: 0.5` allows zooming in to a half-second excerpt.
+- `maxZoom <= 0` disables waveform zoom.
 - `waveformSource: 'audible'` uses current audible mix.
 - `waveformSource: <trackIndex>` renders a fixed track waveform.
 - `seekMarginLeft + seekMarginRight` must be less than `100`.
@@ -287,6 +288,7 @@ Normalization and behavior:
   - `default` mode: off
   - `alignment` mode: on
 - If any waveform UI element exists, waveform rendering is forced on (`features.waveform = true`).
+- When zoomed in, the top-left overlay shows a draggable waveform minimap instead of a numeric zoom badge.
 
 ## Sheet Music UI Element
 

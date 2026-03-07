@@ -70,7 +70,7 @@ export interface TrackSwitchWaveformConfig {
     width?: number;
     height?: number;
     waveformBarWidth?: number;
-    maxZoom?: number | string;
+    maxZoom?: number;
     waveformSource?: 'audible' | number;
     timer?: boolean;
     style?: string;

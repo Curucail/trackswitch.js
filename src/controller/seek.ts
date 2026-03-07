@@ -28,6 +28,14 @@ export function onSeekMove(ctx: any, event: any): any {
             return;
         }
 
+        if (this.waveformMinimapDragState) {
+            if (this.updateWaveformMinimapDrag(event)) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            return;
+        }
+
         if (this.pendingWaveformTouchSeek) {
             if (this.tryActivatePendingWaveformTouchSeek(event)) {
                 event.preventDefault();
@@ -163,7 +171,8 @@ export function onWaveformZoomWheel(ctx: any, event: any): any {
             return;
         }
 
-        if (!this.renderer.isWaveformZoomEnabled(seekWrap)) {
+        const zoomDuration = this.getSeekTimelineContext(seekWrap).duration;
+        if (!this.renderer.isWaveformZoomEnabled(seekWrap, zoomDuration)) {
             return;
         }
 
@@ -180,6 +189,7 @@ export function onWaveformZoomWheel(ctx: any, event: any): any {
         const changed = this.renderer.setWaveformZoom(
             seekWrap,
             nextZoom,
+            zoomDuration,
             Number.isFinite(event.pageX) ? event.pageX : undefined
         );
 
@@ -188,6 +198,42 @@ export function onWaveformZoomWheel(ctx: any, event: any): any {
             this.updateMainControls();
         }
     }).call(ctx, event);
+}
+
+export function updateWaveformMinimapDrag(ctx: any, event: any): any {
+    return (function(this: any, event: any) {
+        if (!this.waveformMinimapDragState) {
+            return false;
+        }
+
+        if (event.type === 'touchmove' && this.getActiveTouchCount(event) >= 2) {
+            this.endWaveformMinimapDrag();
+            return false;
+        }
+
+        if (!Number.isFinite(event.pageX)) {
+            return true;
+        }
+
+        const rect = this.waveformMinimapDragState.minimapNode.getBoundingClientRect();
+        const minimapWidth = Math.max(1, rect.width || this.waveformMinimapDragState.minimapNode.clientWidth);
+        const pointerRatio = clamp(
+            (((event.pageX as number) - (rect.left + window.scrollX)) / minimapWidth),
+            0,
+            1
+        );
+        this.renderer.setWaveformMinimapViewportStart(
+            this.waveformMinimapDragState.seekWrap,
+            pointerRatio - this.waveformMinimapDragState.pointerOffsetRatio
+        );
+        return true;
+    }).call(ctx, event);
+}
+
+export function endWaveformMinimapDrag(ctx: any): any {
+    return (function(this: any) {
+        this.waveformMinimapDragState = null;
+    }).call(ctx);
 }
 
 export function requestWaveformRender(ctx: any): any {
@@ -408,7 +454,8 @@ export function tryStartPinchZoom(ctx: any, event: any, seekWrap: any): any {
             return false;
         }
 
-        if (!this.renderer.isWaveformZoomEnabled(seekWrap)) {
+        const zoomDuration = this.getSeekTimelineContext(seekWrap).duration;
+        if (!this.renderer.isWaveformZoomEnabled(seekWrap, zoomDuration)) {
             return false;
         }
 
@@ -428,6 +475,7 @@ export function tryStartPinchZoom(ctx: any, event: any, seekWrap: any): any {
             initialZoom: initialZoom,
         };
         this.pendingWaveformTouchSeek = null;
+        this.waveformMinimapDragState = null;
 
         if (this.state.currentlySeeking) {
             this.dispatch({ type: 'set-seeking', seeking: false });
@@ -454,9 +502,11 @@ export function updatePinchZoom(ctx: any, event: any): any {
 
         const anchorPageX = this.getTouchCenterPageX(event);
         const scale = distance / this.pinchZoomState.initialDistance;
+        const zoomDuration = this.getSeekTimelineContext(this.pinchZoomState.seekWrap).duration;
         const changed = this.renderer.setWaveformZoom(
             this.pinchZoomState.seekWrap,
             this.pinchZoomState.initialZoom * scale,
+            zoomDuration,
             anchorPageX === null ? undefined : anchorPageX
         );
 

@@ -265,9 +265,81 @@ export function onSeekStart(ctx: any, event: any): any {
     }).call(ctx, event);
 }
 
+export function onWaveformMinimapStart(ctx: any, event: any): any {
+    return (function(this: any, event: any) {
+        if (!this.isLoaded || !isPrimaryInput(event) || this.pinchZoomState) {
+            return;
+        }
+
+        if (event.type === 'touchstart' && this.getActiveTouchCount(event) !== 1) {
+            return;
+        }
+
+        const minimapNode = closestInRoot(this.root, event.target, '.waveform-zoom-minimap');
+        if (!minimapNode || !Number.isFinite(event.pageX)) {
+            return;
+        }
+
+        const wrapper = closestInRoot(this.root, event.target, '.waveform-wrap');
+        if (!wrapper) {
+            return;
+        }
+
+        const seekWrap = wrapper.querySelector('.seekwrap[data-seek-surface="waveform"]');
+        if (!(seekWrap instanceof HTMLElement)) {
+            return;
+        }
+
+        const viewport = this.renderer.getWaveformMinimapViewport(seekWrap);
+        if (!viewport || viewport.widthRatio >= 1) {
+            return;
+        }
+
+        const rect = minimapNode.getBoundingClientRect();
+        const minimapWidth = Math.max(1, rect.width || minimapNode.clientWidth);
+        const pointerRatio = Math.max(
+            0,
+            Math.min(1, (((event.pageX as number) - (rect.left + window.scrollX)) / minimapWidth))
+        );
+        const isInsideViewport = pointerRatio >= viewport.startRatio
+            && pointerRatio <= (viewport.startRatio + viewport.widthRatio);
+        const pointerOffsetRatio = isInsideViewport
+            ? (pointerRatio - viewport.startRatio)
+            : (viewport.widthRatio / 2);
+
+        this.waveformMinimapDragState = {
+            seekWrap: seekWrap,
+            minimapNode: minimapNode,
+            pointerOffsetRatio: pointerOffsetRatio,
+        };
+        this.pendingWaveformTouchSeek = null;
+        this.seekingElement = null;
+        this.rightClickDragging = false;
+        this.loopDragStart = null;
+        this.draggingMarker = null;
+        if (this.state.currentlySeeking) {
+            this.dispatch({ type: 'set-seeking', seeking: false });
+        }
+
+        this.renderer.setWaveformMinimapViewportStart(
+            seekWrap,
+            pointerRatio - pointerOffsetRatio
+        );
+        event.preventDefault();
+        event.stopPropagation();
+    }).call(ctx, event);
+}
+
 export function onSeekEnd(ctx: any, event: any): any {
     return (function(this: any, event: any) {
         if (!this.isLoaded) {
+            return;
+        }
+
+        if (this.waveformMinimapDragState) {
+            this.endWaveformMinimapDrag();
+            event.preventDefault();
+            event.stopPropagation();
             return;
         }
 

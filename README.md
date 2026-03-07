@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', function () {
         type: 'waveform',
         width: 1200,
         height: 150,
-        maxZoom: '2000%', // optional per-waveform zoom cap (20x)
+        maxZoom: 5, // optional minimum visible window in seconds
         waveformSource: 'audible', // or a track index (e.g. 1) for a fixed track waveform
       },
       {
@@ -163,7 +163,7 @@ Alignment mode behavior:
 - `alignment`: the tempo panel computes finite-difference local tempo from DTW path neighborhoods, with `100` meaning equal local speed to the reference
 - `alignment`: the tempo panel shows a gray dashed `y = 100` reference line plus a fixed dashed vertical playhead guide at panel center; its x-axis is active-track time and it uses a centered moving track-time window (adjustable via the tempo controls)
 - `alignment`: the tempo panel renders one active-track curve using central finite differences (`w = 1`), supports click-to-seek, and switches to a visible dimmed non-interactive state while global `SYNC` is enabled
-- Waveform zoom is configured per waveform via `maxZoom`; wheel/pinch zoom is enabled only when `maxZoom > 1` (or `> '100%'`)
+- Waveform zoom is configured per waveform via `maxZoom`, expressed as the minimum visible window in seconds (for example `5` or `0.5`); wheel/pinch zoom is enabled only when the active waveform duration exceeds that value
 
 Examples
 --------

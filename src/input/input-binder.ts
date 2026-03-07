@@ -30,6 +30,7 @@ export interface InputController {
     onPreset(event: ControllerPointerEvent): void;
     onPresetScroll(event: ControllerPointerEvent): void;
     onWaveformZoomWheel(event: ControllerPointerEvent): void;
+    onWaveformMinimapStart(event: ControllerPointerEvent): void;
     onSetLoopA(event: ControllerPointerEvent): void;
     onSetLoopB(event: ControllerPointerEvent): void;
     onToggleLoop(event: ControllerPointerEvent): void;
@@ -399,6 +400,12 @@ export class InputBinder {
         const hasSheetMusicUi = !!this.root.querySelector('.sheetmusic, .sheetmusic-wrap');
 
         if (this.features.waveform) {
+            this.addDelegatedListener('touchstart', '.waveform-zoom-minimap', (event) => {
+                this.controller.onWaveformMinimapStart(event);
+            });
+            this.addDelegatedListener('mousedown', '.waveform-zoom-minimap', (event) => {
+                this.controller.onWaveformMinimapStart(event);
+            });
             this.addDelegatedListener(
                 'wheel',
                 '.waveform-wrap',

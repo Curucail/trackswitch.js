@@ -14,18 +14,22 @@ interface WaveformSeekSurfaceMetadata {
     waveformSource: 'audible' | number;
     originalHeight: number;
     barWidth: number;
-    maxZoom: number;
+    maxZoomSeconds: number;
     baseWidth: number;
     zoom: number;
     timingNode: HTMLElement | null;
     zoomNode: HTMLElement;
+    zoomMinimapNode: HTMLElement;
+    zoomCanvas: HTMLCanvasElement;
+    zoomViewportNode: HTMLElement;
+    zoomCanvasLastDrawKey: string | null;
     tiles: Map<number, { canvas: HTMLCanvasElement; lastDrawKey: string | null }>;
     normalizationPeak: number;
     normalizationCacheKey: string | null;
 }
 
 const MIN_WAVEFORM_ZOOM = 1;
-const DEFAULT_MAX_WAVEFORM_ZOOM = 20;
+const DEFAULT_MAX_WAVEFORM_ZOOM_SECONDS = 5;
 const WAVEFORM_TILE_WIDTH_PX = 1024;
 
 function buildSeekWrap(leftPercent: number, rightPercent: number): string {
@@ -106,26 +110,17 @@ function parseWaveformTimerEnabled(value: string | null, mode: TrackSwitchFeatur
 
 function parseWaveformMaxZoom(value: string | null): number {
     if (value === null) {
-        return DEFAULT_MAX_WAVEFORM_ZOOM;
+        return DEFAULT_MAX_WAVEFORM_ZOOM_SECONDS;
     }
 
     const trimmed = value.trim();
     if (!trimmed) {
-        return DEFAULT_MAX_WAVEFORM_ZOOM;
-    }
-
-    if (trimmed.endsWith('%')) {
-        const percent = Number(trimmed.slice(0, -1).trim());
-        if (Number.isFinite(percent) && percent >= 100) {
-            return percent / 100;
-        }
-
-        return DEFAULT_MAX_WAVEFORM_ZOOM;
+        return DEFAULT_MAX_WAVEFORM_ZOOM_SECONDS;
     }
 
     const parsed = Number(trimmed);
-    if (!Number.isFinite(parsed) || parsed < MIN_WAVEFORM_ZOOM) {
-        return DEFAULT_MAX_WAVEFORM_ZOOM;
+    if (!Number.isFinite(parsed)) {
+        return DEFAULT_MAX_WAVEFORM_ZOOM_SECONDS;
     }
 
     return parsed;
@@ -137,6 +132,75 @@ function clampWaveformZoom(zoom: number, maximum: number): number {
     }
 
     return clampTime(zoom, MIN_WAVEFORM_ZOOM, maximum);
+}
+
+function getWaveformSurfaceWidth(surfaceMetadata: WaveformSeekSurfaceMetadata): number {
+    return Math.max(1, Math.round(surfaceMetadata.baseWidth * surfaceMetadata.zoom));
+}
+
+function getWaveformViewportState(
+    surfaceMetadata: WaveformSeekSurfaceMetadata
+): { startRatio: number; widthRatio: number } {
+    const surfaceWidth = getWaveformSurfaceWidth(surfaceMetadata);
+    const viewportWidth = Math.max(1, surfaceMetadata.scrollContainer.clientWidth);
+    const widthRatio = clampTime(viewportWidth / surfaceWidth, 0, 1);
+    const maxStartRatio = Math.max(0, 1 - widthRatio);
+    const startRatio = clampTime(surfaceMetadata.scrollContainer.scrollLeft / surfaceWidth, 0, maxStartRatio);
+    return {
+        startRatio: startRatio,
+        widthRatio: widthRatio,
+    };
+}
+
+function updateWaveformMinimapViewport(surfaceMetadata: WaveformSeekSurfaceMetadata): void {
+    const minimapWidth = Math.max(1, surfaceMetadata.zoomMinimapNode.clientWidth);
+    const viewportState = getWaveformViewportState(surfaceMetadata);
+    surfaceMetadata.zoomViewportNode.style.left = (viewportState.startRatio * minimapWidth) + 'px';
+    surfaceMetadata.zoomViewportNode.style.width = Math.max(0, viewportState.widthRatio * minimapWidth) + 'px';
+}
+
+function getWaveformMaximumZoom(surfaceMetadata: WaveformSeekSurfaceMetadata, durationSeconds: number): number {
+    const safeDuration = sanitizeDuration(durationSeconds);
+    if (safeDuration <= 0 || surfaceMetadata.maxZoomSeconds <= 0) {
+        return MIN_WAVEFORM_ZOOM;
+    }
+
+    return Math.max(MIN_WAVEFORM_ZOOM, safeDuration / surfaceMetadata.maxZoomSeconds);
+}
+
+function setWaveformZoomForSurface(
+    surfaceMetadata: WaveformSeekSurfaceMetadata,
+    zoom: number,
+    maximum: number,
+    anchorPageX?: number
+): boolean {
+    const nextZoom = clampWaveformZoom(zoom, maximum);
+    if (Math.abs(nextZoom - surfaceMetadata.zoom) < 0.000001) {
+        updateWaveformMinimapViewport(surfaceMetadata);
+        return false;
+    }
+
+    const previousSurfaceWidth = getWaveformSurfaceWidth(surfaceMetadata);
+    const wrapperRect = surfaceMetadata.scrollContainer.getBoundingClientRect();
+    const wrapperWidth = Math.max(1, surfaceMetadata.scrollContainer.clientWidth);
+    const anchorWithinWrapper = Number.isFinite(anchorPageX)
+        ? clampTime((anchorPageX as number) - (wrapperRect.left + window.scrollX), 0, wrapperWidth)
+        : (wrapperWidth / 2);
+    const anchorRatio = previousSurfaceWidth > 0
+        ? (surfaceMetadata.scrollContainer.scrollLeft + anchorWithinWrapper) / previousSurfaceWidth
+        : 0;
+
+    surfaceMetadata.zoom = nextZoom;
+    const nextSurfaceWidth = getWaveformSurfaceWidth(surfaceMetadata);
+    surfaceMetadata.surface.style.width = nextSurfaceWidth + 'px';
+    surfaceMetadata.surface.style.height = surfaceMetadata.originalHeight + 'px';
+    surfaceMetadata.tileLayer.style.height = surfaceMetadata.originalHeight + 'px';
+
+    const maxScrollLeft = Math.max(0, nextSurfaceWidth - surfaceMetadata.scrollContainer.clientWidth);
+    const nextScrollLeft = (anchorRatio * nextSurfaceWidth) - anchorWithinWrapper;
+    surfaceMetadata.scrollContainer.scrollLeft = clampTime(nextScrollLeft, 0, maxScrollLeft);
+    updateWaveformMinimapViewport(surfaceMetadata);
+    return true;
 }
 
 export function getCanvasPixelRatio(ctx: any): any {
@@ -169,7 +233,7 @@ export function wrapWaveformCanvases(ctx: any): any {
 
             const waveformSource = parseWaveformSource(canvasElement.getAttribute('data-waveform-source'));
             const barWidth = parseWaveformBarWidth(canvasElement.getAttribute('data-waveform-bar-width'), 1);
-            const maxZoom = parseWaveformMaxZoom(canvasElement.getAttribute('data-waveform-max-zoom'));
+            const maxZoomSeconds = parseWaveformMaxZoom(canvasElement.getAttribute('data-waveform-max-zoom'));
             const timerEnabled = parseWaveformTimerEnabled(
                 canvasElement.getAttribute('data-waveform-timer'),
                 this.features.mode
@@ -223,6 +287,16 @@ export function wrapWaveformCanvases(ctx: any): any {
                     ? this.createWaveformTimingNode(overlay)
                     : null;
                 const zoomNode = this.createWaveformZoomNode(overlay);
+                const zoomMinimapNode = zoomNode.querySelector('.waveform-zoom-minimap');
+                const zoomCanvas = zoomNode.querySelector('.waveform-zoom-canvas');
+                const zoomViewportNode = zoomNode.querySelector('.waveform-zoom-viewport');
+                if (
+                    !(zoomMinimapNode instanceof HTMLElement)
+                    || !(zoomCanvas instanceof HTMLCanvasElement)
+                    || !(zoomViewportNode instanceof HTMLElement)
+                ) {
+                    return;
+                }
                 this.waveformSeekSurfaces.push({
                     wrapper: wrapper,
                     scrollContainer: scrollContainer,
@@ -233,17 +307,25 @@ export function wrapWaveformCanvases(ctx: any): any {
                     waveformSource: waveformSource,
                     originalHeight: originalHeight,
                     barWidth: barWidth,
-                    maxZoom: maxZoom,
+                    maxZoomSeconds: maxZoomSeconds,
                     baseWidth: this.resolveWaveformBaseWidth(scrollContainer, canvasElement.width),
                     zoom: MIN_WAVEFORM_ZOOM,
                     timingNode: timingNode,
                     zoomNode: zoomNode,
+                    zoomMinimapNode: zoomMinimapNode,
+                    zoomCanvas: zoomCanvas,
+                    zoomViewportNode: zoomViewportNode,
+                    zoomCanvasLastDrawKey: null,
                     tiles: new Map<number, { canvas: HTMLCanvasElement; lastDrawKey: string | null }>(),
                     normalizationPeak: 1,
                     normalizationCacheKey: null,
                 });
 
                 scrollContainer.addEventListener('scroll', () => {
+                    const currentSurface = this.findWaveformSurface(seekWrap);
+                    if (currentSurface) {
+                        updateWaveformMinimapViewport(currentSurface);
+                    }
                     this.scheduleVisibleWaveformTileRefresh();
                 }, { passive: true });
             }
@@ -267,7 +349,11 @@ export function createWaveformZoomNode(ctx: any, overlay: any): any {
     return (function(this: any, overlay: any) {
         const zoom = document.createElement('div');
         zoom.className = 'waveform-zoom';
-        zoom.textContent = 'Zoom: 100%';
+        zoom.innerHTML = '<span class="waveform-zoom-label">Zoom</span>'
+            + '<div class="waveform-zoom-minimap">'
+            + '<canvas class="waveform-zoom-canvas"></canvas>'
+            + '<div class="waveform-zoom-viewport"></div>'
+            + '</div>';
         zoom.style.display = 'none';
         overlay.appendChild(zoom);
         return zoom;
@@ -293,10 +379,11 @@ export function resolveWaveformBaseWidth(ctx: any, scrollContainer: any, fallbac
 
 export function setWaveformSurfaceWidth(ctx: any, surfaceMetadata: any): any {
     return (function(this: any, surfaceMetadata: any) {
-        const width = Math.max(1, Math.round(surfaceMetadata.baseWidth * surfaceMetadata.zoom));
+        const width = getWaveformSurfaceWidth(surfaceMetadata);
         surfaceMetadata.surface.style.width = width + 'px';
         surfaceMetadata.surface.style.height = surfaceMetadata.originalHeight + 'px';
         surfaceMetadata.tileLayer.style.height = surfaceMetadata.originalHeight + 'px';
+        updateWaveformMinimapViewport(surfaceMetadata);
     
     }).call(ctx, surfaceMetadata);
 }
@@ -486,6 +573,70 @@ export function buildWaveformNormalizationCacheKey(ctx: any, surfaceMetadata: an
     }).call(ctx, surfaceMetadata, runtimes, sourceRuntimes, fullDuration, renderBarWidth, useLocalAxis, hasTimelineProjector);
 }
 
+function renderWaveformMinimap(
+    surfaceMetadata: WaveformSeekSurfaceMetadata,
+    waveformEngine: any,
+    sourceRuntimes: TrackRuntime[],
+    fullDuration: number,
+    baseProjector: TrackTimelineProjector,
+    normalizationPeak: number,
+    normalizationCacheKey: string,
+    pixelRatio: number
+): void {
+    if (surfaceMetadata.zoom <= (MIN_WAVEFORM_ZOOM + 0.000001)) {
+        return;
+    }
+
+    const cssWidth = Math.max(1, Math.round(surfaceMetadata.zoomMinimapNode.clientWidth));
+    const cssHeight = Math.max(1, Math.round(surfaceMetadata.zoomMinimapNode.clientHeight));
+    const renderWidth = Math.max(1, Math.round(cssWidth * pixelRatio));
+    const renderHeight = Math.max(1, Math.round(cssHeight * pixelRatio));
+    const canvas = surfaceMetadata.zoomCanvas;
+    if (canvas.width !== renderWidth) {
+        canvas.width = renderWidth;
+    }
+    if (canvas.height !== renderHeight) {
+        canvas.height = renderHeight;
+    }
+
+    const context = canvas.getContext('2d');
+    if (!context) {
+        return;
+    }
+
+    const drawKey = [
+        normalizationCacheKey,
+        'minimap',
+        renderWidth,
+        renderHeight,
+    ].join('#');
+    if (surfaceMetadata.zoomCanvasLastDrawKey === drawKey) {
+        return;
+    }
+
+    if (fullDuration <= 0) {
+        waveformEngine.drawPlaceholder(canvas, context, 1, 0.2);
+        surfaceMetadata.zoomCanvasLastDrawKey = drawKey;
+        return;
+    }
+
+    const mixed = waveformEngine.calculateMixedWaveform(
+        sourceRuntimes,
+        renderWidth,
+        1,
+        fullDuration,
+        baseProjector
+    );
+    if (!mixed) {
+        waveformEngine.drawPlaceholder(canvas, context, 1, 0.2);
+        surfaceMetadata.zoomCanvasLastDrawKey = drawKey;
+        return;
+    }
+
+    waveformEngine.drawWaveform(canvas, context, mixed, 1, normalizationPeak);
+    surfaceMetadata.zoomCanvasLastDrawKey = drawKey;
+}
+
 export function findWaveformSurface(ctx: any, seekWrap: any): any {
     return (function(this: any, seekWrap: any) {
         if (!seekWrap) {
@@ -507,10 +658,7 @@ export function findWaveformSurface(ctx: any, seekWrap: any): any {
 export function reflowWaveforms(ctx: any): any {
     return (function(this: any) {
         this.waveformSeekSurfaces.forEach((surfaceMetadata: WaveformSeekSurfaceMetadata) => {
-            const previousSurfaceWidth = Math.max(
-                1,
-                Math.round(surfaceMetadata.baseWidth * surfaceMetadata.zoom)
-            );
+            const previousSurfaceWidth = getWaveformSurfaceWidth(surfaceMetadata);
             const viewportCenter = surfaceMetadata.scrollContainer.clientWidth / 2;
             const centerRatio = previousSurfaceWidth > 0
                 ? (surfaceMetadata.scrollContainer.scrollLeft + viewportCenter) / previousSurfaceWidth
@@ -522,13 +670,11 @@ export function reflowWaveforms(ctx: any): any {
             );
             this.setWaveformSurfaceWidth(surfaceMetadata);
 
-            const nextSurfaceWidth = Math.max(
-                1,
-                Math.round(surfaceMetadata.baseWidth * surfaceMetadata.zoom)
-            );
+            const nextSurfaceWidth = getWaveformSurfaceWidth(surfaceMetadata);
             const maxScrollLeft = Math.max(0, nextSurfaceWidth - surfaceMetadata.scrollContainer.clientWidth);
             const nextScrollLeft = (centerRatio * nextSurfaceWidth) - viewportCenter;
             surfaceMetadata.scrollContainer.scrollLeft = clampTime(nextScrollLeft, 0, maxScrollLeft);
+            updateWaveformMinimapViewport(surfaceMetadata);
         });
     
     }).call(ctx);
@@ -546,56 +692,72 @@ export function getWaveformZoom(ctx: any, seekWrap: any): any {
     }).call(ctx, seekWrap);
 }
 
-export function isWaveformZoomEnabled(ctx: any, seekWrap: any): any {
-    return (function(this: any, seekWrap: any) {
+export function isWaveformZoomEnabled(ctx: any, seekWrap: any, durationSeconds: any): any {
+    return (function(this: any, seekWrap: any, durationSeconds: any) {
         const surfaceMetadata = this.findWaveformSurface(seekWrap);
         if (!surfaceMetadata) {
             return false;
         }
 
-        return surfaceMetadata.maxZoom > MIN_WAVEFORM_ZOOM;
+        return getWaveformMaximumZoom(surfaceMetadata, durationSeconds) > MIN_WAVEFORM_ZOOM;
+    
+    }).call(ctx, seekWrap, durationSeconds);
+}
+
+export function getWaveformMinimapViewport(ctx: any, seekWrap: any): any {
+    return (function(this: any, seekWrap: any) {
+        const surfaceMetadata = this.findWaveformSurface(seekWrap);
+        if (!surfaceMetadata) {
+            return null;
+        }
+
+        return getWaveformViewportState(surfaceMetadata);
     
     }).call(ctx, seekWrap);
 }
 
-export function setWaveformZoom(ctx: any, seekWrap: any, zoom: any, anchorPageX: any): any {
-    return (function(this: any, seekWrap: any, zoom: any, anchorPageX: any) {
+export function setWaveformMinimapViewportStart(ctx: any, seekWrap: any, startRatio: any): any {
+    return (function(this: any, seekWrap: any, startRatio: any) {
         const surfaceMetadata = this.findWaveformSurface(seekWrap);
         if (!surfaceMetadata) {
             return false;
         }
 
-        const nextZoom = clampWaveformZoom(zoom, surfaceMetadata.maxZoom);
-        if (Math.abs(nextZoom - surfaceMetadata.zoom) < 0.000001) {
+        const viewportState = getWaveformViewportState(surfaceMetadata);
+        const surfaceWidth = getWaveformSurfaceWidth(surfaceMetadata);
+        const maxStartRatio = Math.max(0, 1 - viewportState.widthRatio);
+        const nextStartRatio = clampTime(startRatio, 0, maxStartRatio);
+        const nextScrollLeft = nextStartRatio * surfaceWidth;
+        const maxScrollLeft = Math.max(0, surfaceWidth - surfaceMetadata.scrollContainer.clientWidth);
+        const clampedScrollLeft = clampTime(nextScrollLeft, 0, maxScrollLeft);
+        if (Math.abs(clampedScrollLeft - surfaceMetadata.scrollContainer.scrollLeft) < 0.000001) {
+            updateWaveformMinimapViewport(surfaceMetadata);
             return false;
         }
 
-        const previousSurfaceWidth = Math.max(
-            1,
-            Math.round(surfaceMetadata.baseWidth * surfaceMetadata.zoom)
-        );
-        const wrapperRect = surfaceMetadata.scrollContainer.getBoundingClientRect();
-        const wrapperWidth = Math.max(1, surfaceMetadata.scrollContainer.clientWidth);
-        const anchorWithinWrapper = Number.isFinite(anchorPageX)
-            ? clampTime((anchorPageX as number) - (wrapperRect.left + window.scrollX), 0, wrapperWidth)
-            : (wrapperWidth / 2);
-        const anchorRatio = previousSurfaceWidth > 0
-            ? (surfaceMetadata.scrollContainer.scrollLeft + anchorWithinWrapper) / previousSurfaceWidth
-            : 0;
-
-        surfaceMetadata.zoom = nextZoom;
-        this.setWaveformSurfaceWidth(surfaceMetadata);
-
-        const nextSurfaceWidth = Math.max(
-            1,
-            Math.round(surfaceMetadata.baseWidth * surfaceMetadata.zoom)
-        );
-        const maxScrollLeft = Math.max(0, nextSurfaceWidth - surfaceMetadata.scrollContainer.clientWidth);
-        const nextScrollLeft = (anchorRatio * nextSurfaceWidth) - anchorWithinWrapper;
-        surfaceMetadata.scrollContainer.scrollLeft = clampTime(nextScrollLeft, 0, maxScrollLeft);
+        surfaceMetadata.scrollContainer.scrollLeft = clampedScrollLeft;
+        updateWaveformMinimapViewport(surfaceMetadata);
+        this.scheduleVisibleWaveformTileRefresh();
         return true;
     
-    }).call(ctx, seekWrap, zoom, anchorPageX);
+    }).call(ctx, seekWrap, startRatio);
+}
+
+export function setWaveformZoom(ctx: any, seekWrap: any, zoom: any, durationSeconds: any, anchorPageX: any): any {
+    return (function(this: any, seekWrap: any, zoom: any, durationSeconds: any, anchorPageX: any) {
+        const surfaceMetadata = this.findWaveformSurface(seekWrap);
+        if (!surfaceMetadata) {
+            return false;
+        }
+
+        return setWaveformZoomForSurface(
+            surfaceMetadata,
+            zoom,
+            getWaveformMaximumZoom(surfaceMetadata, durationSeconds),
+            anchorPageX
+        );
+    
+    }).call(ctx, seekWrap, zoom, durationSeconds, anchorPageX);
 }
 
 export function drawDummyWaveforms(ctx: any, waveformEngine: any): any {
@@ -617,7 +779,20 @@ export function drawDummyWaveforms(ctx: any, waveformEngine: any): any {
             }) => {
                 waveformEngine.drawPlaceholder(tile.canvas, tile.context, tile.renderBarWidth, 0.3);
             });
+            if (surfaceMetadata.zoom > MIN_WAVEFORM_ZOOM) {
+                renderWaveformMinimap(
+                    surfaceMetadata,
+                    waveformEngine,
+                    [],
+                    0,
+                    (_runtime, trackTimelineTimeSeconds) => trackTimelineTimeSeconds,
+                    1,
+                    'placeholder',
+                    pixelRatio
+                );
+            }
         }
+        this.updateWaveformZoomIndicators();
     
     }).call(ctx, waveformEngine);
 }
@@ -673,6 +848,11 @@ export function renderWaveformsInternal(ctx: any, waveformEngine: any, runtimes:
             const baseProjector: TrackTimelineProjector = useLocalAxis
                 ? ((_runtime, trackTimelineTimeSeconds) => trackTimelineTimeSeconds)
                 : (trackTimelineProjector || ((_runtime, trackTimelineTimeSeconds) => trackTimelineTimeSeconds));
+            setWaveformZoomForSurface(
+                surfaceMetadata,
+                surfaceMetadata.zoom,
+                getWaveformMaximumZoom(surfaceMetadata, fullDuration)
+            );
 
             const surfaceRenderBarWidth = Math.max(1, Math.round(surfaceMetadata.barWidth * pixelRatio));
             const normalizationCacheKey = this.buildWaveformNormalizationCacheKey(
@@ -768,7 +948,18 @@ export function renderWaveformsInternal(ctx: any, waveformEngine: any, runtimes:
                 );
                 tile.record.lastDrawKey = tileDrawKey;
             });
+            renderWaveformMinimap(
+                surfaceMetadata,
+                waveformEngine,
+                sourceRuntimes,
+                fullDuration,
+                baseProjector,
+                normalizationPeak,
+                normalizationCacheKey,
+                pixelRatio
+            );
         }
+        this.updateWaveformZoomIndicators();
     
     }).call(ctx, waveformEngine, runtimes, timelineDuration, trackTimelineProjector, waveformTimelineContext, performReflow, forceRedrawVisibleTiles);
 }
@@ -820,14 +1011,13 @@ export function resolveWaveformTrackIndex(ctx: any, runtimes: any, waveformSourc
 export function updateWaveformZoomIndicators(ctx: any): any {
     return (function(this: any) {
         this.waveformSeekSurfaces.forEach((surface: WaveformSeekSurfaceMetadata) => {
-            const zoomPercent = Math.round(clampWaveformZoom(surface.zoom, surface.maxZoom) * 100);
-            if (zoomPercent === 100) {
+            if (surface.zoom <= (MIN_WAVEFORM_ZOOM + 0.000001)) {
                 surface.zoomNode.style.display = 'none';
                 return;
             }
 
-            surface.zoomNode.textContent = 'Zoom: ' + zoomPercent + '%';
-            surface.zoomNode.style.display = 'block';
+            updateWaveformMinimapViewport(surface);
+            surface.zoomNode.style.display = 'flex';
         });
     
     }).call(ctx);

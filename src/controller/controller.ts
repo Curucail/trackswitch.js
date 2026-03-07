@@ -68,6 +68,12 @@ interface PendingWaveformTouchSeek {
     startPageY: number;
 }
 
+interface WaveformMinimapDragState {
+    seekWrap: HTMLElement;
+    minimapNode: HTMLElement;
+    pointerOffsetRatio: number;
+}
+
 export class TrackSwitchControllerImpl implements TrackSwitchController, InputController {
     public readonly root: HTMLElement;
     public readonly features: TrackSwitchFeatures;
@@ -95,6 +101,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     public draggingMarker: LoopMarker | null = null;
     public pinchZoomState: PinchZoomState | null = null;
     public pendingWaveformTouchSeek: PendingWaveformTouchSeek | null = null;
+    public waveformMinimapDragState: WaveformMinimapDragState | null = null;
     public waveformRenderFrameId: number | null = null;
     public readonly loopMinDistance = 0.1;
     public readonly touchSeekMoveThresholdPx = 10;
@@ -388,6 +395,10 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         return controllerSeek.onWaveformZoomWheel(this, event);
     }
 
+    onWaveformMinimapStart(event: ControllerPointerEvent): void {
+        return controllerInput.onWaveformMinimapStart(this, event);
+    }
+
     onSetLoopA(event: ControllerPointerEvent): void {
         return controllerInput.onSetLoopA(this, event);
     }
@@ -500,6 +511,14 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
     public tryStartPinchZoom(event: ControllerPointerEvent, seekWrap: HTMLElement | null): boolean {
         return controllerSeek.tryStartPinchZoom(this, event, seekWrap);
+    }
+
+    public updateWaveformMinimapDrag(event: ControllerPointerEvent): boolean {
+        return controllerSeek.updateWaveformMinimapDrag(this, event);
+    }
+
+    public endWaveformMinimapDrag(): void {
+        return controllerSeek.endWaveformMinimapDrag(this);
     }
 
     public updatePinchZoom(event: ControllerPointerEvent): boolean {

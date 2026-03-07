@@ -132,6 +132,7 @@ export function destroy(ctx: any): any {
             cancelAnimationFrame(this.waveformRenderFrameId);
             this.waveformRenderFrameId = null;
         }
+        this.waveformMinimapDragState = null;
 
         if (this.state.playing) {
             this.stopAudio();
@@ -663,6 +664,7 @@ export function handleError(ctx: any, message: any): any {
             this.waveformRenderFrameId = null;
         }
         this.pinchZoomState = null;
+        this.waveformMinimapDragState = null;
         this.sheetMusicEngine.destroy();
 
         this.renderer.showError(message, this.runtimes);
