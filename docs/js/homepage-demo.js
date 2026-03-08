@@ -152,6 +152,7 @@
     var quickstartText = '';
     var arrowFrame = null;
     var arrowPath = null;
+    var arrowHeadPath = null;
 
     if (
       !playerRoot ||
@@ -244,6 +245,19 @@
       var control1Y;
       var control2X;
       var control2Y;
+      var tangentX;
+      var tangentY;
+      var tangentLength;
+      var directionX;
+      var directionY;
+      var headLength = 11;
+      var headWidth = 5.5;
+      var headBaseX;
+      var headBaseY;
+      var leftX;
+      var leftY;
+      var rightX;
+      var rightY;
 
       arrowFrame = null;
       if (!guideArrow || !showcaseRoot || !codeCallout) {
@@ -251,12 +265,13 @@
       }
 
       ensureGuideArrowSvg();
-      if (!arrowPath) {
+      if (!arrowPath || !arrowHeadPath) {
         return;
       }
 
       if (window.matchMedia('(max-width: 1360px)').matches) {
         arrowPath.setAttribute('d', '');
+        arrowHeadPath.setAttribute('d', '');
         return;
       }
 
@@ -266,6 +281,7 @@
 
       if (!showcaseRect.width || !playerRect.width || !codeRect.width) {
         arrowPath.setAttribute('d', '');
+        arrowHeadPath.setAttribute('d', '');
         return;
       }
 
@@ -302,15 +318,40 @@
           ' ' +
           endY
       );
+
+      tangentX = endX - control2X;
+      tangentY = endY - control2Y;
+      tangentLength = Math.sqrt(tangentX * tangentX + tangentY * tangentY) || 1;
+      directionX = tangentX / tangentLength;
+      directionY = tangentY / tangentLength;
+      headBaseX = endX - directionX * headLength;
+      headBaseY = endY - directionY * headLength;
+      leftX = headBaseX - directionY * headWidth;
+      leftY = headBaseY + directionX * headWidth;
+      rightX = headBaseX + directionY * headWidth;
+      rightY = headBaseY - directionX * headWidth;
+
+      arrowHeadPath.setAttribute(
+        'd',
+        'M ' +
+          leftX +
+          ' ' +
+          leftY +
+          ' L ' +
+          endX +
+          ' ' +
+          endY +
+          ' L ' +
+          rightX +
+          ' ' +
+          rightY
+      );
     }
 
     function ensureGuideArrowSvg() {
       var svg;
-      var defs;
-      var marker;
-      var markerPath;
 
-      if (!guideArrow || arrowPath) {
+      if (!guideArrow || arrowPath || arrowHeadPath) {
         return;
       }
 
@@ -318,32 +359,13 @@
       svg.setAttribute('aria-hidden', 'true');
       svg.setAttribute('focusable', 'false');
 
-      defs = document.createElementNS(SVG_NS, 'defs');
-      marker = document.createElementNS(SVG_NS, 'marker');
-      marker.setAttribute('id', 'ts-guide-arrowhead');
-      marker.setAttribute('markerWidth', '8');
-      marker.setAttribute('markerHeight', '8');
-      marker.setAttribute('refX', '6.5');
-      marker.setAttribute('refY', '3.5');
-      marker.setAttribute('orient', 'auto');
-      marker.setAttribute('markerUnits', 'strokeWidth');
-
-      markerPath = document.createElementNS(SVG_NS, 'path');
-      markerPath.setAttribute('d', 'M 0 0 L 7 3.5 L 0 7');
-      markerPath.setAttribute('fill', 'none');
-      markerPath.setAttribute('stroke', 'rgb(137, 138, 139)');
-      markerPath.setAttribute('stroke-width', '1.6');
-      markerPath.setAttribute('stroke-linecap', 'round');
-      markerPath.setAttribute('stroke-linejoin', 'round');
-
-      marker.appendChild(markerPath);
-      defs.appendChild(marker);
-      svg.appendChild(defs);
-
       arrowPath = document.createElementNS(SVG_NS, 'path');
       arrowPath.setAttribute('class', 'ts-showcase__guide-path');
-      arrowPath.setAttribute('marker-end', 'url(#ts-guide-arrowhead)');
       svg.appendChild(arrowPath);
+
+      arrowHeadPath = document.createElementNS(SVG_NS, 'path');
+      arrowHeadPath.setAttribute('class', 'ts-showcase__guide-head');
+      svg.appendChild(arrowHeadPath);
 
       guideArrow.innerHTML = '';
       guideArrow.appendChild(svg);
