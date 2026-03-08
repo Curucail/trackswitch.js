@@ -20,57 +20,93 @@ title: trackswitch.js
 - [Utility Exports](#utility-exports)
 - [Validation and Common Errors](#validation-and-common-errors)
 
-# Quick Start
+# Configuration Shape (+ all available flags)
 
-If you are new to trackswitch.js, use this as a starting point:
+## Default Mode
 
 ```javascript
 TrackSwitch.createTrackSwitch(rootElement, {
-  presetNames: ['All Tracks', 'Vocals'],
+  presetNames: ['All Tracks', 'Strings + Synth', 'Rhythm Section'],
   ui: [
-    { type: 'image', src: 'cover.jpg', seekable: true },
-    { type: 'waveform', width: 1200, height: 150 },
+    {
+      type: 'image',
+      src: 'cover.jpg',
+      seekable: true,
+      seekMarginLeft: 5,
+      seekMarginRight: 5,
+      style: 'margin: 12px auto;',
+    },
+    {
+      type: 'perTrackImage',
+      seekable: false,
+      seekMarginLeft: 0,
+      seekMarginRight: 0,
+      style: 'margin: 12px auto 24px;',
+    },
+    {
+      type: 'waveform',
+      width: 1200,
+      height: 150,
+      waveformBarWidth: 2,
+      maxZoom: 5,
+      waveformSource: 'audible',
+      timer: true,
+      seekMarginLeft: 3,
+      seekMarginRight: 4,
+      style: 'margin: 16px 0;',
+    },
     {
       type: 'trackGroup',
       rowHeight: 44,
       trackGroup: [
-        { title: 'Vocals', presets: [0, 1], sources: [{ src: 'vocals.mp3' }] },
-        { title: 'Drums', presets: [0], sources: [{ src: 'drums.mp3' }] },
-      ],
-    },
-  ],
-  features: {
-    mode: 'default',
-    globalVolume: true,
-    trackMixControls: true,
-    looping: true,
-    presets: true,
-  },
-});
-```
-
-For a non-technical walkthrough, see [getting-started.md](getting-started.md).
-
-# Configuration Shape
-
-```javascript
-TrackSwitch.createTrackSwitch(rootElement, {
-  presetNames: ['All Tracks', 'Preset 1'],
-  ui: [
-    { type: 'image', src: 'cover.jpg', seekable: true },
-    { type: 'waveform', width: 1200, height: 150 },
-    {
-      type: 'trackGroup',
-      rowHeight: 40,
-      trackGroup: [
         {
-          title: 'Track 1',
+          title: 'Violins',
+          solo: true,
+          volume: 0.9,
+          pan: -0.25,
+          image: 'violins.png',
+          style: 'border-left: 3px solid #9b6bff;',
           presets: [0, 1],
-          sources: [{ src: 'track1.mp3' }],
-          alignment: {
-            column: 't1_sec',
-            synchronizedSources: [{ src: 'track1_synced.mp3' }],
-          },
+          sources: [
+            { src: 'violins.mp3', type: 'audio/mpeg' },
+            { src: 'violins.ogg', type: 'audio/ogg' },
+          ],
+        },
+        {
+          title: 'Synths',
+          solo: false,
+          volume: 0.75,
+          pan: 0.2,
+          image: 'synths.png',
+          style: 'border-left: 3px solid #00a7a0;',
+          presets: [0, 1],
+          sources: [
+            { src: 'synths.mp3', type: 'audio/mpeg', startOffsetMs: 0, endOffsetMs: 0 },
+          ],
+        },
+        {
+          title: 'Bass',
+          solo: false,
+          volume: 0.85,
+          pan: -0.05,
+          image: 'bass.png',
+          style: 'border-left: 3px solid #2d8fdd;',
+          presets: [0],
+          sources: [
+            { src: 'bass.mp3', type: 'audio/mpeg', startOffsetMs: 0, endOffsetMs: 0 },
+          ],
+        },
+        {
+          title: 'Drums',
+          solo: false,
+          volume: 1,
+          pan: 0,
+          image: 'drums.png',
+          style: 'border-left: 3px solid #ff7a18;',
+          presets: [0],
+          sources: [
+            { src: 'drums.mp3', type: 'audio/mpeg' },
+          ],
         },
       ],
     },
@@ -78,8 +114,124 @@ TrackSwitch.createTrackSwitch(rootElement, {
       type: 'sheetMusic',
       src: 'score.musicxml',
       measureCsv: 'score_measures.csv',
+      maxWidth: 960,
+      maxHeight: 360,
+      renderScale: 0.75,
+      followPlayback: true,
+      cursorColor: '#999999',
+      cursorAlpha: 0.1,
+      style: 'margin: 20px auto;',
     },
-    { type: 'warpingMatrix', height: 240 },
+  ],
+  features: {
+    mode: 'default',
+    exclusiveSolo: false,
+    muteOtherPlayerInstances: true,
+    globalVolume: true,
+    trackMixControls: true,
+    repeat: false,
+    tabView: false,
+    iosAudioUnlock: true,
+    keyboard: true,
+    looping: true,
+    seekBar: true,
+    timer: true,
+    presets: false,
+    waveform: true,
+  },
+});
+```
+
+## Alignment Mode
+
+```javascript
+TrackSwitch.createTrackSwitch(rootElement, {
+  ui: [
+    {
+      type: 'image',
+      src: 'cover.jpg',
+      seekable: true,
+      seekMarginLeft: 5,
+      seekMarginRight: 5,
+      style: 'margin: 12px auto;',
+    },
+    {
+      type: 'perTrackImage',
+      seekable: true,
+      seekMarginLeft: 4,
+      seekMarginRight: 4,
+      style: 'margin: 12px auto 24px;',
+    },
+    {
+      type: 'waveform',
+      width: 1200,
+      height: 150,
+      waveformBarWidth: 2,
+      maxZoom: 5,
+      waveformSource: 0,
+      timer: true,
+      seekMarginLeft: 3,
+      seekMarginRight: 4,
+      style: 'margin: 16px 0;',
+    },
+    {
+      type: 'trackGroup',
+      rowHeight: 44,
+      trackGroup: [
+        {
+          title: 'Performance A',
+          solo: true,
+          volume: 1,
+          pan: 0,
+          image: 'performance-a.png',
+          sources: [
+            { src: 'performance-a.mp3', type: 'audio/mpeg', startOffsetMs: 0, endOffsetMs: 0 },
+          ],
+          alignment: {
+            column: 'perf_a_sec',
+            synchronizedSources: [
+              { src: 'performance-a_synced.mp3', type: 'audio/mpeg', startOffsetMs: 0, endOffsetMs: 0 },
+            ],
+          },
+          style: 'border-left: 3px solid #0b84f3;',
+        },
+        {
+          title: 'Performance B',
+          solo: false,
+          volume: 0.95,
+          pan: 0,
+          image: 'performance-b.png',
+          sources: [
+            { src: 'performance-b.mp3', type: 'audio/mpeg', startOffsetMs: 0, endOffsetMs: 0 },
+          ],
+          alignment: {
+            column: 'perf_b_sec',
+            synchronizedSources: [
+              { src: 'performance-b_synced.mp3', type: 'audio/mpeg' },
+            ],
+          },
+          style: 'border-left: 3px solid #f36f21;',
+        },
+      ],
+    },
+    {
+      type: 'sheetMusic',
+      src: 'score.musicxml',
+      measureCsv: 'score_measures.csv',
+      maxWidth: 960,
+      maxHeight: 360,
+      renderScale: 0.75,
+      followPlayback: true,
+      cursorColor: '#999999',
+      cursorAlpha: 0.1,
+      style: 'margin: 20px auto;',
+    },
+    {
+      type: 'warpingMatrix',
+      height: 240,
+      tempoSmoothingHalfWindowPoints: 3,
+      style: 'margin: 12px 0;',
+    },
   ],
   alignment: {
     csv: 'dtw_alignment.csv',
@@ -87,11 +239,20 @@ TrackSwitch.createTrackSwitch(rootElement, {
     outOfRange: 'clamp',
   },
   features: {
-    mode: 'default',
+    mode: 'alignment',
+    exclusiveSolo: true,
+    muteOtherPlayerInstances: true,
     globalVolume: true,
     trackMixControls: true,
+    repeat: false,
+    tabView: false,
+    iosAudioUnlock: true,
+    keyboard: true,
     looping: true,
-    presets: true,
+    seekBar: true,
+    timer: true,
+    presets: false,
+    waveform: true,
   },
 });
 ```
@@ -150,8 +311,6 @@ Tracks live in `ui` entries with `type: 'trackGroup'`:
       image: 'drums.png',
       style: 'border-left: 3px solid #4f8dc9;',
       presets: [0, 2],
-      seekMarginLeft: 3,
-      seekMarginRight: 4,
       sources: [{ src: 'drums.mp3' }],
       alignment: {
         column: 't2_sec',
@@ -176,17 +335,13 @@ Track fields:
 - `image?: string`
 - `style?: string`
 - `presets?: number[]`
-- `seekMarginLeft?: number`
-- `seekMarginRight?: number`
 - `sources: TrackSourceDefinition[]` (required)
 - `alignment?: { column?: string; synchronizedSources?: TrackSourceDefinition[] }`
 
 Track notes:
 
-- Track `id` values are not supported.
 - Track index is the order inside `ui[].trackGroup[]`.
 - In non-exclusive mode (`features.exclusiveSolo: false`), if no track `solo` state is explicitly configured, all tracks start enabled.
-- `seekMarginLeft` / `seekMarginRight` are accepted in the track definition for compatibility; seek margin behavior is primarily used by seekable UI elements (`image`, `waveform`).
 
 Source fields (`sources[]` and `alignment.synchronizedSources[]`):
 
@@ -518,43 +673,3 @@ Named exports from package entrypoint:
 - `createInitialPlayerState`, `playerStateReducer`
 - `WaveformEngine`
 - `inferSourceMimeType`, `formatSecondsToHHMMSSmmm`, `parsePresetIndices`
-
-# Validation and Common Errors
-
-These are common runtime errors and what to check:
-
-1. `TrackSwitch requires at least one ui entry with type "trackGroup" and non-empty trackGroup.`
-Fix: add at least one `ui` element with `type: 'trackGroup'` and at least one track.
-
-2. `Each ui trackGroup must contain at least one track.`
-Fix: ensure every `trackGroup` array is non-empty.
-
-3. `Each track in ui trackGroup must define at least one valid source src.`
-Fix: ensure each track has `sources: [{ src: '...' }]`.
-
-4. `Invalid init key: ...`, `Invalid alignment key: ...`, `Invalid ui.<type> key: ...`, `Invalid track key: ...`, `Invalid track alignment key: ...`, or `Invalid source key: ...`
-Fix: remove unknown keys and use only documented options for that section.
-
-5. `Invalid ui element type: ...`
-Fix: use only `image`, `perTrackImage`, `waveform`, `trackGroup`, `sheetMusic`, `warpingMatrix`.
-
-6. `Invalid feature key: ...`
-Fix: use only documented `features` keys.
-
-7. `Invalid init configuration: perTrackImage requires features.exclusiveSolo to be true.`
-Fix: enable `features.exclusiveSolo` (default mode) or remove `perTrackImage`.
-
-8. `Invalid ui.image configuration: seekMarginLeft + seekMarginRight must be less than 100.` (same rule for `ui.perTrackImage` and `ui.waveform`)
-Fix: reduce one or both margins so the sum is `< 100`.
-
-9. `Alignment mode requires init.alignment configuration.`
-Fix: add `alignment` object when `features.mode = 'alignment'`.
-
-10. `Alignment configuration requires alignment.referenceTimeColumn.`
-Fix: set `alignment.referenceTimeColumn`.
-
-11. `Alignment mode requires alignment.column for every track. Missing trackIndex ...`
-Fix: set `ui[].trackGroup[].alignment.column` for every track.
-
-12. `Alignment CSV is missing configured referenceTimeColumn: ...` or `Alignment CSV is missing configured column: ...`
-Fix: verify CSV headers match your `referenceTimeColumn` and track columns.

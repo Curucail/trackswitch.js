@@ -140,7 +140,6 @@ title: trackswitch.js
 
 ## Documentation
 
-- New to trackswitch.js? Start here: [Getting Started](getting-started.md)
 - Full option reference: [Configuration Guide](configuration.md)
 
 ## Usage scenarios

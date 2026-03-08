@@ -28,8 +28,6 @@ export interface TrackDefinition {
     image?: string;
     style?: string;
     presets?: number[];
-    seekMarginLeft?: number;
-    seekMarginRight?: number;
     sources: TrackSourceDefinition[];
     alignment?: TrackDefinitionAlignment;
 }

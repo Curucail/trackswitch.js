@@ -50,8 +50,6 @@ const trackAllowedKeys = [
     'image',
     'style',
     'presets',
-    'seekMarginLeft',
-    'seekMarginRight',
     'sources',
     'alignment',
 ] as const;
