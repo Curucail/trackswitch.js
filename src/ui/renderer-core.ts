@@ -640,7 +640,7 @@ export function renderTrackList(ctx: any, runtimes: any): any {
 
 export function wrapSeekableImages(ctx: any): any {
     return (function(this: any) {
-        const candidates = this.queryAll('img:not(.per-track-image)');
+        const candidates = this.queryAll('img');
 
         candidates.forEach((candidate: HTMLElement) => {
             if (!(candidate instanceof HTMLImageElement)) {
