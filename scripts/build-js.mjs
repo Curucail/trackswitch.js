@@ -16,7 +16,7 @@ const banner = [
   " */",
 ].join("\n");
 
-const commonOptions = {
+const browserCommonOptions = {
   entryPoints: [resolve(rootDir, "src/index.ts")],
   bundle: true,
   platform: "browser",
@@ -26,24 +26,37 @@ const commonOptions = {
   banner: { js: banner },
 };
 
+const esmCommonOptions = {
+  entryPoints: [resolve(rootDir, "src/index.ts")],
+  bundle: true,
+  platform: "browser",
+  format: "esm",
+  target: "es2017",
+  banner: { js: banner },
+  outfile: resolve(rootDir, "dist/esm/index.js"),
+};
+
 const minifyOnly = process.argv.includes("--minify-only");
 const watch = process.argv.includes("--watch");
 
 const buildConfigs = minifyOnly
   ? [
       {
-        ...commonOptions,
+        ...browserCommonOptions,
         minify: true,
         outfile: resolve(rootDir, "dist/js/trackswitch.min.js"),
       },
     ]
   : [
       {
-        ...commonOptions,
+        ...esmCommonOptions,
+      },
+      {
+        ...browserCommonOptions,
         outfile: resolve(rootDir, "dist/js/trackswitch.js"),
       },
       {
-        ...commonOptions,
+        ...browserCommonOptions,
         minify: true,
         outfile: resolve(rootDir, "dist/js/trackswitch.min.js"),
       },

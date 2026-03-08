@@ -667,7 +667,7 @@ Events:
 
 # Utility Exports
 
-Named exports from package entrypoint:
+Named exports from the ESM package entrypoint (`import { ... } from 'trackswitch'`):
 
 - `normalizeFeatures`, `defaultFeatures`
 - `createInitialPlayerState`, `playerStateReducer`

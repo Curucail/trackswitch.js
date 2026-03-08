@@ -10,7 +10,30 @@ Install from npm:
 
     npm install trackswitch
 
-For manual usage, include:
+ESM / TypeScript usage:
+
+```ts
+import { createTrackSwitch, type TrackSwitchInit } from 'trackswitch';
+import 'trackswitch/dist/css/trackswitch.min.css';
+
+const init: TrackSwitchInit = {
+  ui: [
+    {
+      type: 'trackGroup',
+      trackGroup: [
+        {
+          title: 'Track 1',
+          sources: [{ src: 'track1.mp3' }],
+        },
+      ],
+    },
+  ],
+};
+
+createTrackSwitch(document.getElementById('player')!, init);
+```
+
+Browser script-tag usage:
 
 - `dist/css/trackswitch.min.css`
 - `dist/js/trackswitch.min.js`
@@ -215,7 +238,8 @@ Build scripts:
 
 - `npm run build` - Full build (clean, compile, minify)
 - `npm run build:css` - Compile and minify CSS only
-- `npm run build:js` - Bundle and minify JS only
+- `npm run build:js` - Build the ESM package entry and browser bundles
+- `npm run build:types` - Generate `.d.ts` files for the package entry
 - `npm run clean` - Remove `dist/` folder
 
 Citation

@@ -127,12 +127,15 @@ title: trackswitch.js
         <button id="ts-copy-quickstart" class="ts-copy-btn" type="button">Copy code</button>
         <div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code id="ts-dynamic-quickstart" class="language-html"></code></pre></div></div>
       </div>
-      <p class="ts-showcase__install-label">And install trackswitch.js from npm:</p>
+      <p class="ts-showcase__install-label">Install the package with npm:</p>
       <pre><code class="language-shell">npm install trackswitch</code></pre>
-      <p class="ts-showcase__install-label">Or include the files from the build/package in your website:</p>
+      <p class="ts-showcase__install-label">TypeScript / bundler usage:</p>
+      <div class="language-ts highlighter-rouge"><div class="highlight"><pre class="highlight"><code>import { createTrackSwitch, type TrackSwitchInit } from 'trackswitch';
+import 'trackswitch/dist/css/trackswitch.min.css';</code></pre></div></div>
+      <p class="ts-showcase__install-label">Or use the browser bundle directly:</p>
       <ul>
-        <li><code>trackswitch.min.css</code></li>
-        <li><code>trackswitch.min.js</code></li>
+        <li><code>node_modules/trackswitch/dist/css/trackswitch.min.css</code></li>
+        <li><code>node_modules/trackswitch/dist/js/trackswitch.min.js</code></li>
       </ul>
     </aside>
   </div>
