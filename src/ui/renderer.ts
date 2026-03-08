@@ -175,16 +175,20 @@ interface WarpingMatrixHostMetadata {
     tempoWindowValueNode: HTMLElement;
     tempoYScaleSlider: HTMLInputElement;
     tempoYScaleValueNode: HTMLElement;
+    tempoSmoothingSlider: HTMLInputElement;
+    tempoSmoothingValueNode: HTMLElement;
     matrixSeriesSignature: string | null;
     matrixDataCache: WarpingMatrixMatrixData | null;
     matrixDataCacheKey: string | null;
     tempoDataCache: WarpingMatrixTempoData | null;
     tempoDataCacheKey: string | null;
     matrixDisabled: boolean;
+    trackSeries: WarpingMatrixTrackSeries[];
     matrixTrackDuration: number;
     configuredHeight: number | null;
     tempoWindowSeconds: number;
     tempoYHalfRangePercent: number;
+    tempoSmoothingHalfWindowPoints: number;
     colorByColumn: Map<string, string>;
     activeColumnKey: string | null;
     referenceDuration: number;
@@ -210,7 +214,7 @@ export class ViewRenderer {
     public warpingClipPathCounter = 0;
     public readonly warpingMatrixTempoControlState = new WeakMap<
         HTMLElement,
-        { windowSeconds: number; yHalfRangePercent: number }
+        { windowSeconds: number; yHalfRangePercent: number; smoothingHalfWindowPoints: number }
     >();
 
     constructor(
@@ -243,8 +247,8 @@ public getWarpingMatrixLocalTempoWindowSeconds(host: WarpingMatrixHostMetadata):
         return viewRendererWarping.getWarpingMatrixLocalTempoWindowSeconds(this, host);
     }
 
-public getWarpingMatrixLocalTempoSlopeHalfWindowPoints(): number {
-        return viewRendererWarping.getWarpingMatrixLocalTempoSlopeHalfWindowPoints(this);
+public getWarpingMatrixLocalTempoSlopeHalfWindowPoints(host: WarpingMatrixHostMetadata): number {
+        return viewRendererWarping.getWarpingMatrixLocalTempoSlopeHalfWindowPoints(this, host);
     }
 
 public getWarpingMatrixTempoYHalfRangePercent(host: WarpingMatrixHostMetadata): number {

@@ -330,13 +330,14 @@ Behavior:
 ## Warping Matrix UI Element
 
 ```javascript
-{ type: 'warpingMatrix', height: 240, style: 'margin: 12px 0;' }
+{ type: 'warpingMatrix', height: 240, tempoSmoothingHalfWindowPoints: 3, style: 'margin: 12px 0;' }
 ```
 
 Fields:
 
 - `height?: number`
 - `style?: string`
+- `tempoSmoothingHalfWindowPoints?: number`
 
 Behavior:
 
@@ -345,6 +346,7 @@ Behavior:
   - left: warping path (reference time vs track time)
   - right: local tempo deviation (percent, with baseline at `100`)
 - Tempo plot uses active-track time on x-axis and can seek on click.
+- Tempo smoothing uses central differences over `k` neighbors on each side; default `k = 5`.
 - While global `SYNC` is on, the panel is visibly dimmed and non-interactive.
 
 # Features

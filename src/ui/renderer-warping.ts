@@ -107,16 +107,20 @@ interface WarpingMatrixHostMetadata {
     tempoWindowValueNode: HTMLElement;
     tempoYScaleSlider: HTMLInputElement;
     tempoYScaleValueNode: HTMLElement;
+    tempoSmoothingSlider: HTMLInputElement;
+    tempoSmoothingValueNode: HTMLElement;
     matrixSeriesSignature: string | null;
     matrixDataCache: WarpingMatrixMatrixData | null;
     matrixDataCacheKey: string | null;
     tempoDataCache: WarpingMatrixTempoData | null;
     tempoDataCacheKey: string | null;
     matrixDisabled: boolean;
+    trackSeries: WarpingMatrixTrackSeries[];
     matrixTrackDuration: number;
     configuredHeight: number | null;
     tempoWindowSeconds: number;
     tempoYHalfRangePercent: number;
+    tempoSmoothingHalfWindowPoints: number;
     colorByColumn: Map<string, string>;
     activeColumnKey: string | null;
     referenceDuration: number;
@@ -129,7 +133,8 @@ interface WarpingMatrixHostMetadata {
 const WARPING_MATRIX_PRIMARY_COLOR = '#ED8C01';
 const DEFAULT_WARPING_MATRIX_PATH_STROKE_WIDTH = 3;
 const DEFAULT_WARPING_MATRIX_LOCAL_TEMPO_WINDOW_SECONDS = 60;
-const WARPING_MATRIX_LOCAL_TEMPO_SLOPE_HALF_WINDOW_POINTS = 1;
+const DEFAULT_WARPING_MATRIX_LOCAL_TEMPO_SLOPE_HALF_WINDOW_POINTS = 5;
+const WARPING_MATRIX_TEMPO_SMOOTHING_SLIDER_MAX_HALF_WINDOW_POINTS = 100;
 const WARPING_MATRIX_TEMPO_WINDOW_MIN_SECONDS = 10;
 const WARPING_MATRIX_TEMPO_WINDOW_MAX_SECONDS = 180;
 const WARPING_MATRIX_TEMPO_WINDOW_STEP_SECONDS = 0.5;
@@ -207,6 +212,19 @@ function parseWarpingMatrixHeight(value: string | null): number | null {
     return Math.max(1, Math.round(parsed));
 }
 
+function parseWarpingMatrixTempoSmoothingHalfWindowPoints(value: string | null): number | null {
+    if (value === null) {
+        return null;
+    }
+
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed < 1) {
+        return null;
+    }
+
+    return Math.max(1, Math.round(parsed));
+}
+
 function normalizeTempoWindowSeconds(value: number): number {
     if (!Number.isFinite(value)) {
         return DEFAULT_WARPING_MATRIX_LOCAL_TEMPO_WINDOW_SECONDS;
@@ -231,6 +249,14 @@ function normalizeTempoYHalfRangePercent(value: number): number {
     );
 }
 
+function normalizeTempoSmoothingHalfWindowPoints(value: number): number {
+    if (!Number.isFinite(value)) {
+        return DEFAULT_WARPING_MATRIX_LOCAL_TEMPO_SLOPE_HALF_WINDOW_POINTS;
+    }
+
+    return Math.max(1, Math.round(value));
+}
+
 export function getWarpingMatrixPathStrokeWidth(ctx: any): any {
     return (function(this: any) {
         return DEFAULT_WARPING_MATRIX_PATH_STROKE_WIDTH;
@@ -245,11 +271,11 @@ export function getWarpingMatrixLocalTempoWindowSeconds(ctx: any, host: any): an
     }).call(ctx, host);
 }
 
-export function getWarpingMatrixLocalTempoSlopeHalfWindowPoints(ctx: any): any {
-    return (function(this: any) {
-        return WARPING_MATRIX_LOCAL_TEMPO_SLOPE_HALF_WINDOW_POINTS;
+export function getWarpingMatrixLocalTempoSlopeHalfWindowPoints(ctx: any, host: any): any {
+    return (function(this: any, host: any) {
+        return normalizeTempoSmoothingHalfWindowPoints(host.tempoSmoothingHalfWindowPoints);
     
-    }).call(ctx);
+    }).call(ctx, host);
 }
 
 export function getWarpingMatrixTempoYHalfRangePercent(ctx: any, host: any): any {
@@ -263,6 +289,7 @@ export function updateWarpingMatrixTempoControlLabels(ctx: any, host: any): any 
     return (function(this: any, host: any) {
         host.tempoWindowValueNode.textContent = this.getWarpingMatrixLocalTempoWindowSeconds(host).toFixed(1) + 's';
         host.tempoYScaleValueNode.textContent = '±' + Math.round(this.getWarpingMatrixTempoYHalfRangePercent(host)) + '%';
+        host.tempoSmoothingValueNode.textContent = 'k=' + this.getWarpingMatrixLocalTempoSlopeHalfWindowPoints(host);
     
     }).call(ctx, host);
 }
@@ -272,6 +299,7 @@ export function persistWarpingMatrixTempoControls(ctx: any, host: any): any {
         this.warpingMatrixTempoControlState.set(host.host, {
             windowSeconds: this.getWarpingMatrixLocalTempoWindowSeconds(host),
             yHalfRangePercent: this.getWarpingMatrixTempoYHalfRangePercent(host),
+            smoothingHalfWindowPoints: this.getWarpingMatrixLocalTempoSlopeHalfWindowPoints(host),
         });
     
     }).call(ctx, host);
@@ -322,6 +350,9 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
             }
 
             const configuredHeight = parseWarpingMatrixHeight(hostElement.getAttribute('data-warping-matrix-height'));
+            const configuredTempoSmoothingHalfWindowPoints = parseWarpingMatrixTempoSmoothingHalfWindowPoints(
+                hostElement.getAttribute('data-warping-matrix-tempo-smoothing-half-window-points')
+            );
             hostElement.style.removeProperty('height');
 
             hostElement.classList.add('warping-matrix-host');
@@ -385,8 +416,25 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
             yScaleControl.appendChild(tempoYScaleSlider);
             yScaleControl.appendChild(tempoYScaleValueNode);
 
+            const smoothingControl = document.createElement('label');
+            smoothingControl.className = 'warping-tempo-control';
+            const smoothingLabel = document.createElement('span');
+            smoothingLabel.className = 'warping-tempo-control-label';
+            smoothingLabel.textContent = 'Smoothing (k)';
+            const tempoSmoothingSlider = document.createElement('input');
+            tempoSmoothingSlider.className = 'warping-tempo-slider';
+            tempoSmoothingSlider.type = 'range';
+            tempoSmoothingSlider.min = '1';
+            tempoSmoothingSlider.step = '1';
+            const tempoSmoothingValueNode = document.createElement('span');
+            tempoSmoothingValueNode.className = 'warping-tempo-value';
+            smoothingControl.appendChild(smoothingLabel);
+            smoothingControl.appendChild(tempoSmoothingSlider);
+            smoothingControl.appendChild(tempoSmoothingValueNode);
+
             tempoControls.appendChild(windowControl);
             tempoControls.appendChild(yScaleControl);
+            tempoControls.appendChild(smoothingControl);
             tempoPanel.appendChild(tempoControls);
 
             const persistedTempoControls = this.warpingMatrixTempoControlState.get(hostElement);
@@ -396,8 +444,23 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
             const initialTempoYHalfRangePercent = normalizeTempoYHalfRangePercent(
                 persistedTempoControls ? persistedTempoControls.yHalfRangePercent : DEFAULT_WARPING_MATRIX_TEMPO_Y_HALF_RANGE_PERCENT
             );
+            const initialTempoSmoothingHalfWindowPoints = normalizeTempoSmoothingHalfWindowPoints(
+                persistedTempoControls
+                    ? persistedTempoControls.smoothingHalfWindowPoints
+                    : (
+                        configuredTempoSmoothingHalfWindowPoints
+                        ?? DEFAULT_WARPING_MATRIX_LOCAL_TEMPO_SLOPE_HALF_WINDOW_POINTS
+                    )
+            );
             tempoWindowSlider.value = String(initialTempoWindowSeconds);
             tempoYScaleSlider.value = String(initialTempoYHalfRangePercent);
+            tempoSmoothingSlider.max = String(
+                Math.max(
+                    WARPING_MATRIX_TEMPO_SMOOTHING_SLIDER_MAX_HALF_WINDOW_POINTS,
+                    initialTempoSmoothingHalfWindowPoints
+                )
+            );
+            tempoSmoothingSlider.value = String(initialTempoSmoothingHalfWindowPoints);
 
             const metadata: WarpingMatrixHostMetadata = {
                 wrapper: wrapper,
@@ -414,16 +477,20 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
                 tempoWindowValueNode: tempoWindowValueNode,
                 tempoYScaleSlider: tempoYScaleSlider,
                 tempoYScaleValueNode: tempoYScaleValueNode,
+                tempoSmoothingSlider: tempoSmoothingSlider,
+                tempoSmoothingValueNode: tempoSmoothingValueNode,
                 matrixSeriesSignature: null,
                 matrixDataCache: null,
                 matrixDataCacheKey: null,
                 tempoDataCache: null,
                 tempoDataCacheKey: null,
                 matrixDisabled: false,
+                trackSeries: [],
                 matrixTrackDuration: 1,
                 configuredHeight: configuredHeight,
                 tempoWindowSeconds: initialTempoWindowSeconds,
                 tempoYHalfRangePercent: initialTempoYHalfRangePercent,
+                tempoSmoothingHalfWindowPoints: initialTempoSmoothingHalfWindowPoints,
                 colorByColumn: new Map<string, string>(),
                 activeColumnKey: null,
                 referenceDuration: 0,
@@ -468,6 +535,24 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
                 tempoYScaleSlider.value = String(metadata.tempoYHalfRangePercent);
                 this.updateWarpingMatrixTempoControlLabels(metadata);
                 this.persistWarpingMatrixTempoControls(metadata);
+                this.renderWarpingMatrixTempoPlot(metadata);
+            });
+            tempoSmoothingSlider.addEventListener('input', () => {
+                metadata.tempoSmoothingHalfWindowPoints = normalizeTempoSmoothingHalfWindowPoints(
+                    Number(tempoSmoothingSlider.value)
+                );
+                tempoSmoothingSlider.value = String(metadata.tempoSmoothingHalfWindowPoints);
+                this.updateWarpingMatrixTempoControlLabels(metadata);
+                this.persistWarpingMatrixTempoControls(metadata);
+                hostElement.setAttribute(
+                    'data-warping-matrix-tempo-smoothing-half-window-points',
+                    String(metadata.tempoSmoothingHalfWindowPoints)
+                );
+                metadata.tempoDataCache = this.buildWarpingTempoData(
+                    metadata.trackSeries,
+                    metadata.tempoSmoothingHalfWindowPoints
+                );
+                metadata.tempoDataCacheKey = null;
                 this.renderWarpingMatrixTempoPlot(metadata);
             });
 
@@ -942,14 +1027,19 @@ export function updateWarpingMatrix(ctx: any, host: any, context: any): any {
         host.syncDisabledOverlay.style.display = host.matrixDisabled ? 'flex' : 'none';
         host.tempoWindowSeconds = normalizeTempoWindowSeconds(Number(host.tempoWindowSlider.value));
         host.tempoYHalfRangePercent = normalizeTempoYHalfRangePercent(Number(host.tempoYScaleSlider.value));
+        host.tempoSmoothingHalfWindowPoints = normalizeTempoSmoothingHalfWindowPoints(Number(host.tempoSmoothingSlider.value));
         if (host.tempoWindowSlider.value !== String(host.tempoWindowSeconds)) {
             host.tempoWindowSlider.value = String(host.tempoWindowSeconds);
         }
         if (host.tempoYScaleSlider.value !== String(host.tempoYHalfRangePercent)) {
             host.tempoYScaleSlider.value = String(host.tempoYHalfRangePercent);
         }
+        if (host.tempoSmoothingSlider.value !== String(host.tempoSmoothingHalfWindowPoints)) {
+            host.tempoSmoothingSlider.value = String(host.tempoSmoothingHalfWindowPoints);
+        }
         host.tempoWindowSlider.disabled = host.matrixDisabled;
         host.tempoYScaleSlider.disabled = host.matrixDisabled;
+        host.tempoSmoothingSlider.disabled = host.matrixDisabled;
         this.updateWarpingMatrixTempoControlLabels(host);
         this.persistWarpingMatrixTempoControls(host);
 
@@ -1004,6 +1094,7 @@ export function updateWarpingMatrix(ctx: any, host: any, context: any): any {
 
         host.colorByColumn.clear();
         const effectiveTrackSeries = host.matrixDisabled ? [] : context.trackSeries;
+        host.trackSeries = effectiveTrackSeries;
         const normalizedColumnOrder = effectiveTrackSeries.length > 0 && context.columnOrder.length > 0
             ? context.columnOrder
             : effectiveTrackSeries.map((series: WarpingMatrixTrackSeries) => series.columnKey);
@@ -1081,7 +1172,7 @@ export function updateWarpingMatrix(ctx: any, host: any, context: any): any {
             host.matrixDataCacheKey = matrixDataCacheKey;
         }
 
-        const localTempoSlopeHalfWindowPoints = this.getWarpingMatrixLocalTempoSlopeHalfWindowPoints();
+        const localTempoSlopeHalfWindowPoints = this.getWarpingMatrixLocalTempoSlopeHalfWindowPoints(host);
         const tempoDataCacheKey = matrixDataCacheKey + '#w' + localTempoSlopeHalfWindowPoints;
         if (host.tempoDataCacheKey !== tempoDataCacheKey) {
             host.tempoDataCache = this.buildWarpingTempoData(effectiveTrackSeries, localTempoSlopeHalfWindowPoints);

@@ -40,7 +40,7 @@ const uiSheetMusicAllowedKeys = [
     'cursorColor',
     'cursorAlpha',
 ] as const;
-const uiWarpingMatrixAllowedKeys = ['type', 'style', 'height'] as const;
+const uiWarpingMatrixAllowedKeys = ['type', 'style', 'height', 'tempoSmoothingHalfWindowPoints'] as const;
 
 const trackAllowedKeys = [
     'title',
@@ -214,10 +214,21 @@ function normalizeWarpingMatrixHeight(value: number | undefined): number | undef
     return Math.max(1, Math.round(value));
 }
 
+function normalizeWarpingMatrixTempoSmoothingHalfWindowPoints(value: number | undefined): number | undefined {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 1) {
+        return undefined;
+    }
+
+    return Math.max(1, Math.round(value));
+}
+
 function normalizeWarpingMatrixConfig<T extends TrackSwitchWarpingMatrixConfig>(warpingMatrix: T): T {
     return {
         ...warpingMatrix,
         height: normalizeWarpingMatrixHeight(warpingMatrix.height),
+        tempoSmoothingHalfWindowPoints: normalizeWarpingMatrixTempoSmoothingHalfWindowPoints(
+            warpingMatrix.tempoSmoothingHalfWindowPoints
+        ),
     };
 }
 
@@ -335,6 +346,16 @@ function injectWarpingMatrix(root: HTMLElement, warpingMatrix: TrackSwitchWarpin
     const normalizedHeight = normalizeWarpingMatrixHeight(warpingMatrix.height);
     if (normalizedHeight !== undefined) {
         container.setAttribute('data-warping-matrix-height', String(normalizedHeight));
+    }
+
+    const normalizedTempoSmoothingHalfWindowPoints = normalizeWarpingMatrixTempoSmoothingHalfWindowPoints(
+        warpingMatrix.tempoSmoothingHalfWindowPoints
+    );
+    if (normalizedTempoSmoothingHalfWindowPoints !== undefined) {
+        container.setAttribute(
+            'data-warping-matrix-tempo-smoothing-half-window-points',
+            String(normalizedTempoSmoothingHalfWindowPoints)
+        );
     }
 
     root.appendChild(container);
