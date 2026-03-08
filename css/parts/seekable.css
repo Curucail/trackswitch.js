@@ -32,6 +32,7 @@
     position: absolute;
     inset-block: 0;
     width: 2px;
+    transform: translateX(-50%);
     background-color: var(--ts-color-text-primary);
     z-index: 4;
 }
