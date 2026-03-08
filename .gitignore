@@ -5,3 +5,6 @@ dist/
 example_ulli/
 example_dtw/
 examples2/
+AGENTS.md
+docs/js/trackswitch.min.js
+docs/css/trackswitch.min.css

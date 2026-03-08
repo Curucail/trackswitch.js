@@ -60,6 +60,10 @@
     margin: 0;
 }
 
+.trackswitch .main-control .playback-group>.playback-controls>li.repeat .ts-icon-svg {
+    transform: scale(0.9);
+}
+
 /* Generic button styles within main-control */
 .trackswitch .main-control .button {
     width: 15px;

@@ -168,11 +168,6 @@
         padding: 0 0px;
     }
 
-    .trackswitch .main-control .volume-control {
-        position: relative;
-        top: 2px;
-    }
-
     .trackswitch .main-control .volume-control .volume-icon {
         font-size: 20px;
         margin-right: 12px;
