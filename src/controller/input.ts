@@ -368,6 +368,15 @@ export function onSeekEnd(ctx: any, event: any): any {
             return;
         }
 
+        const hasActiveSeekInteraction = this.draggingMarker !== null
+            || this.rightClickDragging
+            || this.state.currentlySeeking
+            || this.seekingElement !== null;
+
+        if (!hasActiveSeekInteraction) {
+            return;
+        }
+
         event.preventDefault();
 
         if (this.draggingMarker !== null) {
