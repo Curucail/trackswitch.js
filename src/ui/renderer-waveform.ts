@@ -31,6 +31,7 @@ interface WaveformSeekSurfaceMetadata {
 const MIN_WAVEFORM_ZOOM = 1;
 const DEFAULT_MAX_WAVEFORM_ZOOM_SECONDS = 5;
 const WAVEFORM_TILE_WIDTH_PX = 1024;
+const SEEKHEAD_WIDTH_PX = 2;
 
 function buildSeekWrap(leftPercent: number, rightPercent: number): string {
     return '<div class="seekwrap" style="left: ' + leftPercent + '%; right: ' + rightPercent + '%;">'
@@ -47,6 +48,11 @@ function setDisplay(element: Element, displayValue: string): void {
 
 function setLeftPercent(element: Element, value: number): void {
     (element as HTMLElement).style.left = value + '%';
+}
+
+function setSeekheadPosition(element: Element, value: number): void {
+    const boundedValue = clampPercent(value);
+    (element as HTMLElement).style.left = `calc(${boundedValue}% - ${(boundedValue / 100) * SEEKHEAD_WIDTH_PX}px)`;
 }
 
 function setWidthPercent(element: Element, value: number): void {
@@ -1154,7 +1160,7 @@ export function updateSeekWrapVisuals(ctx: any, seekWrap: any, position: any, du
             const seekPercent = safeDuration > 0
                 ? clampPercent((safePosition / safeDuration) * 100)
                 : 0;
-            setLeftPercent(seekhead, seekPercent);
+            setSeekheadPosition(seekhead, seekPercent);
         }
 
         if (!this.features.looping) {
