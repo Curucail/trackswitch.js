@@ -97,7 +97,7 @@
 
   var MODE_DISABLED_CONTROLS = {
     default: ['sheetNotePreview', 'warpingMatrix'],
-    alignment: ['customImage', 'seekableImage', 'presets', 'exclusiveSolo'],
+    alignment: ['customImage', 'seekableImage', 'presets', 'exclusiveSolo', 'trackImageBySolo'],
   };
 
   var DEFAULT_MODEL = {

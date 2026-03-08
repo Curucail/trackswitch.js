@@ -130,7 +130,7 @@ footer img {
 .ts-showcase__layout {
     min-height: 58vh;
     display: grid;
-    grid-template-columns: 320px minmax(680px, 1020px) 320px;
+    grid-template-columns: 320px minmax(760px, 1160px) 320px;
     gap: 1.2rem;
     padding-top: 2rem;
     align-items: center;
@@ -149,7 +149,7 @@ footer img {
 }
 
 .ts-showcase__code-row {
-    width: min(1460px, 100%);
+    width: min(1580px, 100%);
     margin: 5.1rem auto 0;
     display: flex;
     justify-content: center;
@@ -158,7 +158,7 @@ footer img {
 .ts-showcase__code-callout {
     position: relative;
     padding: 1rem;
-    width: min(1000px, 100%);
+    width: min(1120px, 100%);
     margin: 0.65rem 0 0.45rem;
     border-radius: 16px;
     border: 1px solid rgba(42, 79, 112, 0.18);
@@ -396,7 +396,7 @@ body.home-page .main-content {
 
 @media screen and (min-width: 64em) {
     .home-page .main-content {
-        max-width: 66rem;
+        max-width: 86rem;
         padding-left: 2rem;
         padding-right: 2rem;
     }
