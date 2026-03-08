@@ -78,29 +78,35 @@ function normalizeSvgMarkup(svgMarkup: string): string {
     return normalized;
 }
 
-function renderIconSvgMarkup(iconDefinition: IconDefinition): string {
-    return normalizeSvgMarkup(icon(iconDefinition).html.join(''));
+function renderIconSvgMarkup(iconDefinition: IconDefinition, iconName: TrackSwitchIconName): string {
+    let normalized = normalizeSvgMarkup(icon(iconDefinition).html.join(''));
+
+    if (iconName.startsWith('volume')) {
+        normalized = normalized.replace('<svg', '<svg preserveAspectRatio="xMinYMid meet"');
+    }
+
+    return normalized;
 }
 
 const ICON_SVG_BY_NAME: Record<TrackSwitchIconName, string> = {
-    play: renderIconSvgMarkup(ICON_DEFINITION_BY_NAME.play),
-    pause: renderIconSvgMarkup(ICON_DEFINITION_BY_NAME.pause),
-    stop: renderIconSvgMarkup(ICON_DEFINITION_BY_NAME.stop),
-    repeat: renderIconSvgMarkup(ICON_DEFINITION_BY_NAME.repeat),
-    'rotate-right': renderIconSvgMarkup(ICON_DEFINITION_BY_NAME['rotate-right']),
-    xmark: renderIconSvgMarkup(ICON_DEFINITION_BY_NAME.xmark),
-    'power-off': renderIconSvgMarkup(ICON_DEFINITION_BY_NAME['power-off']),
-    spinner: renderIconSvgMarkup(ICON_DEFINITION_BY_NAME.spinner),
-    exclamation: renderIconSvgMarkup(ICON_DEFINITION_BY_NAME.exclamation),
-    'circle-info': renderIconSvgMarkup(ICON_DEFINITION_BY_NAME['circle-info']),
-    'triangle-exclamation': renderIconSvgMarkup(ICON_DEFINITION_BY_NAME['triangle-exclamation']),
-    circle: renderIconSvgMarkup(ICON_DEFINITION_BY_NAME.circle),
-    'circle-check': renderIconSvgMarkup(ICON_DEFINITION_BY_NAME['circle-check']),
-    'circle-dot': renderIconSvgMarkup(ICON_DEFINITION_BY_NAME['circle-dot']),
-    'volume-xmark': renderIconSvgMarkup(ICON_DEFINITION_BY_NAME['volume-xmark']),
-    volume: renderIconSvgMarkup(ICON_DEFINITION_BY_NAME.volume),
-    'volume-low': renderIconSvgMarkup(ICON_DEFINITION_BY_NAME['volume-low']),
-    'volume-high': renderIconSvgMarkup(ICON_DEFINITION_BY_NAME['volume-high']),
+    play: renderIconSvgMarkup(ICON_DEFINITION_BY_NAME.play, 'play'),
+    pause: renderIconSvgMarkup(ICON_DEFINITION_BY_NAME.pause, 'pause'),
+    stop: renderIconSvgMarkup(ICON_DEFINITION_BY_NAME.stop, 'stop'),
+    repeat: renderIconSvgMarkup(ICON_DEFINITION_BY_NAME.repeat, 'repeat'),
+    'rotate-right': renderIconSvgMarkup(ICON_DEFINITION_BY_NAME['rotate-right'], 'rotate-right'),
+    xmark: renderIconSvgMarkup(ICON_DEFINITION_BY_NAME.xmark, 'xmark'),
+    'power-off': renderIconSvgMarkup(ICON_DEFINITION_BY_NAME['power-off'], 'power-off'),
+    spinner: renderIconSvgMarkup(ICON_DEFINITION_BY_NAME.spinner, 'spinner'),
+    exclamation: renderIconSvgMarkup(ICON_DEFINITION_BY_NAME.exclamation, 'exclamation'),
+    'circle-info': renderIconSvgMarkup(ICON_DEFINITION_BY_NAME['circle-info'], 'circle-info'),
+    'triangle-exclamation': renderIconSvgMarkup(ICON_DEFINITION_BY_NAME['triangle-exclamation'], 'triangle-exclamation'),
+    circle: renderIconSvgMarkup(ICON_DEFINITION_BY_NAME.circle, 'circle'),
+    'circle-check': renderIconSvgMarkup(ICON_DEFINITION_BY_NAME['circle-check'], 'circle-check'),
+    'circle-dot': renderIconSvgMarkup(ICON_DEFINITION_BY_NAME['circle-dot'], 'circle-dot'),
+    'volume-xmark': renderIconSvgMarkup(ICON_DEFINITION_BY_NAME['volume-xmark'], 'volume-xmark'),
+    volume: renderIconSvgMarkup(ICON_DEFINITION_BY_NAME.volume, 'volume'),
+    'volume-low': renderIconSvgMarkup(ICON_DEFINITION_BY_NAME['volume-low'], 'volume-low'),
+    'volume-high': renderIconSvgMarkup(ICON_DEFINITION_BY_NAME['volume-high'], 'volume-high'),
 };
 
 export function renderIconSlotHtml(iconName: TrackSwitchIconName, extraClassName = ''): string {

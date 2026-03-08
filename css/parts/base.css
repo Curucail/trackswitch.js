@@ -70,7 +70,7 @@
     width: 1em;
     height: 1em;
     flex: 0 0 1em;
-    transform-origin: center;
+    transform-origin: left center;
 }
 
 /* Normalize FA volume glyphs that ship with different viewBox widths. */
@@ -87,7 +87,7 @@
 }
 
 .trackswitch .volume-icon .ts-icon-slot[data-icon="volume-high"] .ts-icon-svg {
-    transform: scale(1.25);
+    transform: translateX(-0.0625em) scale(1.25);
 }
 
 .trackswitch .ts-icon-slot.is-spinning svg {
