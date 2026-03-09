@@ -11,7 +11,7 @@ import {
     TrackSwitchWarpingMatrixConfig,
 } from '../domain/types';
 import { clampPercent } from '../shared/math';
-import { assertAllowedKeys, toConfigRecord } from './config-validation';
+import { assertAllowedKeys, toConfigRecord } from './validation';
 
 const uiImageAllowedKeys = ['type', 'src', 'seekable', 'style', 'seekMarginLeft', 'seekMarginRight'] as const;
 const uiPerTrackImageAllowedKeys = ['type', 'seekable', 'style', 'seekMarginLeft', 'seekMarginRight'] as const;

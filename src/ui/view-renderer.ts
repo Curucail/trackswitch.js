@@ -7,9 +7,9 @@ import {
 } from '../domain/types';
 import { TrackTimelineProjector, WaveformEngine } from '../engine/waveform-engine';
 import * as d3 from 'd3';
-import * as viewRendererCore from './renderer-core';
-import * as viewRendererWaveform from './renderer-waveform';
-import * as viewRendererWarping from './renderer-warping';
+import * as viewRendererCore from './render-layout';
+import * as viewRendererWaveform from './render-waveforms';
+import * as viewRendererWarping from './render-warping-matrix';
 
 type SvgSelection = d3.Selection<SVGSVGElement, unknown, null, undefined>;
 type GroupSelection = d3.Selection<SVGGElement, unknown, null, undefined>;

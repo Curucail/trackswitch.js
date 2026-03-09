@@ -20,22 +20,22 @@ import { createTrackRuntime } from '../domain/runtime';
 import { AudioEngine } from '../engine/audio-engine';
 import { SheetMusicEngine } from '../engine/sheet-music-engine';
 import { TrackTimelineProjector, WaveformEngine } from '../engine/waveform-engine';
-import { ViewRenderer, WarpingMatrixRenderContext, WaveformTimelineContext } from '../ui/renderer';
-import { InputBinder, InputController } from '../input/input-binder';
+import { ViewRenderer, WarpingMatrixRenderContext, WaveformTimelineContext } from '../ui/view-renderer';
+import { InputBinder, InputController } from '../input/dom-event-binder';
 import { derivePresetNames } from '../shared/preset';
 import { ControllerPointerEvent } from '../shared/seek';
 import { TimeMappingSeries } from '../shared/alignment';
 import {
     allocateInstanceId,
     registerController,
-} from './registry';
+} from './player-registry';
 
-import * as controllerPlayback from './playback';
-import * as controllerInput from './input';
-import * as controllerSeek from './seek';
-import * as controllerAlignment from './alignment';
-import * as controllerUi from './ui';
-import * as controllerEvents from './events';
+import * as controllerPlayback from './playback-actions';
+import * as controllerInput from './input-actions';
+import * as controllerSeek from './seek-actions';
+import * as controllerAlignment from './alignment-actions';
+import * as controllerUi from './ui-sync';
+import * as controllerEvents from './event-emitter';
 
 interface TrackAlignmentConverter {
     referenceToTrack: TimeMappingSeries;

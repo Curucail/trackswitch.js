@@ -4,8 +4,8 @@ import { getSeekMetrics, isPrimaryInput } from '../shared/seek';
 import {
     isKeyboardControllerActive,
     setActiveKeyboardController,
-} from './registry';
-import { activateLoopRange } from './playback';
+} from './player-registry';
+import { activateLoopRange } from './playback-actions';
 
 const SHORTCUT_HELP_BLOCKED_KEYS = new Set([
     ' ',

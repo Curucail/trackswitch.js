@@ -1,4 +1,4 @@
-import { createTrackSwitch } from './controller/create';
+import { createTrackSwitch } from './player/factory';
 import { normalizeFeatures, defaultFeatures } from './domain/options';
 import { createInitialPlayerState, playerStateReducer } from './domain/state';
 import { WaveformEngine } from './engine/waveform-engine';

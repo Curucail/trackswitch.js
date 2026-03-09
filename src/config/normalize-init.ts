@@ -7,7 +7,7 @@ import {
     TrackSwitchUiElement,
 } from '../domain/types';
 import { injectConfiguredUiElements, normalizeUiElement } from './ui-elements';
-import { assertAllowedKeys, toConfigRecord } from './config-validation';
+import { assertAllowedKeys, toConfigRecord } from './validation';
 import { normalizeFeatures } from '../domain/options';
 
 export const TRACKS_REQUIRED_ERROR = 'TrackSwitch requires at least one ui entry with type "trackGroup" and non-empty trackGroup.';
