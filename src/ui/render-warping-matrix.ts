@@ -1768,7 +1768,7 @@ export function buildWarpingTempoData(ctx: any, matrixData: any, halfWindowPoint
                     return;
                 }
 
-                const tempoPercent = 100 / ratioPoint.beatDurationRatio;
+                const tempoPercent = ratioPoint.beatDurationRatio * 100;
                 if (!Number.isFinite(tempoPercent) || tempoPercent <= 0) {
                     return;
                 }
