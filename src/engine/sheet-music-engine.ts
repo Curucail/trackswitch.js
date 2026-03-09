@@ -2,6 +2,7 @@ import { applyConfiguredRenderScale, disposeEntry, initializeEntry, readHostWidt
 import { moveCursorToMeasure, resolveAvailableMeasure, resolveReferenceTimeForMeasure, updatePosition as updateCursorPosition } from './sheet-music/cursor-sync';
 import { handleHostClick, handleHostTouch, handleHostTouchMove, handleHostTouchStart } from './sheet-music/interaction-hit-test';
 import { centerCurrentMeasureInViewport, ensureCurrentMeasureVisible } from './sheet-music/scrolling';
+import { loadProjectedTempoMap } from './sheet-music/tempo-map';
 import {
     DEFAULT_CURSOR_COLOR,
     sanitizeCursorAlpha,
@@ -41,6 +42,8 @@ export class SheetMusicEngine {
                 osmd: null,
                 measureCursor: null,
                 measureMap: null,
+                projectedTempoSegments: null,
+                fallbackTempoBpm: null,
                 availableMeasures: [],
                 availableMeasureSet: new Set<number>(),
                 syncEnabled: false,
@@ -147,4 +150,88 @@ export class SheetMusicEngine {
     public resolveReferenceTimeForMeasure(measureMap: Array<{ measure: number; start: number }>, clickedMeasure: number): number {
         return resolveReferenceTimeForMeasure(measureMap, clickedMeasure);
     }
+
+    public resolveReferenceBpm(referenceTime: number): number | null {
+        const sanitizedReferenceTime = sanitizePlaybackPosition(referenceTime);
+
+        for (let index = 0; index < this.entries.length; index += 1) {
+            const entry = this.entries[index];
+            const resolved = resolveEntryReferenceBpm(entry, sanitizedReferenceTime);
+            if (resolved !== null) {
+                return resolved;
+            }
+        }
+
+        return null;
+    }
+
+    public async loadTempoMap(entry: SheetMusicEntryModel): Promise<void> {
+        if (!entry.osmd) {
+            entry.fallbackTempoBpm = null;
+            entry.projectedTempoSegments = null;
+            return;
+        }
+
+        try {
+            const { fallbackTempoBpm, projectedSegments } = await loadProjectedTempoMap(entry.source, entry.measureMap);
+            if (this.destroyed) {
+                return;
+            }
+
+            entry.fallbackTempoBpm = fallbackTempoBpm;
+            entry.projectedTempoSegments = projectedSegments;
+        } catch (error) {
+            entry.fallbackTempoBpm = resolveOsmdFallbackTempo(entry);
+            entry.projectedTempoSegments = null;
+            console.warn(
+                '[trackswitch] Failed to load score tempo map:',
+                entry.source,
+                error
+            );
+        }
+    }
+}
+
+function resolveEntryReferenceBpm(entry: SheetMusicEntryModel, referenceTime: number): number | null {
+    const projectedSegments = entry.projectedTempoSegments || [];
+    if (projectedSegments.length > 0) {
+        let resolvedBpm = projectedSegments[0].bpm;
+        for (let index = 0; index < projectedSegments.length; index += 1) {
+            const segment = projectedSegments[index];
+            if (segment.referenceStartTime > referenceTime) {
+                break;
+            }
+
+            resolvedBpm = segment.bpm;
+        }
+
+        return Number.isFinite(resolvedBpm) && resolvedBpm > 0 ? resolvedBpm : null;
+    }
+
+    if (Number.isFinite(entry.fallbackTempoBpm) && (entry.fallbackTempoBpm as number) > 0) {
+        return entry.fallbackTempoBpm;
+    }
+
+    return resolveOsmdFallbackTempo(entry);
+}
+
+function resolveOsmdFallbackTempo(entry: SheetMusicEntryModel): number | null {
+    const sheet = entry.osmd?.Sheet as any;
+    if (!sheet) {
+        return null;
+    }
+
+    const expressionsTempo = typeof sheet.getExpressionsStartTempoInBPM === 'function'
+        ? Number(sheet.getExpressionsStartTempoInBPM())
+        : Number.NaN;
+    if (Number.isFinite(expressionsTempo) && expressionsTempo > 0) {
+        return expressionsTempo;
+    }
+
+    const defaultTempo = Number(sheet.DefaultStartTempoInBpm);
+    if (Number.isFinite(defaultTempo) && defaultTempo > 0) {
+        return defaultTempo;
+    }
+
+    return null;
 }

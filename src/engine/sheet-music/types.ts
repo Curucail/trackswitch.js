@@ -12,6 +12,16 @@ export interface SheetMusicHostConfig {
     cursorAlpha: number;
 }
 
+export interface SheetMusicTempoSegment {
+    measure: number;
+    bpm: number;
+}
+
+export interface SheetMusicProjectedTempoSegment {
+    referenceStartTime: number;
+    bpm: number;
+}
+
 export interface SheetMusicEntryModel {
     host: HTMLElement;
     scrollContainer: HTMLElement | null;
@@ -35,6 +45,8 @@ export interface SheetMusicEntryModel {
         cursorElement?: Element | null;
     } | null;
     measureMap: MeasureMapPoint[] | null;
+    projectedTempoSegments: SheetMusicProjectedTempoSegment[] | null;
+    fallbackTempoBpm: number | null;
     availableMeasures: number[];
     availableMeasureSet: Set<number>;
     syncEnabled: boolean;

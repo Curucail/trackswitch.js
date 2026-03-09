@@ -44,7 +44,7 @@
     flex: 1 1 auto;
     height: auto;
     min-height: 0;
-    order: 1;
+    order: 2;
 }
 
 .trackswitch .warping-tempo-controls {
@@ -61,6 +61,17 @@
     color: var(--ts-color-text-secondary);
     position: relative;
     z-index: 2;
+}
+
+.trackswitch .warping-tempo-message {
+    order: 1;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--ts-color-text-muted);
+    background-color: var(--ts-color-track-error-bg);
+    color: var(--ts-color-text-primary);
+    font-family: monospace;
+    font-size: 12px;
+    font-weight: 600;
 }
 
 .trackswitch .warping-tempo-control {
@@ -206,6 +217,10 @@
     .trackswitch .warping-tempo-controls {
         flex-wrap: wrap;
         gap: 8px 12px;
+    }
+
+    .trackswitch .warping-tempo-message {
+        font-size: 11px;
     }
 
     .trackswitch .warping-tempo-control {

@@ -40,7 +40,7 @@ const uiSheetMusicAllowedKeys = [
     'cursorColor',
     'cursorAlpha',
 ] as const;
-const uiWarpingMatrixAllowedKeys = ['type', 'style', 'height', 'tempoSmoothingHalfWindowPoints'] as const;
+const uiWarpingMatrixAllowedKeys = ['type', 'style', 'height', 'tempoSmoothingHalfWindowPoints', 'globalScoreBPM'] as const;
 
 const trackAllowedKeys = [
     'title',
@@ -208,6 +208,14 @@ function normalizeWarpingMatrixTempoSmoothingHalfWindowPoints(value: number | un
     return normalizePositiveInteger(value);
 }
 
+function normalizeWarpingMatrixGlobalScoreBpm(value: number | undefined): number | undefined {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+        return undefined;
+    }
+
+    return value;
+}
+
 function normalizeWarpingMatrixConfig<T extends TrackSwitchWarpingMatrixConfig>(warpingMatrix: T): T {
     return {
         ...warpingMatrix,
@@ -215,6 +223,7 @@ function normalizeWarpingMatrixConfig<T extends TrackSwitchWarpingMatrixConfig>(
         tempoSmoothingHalfWindowPoints: normalizeWarpingMatrixTempoSmoothingHalfWindowPoints(
             warpingMatrix.tempoSmoothingHalfWindowPoints
         ),
+        globalScoreBPM: normalizeWarpingMatrixGlobalScoreBpm(warpingMatrix.globalScoreBPM),
     };
 }
 
@@ -342,6 +351,11 @@ function injectWarpingMatrix(root: HTMLElement, warpingMatrix: TrackSwitchWarpin
             'data-warping-matrix-tempo-smoothing-half-window-points',
             String(normalizedTempoSmoothingHalfWindowPoints)
         );
+    }
+
+    const normalizedGlobalScoreBpm = normalizeWarpingMatrixGlobalScoreBpm(warpingMatrix.globalScoreBPM);
+    if (normalizedGlobalScoreBpm !== undefined) {
+        container.setAttribute('data-warping-matrix-global-score-bpm', String(normalizedGlobalScoreBpm));
     }
 
     root.appendChild(container);

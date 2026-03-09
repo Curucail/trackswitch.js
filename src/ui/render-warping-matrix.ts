@@ -42,8 +42,14 @@ interface WarpingMatrixTempoPoint {
     tempoPercent: number;
 }
 
+interface WarpingMatrixTempoSeriesData {
+    points: WarpingMatrixTempoPoint[];
+    isStrictlyMonotonic: boolean;
+    warningMessage: string | null;
+}
+
 interface WarpingMatrixTempoData {
-    byColumn: Map<string, WarpingMatrixTempoPoint[]>;
+    byColumn: Map<string, WarpingMatrixTempoSeriesData>;
 }
 
 interface WarpingPlotMargins {
@@ -78,15 +84,17 @@ interface WarpingTempoPlotState {
     title: TextSelection;
     xAxis: GroupSelection;
     yAxis: GroupSelection;
+    yAxisRight: GroupSelection;
     xLabel: TextSelection;
     yLabel: TextSelection;
+    yLabelRight: TextSelection;
     plotRoot: GroupSelection;
     clipRect: RectSelection;
     path: PathSelection;
     baseline: LineSelection;
     centerLine: LineSelection;
     xScale: d3.ScaleLinear<number, number>;
-    yScale: d3.ScaleLinear<number, number>;
+    yScale: d3.ScaleContinuousNumeric<number, number>;
     margins: WarpingPlotMargins;
     innerWidth: number;
     innerHeight: number;
@@ -103,10 +111,9 @@ interface WarpingMatrixHostMetadata {
     tempoPlotHost: HTMLElement;
     tempoPlot: WarpingTempoPlotState | null;
     tempoControls: HTMLElement;
+    tempoMessage: HTMLElement;
     tempoWindowSlider: HTMLInputElement;
     tempoWindowValueNode: HTMLElement;
-    tempoYScaleSlider: HTMLInputElement;
-    tempoYScaleValueNode: HTMLElement;
     tempoSmoothingSlider: HTMLInputElement;
     tempoSmoothingValueNode: HTMLElement;
     matrixSeriesSignature: string | null;
@@ -115,17 +122,19 @@ interface WarpingMatrixHostMetadata {
     tempoDataCache: WarpingMatrixTempoData | null;
     tempoDataCacheKey: string | null;
     matrixDisabled: boolean;
+    tempoCurveValid: boolean;
     trackSeries: WarpingMatrixTrackSeries[];
     matrixTrackDuration: number;
     configuredHeight: number | null;
+    configuredGlobalScoreBpm: number | null;
     tempoWindowSeconds: number;
-    tempoYHalfRangePercent: number;
     tempoSmoothingHalfWindowPoints: number;
     colorByColumn: Map<string, string>;
     activeColumnKey: string | null;
     referenceDuration: number;
     currentReferenceTime: number;
     currentTrackTime: number;
+    currentScoreBpm: number | null;
     matrixActivePointerId: number | null;
     lastSizeKey: string | null;
     layoutDirty: boolean;
@@ -143,10 +152,10 @@ const WARPING_MATRIX_TEMPO_SMOOTHING_SLIDER_MAX_HALF_WINDOW_POINTS = 100;
 const WARPING_MATRIX_TEMPO_WINDOW_MIN_SECONDS = 10;
 const WARPING_MATRIX_TEMPO_WINDOW_MAX_SECONDS = 180;
 const WARPING_MATRIX_TEMPO_WINDOW_STEP_SECONDS = 0.5;
-const WARPING_MATRIX_TEMPO_Y_RANGE_MIN_PERCENT = 150;
-const WARPING_MATRIX_TEMPO_Y_RANGE_MAX_PERCENT = 500;
-const WARPING_MATRIX_TEMPO_Y_RANGE_STEP_PERCENT = 1;
-const DEFAULT_WARPING_MATRIX_TEMPO_Y_HALF_RANGE_PERCENT = 250;
+const WARPING_MATRIX_TEMPO_LOG_MIN_PERCENT = 10;
+const WARPING_MATRIX_TEMPO_LOG_MAX_PERCENT = 1000;
+const WARPING_MATRIX_MONOTONICITY_WARNING = 'Warping path cannot be made strictly monotonous';
+const WARPING_MATRIX_TEMPO_AXIS_TICKS = [10, 20, 50, 100, 200, 500, 1000];
 
 function clampTime(value: number, minimum: number, maximum: number): number {
     if (!Number.isFinite(value)) {
@@ -230,6 +239,19 @@ function parseWarpingMatrixTempoSmoothingHalfWindowPoints(value: string | null):
     return Math.max(1, Math.round(parsed));
 }
 
+function parseWarpingMatrixGlobalScoreBpm(value: string | null): number | null {
+    if (value === null) {
+        return null;
+    }
+
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+        return null;
+    }
+
+    return parsed;
+}
+
 function normalizeTempoWindowSeconds(value: number): number {
     if (!Number.isFinite(value)) {
         return DEFAULT_WARPING_MATRIX_LOCAL_TEMPO_WINDOW_SECONDS;
@@ -242,24 +264,20 @@ function normalizeTempoWindowSeconds(value: number): number {
     );
 }
 
-function normalizeTempoYHalfRangePercent(value: number): number {
-    if (!Number.isFinite(value)) {
-        return DEFAULT_WARPING_MATRIX_TEMPO_Y_HALF_RANGE_PERCENT;
-    }
-
-    return clampTime(
-        Math.round(value / WARPING_MATRIX_TEMPO_Y_RANGE_STEP_PERCENT) * WARPING_MATRIX_TEMPO_Y_RANGE_STEP_PERCENT,
-        WARPING_MATRIX_TEMPO_Y_RANGE_MIN_PERCENT,
-        WARPING_MATRIX_TEMPO_Y_RANGE_MAX_PERCENT
-    );
-}
-
 function normalizeTempoSmoothingHalfWindowPoints(value: number): number {
     if (!Number.isFinite(value)) {
         return DEFAULT_WARPING_MATRIX_LOCAL_TEMPO_SLOPE_HALF_WINDOW_POINTS;
     }
 
     return Math.max(1, Math.round(value));
+}
+
+function formatTempoAxisBpmLabel(percentValue: number, scoreBpm: number): string {
+    if (!Number.isFinite(percentValue) || percentValue <= 0 || !Number.isFinite(scoreBpm) || scoreBpm <= 0) {
+        return '';
+    }
+
+    return String(Math.round((percentValue / 100) * scoreBpm));
 }
 
 function resolveAutoTempoSmoothingHalfWindowPoints(
@@ -338,17 +356,9 @@ export function getWarpingMatrixLocalTempoSlopeHalfWindowPoints(ctx: any, host: 
     }).call(ctx, host);
 }
 
-export function getWarpingMatrixTempoYHalfRangePercent(ctx: any, host: any): any {
-    return (function(this: any, host: any) {
-        return normalizeTempoYHalfRangePercent(host.tempoYHalfRangePercent);
-    
-    }).call(ctx, host);
-}
-
 export function updateWarpingMatrixTempoControlLabels(ctx: any, host: any): any {
     return (function(this: any, host: any) {
         host.tempoWindowValueNode.textContent = this.getWarpingMatrixLocalTempoWindowSeconds(host).toFixed(1) + 's';
-        host.tempoYScaleValueNode.textContent = '±' + Math.round(this.getWarpingMatrixTempoYHalfRangePercent(host)) + '%';
         host.tempoSmoothingValueNode.textContent = 'k=' + this.getWarpingMatrixLocalTempoSlopeHalfWindowPoints(host);
     
     }).call(ctx, host);
@@ -358,7 +368,6 @@ export function persistWarpingMatrixTempoControls(ctx: any, host: any): any {
     return (function(this: any, host: any) {
         this.warpingMatrixTempoControlState.set(host.host, {
             windowSeconds: this.getWarpingMatrixLocalTempoWindowSeconds(host),
-            yHalfRangePercent: this.getWarpingMatrixTempoYHalfRangePercent(host),
             smoothingHalfWindowPoints: this.getWarpingMatrixLocalTempoSlopeHalfWindowPoints(host),
         });
     
@@ -413,6 +422,9 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
             const configuredTempoSmoothingHalfWindowPoints = parseWarpingMatrixTempoSmoothingHalfWindowPoints(
                 hostElement.getAttribute('data-warping-matrix-tempo-smoothing-half-window-points')
             );
+            const configuredGlobalScoreBpm = parseWarpingMatrixGlobalScoreBpm(
+                hostElement.getAttribute('data-warping-matrix-global-score-bpm')
+            );
             hostElement.style.removeProperty('height');
 
             hostElement.classList.add('warping-matrix-host');
@@ -442,6 +454,11 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
             const tempoControls = document.createElement('div');
             tempoControls.className = 'warping-tempo-controls';
 
+            const tempoMessage = document.createElement('div');
+            tempoMessage.className = 'warping-tempo-message';
+            tempoMessage.hidden = true;
+            tempoPanel.appendChild(tempoMessage);
+
             const windowControl = document.createElement('label');
             windowControl.className = 'warping-tempo-control';
             const windowLabel = document.createElement('span');
@@ -458,23 +475,6 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
             windowControl.appendChild(windowLabel);
             windowControl.appendChild(tempoWindowSlider);
             windowControl.appendChild(tempoWindowValueNode);
-
-            const yScaleControl = document.createElement('label');
-            yScaleControl.className = 'warping-tempo-control';
-            const yScaleLabel = document.createElement('span');
-            yScaleLabel.className = 'warping-tempo-control-label';
-            yScaleLabel.textContent = 'Y scale (±%)';
-            const tempoYScaleSlider = document.createElement('input');
-            tempoYScaleSlider.className = 'warping-tempo-slider';
-            tempoYScaleSlider.type = 'range';
-            tempoYScaleSlider.min = String(WARPING_MATRIX_TEMPO_Y_RANGE_MIN_PERCENT);
-            tempoYScaleSlider.max = String(WARPING_MATRIX_TEMPO_Y_RANGE_MAX_PERCENT);
-            tempoYScaleSlider.step = String(WARPING_MATRIX_TEMPO_Y_RANGE_STEP_PERCENT);
-            const tempoYScaleValueNode = document.createElement('span');
-            tempoYScaleValueNode.className = 'warping-tempo-value';
-            yScaleControl.appendChild(yScaleLabel);
-            yScaleControl.appendChild(tempoYScaleSlider);
-            yScaleControl.appendChild(tempoYScaleValueNode);
 
             const smoothingControl = document.createElement('label');
             smoothingControl.className = 'warping-tempo-control';
@@ -493,7 +493,6 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
             smoothingControl.appendChild(tempoSmoothingValueNode);
 
             tempoControls.appendChild(windowControl);
-            tempoControls.appendChild(yScaleControl);
             tempoControls.appendChild(smoothingControl);
             tempoPanel.appendChild(tempoControls);
 
@@ -502,9 +501,6 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
             const hasConfiguredTempoSmoothing = configuredTempoSmoothingHalfWindowPoints !== null;
             const initialTempoWindowSeconds = normalizeTempoWindowSeconds(
                 persistedTempoControls ? persistedTempoControls.windowSeconds : DEFAULT_WARPING_MATRIX_LOCAL_TEMPO_WINDOW_SECONDS
-            );
-            const initialTempoYHalfRangePercent = normalizeTempoYHalfRangePercent(
-                persistedTempoControls ? persistedTempoControls.yHalfRangePercent : DEFAULT_WARPING_MATRIX_TEMPO_Y_HALF_RANGE_PERCENT
             );
             const initialTempoSmoothingHalfWindowPoints = normalizeTempoSmoothingHalfWindowPoints(
                 persistedTempoControls
@@ -515,7 +511,6 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
                     )
             );
             tempoWindowSlider.value = String(initialTempoWindowSeconds);
-            tempoYScaleSlider.value = String(initialTempoYHalfRangePercent);
             tempoSmoothingSlider.max = String(
                 Math.max(
                     WARPING_MATRIX_TEMPO_SMOOTHING_SLIDER_MAX_HALF_WINDOW_POINTS,
@@ -535,10 +530,9 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
                 tempoPlotHost: tempoPlotHost,
                 tempoPlot: null,
                 tempoControls: tempoControls,
+                tempoMessage: tempoMessage,
                 tempoWindowSlider: tempoWindowSlider,
                 tempoWindowValueNode: tempoWindowValueNode,
-                tempoYScaleSlider: tempoYScaleSlider,
-                tempoYScaleValueNode: tempoYScaleValueNode,
                 tempoSmoothingSlider: tempoSmoothingSlider,
                 tempoSmoothingValueNode: tempoSmoothingValueNode,
                 matrixSeriesSignature: null,
@@ -547,17 +541,19 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
                 tempoDataCache: null,
                 tempoDataCacheKey: null,
                 matrixDisabled: false,
+                tempoCurveValid: true,
                 trackSeries: [],
                 matrixTrackDuration: 1,
                 configuredHeight: configuredHeight,
+                configuredGlobalScoreBpm: configuredGlobalScoreBpm,
                 tempoWindowSeconds: initialTempoWindowSeconds,
-                tempoYHalfRangePercent: initialTempoYHalfRangePercent,
                 tempoSmoothingHalfWindowPoints: initialTempoSmoothingHalfWindowPoints,
                 colorByColumn: new Map<string, string>(),
                 activeColumnKey: null,
                 referenceDuration: 0,
                 currentReferenceTime: 0,
                 currentTrackTime: 0,
+                currentScoreBpm: configuredGlobalScoreBpm,
                 matrixActivePointerId: null,
                 lastSizeKey: null,
                 layoutDirty: true,
@@ -599,20 +595,7 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
                     syncEnabled: metadata.matrixDisabled,
                     referenceDuration: metadata.referenceDuration,
                     currentReferenceTime: metadata.currentReferenceTime,
-                    columnOrder: [],
-                    trackSeries: metadata.trackSeries,
-                });
-            });
-            tempoYScaleSlider.addEventListener('input', () => {
-                metadata.tempoYHalfRangePercent = normalizeTempoYHalfRangePercent(Number(tempoYScaleSlider.value));
-                tempoYScaleSlider.value = String(metadata.tempoYHalfRangePercent);
-                this.updateWarpingMatrixTempoControlLabels(metadata);
-                this.persistWarpingMatrixTempoControls(metadata);
-                this.updateWarpingMatrixPlaybackState(metadata, {
-                    enabled: true,
-                    syncEnabled: metadata.matrixDisabled,
-                    referenceDuration: metadata.referenceDuration,
-                    currentReferenceTime: metadata.currentReferenceTime,
+                    currentScoreBpm: metadata.currentScoreBpm,
                     columnOrder: [],
                     trackSeries: metadata.trackSeries,
                 });
@@ -660,7 +643,7 @@ export function createWarpingMatrixPlotState(ctx: any, plotHost: any, width: any
 
         const margins: WarpingPlotMargins = {
             top: 32,
-            right: 16,
+            right: 52,
             bottom: 40,
             left: 52,
         };
@@ -751,7 +734,7 @@ export function createWarpingTempoPlotState(ctx: any, plotHost: any, width: any,
 
         const margins: WarpingPlotMargins = {
             top: 32,
-            right: 16,
+            right: 52,
             bottom: 40,
             left: 52,
         };
@@ -784,6 +767,9 @@ export function createWarpingTempoPlotState(ctx: any, plotHost: any, width: any,
         const yAxis = svg
             .append('g')
             .attr('class', 'warping-plot-axis warping-plot-axis-y');
+        const yAxisRight = svg
+            .append('g')
+            .attr('class', 'warping-plot-axis warping-plot-axis-y-right');
 
         const xLabel = svg
             .append('text')
@@ -791,6 +777,11 @@ export function createWarpingTempoPlotState(ctx: any, plotHost: any, width: any,
             .attr('text-anchor', 'middle')
             .text('Track time (s)');
         const yLabel = svg
+            .append('text')
+            .attr('class', 'warping-plot-axis-label')
+            .attr('text-anchor', 'middle')
+            .text('Tempo (%)');
+        const yLabelRight = svg
             .append('text')
             .attr('class', 'warping-plot-axis-label')
             .attr('text-anchor', 'middle')
@@ -816,15 +807,17 @@ export function createWarpingTempoPlotState(ctx: any, plotHost: any, width: any,
             title: title,
             xAxis: xAxis,
             yAxis: yAxis,
+            yAxisRight: yAxisRight,
             xLabel: xLabel,
             yLabel: yLabel,
+            yLabelRight: yLabelRight,
             plotRoot: plotRoot,
             clipRect: clipRect,
             path: path,
             baseline: baseline,
             centerLine: centerLine,
             xScale: d3.scaleLinear(),
-            yScale: d3.scaleLinear(),
+            yScale: d3.scaleLog(),
             margins: margins,
             innerWidth: innerWidth,
             innerHeight: innerHeight,
@@ -883,6 +876,7 @@ export function applyWarpingTempoPlotDimensions(ctx: any, plot: any, width: any,
             .attr('y', 20);
         plot.xAxis.attr('transform', 'translate(' + plot.margins.left + ',' + (plot.margins.top + plot.innerHeight) + ')');
         plot.yAxis.attr('transform', 'translate(' + plot.margins.left + ',' + plot.margins.top + ')');
+        plot.yAxisRight.attr('transform', 'translate(' + (plot.margins.left + plot.innerWidth) + ',' + plot.margins.top + ')');
         plot.xLabel
             .attr('x', plot.margins.left + (plot.innerWidth / 2))
             .attr('y', height - 8);
@@ -890,6 +884,10 @@ export function applyWarpingTempoPlotDimensions(ctx: any, plot: any, width: any,
             .attr('x', 0)
             .attr('y', 0)
             .attr('transform', 'translate(14,' + (plot.margins.top + (plot.innerHeight / 2)) + ') rotate(-90)');
+        plot.yLabelRight
+            .attr('x', 0)
+            .attr('y', 0)
+            .attr('transform', 'translate(' + (width - 14) + ',' + (plot.margins.top + (plot.innerHeight / 2)) + ') rotate(90)');
     
     }).call(ctx, plot, width, height);
 }
@@ -1078,7 +1076,19 @@ export function getPrimaryTempoSeries(ctx: any, host: any): any {
             return [];
         }
 
-        return host.tempoDataCache.byColumn.get(host.activeColumnKey) || [];
+        const seriesData = host.tempoDataCache.byColumn.get(host.activeColumnKey);
+        return seriesData ? seriesData.points : [];
+    
+    }).call(ctx, host);
+}
+
+export function getPrimaryTempoSeriesData(ctx: any, host: any): any {
+    return (function(this: any, host: any) {
+        if (!host.tempoDataCache || !host.activeColumnKey) {
+            return null;
+        }
+
+        return host.tempoDataCache.byColumn.get(host.activeColumnKey) || null;
     
     }).call(ctx, host);
 }
@@ -1169,23 +1179,23 @@ export function applyWarpingMatrixContext(ctx: any, host: any, context: any): an
 
         host.referenceDuration = referenceDuration;
         host.currentReferenceTime = clampTime(context.currentReferenceTime, 0, referenceDuration);
+        host.currentScoreBpm = host.configuredGlobalScoreBpm ?? (
+            Number.isFinite(context.currentScoreBpm) && context.currentScoreBpm > 0
+                ? context.currentScoreBpm
+                : null
+        );
         host.matrixDisabled = context.syncEnabled;
         host.host.classList.toggle('warping-matrix-sync-disabled', host.matrixDisabled);
         host.syncDisabledOverlay.style.display = host.matrixDisabled ? 'flex' : 'none';
         host.tempoWindowSeconds = normalizeTempoWindowSeconds(Number(host.tempoWindowSlider.value));
-        host.tempoYHalfRangePercent = normalizeTempoYHalfRangePercent(Number(host.tempoYScaleSlider.value));
         host.tempoSmoothingHalfWindowPoints = normalizeTempoSmoothingHalfWindowPoints(Number(host.tempoSmoothingSlider.value));
         if (host.tempoWindowSlider.value !== String(host.tempoWindowSeconds)) {
             host.tempoWindowSlider.value = String(host.tempoWindowSeconds);
-        }
-        if (host.tempoYScaleSlider.value !== String(host.tempoYHalfRangePercent)) {
-            host.tempoYScaleSlider.value = String(host.tempoYHalfRangePercent);
         }
         if (host.tempoSmoothingSlider.value !== String(host.tempoSmoothingHalfWindowPoints)) {
             host.tempoSmoothingSlider.value = String(host.tempoSmoothingHalfWindowPoints);
         }
         host.tempoWindowSlider.disabled = host.matrixDisabled;
-        host.tempoYScaleSlider.disabled = host.matrixDisabled;
         host.tempoSmoothingSlider.disabled = host.matrixDisabled;
         this.updateWarpingMatrixTempoControlLabels(host);
         this.persistWarpingMatrixTempoControls(host);
@@ -1458,6 +1468,40 @@ function sliceTempoSeriesForDomain(points: WarpingMatrixTempoPoint[], xDomain: [
     return points.slice(startIndex, endIndex);
 }
 
+function resolveDisplayedWarpingMatrixScoreBpm(
+    renderer: any,
+    host: WarpingMatrixHostMetadata,
+    primarySeriesData: WarpingMatrixPathSeriesData | null,
+    xDomain: [number, number]
+): number | null {
+    if (Number.isFinite(host.configuredGlobalScoreBpm) && (host.configuredGlobalScoreBpm as number) > 0) {
+        return host.configuredGlobalScoreBpm;
+    }
+
+    if (
+        !primarySeriesData
+        || typeof renderer.resolveWarpingMatrixScoreBpm !== 'function'
+    ) {
+        return Number.isFinite(host.currentScoreBpm) && (host.currentScoreBpm as number) > 0
+            ? host.currentScoreBpm
+            : null;
+    }
+
+    const centerTrackTime = (xDomain[0] + xDomain[1]) / 2;
+    const centerReferenceTime = renderer.interpolateWarpingReferenceTime(
+        primarySeriesData.pointsByTrackTime,
+        centerTrackTime
+    );
+    const resolvedBpm = renderer.resolveWarpingMatrixScoreBpm(centerReferenceTime);
+    if (Number.isFinite(resolvedBpm) && (resolvedBpm as number) > 0) {
+        return resolvedBpm;
+    }
+
+    return Number.isFinite(host.currentScoreBpm) && (host.currentScoreBpm as number) > 0
+        ? host.currentScoreBpm
+        : null;
+}
+
 export function updateWarpingMatrixPlaybackState(ctx: any, host: any, context: any): any {
     return (function(this: any, host: any, context: any) {
         if (!context || !context.enabled) {
@@ -1491,40 +1535,78 @@ export function renderWarpingMatrixTempoPlot(ctx: any, host: any): any {
 
         const tempoPlot = host.tempoPlot;
         const primarySeriesData = this.getPrimaryWarpingSeriesData(host);
+        const tempoSeriesData = this.getPrimaryTempoSeriesData(host);
         const tempoSeries = this.getPrimaryTempoSeries(host);
         const trackDuration = primarySeriesData ? Math.max(0.001, primarySeriesData.trackDuration) : 0.001;
         const windowSeconds = this.getWarpingMatrixLocalTempoWindowSeconds(host);
         const xDomain = this.resolveCenteredWarpingWindow(host.currentTrackTime, windowSeconds, trackDuration);
-        const tempoYHalfRangePercent = this.getWarpingMatrixTempoYHalfRangePercent(host);
+        const displayedScoreBpm = resolveDisplayedWarpingMatrixScoreBpm(this, host, primarySeriesData, xDomain);
+        const showMonotonicityMessage = !!tempoSeriesData && !tempoSeriesData.isStrictlyMonotonic;
+        host.tempoCurveValid = !showMonotonicityMessage;
+        host.tempoMessage.hidden = host.matrixDisabled || !showMonotonicityMessage;
+        host.tempoMessage.textContent = host.matrixDisabled || !showMonotonicityMessage
+            ? ''
+            : (tempoSeriesData?.warningMessage || WARPING_MATRIX_MONOTONICITY_WARNING);
 
         tempoPlot.xScale
             .domain(xDomain)
             .range([0, tempoPlot.innerWidth]);
 
-        const yDomain: [number, number] = [100 - tempoYHalfRangePercent, 100 + tempoYHalfRangePercent];
         tempoPlot.yScale
-            .domain(yDomain)
+            .domain([WARPING_MATRIX_TEMPO_LOG_MIN_PERCENT, WARPING_MATRIX_TEMPO_LOG_MAX_PERCENT])
             .range([tempoPlot.innerHeight, 0]);
 
         const xTickCount = Math.max(2, Math.round(tempoPlot.innerWidth / 90));
-        const yTickCount = Math.max(5, Math.round(tempoPlot.innerHeight / 35));
         tempoPlot.xAxis.call(d3.axisBottom(tempoPlot.xScale).ticks(xTickCount));
+        const showBpmAxis = Number.isFinite(displayedScoreBpm) && (displayedScoreBpm as number) > 0;
         tempoPlot.yAxis.call(
             d3.axisLeft(tempoPlot.yScale)
-                .ticks(yTickCount)
+                .tickValues(WARPING_MATRIX_TEMPO_AXIS_TICKS)
                 .tickFormat((tickValue) => {
                     const numericTick = Number(tickValue);
-                    if (!Number.isFinite(numericTick) || numericTick < 0) {
+                    if (!Number.isFinite(numericTick) || numericTick <= 0) {
                         return '';
                     }
 
-                    return String(Math.round(numericTick));
+                    if (!showBpmAxis) {
+                        return String(Math.round(numericTick));
+                    }
+
+                    return formatTempoAxisBpmLabel(numericTick, displayedScoreBpm as number);
                 })
         );
+        if (showBpmAxis) {
+            tempoPlot.yAxisRight
+                .style('display', null)
+                .call(
+                    d3.axisRight(tempoPlot.yScale)
+                        .tickValues(WARPING_MATRIX_TEMPO_AXIS_TICKS)
+                        .tickFormat((tickValue) => {
+                            const numericTick = Number(tickValue);
+                            if (!Number.isFinite(numericTick) || numericTick <= 0) {
+                                return '';
+                            }
 
-        const visibleTempoSeries = sliceTempoSeriesForDomain(tempoSeries, xDomain);
+                            return String(Math.round(numericTick));
+                        })
+                );
+        } else {
+            tempoPlot.yAxisRight.style('display', 'none');
+        }
+        tempoPlot.yLabel.text(showBpmAxis ? 'Tempo (BPM)' : 'Tempo (%)');
+        tempoPlot.yLabelRight
+            .text('Tempo (%)')
+            .style('display', showBpmAxis ? null : 'none');
+
+        const visibleTempoSeries = showMonotonicityMessage ? [] : sliceTempoSeriesForDomain(tempoSeries, xDomain);
         const tempoLine = d3.line<WarpingMatrixTempoPoint>()
-            .defined((point) => Number.isFinite(point.trackTime) && Number.isFinite(point.tempoPercent))
+            .defined((point) => {
+                return (
+                    Number.isFinite(point.trackTime)
+                    && Number.isFinite(point.tempoPercent)
+                    && point.tempoPercent > 0
+                );
+            })
             .x((point) => tempoPlot.xScale(point.trackTime))
             .y((point) => tempoPlot.yScale(point.tempoPercent));
 
@@ -1550,7 +1632,7 @@ export function renderWarpingMatrixTempoPlot(ctx: any, host: any): any {
             .attr('y2', tempoPlot.innerHeight)
             .raise();
     
-    }).call(ctx, host);
+        }).call(ctx, host);
 }
 
 export function resolveCenteredWarpingWindow(ctx: any, center: any, windowSeconds: any, _maxTime: any): any {
@@ -1635,7 +1717,7 @@ export function buildWarpingMatrixData(ctx: any, trackSeries: any, referenceDura
 
 export function buildWarpingTempoData(ctx: any, matrixData: any, halfWindowPoints: any): any {
     return (function(this: any, matrixData: any, halfWindowPoints: any) {
-        const byColumn = new Map<string, WarpingMatrixTempoPoint[]>();
+        const byColumn = new Map<string, WarpingMatrixTempoSeriesData>();
         const normalizedHalfWindow = Math.max(1, Math.round(halfWindowPoints));
 
         if (!matrixData) {
@@ -1643,36 +1725,60 @@ export function buildWarpingTempoData(ctx: any, matrixData: any, halfWindowPoint
         }
 
         matrixData.byColumn.forEach((seriesData: WarpingMatrixPathSeriesData, columnKey: string) => {
-            const points = seriesData.pointsByReferenceTime;
-
-            if (points.length < (normalizedHalfWindow * 2) + 1) {
-                byColumn.set(columnKey, []);
+            const strictPath = buildStrictMonotonicWarpingPath(seriesData.pointsByReferenceTime);
+            if (!strictPath) {
+                byColumn.set(columnKey, {
+                    points: [],
+                    isStrictlyMonotonic: false,
+                    warningMessage: WARPING_MATRIX_MONOTONICITY_WARNING,
+                });
                 return;
             }
 
-            const tempoPoints: WarpingMatrixTempoPoint[] = [];
-            for (let index = normalizedHalfWindow; index < points.length - normalizedHalfWindow; index += 1) {
-                const left = points[index - normalizedHalfWindow];
-                const right = points[index + normalizedHalfWindow];
-                const center = points[index];
+            const frameGrid = collectReferenceFrameGrid(seriesData.pointsByReferenceTime);
+            if (frameGrid.length < 2) {
+                byColumn.set(columnKey, {
+                    points: [],
+                    isStrictlyMonotonic: false,
+                    warningMessage: WARPING_MATRIX_MONOTONICITY_WARNING,
+                });
+                return;
+            }
 
-                const referenceDelta = right.referenceTime - left.referenceTime;
-                const trackDelta = right.trackTime - left.trackTime;
-                if (!Number.isFinite(referenceDelta) || !Number.isFinite(trackDelta) || referenceDelta <= 0) {
-                    continue;
+            const interpolatedFrames = frameGrid.map((referenceTime: number): WarpingMatrixPathPoint => {
+                return {
+                    referenceTime: referenceTime,
+                    trackTime: this.interpolateWarpingTrackTime(strictPath, referenceTime),
+                };
+            });
+            const beatDurationRatios = buildBeatDurationRatios(interpolatedFrames);
+            if (beatDurationRatios.length === 0) {
+                byColumn.set(columnKey, {
+                    points: [],
+                    isStrictlyMonotonic: false,
+                    warningMessage: WARPING_MATRIX_MONOTONICITY_WARNING,
+                });
+                return;
+            }
+
+            const smoothedRatios = smoothBeatDurationRatiosWithHann(beatDurationRatios, normalizedHalfWindow);
+            const tempoPoints: WarpingMatrixTempoPoint[] = [];
+            smoothedRatios.forEach((ratioPoint) => {
+                if (!Number.isFinite(ratioPoint.beatDurationRatio) || ratioPoint.beatDurationRatio <= 0) {
+                    return;
                 }
 
-                const tempoPercent = (trackDelta / referenceDelta) * 100;
-                if (!Number.isFinite(tempoPercent)) {
-                    continue;
+                const tempoPercent = 100 / ratioPoint.beatDurationRatio;
+                if (!Number.isFinite(tempoPercent) || tempoPercent <= 0) {
+                    return;
                 }
 
                 tempoPoints.push({
-                    trackTime: center.trackTime,
-                    referenceTime: center.referenceTime,
+                    trackTime: ratioPoint.trackTime,
+                    referenceTime: ratioPoint.referenceTime,
                     tempoPercent: tempoPercent,
                 });
-            }
+            });
 
             tempoPoints.sort((left: WarpingMatrixTempoPoint, right: WarpingMatrixTempoPoint) => {
                 if (left.trackTime === right.trackTime) {
@@ -1681,12 +1787,144 @@ export function buildWarpingTempoData(ctx: any, matrixData: any, halfWindowPoint
 
                 return left.trackTime - right.trackTime;
             });
-            byColumn.set(columnKey, tempoPoints);
+            byColumn.set(columnKey, {
+                points: tempoPoints,
+                isStrictlyMonotonic: true,
+                warningMessage: null,
+            });
         });
 
         return { byColumn };
     
     }).call(ctx, matrixData, halfWindowPoints);
+}
+
+interface BeatDurationRatioPoint {
+    trackTime: number;
+    referenceTime: number;
+    beatDurationRatio: number;
+}
+
+function buildStrictMonotonicWarpingPath(points: WarpingMatrixPathPoint[]): WarpingMatrixPathPoint[] | null {
+    if (!Array.isArray(points) || points.length < 2) {
+        return null;
+    }
+
+    const firstPoint = points[0];
+    const lastPoint = points[points.length - 1];
+    if (
+        !Number.isFinite(firstPoint.referenceTime)
+        || !Number.isFinite(firstPoint.trackTime)
+        || !Number.isFinite(lastPoint.referenceTime)
+        || !Number.isFinite(lastPoint.trackTime)
+    ) {
+        return null;
+    }
+
+    const strictPath: WarpingMatrixPathPoint[] = [firstPoint];
+    for (let index = 1; index < points.length - 1; index += 1) {
+        const point = points[index];
+        const previous = strictPath[strictPath.length - 1];
+        if (
+            Number.isFinite(point.referenceTime)
+            && Number.isFinite(point.trackTime)
+            && point.referenceTime > previous.referenceTime
+            && point.trackTime > previous.trackTime
+        ) {
+            strictPath.push(point);
+        }
+    }
+
+    const previous = strictPath[strictPath.length - 1];
+    if (lastPoint.referenceTime <= previous.referenceTime || lastPoint.trackTime <= previous.trackTime) {
+        return null;
+    }
+
+    strictPath.push(lastPoint);
+    return strictPath.length >= 2 ? strictPath : null;
+}
+
+function collectReferenceFrameGrid(points: WarpingMatrixPathPoint[]): number[] {
+    const frameGrid: number[] = [];
+    points.forEach((point) => {
+        if (!Number.isFinite(point.referenceTime)) {
+            return;
+        }
+
+        if (frameGrid.length === 0 || point.referenceTime > frameGrid[frameGrid.length - 1]) {
+            frameGrid.push(point.referenceTime);
+        }
+    });
+
+    return frameGrid;
+}
+
+function buildBeatDurationRatios(points: WarpingMatrixPathPoint[]): BeatDurationRatioPoint[] {
+    const ratios: BeatDurationRatioPoint[] = [];
+    for (let index = 1; index < points.length; index += 1) {
+        const previous = points[index - 1];
+        const current = points[index];
+        const referenceDelta = current.referenceTime - previous.referenceTime;
+        const trackDelta = current.trackTime - previous.trackTime;
+        if (!Number.isFinite(referenceDelta) || !Number.isFinite(trackDelta) || referenceDelta <= 0 || trackDelta <= 0) {
+            continue;
+        }
+
+        ratios.push({
+            referenceTime: (previous.referenceTime + current.referenceTime) / 2,
+            trackTime: (previous.trackTime + current.trackTime) / 2,
+            beatDurationRatio: trackDelta / referenceDelta,
+        });
+    }
+
+    return ratios;
+}
+
+function createHannWeights(halfWindowPoints: number): number[] {
+    const normalizedHalfWindow = Math.max(1, Math.round(halfWindowPoints));
+    const windowLength = (normalizedHalfWindow * 2) + 1;
+    const denominator = Math.max(1, windowLength - 1);
+    const weights: number[] = [];
+
+    for (let index = 0; index < windowLength; index += 1) {
+        weights.push(0.5 - (0.5 * Math.cos((2 * Math.PI * index) / denominator)));
+    }
+
+    return weights;
+}
+
+function smoothBeatDurationRatiosWithHann(
+    points: BeatDurationRatioPoint[],
+    halfWindowPoints: number
+): BeatDurationRatioPoint[] {
+    if (points.length === 0) {
+        return [];
+    }
+
+    const weights = createHannWeights(halfWindowPoints);
+    const normalizedHalfWindow = Math.max(1, Math.round(halfWindowPoints));
+
+    return points.map((point, index) => {
+        let weightedSum = 0;
+        let totalWeight = 0;
+
+        for (let offset = -normalizedHalfWindow; offset <= normalizedHalfWindow; offset += 1) {
+            const sampleIndex = index + offset;
+            if (sampleIndex < 0 || sampleIndex >= points.length) {
+                continue;
+            }
+
+            const weight = weights[offset + normalizedHalfWindow];
+            weightedSum += points[sampleIndex].beatDurationRatio * weight;
+            totalWeight += weight;
+        }
+
+        return {
+            trackTime: point.trackTime,
+            referenceTime: point.referenceTime,
+            beatDurationRatio: totalWeight > 0 ? weightedSum / totalWeight : point.beatDurationRatio,
+        };
+    });
 }
 
 export function interpolateWarpingTrackTime(ctx: any, points: any, referenceTime: any): any {

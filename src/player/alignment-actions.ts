@@ -346,6 +346,7 @@ export function getWarpingMatrixContext(ctx: any): any {
                 syncEnabled: this.globalSyncEnabled,
                 referenceDuration: this.longestDuration,
                 currentReferenceTime: this.state.position,
+                currentScoreBpm: this.sheetMusicEngine.resolveReferenceBpm(this.state.position),
                 columnOrder: [],
                 trackSeries: [],
             };
@@ -358,6 +359,7 @@ export function getWarpingMatrixContext(ctx: any): any {
                 syncEnabled: this.globalSyncEnabled,
                 referenceDuration: this.longestDuration,
                 currentReferenceTime: this.state.position,
+                currentScoreBpm: this.sheetMusicEngine.resolveReferenceBpm(this.state.position),
                 columnOrder: this.alignmentContext.uniqueColumnOrder,
                 trackSeries: [],
             };
@@ -373,6 +375,7 @@ export function getWarpingMatrixContext(ctx: any): any {
             syncEnabled: this.globalSyncEnabled,
             referenceDuration: this.longestDuration,
             currentReferenceTime: this.state.position,
+            currentScoreBpm: this.sheetMusicEngine.resolveReferenceBpm(this.state.position),
             columnOrder: this.alignmentContext.uniqueColumnOrder,
             trackSeries: trackSeries,
         };

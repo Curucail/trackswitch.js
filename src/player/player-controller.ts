@@ -193,6 +193,9 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             config.trackGroups,
             (referenceTime) => {
                 this.seekTo(referenceTime);
+            },
+            (referenceTime) => {
+                return this.sheetMusicEngine.resolveReferenceBpm(referenceTime);
             }
         );
 

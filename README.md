@@ -109,6 +109,7 @@ document.addEventListener('DOMContentLoaded', function () {
       {
         type: 'warpingMatrix',
         height: 240,
+        globalScoreBPM: 60,
       },
     ],
     features: {
@@ -183,9 +184,10 @@ Alignment mode behavior:
 - `alignment`: `sheetMusic` supports optional `maxWidth` (container max-width px), `renderScale` (OSMD zoom), and `maxHeight` (px) for internal score scrolling
 - `alignment`: `sheetMusic` supports optional `followPlayback` (default `true`) to auto-scroll vertically and keep the current highlighted measure in view
 - `alignment`: optional `warpingMatrix` UI entries render two linked panels: the warping-path graph plus a local-tempo graph
-- `alignment`: the tempo panel computes finite-difference local tempo from DTW path neighborhoods, with `100` meaning equal local speed to the reference
-- `alignment`: the tempo panel shows a gray dashed `y = 100` reference line plus a fixed dashed vertical playhead guide at panel center; its x-axis is active-track time and it uses a centered moving track-time window (adjustable via the tempo controls)
-- `alignment`: the tempo panel renders one active-track curve using central finite differences with configurable smoothing half-window `k` (default `5`), supports click-to-seek, and switches to a visible dimmed non-interactive state while global `SYNC` is enabled
+- `alignment`: the tempo panel enforces a strictly monotonic warping path, fills gaps by linear interpolation on the reference-time frame grid, computes frame-wise beat-duration ratios, smooths them with a Hann window, and converts the result back to tempo percent with `100` meaning equal local speed to the reference
+- `alignment`: the tempo panel uses a fixed logarithmic y-axis from `10` to `1000`, keeps the dashed `y = 100` reference line and centered vertical playhead guide, and continues to use active-track time on the x-axis with an adjustable moving window
+- `alignment`: if `warpingMatrix.globalScoreBPM` is set, the tempo plot shows BPM ticks on the left and percent ticks on the right; if it is not set, the player tries to derive BPM from the first loaded `sheetMusic` score and otherwise falls back to percent-only labels
+- `alignment`: the tempo panel renders one active-track curve with configurable smoothing half-window `k` (default `5`), supports click-to-seek, hides the curve and shows `Warping path cannot be made strictly monotonous` when no usable strict path can be derived, and switches to a visible dimmed non-interactive state while global `SYNC` is enabled
 - Waveform zoom is configured per waveform via `maxZoom`, expressed as the minimum visible window in seconds (for example `5` or `0.5`); wheel/pinch zoom is enabled only when the active waveform duration exceeds that value
 
 Examples

@@ -485,7 +485,7 @@ Behavior:
 ## Warping Matrix UI Element
 
 ```javascript
-{ type: 'warpingMatrix', height: 240, tempoSmoothingHalfWindowPoints: 3, style: 'margin: 12px 0;' }
+{ type: 'warpingMatrix', height: 240, tempoSmoothingHalfWindowPoints: 3, globalScoreBPM: 60, style: 'margin: 12px 0;' }
 ```
 
 Fields:
@@ -493,6 +493,7 @@ Fields:
 - `height?: number`
 - `style?: string`
 - `tempoSmoothingHalfWindowPoints?: number`
+- `globalScoreBPM?: number`
 
 Behavior:
 
@@ -501,7 +502,12 @@ Behavior:
   - left: warping path (reference time vs track time)
   - right: local tempo deviation (percent, with baseline at `100`)
 - Tempo plot uses active-track time on x-axis and can seek on click.
-- Tempo smoothing uses central differences over `k` neighbors on each side; default `k = 5`.
+- Tempo plot derives tempo from a strictly monotonic warping path, fills gaps by linear interpolation on the reference-time frame grid, smooths beat-duration ratios with a Hann window, and maps the result back to tempo percent.
+- Tempo smoothing uses Hann-window half-width `k`; default `k = 5`.
+- Tempo plot uses a fixed logarithmic y-axis from `10` to `1000`.
+- If `globalScoreBPM` is set, BPM ticks are shown on the left axis and percent ticks on the right.
+- If `globalScoreBPM` is not set, the player tries to derive BPM from the first loaded `sheetMusic` score and otherwise keeps percent-only axis labels.
+- If the warping path cannot be made strictly monotonic, the tempo curve is hidden and a warning message is shown instead.
 - While global `SYNC` is on, the panel is visibly dimmed and non-interactive.
 
 # Features

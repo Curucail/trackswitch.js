@@ -92,6 +92,7 @@ export interface TrackSwitchWarpingMatrixConfig {
     style?: string;
     height?: number;
     tempoSmoothingHalfWindowPoints?: number;
+    globalScoreBPM?: number;
 }
 
 export interface TrackSwitchImageUiElement extends TrackSwitchImageConfig {

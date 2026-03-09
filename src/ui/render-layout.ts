@@ -45,8 +45,14 @@ interface WarpingMatrixTempoPoint {
     tempoPercent: number;
 }
 
+interface WarpingMatrixTempoSeriesData {
+    points: WarpingMatrixTempoPoint[];
+    isStrictlyMonotonic: boolean;
+    warningMessage: string | null;
+}
+
 interface WarpingMatrixTempoData {
-    byColumn: Map<string, WarpingMatrixTempoPoint[]>;
+    byColumn: Map<string, WarpingMatrixTempoSeriesData>;
 }
 
 interface WarpingPlotMargins {
@@ -81,15 +87,17 @@ interface WarpingTempoPlotState {
     title: TextSelection;
     xAxis: GroupSelection;
     yAxis: GroupSelection;
+    yAxisRight: GroupSelection;
     xLabel: TextSelection;
     yLabel: TextSelection;
+    yLabelRight: TextSelection;
     plotRoot: GroupSelection;
     clipRect: RectSelection;
     path: PathSelection;
     baseline: LineSelection;
     centerLine: LineSelection;
     xScale: d3.ScaleLinear<number, number>;
-    yScale: d3.ScaleLinear<number, number>;
+    yScale: d3.ScaleContinuousNumeric<number, number>;
     margins: WarpingPlotMargins;
     innerWidth: number;
     innerHeight: number;
@@ -106,27 +114,35 @@ interface WarpingMatrixHostMetadata {
     tempoPlotHost: HTMLElement;
     tempoPlot: WarpingTempoPlotState | null;
     tempoControls: HTMLElement;
+    tempoMessage: HTMLElement;
     tempoWindowSlider: HTMLInputElement;
     tempoWindowValueNode: HTMLElement;
-    tempoYScaleSlider: HTMLInputElement;
-    tempoYScaleValueNode: HTMLElement;
+    tempoSmoothingSlider: HTMLInputElement;
+    tempoSmoothingValueNode: HTMLElement;
     matrixSeriesSignature: string | null;
     matrixDataCache: WarpingMatrixMatrixData | null;
     matrixDataCacheKey: string | null;
     tempoDataCache: WarpingMatrixTempoData | null;
     tempoDataCacheKey: string | null;
     matrixDisabled: boolean;
+    tempoCurveValid: boolean;
     matrixTrackDuration: number;
     configuredHeight: number | null;
+    configuredGlobalScoreBpm: number | null;
     tempoWindowSeconds: number;
-    tempoYHalfRangePercent: number;
+    tempoSmoothingHalfWindowPoints: number;
     colorByColumn: Map<string, string>;
     activeColumnKey: string | null;
     referenceDuration: number;
     currentReferenceTime: number;
     currentTrackTime: number;
+    currentScoreBpm: number | null;
     matrixActivePointerId: number | null;
     lastSizeKey: string | null;
+    layoutDirty: boolean;
+    staticPlotDirty: boolean;
+    tempoSmoothingAutoInitialized: boolean;
+    tempoSmoothingUsesAutoDefault: boolean;
 }
 
 interface ShortcutHelpEntry {

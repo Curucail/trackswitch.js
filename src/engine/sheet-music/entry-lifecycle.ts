@@ -70,6 +70,8 @@ export async function initializeEntry(ctx: any, entry: SheetMusicEntryModel): Pr
     } catch (error) {
         entry.osmd = null;
         entry.measureCursor = null;
+        entry.projectedTempoSegments = null;
+        entry.fallbackTempoBpm = null;
         entry.availableMeasures = [];
         entry.availableMeasureSet = new Set<number>();
         entry.host.classList.add('sheetmusic-error');
@@ -81,6 +83,7 @@ export async function initializeEntry(ctx: any, entry: SheetMusicEntryModel): Pr
     }
 
     await measureMapPromise;
+    await ctx.loadTempoMap(entry);
 
     entry.syncEnabled = Boolean(
         entry.osmd
@@ -230,6 +233,8 @@ export function disposeEntry(entry: SheetMusicEntryModel): void {
 
     entry.osmd = null;
     entry.measureCursor = null;
+    entry.projectedTempoSegments = null;
+    entry.fallbackTempoBpm = null;
     entry.syncEnabled = false;
     entry.lastRenderedHostWidth = -1;
 }
