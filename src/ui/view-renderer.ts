@@ -203,6 +203,8 @@ interface WarpingMatrixHostMetadata {
     lastSizeKey: string | null;
     layoutDirty: boolean;
     staticPlotDirty: boolean;
+    tempoSmoothingAutoInitialized: boolean;
+    tempoSmoothingUsesAutoDefault: boolean;
 }
 
 export class ViewRenderer {
