@@ -358,23 +358,29 @@ export function setLoopPoint(ctx: any, marker: any): any {
         if (this.state.loop.pointA !== null && this.state.loop.pointB !== null) {
             const loopA = this.state.loop.pointA;
             const loopB = this.state.loop.pointB;
-            this.state = {
-                ...this.state,
-                loop: {
-                    ...this.state.loop,
-                    enabled: true,
-                },
-            };
-
-            if (this.state.playing && (this.state.position < loopA || this.state.position > loopB)) {
-                this.stopAudio();
-                this.startAudio(loopA);
-            }
+            this.activateLoopRange(loopA, loopB);
         }
 
         this.updateMainControls();
         return true;
     }).call(ctx, marker);
+}
+
+export function activateLoopRange(ctx: any, loopA: any, loopB: any): any {
+    return (function(this: any, loopA: any, loopB: any) {
+        this.state = {
+            ...this.state,
+            loop: {
+                ...this.state.loop,
+                enabled: true,
+            },
+        };
+
+        if (this.state.playing && (this.state.position < loopA || this.state.position > loopB)) {
+            this.stopAudio();
+            this.startAudio(loopA);
+        }
+    }).call(ctx, loopA, loopB);
 }
 
 export function toggleLoop(ctx: any): any {

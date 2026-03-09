@@ -1,21 +1,7 @@
 import { TrackRuntime } from '../domain/types';
-import { eventTargetAsElement } from '../shared/dom';
+import { closestInRoot } from '../shared/dom';
 import { clamp } from '../shared/math';
 import { getSeekMetrics } from '../shared/seek';
-
-function closestInRoot(root: HTMLElement, target: EventTarget | null | undefined, selector: string): HTMLElement | null {
-    const element = eventTargetAsElement(target ?? null);
-    if (!element) {
-        return null;
-    }
-
-    const matched = element.closest(selector);
-    if (!matched || !root.contains(matched)) {
-        return null;
-    }
-
-    return matched as HTMLElement;
-}
 
 interface SeekTimelineContext {
     duration: number;

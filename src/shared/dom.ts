@@ -26,3 +26,21 @@ export function eventTargetAsElement(target: EventTarget | null | undefined): El
     const candidate = target as { nodeType?: unknown };
     return candidate.nodeType === 1 ? target as Element : null;
 }
+
+export function closestInRoot(
+    root: HTMLElement,
+    target: EventTarget | null | undefined,
+    selector: string
+): HTMLElement | null {
+    const element = eventTargetAsElement(target ?? null);
+    if (!element) {
+        return null;
+    }
+
+    const matched = element.closest(selector);
+    if (!matched || !root.contains(matched)) {
+        return null;
+    }
+
+    return matched as HTMLElement;
+}

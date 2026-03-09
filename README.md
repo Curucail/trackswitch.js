@@ -199,6 +199,19 @@ See [configuration examples](https://audiolabs.github.io/trackswitch.js/configur
 
 See [examples](https://audiolabs.github.io/trackswitch.js/examples.html).
 
+Maintenance
+-----------
+
+Useful repo maintenance checks:
+
+- `npm run audit:dead` - unused exports and files in the library source
+- `npm run audit:dup` - duplicated TypeScript and CSS blocks
+- `npm run audit:smells` - structural code smells in `src/`
+- `npm run audit:css` - CSS selectors that are not referenced by the player code
+- `npm run audit` - run the full audit suite
+
+The CSS audit writes a JSON report to `node_modules/.cache/trackswitch-css-audit.json`.
+
 Keyboard Shortcuts
 ------------------
 

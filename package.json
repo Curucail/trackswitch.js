@@ -7,6 +7,11 @@
   "homepage": "https://github.com/audiolabs/trackswitch.js",
   "license": "MIT",
   "scripts": {
+    "audit": "node scripts/run-audit-suite.mjs",
+    "audit:css": "node scripts/audit-css-selectors.mjs",
+    "audit:dead": "knip --config knip.json --production --include exports,files --no-exit-code --reporter compact",
+    "audit:dup": "jscpd --config .jscpd.json src css",
+    "audit:smells": "eslint --config eslint.audit.config.mjs src --ext .ts --cache --cache-location node_modules/.cache/eslint-audit --format stylish",
     "build": "npm run build:css && npm run build:js && npm run build:types",
     "build:css": "esbuild css/trackswitch.css --bundle --minify --outfile=dist/css/trackswitch.min.css",
     "build:css:watch": "esbuild css/trackswitch.css --bundle --outfile=dist/css/trackswitch.min.css --watch=forever",
@@ -54,17 +59,23 @@
     "THIRD_PARTY_NOTICES.md"
   ],
   "dependencies": {
-    "d3": "^7.9.0",
     "@fortawesome/fontawesome-svg-core": "^7.2.0",
     "@fortawesome/free-regular-svg-icons": "^7.2.0",
     "@fortawesome/free-solid-svg-icons": "^7.2.0",
+    "d3": "^7.9.0",
     "opensheetmusicdisplay": "^1.9.7",
     "papaparse": "^5.5.3"
   },
   "devDependencies": {
     "@types/d3": "^7.4.3",
+    "@typescript-eslint/eslint-plugin": "^8.57.0",
+    "@typescript-eslint/parser": "^8.57.0",
     "esbuild": "^0.27.3",
+    "eslint": "^10.0.3",
+    "eslint-plugin-sonarjs": "^4.0.1",
+    "jscpd": "^4.0.8",
     "jsdom": "^28.1.0",
+    "knip": "^5.86.0",
     "live-server": "^1.2.2",
     "rimraf": "^6.0.0",
     "typescript": "^5.9.3"

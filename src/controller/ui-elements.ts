@@ -168,11 +168,7 @@ function normalizeCursorAlpha(value: number | undefined): number {
 }
 
 function normalizeSheetMusicDimension(value: number | undefined): number | undefined {
-    if (typeof value !== 'number' || !Number.isFinite(value) || value < 1) {
-        return undefined;
-    }
-
-    return Math.max(1, Math.round(value));
+    return normalizePositiveInteger(value);
 }
 
 function normalizeSheetMusicRenderScale(value: number | undefined): number | undefined {
@@ -205,19 +201,11 @@ function normalizeSheetMusicConfig<T extends TrackSwitchSheetMusicConfig>(sheetm
 }
 
 function normalizeWarpingMatrixHeight(value: number | undefined): number | undefined {
-    if (typeof value !== 'number' || !Number.isFinite(value) || value < 1) {
-        return undefined;
-    }
-
-    return Math.max(1, Math.round(value));
+    return normalizePositiveInteger(value);
 }
 
 function normalizeWarpingMatrixTempoSmoothingHalfWindowPoints(value: number | undefined): number | undefined {
-    if (typeof value !== 'number' || !Number.isFinite(value) || value < 1) {
-        return undefined;
-    }
-
-    return Math.max(1, Math.round(value));
+    return normalizePositiveInteger(value);
 }
 
 function normalizeWarpingMatrixConfig<T extends TrackSwitchWarpingMatrixConfig>(warpingMatrix: T): T {
@@ -257,14 +245,6 @@ function normalizeTrackAlignmentConfig(
 }
 
 function normalizeTrackGroupConfig<T extends TrackSwitchTrackGroupUiElement>(group: T): T {
-    const normalizeTrackGroupRowHeight = function(value: number | undefined): number | undefined {
-        if (typeof value !== 'number' || !Number.isFinite(value) || value < 1) {
-            return undefined;
-        }
-
-        return Math.max(1, Math.round(value));
-    };
-
     const normalizedTracks = Array.isArray(group.trackGroup)
         ? group.trackGroup.map(function(track) {
             const trackRecord = toConfigRecord(track, 'track');
@@ -282,9 +262,17 @@ function normalizeTrackGroupConfig<T extends TrackSwitchTrackGroupUiElement>(gro
 
     return {
         ...group,
-        rowHeight: normalizeTrackGroupRowHeight(group.rowHeight),
+        rowHeight: normalizePositiveInteger(group.rowHeight),
         trackGroup: normalizedTracks,
     };
+}
+
+function normalizePositiveInteger(value: number | undefined): number | undefined {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 1) {
+        return undefined;
+    }
+
+    return Math.max(1, Math.round(value));
 }
 
 export function normalizeUiElement(element: TrackSwitchUiElement): TrackSwitchUiElement {
@@ -367,33 +355,21 @@ function injectTrackGroup(root: HTMLElement, trackGroupIndex: number): void {
 }
 
 function injectImage(root: HTMLElement, image: TrackSwitchImageConfig): void {
-    const imageElement = document.createElement('img');
+    const imageElement = createImageElement(image);
     imageElement.src = image.src;
-
-    if (image.seekable) {
-        imageElement.classList.add('seekable');
-    }
-
-    if (typeof image.style === 'string') {
-        imageElement.setAttribute('data-style', image.style);
-    }
-
-    if (typeof image.seekMarginLeft === 'number') {
-        imageElement.setAttribute('data-seek-margin-left', toMarginString(image.seekMarginLeft));
-    }
-
-    if (typeof image.seekMarginRight === 'number') {
-        imageElement.setAttribute('data-seek-margin-right', toMarginString(image.seekMarginRight));
-    }
-
     root.appendChild(imageElement);
 }
 
 function injectPerTrackImage(root: HTMLElement, image: TrackSwitchPerTrackImageConfig): void {
-    const imageElement = document.createElement('img');
+    const imageElement = createImageElement(image);
     imageElement.classList.add('per-track-image');
     imageElement.setAttribute('data-per-track-image', 'true');
     imageElement.style.display = 'none';
+    root.appendChild(imageElement);
+}
+
+function createImageElement(image: Pick<TrackSwitchImageConfig, 'seekable' | 'style' | 'seekMarginLeft' | 'seekMarginRight'>): HTMLImageElement {
+    const imageElement = document.createElement('img');
 
     if (image.seekable) {
         imageElement.classList.add('seekable');
@@ -411,7 +387,7 @@ function injectPerTrackImage(root: HTMLElement, image: TrackSwitchPerTrackImageC
         imageElement.setAttribute('data-seek-margin-right', toMarginString(image.seekMarginRight));
     }
 
-    root.appendChild(imageElement);
+    return imageElement;
 }
 
 function injectWaveform(root: HTMLElement, waveform: TrackSwitchWaveformConfig): void {

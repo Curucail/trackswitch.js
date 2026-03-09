@@ -1,24 +1,11 @@
-import { eventTargetAsElement } from '../shared/dom';
+import { closestInRoot, eventTargetAsElement } from '../shared/dom';
 import { parseStrictNonNegativeInt } from '../shared/preset';
 import { getSeekMetrics, isPrimaryInput } from '../shared/seek';
 import {
     isKeyboardControllerActive,
     setActiveKeyboardController,
 } from './registry';
-
-function closestInRoot(root: HTMLElement, target: EventTarget | null | undefined, selector: string): HTMLElement | null {
-    const element = eventTargetAsElement(target ?? null);
-    if (!element) {
-        return null;
-    }
-
-    const matched = element.closest(selector);
-    if (!matched || !root.contains(matched)) {
-        return null;
-    }
-
-    return matched as HTMLElement;
-}
+import { activateLoopRange } from './playback';
 
 function isShortcutHelpToggleKey(event: { key?: string; code?: string }): boolean {
     return event.key === 'F1' || event.code === 'F1';
@@ -83,6 +70,27 @@ function toggleSoloFromPointerEvent(controller: any, event: any): void {
     }
 
     controller.toggleSolo(index, !!event.shiftKey);
+}
+
+function parseSliderValue(target: HTMLInputElement): number {
+    return parseFloat(target.value || '0') / 100;
+}
+
+function getTrackInputTarget(controller: any, event: any): { target: HTMLInputElement; trackIndex: number } | null {
+    const target = eventTargetAsElement(event.target ?? null);
+    if (!(target instanceof HTMLInputElement)) {
+        return null;
+    }
+
+    const trackIndex = controller.trackIndexFromTarget(target);
+    if (trackIndex < 0) {
+        return null;
+    }
+
+    return {
+        target: target,
+        trackIndex: trackIndex,
+    };
 }
 
 export function setKeyboardActive(ctx: any): any {
@@ -413,18 +421,7 @@ export function onSeekEnd(ctx: any, event: any): any {
                 const localLoopA = seekTimelineContext.fromReferenceTime(loopA);
                 const localLoopB = seekTimelineContext.fromReferenceTime(loopB);
                 if (Math.abs(localLoopB - localLoopA) >= this.loopMinDistance) {
-                    this.state = {
-                        ...this.state,
-                        loop: {
-                            ...this.state.loop,
-                            enabled: true,
-                        },
-                    };
-
-                    if (this.state.playing && (this.state.position < loopA || this.state.position > loopB)) {
-                        this.stopAudio();
-                        this.startAudio(loopA);
-                    }
+                    activateLoopRange(this, loopA, loopB);
                 } else {
                     this.state = {
                         ...this.state,
@@ -514,70 +511,48 @@ export function onVolumeReset(ctx: any, event: any): any {
 
 export function onTrackVolume(ctx: any, event: any): any {
     return (function(this: any, event: any) {
-        const target = eventTargetAsElement(event.target ?? null);
-        if (!(target instanceof HTMLInputElement)) {
+        const trackInput = getTrackInputTarget(this, event);
+        if (!trackInput) {
             return;
         }
 
-        const trackIndex = this.trackIndexFromTarget(target);
-        if (trackIndex < 0) {
-            return;
-        }
-
-        const volume = parseFloat(target.value || '0') / 100;
-        this.setTrackVolume(trackIndex, volume);
+        this.setTrackVolume(trackInput.trackIndex, parseSliderValue(trackInput.target));
     }).call(ctx, event);
 }
 
 export function onTrackVolumeReset(ctx: any, event: any): any {
     return (function(this: any, event: any) {
-        const target = eventTargetAsElement(event.target ?? null);
-        if (!(target instanceof HTMLInputElement)) {
-            return;
-        }
-
-        const trackIndex = this.trackIndexFromTarget(target);
-        if (trackIndex < 0) {
+        const trackInput = getTrackInputTarget(this, event);
+        if (!trackInput) {
             return;
         }
 
         event.preventDefault();
-        this.setTrackVolume(trackIndex, 1);
+        this.setTrackVolume(trackInput.trackIndex, 1);
         event.stopPropagation();
     }).call(ctx, event);
 }
 
 export function onTrackPan(ctx: any, event: any): any {
     return (function(this: any, event: any) {
-        const target = eventTargetAsElement(event.target ?? null);
-        if (!(target instanceof HTMLInputElement)) {
+        const trackInput = getTrackInputTarget(this, event);
+        if (!trackInput) {
             return;
         }
 
-        const trackIndex = this.trackIndexFromTarget(target);
-        if (trackIndex < 0) {
-            return;
-        }
-
-        const pan = parseFloat(target.value || '0') / 100;
-        this.setTrackPan(trackIndex, pan);
+        this.setTrackPan(trackInput.trackIndex, parseSliderValue(trackInput.target));
     }).call(ctx, event);
 }
 
 export function onTrackPanReset(ctx: any, event: any): any {
     return (function(this: any, event: any) {
-        const target = eventTargetAsElement(event.target ?? null);
-        if (!(target instanceof HTMLInputElement)) {
-            return;
-        }
-
-        const trackIndex = this.trackIndexFromTarget(target);
-        if (trackIndex < 0) {
+        const trackInput = getTrackInputTarget(this, event);
+        if (!trackInput) {
             return;
         }
 
         event.preventDefault();
-        this.setTrackPan(trackIndex, 0);
+        this.setTrackPan(trackInput.trackIndex, 0);
         event.stopPropagation();
     }).call(ctx, event);
 }

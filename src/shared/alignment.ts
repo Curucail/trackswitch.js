@@ -1,5 +1,5 @@
 import { AlignmentOutOfRangeMode } from '../domain/types';
-import Papa from 'papaparse';
+import { parseCsvRecords, requestText } from './csv';
 
 export interface CsvNumericRow {
     [column: string]: number;
@@ -20,73 +20,25 @@ export interface TimeMappingSeries {
 }
 
 export function loadNumericCsv(url: string): Promise<ParsedNumericCsv> {
-    return requestText(url).then(function(text) {
+    return requestText(url, 'CSV source').then(function(text) {
         return parseNumericCsv(text);
     });
 }
 
-function requestText(url: string): Promise<string> {
-    return new Promise(function(resolve, reject) {
-        const request = new XMLHttpRequest();
-        request.open('GET', url, true);
-
-        request.onreadystatechange = function() {
-            if (request.readyState !== 4) {
-                return;
-            }
-
-            if (request.status >= 200 && request.status < 300) {
-                resolve(String(request.responseText ?? request.response ?? ''));
-            } else {
-                reject(new Error('Failed to request CSV source: ' + url));
-            }
-        };
-
-        request.onerror = function() {
-            reject(new Error('Network error while requesting CSV source: ' + url));
-        };
-
-        request.send();
-    });
-}
-
 export function parseNumericCsv(csvText: string): ParsedNumericCsv {
-    const normalizedText = String(csvText || '').replace(/^\uFEFF/, '');
-    const parsed = Papa.parse<Record<string, unknown>>(normalizedText, {
-        header: true,
-        dynamicTyping: true,
-        skipEmptyLines: 'greedy',
+    const parsed = parseCsvRecords(csvText, {
+        emptyDataError: 'Alignment CSV must include a header and at least one data row.',
     });
-
-    if (parsed.errors.length > 0) {
-        const papaErrors = parsed.errors.map(function(error) {
-            const rowSuffix = typeof error.row === 'number' ? ' (row ' + error.row + ')' : '';
-            return error.message + rowSuffix;
-        }).join('; ');
-        throw new Error(papaErrors);
-    }
-
-    const headers = Array.isArray(parsed.meta.fields)
-        ? parsed.meta.fields.map(function(field) {
-            return String(field ?? '').trim();
-        }).filter(function(field) {
-            return field.length > 0;
-        })
-        : [];
-
-    if (headers.length === 0) {
-        throw new Error('Alignment CSV must include a header and at least one data row.');
-    }
 
     const rows: CsvNumericRow[] = [];
 
-    for (let lineIndex = 0; lineIndex < parsed.data.length; lineIndex += 1) {
-        const sourceRow = parsed.data[lineIndex] || {};
+    for (let lineIndex = 0; lineIndex < parsed.rows.length; lineIndex += 1) {
+        const sourceRow = parsed.rows[lineIndex] || {};
         const row: CsvNumericRow = {};
         let validRow = true;
 
-        for (let cellIndex = 0; cellIndex < headers.length; cellIndex += 1) {
-            const header = headers[cellIndex];
+        for (let cellIndex = 0; cellIndex < parsed.headers.length; cellIndex += 1) {
+            const header = parsed.headers[cellIndex];
             const parsedCell = Number(sourceRow[header]);
             if (!Number.isFinite(parsedCell)) {
                 validRow = false;
@@ -105,7 +57,7 @@ export function parseNumericCsv(csvText: string): ParsedNumericCsv {
     }
 
     return {
-        headers: headers,
+        headers: parsed.headers,
         rows: rows,
     };
 }
