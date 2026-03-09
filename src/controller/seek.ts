@@ -8,123 +8,135 @@ interface SeekTimelineContext {
     toReferenceTime(timelineTime: number): number;
     fromReferenceTime(referenceTime: number): number;
 }
+
+function handleWaveformAuxiliarySeekState(controller: any, event: any): boolean {
+    if (controller.waveformMinimapDragState) {
+        if (controller.updateWaveformMinimapDrag(event)) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        return true;
+    }
+
+    if (controller.pendingWaveformTouchSeek) {
+        if (controller.tryActivatePendingWaveformTouchSeek(event)) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        return true;
+    }
+
+    if (controller.pinchZoomState) {
+        if (controller.updatePinchZoom(event)) {
+            event.preventDefault();
+        }
+        return true;
+    }
+
+    return false;
+}
+
+function updateDraggedLoopMarker(controller: any, event: any): boolean {
+    if (controller.draggingMarker === null) {
+        return false;
+    }
+
+    event.preventDefault();
+    const seekTimelineContext = controller.getSeekTimelineContext(controller.seekingElement);
+    const metrics = getSeekMetrics(controller.seekingElement, event, seekTimelineContext.duration);
+    if (!metrics) {
+        return true;
+    }
+
+    let newTime = metrics.time;
+    if (controller.draggingMarker === 'A') {
+        const loopPointB = controller.state.loop.pointB === null
+            ? null
+            : seekTimelineContext.fromReferenceTime(controller.state.loop.pointB);
+        if (loopPointB !== null) {
+            newTime = Math.min(newTime, loopPointB - controller.loopMinDistance);
+        }
+        newTime = Math.max(0, newTime);
+        controller.state = {
+            ...controller.state,
+            loop: {
+                ...controller.state.loop,
+                pointA: seekTimelineContext.toReferenceTime(newTime),
+            },
+        };
+    } else {
+        const loopPointA = controller.state.loop.pointA === null
+            ? null
+            : seekTimelineContext.fromReferenceTime(controller.state.loop.pointA);
+        if (loopPointA !== null) {
+            newTime = Math.max(newTime, loopPointA + controller.loopMinDistance);
+        }
+        newTime = Math.min(seekTimelineContext.duration, newTime);
+        controller.state = {
+            ...controller.state,
+            loop: {
+                ...controller.state.loop,
+                pointB: seekTimelineContext.toReferenceTime(newTime),
+            },
+        };
+    }
+
+    controller.updateMainControls();
+    return true;
+}
+
+function updateRightClickLoopSelection(controller: any, event: any): boolean {
+    if (!controller.features.looping || !controller.rightClickDragging) {
+        return false;
+    }
+
+    event.preventDefault();
+
+    const seekTimelineContext = controller.getSeekTimelineContext(controller.seekingElement);
+    const metrics = getSeekMetrics(controller.seekingElement, event, seekTimelineContext.duration);
+    if (!metrics || controller.loopDragStart === null) {
+        return true;
+    }
+
+    const loopStart = controller.loopDragStart;
+    const movingForward = metrics.time >= loopStart;
+    const loopEnd = movingForward
+        ? Math.min(
+            seekTimelineContext.duration,
+            Math.max(metrics.time, loopStart + controller.loopMinDistance)
+        )
+        : Math.max(0, Math.min(metrics.time, loopStart - controller.loopMinDistance));
+    const mappedStart = seekTimelineContext.toReferenceTime(movingForward ? loopStart : loopEnd);
+    const mappedEnd = seekTimelineContext.toReferenceTime(movingForward ? loopEnd : loopStart);
+
+    controller.state = {
+        ...controller.state,
+        loop: {
+            ...controller.state.loop,
+            pointA: Math.min(mappedStart, mappedEnd),
+            pointB: Math.max(mappedStart, mappedEnd),
+            enabled: false,
+        },
+    };
+
+    controller.updateMainControls();
+    return true;
+}
 export function onSeekMove(ctx: any, event: any): any {
     return (function(this: any, event: any) {
         if (!this.isLoaded) {
             return;
         }
 
-        if (this.waveformMinimapDragState) {
-            if (this.updateWaveformMinimapDrag(event)) {
-                event.preventDefault();
-                event.stopPropagation();
-            }
+        if (handleWaveformAuxiliarySeekState(this, event)) {
             return;
         }
 
-        if (this.pendingWaveformTouchSeek) {
-            if (this.tryActivatePendingWaveformTouchSeek(event)) {
-                event.preventDefault();
-                event.stopPropagation();
-            }
+        if (updateDraggedLoopMarker(this, event)) {
             return;
         }
 
-        if (this.pinchZoomState) {
-            if (this.updatePinchZoom(event)) {
-                event.preventDefault();
-            }
-            return;
-        }
-
-        if (this.draggingMarker !== null) {
-            event.preventDefault();
-            const seekTimelineContext = this.getSeekTimelineContext(this.seekingElement);
-            const metrics = getSeekMetrics(this.seekingElement, event, seekTimelineContext.duration);
-            if (!metrics) {
-                return;
-            }
-
-            let newTime = metrics.time;
-            if (this.draggingMarker === 'A') {
-                const loopPointB = this.state.loop.pointB === null
-                    ? null
-                    : seekTimelineContext.fromReferenceTime(this.state.loop.pointB);
-                if (loopPointB !== null) {
-                    newTime = Math.min(newTime, loopPointB - this.loopMinDistance);
-                }
-                newTime = Math.max(0, newTime);
-                this.state = {
-                    ...this.state,
-                    loop: {
-                        ...this.state.loop,
-                        pointA: seekTimelineContext.toReferenceTime(newTime),
-                    },
-                };
-            } else {
-                const loopPointA = this.state.loop.pointA === null
-                    ? null
-                    : seekTimelineContext.fromReferenceTime(this.state.loop.pointA);
-                if (loopPointA !== null) {
-                    newTime = Math.max(newTime, loopPointA + this.loopMinDistance);
-                }
-                newTime = Math.min(seekTimelineContext.duration, newTime);
-                this.state = {
-                    ...this.state,
-                    loop: {
-                        ...this.state.loop,
-                        pointB: seekTimelineContext.toReferenceTime(newTime),
-                    },
-                };
-            }
-
-            this.updateMainControls();
-            return;
-        }
-
-        if (this.features.looping && this.rightClickDragging) {
-            event.preventDefault();
-
-            const seekTimelineContext = this.getSeekTimelineContext(this.seekingElement);
-            const metrics = getSeekMetrics(this.seekingElement, event, seekTimelineContext.duration);
-            if (!metrics || this.loopDragStart === null) {
-                return;
-            }
-
-            if (metrics.time >= this.loopDragStart) {
-                const loopStart = this.loopDragStart;
-                const loopEnd = Math.min(
-                    seekTimelineContext.duration,
-                    Math.max(metrics.time, this.loopDragStart + this.loopMinDistance)
-                );
-                const mappedStart = seekTimelineContext.toReferenceTime(loopStart);
-                const mappedEnd = seekTimelineContext.toReferenceTime(loopEnd);
-                this.state = {
-                    ...this.state,
-                    loop: {
-                        ...this.state.loop,
-                        pointA: Math.min(mappedStart, mappedEnd),
-                        pointB: Math.max(mappedStart, mappedEnd),
-                        enabled: false,
-                    },
-                };
-            } else {
-                const loopStart = this.loopDragStart;
-                const loopEnd = Math.max(0, Math.min(metrics.time, this.loopDragStart - this.loopMinDistance));
-                const mappedStart = seekTimelineContext.toReferenceTime(loopEnd);
-                const mappedEnd = seekTimelineContext.toReferenceTime(loopStart);
-                this.state = {
-                    ...this.state,
-                    loop: {
-                        ...this.state.loop,
-                        pointA: Math.min(mappedStart, mappedEnd),
-                        pointB: Math.max(mappedStart, mappedEnd),
-                        enabled: false,
-                    },
-                };
-            }
-
-            this.updateMainControls();
+        if (updateRightClickLoopSelection(this, event)) {
             return;
         }
 

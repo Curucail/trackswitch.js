@@ -42,6 +42,65 @@ function clampNonNegative(value: number): number {
     return Math.max(0, value);
 }
 
+function withLoopState(state: PlayerState, loop: PlayerState['loop']): PlayerState {
+    return {
+        ...state,
+        loop: loop,
+    };
+}
+
+function applyLoopPoint(state: PlayerState, action: Extract<PlayerAction, { type: 'set-loop-point' }>): PlayerState {
+    const nextLoop = {
+        ...state.loop,
+    };
+
+    if (action.marker === 'A') {
+        nextLoop.pointA = clampNonNegative(action.position);
+    } else {
+        nextLoop.pointB = clampNonNegative(action.position);
+    }
+
+    if (nextLoop.pointA !== null && nextLoop.pointB !== null && nextLoop.pointA > nextLoop.pointB) {
+        const swap = nextLoop.pointA;
+        nextLoop.pointA = nextLoop.pointB;
+        nextLoop.pointB = swap;
+    }
+
+    if (
+        nextLoop.pointA !== null
+        && nextLoop.pointB !== null
+        && (nextLoop.pointB - nextLoop.pointA) < action.minDistance
+    ) {
+        if (action.marker === 'A') {
+            nextLoop.pointA = null;
+        } else {
+            nextLoop.pointB = null;
+        }
+        nextLoop.enabled = false;
+    }
+
+    return withLoopState(state, nextLoop);
+}
+
+function toggleLoop(state: PlayerState): PlayerState {
+    if (state.loop.pointA === null || state.loop.pointB === null) {
+        return state;
+    }
+
+    return withLoopState(state, {
+        ...state.loop,
+        enabled: !state.loop.enabled,
+    });
+}
+
+function clearLoop(state: PlayerState): PlayerState {
+    return withLoopState(state, {
+        pointA: null,
+        pointB: null,
+        enabled: false,
+    });
+}
+
 export function playerStateReducer(state: PlayerState, action: PlayerAction): PlayerState {
     switch (action.type) {
         case 'set-playing':
@@ -86,64 +145,14 @@ export function playerStateReducer(state: PlayerState, action: PlayerAction): Pl
                 volume: clamp01(action.volume),
             };
 
-        case 'set-loop-point': {
-            const nextLoop = {
-                ...state.loop,
-            };
+        case 'set-loop-point':
+            return applyLoopPoint(state, action);
 
-            if (action.marker === 'A') {
-                nextLoop.pointA = clampNonNegative(action.position);
-            } else {
-                nextLoop.pointB = clampNonNegative(action.position);
-            }
-
-            if (nextLoop.pointA !== null && nextLoop.pointB !== null && nextLoop.pointA > nextLoop.pointB) {
-                const swap = nextLoop.pointA;
-                nextLoop.pointA = nextLoop.pointB;
-                nextLoop.pointB = swap;
-            }
-
-            if (
-                nextLoop.pointA !== null
-                && nextLoop.pointB !== null
-                && (nextLoop.pointB - nextLoop.pointA) < action.minDistance
-            ) {
-                if (action.marker === 'A') {
-                    nextLoop.pointA = null;
-                } else {
-                    nextLoop.pointB = null;
-                }
-                nextLoop.enabled = false;
-            }
-
-            return {
-                ...state,
-                loop: nextLoop,
-            };
-        }
-
-        case 'toggle-loop': {
-            if (state.loop.pointA === null || state.loop.pointB === null) {
-                return state;
-            }
-            return {
-                ...state,
-                loop: {
-                    ...state.loop,
-                    enabled: !state.loop.enabled,
-                },
-            };
-        }
+        case 'toggle-loop':
+            return toggleLoop(state);
 
         case 'clear-loop':
-            return {
-                ...state,
-                loop: {
-                    pointA: null,
-                    pointB: null,
-                    enabled: false,
-                },
-            };
+            return clearLoop(state);
 
         default:
             return state;

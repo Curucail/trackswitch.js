@@ -76,38 +76,73 @@ export function moveCursorToMeasure(ctx: any, entry: SheetMusicEntryModel, targe
         return;
     }
 
-    if (cursor.show) {
-        cursor.show();
-    }
-
-    let currentMeasure = readCursorMeasure(cursor);
-    if (currentMeasure === null) {
-        cursor.reset();
-        if (cursor.show) {
-            cursor.show();
-        }
-        currentMeasure = readCursorMeasure(cursor);
-        if (currentMeasure === null) {
-            currentMeasure = entry.availableMeasures[0] ?? null;
-        }
-    }
+    let currentMeasure = initializeCursorMeasure(entry, cursor);
 
     const estimatedDistance = currentMeasure === null
         ? entry.availableMeasures.length
         : Math.abs(targetMeasure - currentMeasure);
     const maxSteps = Math.max(1, Math.min(entry.availableMeasures.length + 5, estimatedDistance + 8));
+    currentMeasure = stepCursorTowardsTarget(cursor, currentMeasure, targetMeasure, maxSteps);
 
+    if (currentMeasure !== targetMeasure && cursor.reset) {
+        currentMeasure = retryCursorFromReset(entry, cursor, targetMeasure);
+    }
+
+    entry.targetMeasure = resolveAvailableMeasure(
+        entry,
+        currentMeasure === null ? targetMeasure : currentMeasure
+    );
+
+    ctx.ensureCurrentMeasureVisible(entry);
+}
+
+function initializeCursorMeasure(
+    entry: SheetMusicEntryModel,
+    cursor: NonNullable<SheetMusicEntryModel['measureCursor']>
+): number | null {
+    showCursor(cursor);
+
+    let currentMeasure = readCursorMeasure(cursor);
+    if (currentMeasure !== null) {
+        return currentMeasure;
+    }
+
+    cursor.reset?.();
+    showCursor(cursor);
+
+    currentMeasure = readCursorMeasure(cursor);
+    return currentMeasure === null ? (entry.availableMeasures[0] ?? null) : currentMeasure;
+}
+
+function retryCursorFromReset(
+    entry: SheetMusicEntryModel,
+    cursor: NonNullable<SheetMusicEntryModel['measureCursor']>,
+    targetMeasure: number
+): number | null {
+    cursor.reset?.();
+    showCursor(cursor);
+
+    const fallbackMeasure = readCursorMeasure(cursor);
+    const initialMeasure = fallbackMeasure === null ? (entry.availableMeasures[0] ?? null) : fallbackMeasure;
+    const fallbackMaxSteps = Math.max(1, entry.availableMeasures.length + 5);
+    return stepCursorTowardsTarget(cursor, initialMeasure, targetMeasure, fallbackMaxSteps);
+}
+
+function stepCursorTowardsTarget(
+    cursor: NonNullable<SheetMusicEntryModel['measureCursor']>,
+    startingMeasure: number | null,
+    targetMeasure: number,
+    maxSteps: number
+): number | null {
+    let currentMeasure = startingMeasure;
     let steps = 0;
+
     while (
         currentMeasure !== null
         && currentMeasure !== targetMeasure
         && steps < maxSteps
     ) {
-        if (currentMeasure < targetMeasure) {
-            cursor.nextMeasure();
-        } else {
-            cursor.previousMeasure();
-        }
+        moveCursorOneStep(cursor, currentMeasure, targetMeasure);
 
         const nextMeasure = readCursorMeasure(cursor);
         if (nextMeasure === null || nextMeasure === currentMeasure) {
@@ -118,48 +153,23 @@ export function moveCursorToMeasure(ctx: any, entry: SheetMusicEntryModel, targe
         steps += 1;
     }
 
-    if (currentMeasure !== targetMeasure && cursor.reset) {
-        cursor.reset();
-        if (cursor.show) {
-            cursor.show();
-        }
+    return currentMeasure;
+}
 
-        let fallbackMeasure = readCursorMeasure(cursor);
-        if (fallbackMeasure === null) {
-            fallbackMeasure = entry.availableMeasures[0] ?? null;
-        }
-
-        let fallbackSteps = 0;
-        const fallbackMaxSteps = Math.max(1, entry.availableMeasures.length + 5);
-        while (
-            fallbackMeasure !== null
-            && fallbackMeasure !== targetMeasure
-            && fallbackSteps < fallbackMaxSteps
-        ) {
-            if (fallbackMeasure < targetMeasure) {
-                cursor.nextMeasure();
-            } else {
-                cursor.previousMeasure();
-            }
-
-            const nextMeasure = readCursorMeasure(cursor);
-            if (nextMeasure === null || nextMeasure === fallbackMeasure) {
-                break;
-            }
-
-            fallbackMeasure = nextMeasure;
-            fallbackSteps += 1;
-        }
-
-        currentMeasure = fallbackMeasure;
+function moveCursorOneStep(
+    cursor: NonNullable<SheetMusicEntryModel['measureCursor']>,
+    currentMeasure: number,
+    targetMeasure: number
+): void {
+    if (currentMeasure < targetMeasure) {
+        cursor.nextMeasure?.();
+    } else {
+        cursor.previousMeasure?.();
     }
+}
 
-    entry.targetMeasure = resolveAvailableMeasure(
-        entry,
-        currentMeasure === null ? targetMeasure : currentMeasure
-    );
-
-    ctx.ensureCurrentMeasureVisible(entry);
+function showCursor(cursor: NonNullable<SheetMusicEntryModel['measureCursor']>): void {
+    cursor.show?.();
 }
 
 export function readCursorMeasure(cursor: NonNullable<SheetMusicEntryModel['measureCursor']>): number | null {

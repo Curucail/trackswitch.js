@@ -159,7 +159,34 @@ export class InputBinder {
         this.addListener(eventTarget, type, listener as EventListener, options);
     }
 
-    bind(): void {
+    private addPointerDelegatedListener(selector: string, handler: (event: ControllerPointerEvent) => void): void {
+        this.addDelegatedListener('touchstart', selector, (event) => {
+            handler(event);
+        });
+        this.addDelegatedListener('mousedown', selector, (event) => {
+            handler(event);
+        });
+    }
+
+    private addRootStopPropagationListener(selector: string, eventTypes: string[], options?: AddEventListenerOptions): void {
+        const stopPropagation = (event: Event) => {
+            const eventElement = eventTargetAsElement(event.target);
+            if (!eventElement) {
+                return;
+            }
+
+            const matched = eventElement.closest(selector);
+            if (matched && this.root.contains(matched)) {
+                event.stopPropagation();
+            }
+        };
+
+        eventTypes.forEach((eventType) => {
+            this.addListener(this.root, eventType, stopPropagation as EventListener, options);
+        });
+    }
+
+    private bindBaseControls(): void {
         this.addDelegatedListener('click', '.overlay .activate', (event) => {
             this.controller.onOverlayActivate(event);
         });
@@ -167,6 +194,21 @@ export class InputBinder {
             this.controller.onShortcutHelpOverlay(event);
         });
 
+        this.addPointerDelegatedListener('.playpause', (event) => {
+            this.controller.onPlayPause(event);
+        });
+        this.addPointerDelegatedListener('.stop', (event) => {
+            this.controller.onStop(event);
+        });
+        this.addPointerDelegatedListener('.repeat', (event) => {
+            this.controller.onRepeat(event);
+        });
+        this.addPointerDelegatedListener('.seekwrap', (event) => {
+            this.controller.onSeekStart(event);
+        });
+    }
+
+    private bindKeyboardActivation(): void {
         const activateKeyboard = (event: Event) => {
             this.controller.setKeyboardActive();
             if (!this.isManagedFormControl(event.target)) {
@@ -177,35 +219,9 @@ export class InputBinder {
         this.addListener(this.root, 'pointerdown', activateKeyboard as EventListener, keyboardActivationOptions);
         this.addListener(this.root, 'touchstart', activateKeyboard as EventListener, keyboardActivationOptions);
         this.addListener(this.root, 'mousedown', activateKeyboard as EventListener, keyboardActivationOptions);
+    }
 
-        this.addDelegatedListener('touchstart', '.playpause', (event) => {
-            this.controller.onPlayPause(event);
-        });
-        this.addDelegatedListener('mousedown', '.playpause', (event) => {
-            this.controller.onPlayPause(event);
-        });
-
-        this.addDelegatedListener('touchstart', '.stop', (event) => {
-            this.controller.onStop(event);
-        });
-        this.addDelegatedListener('mousedown', '.stop', (event) => {
-            this.controller.onStop(event);
-        });
-
-        this.addDelegatedListener('touchstart', '.repeat', (event) => {
-            this.controller.onRepeat(event);
-        });
-        this.addDelegatedListener('mousedown', '.repeat', (event) => {
-            this.controller.onRepeat(event);
-        });
-
-        this.addDelegatedListener('touchstart', '.seekwrap', (event) => {
-            this.controller.onSeekStart(event);
-        });
-        this.addDelegatedListener('mousedown', '.seekwrap', (event) => {
-            this.controller.onSeekStart(event);
-        });
-
+    private bindSeekLifecycle(): void {
         this.addListener(window, 'touchmove', (event) => {
             this.controller.onSeekMove(eventToPointerEvent(event));
         }, { passive: false });
@@ -222,200 +238,155 @@ export class InputBinder {
         this.addListener(window, 'mouseup', (event) => {
             this.controller.onSeekEnd(eventToPointerEvent(event));
         });
+    }
 
-        this.addDelegatedListener('touchstart', '.track .control .solo', (event) => {
+    private bindTrackControls(): void {
+        this.addPointerDelegatedListener('.track .control .solo', (event) => {
             this.controller.onSolo(event);
         });
-        this.addDelegatedListener('mousedown', '.track .control .solo', (event) => {
-            this.controller.onSolo(event);
-        });
-        this.addDelegatedListener('touchstart', '.track', (event) => {
+        this.addPointerDelegatedListener('.track', (event) => {
             this.controller.onTrackRowToggle(event);
         });
-        this.addDelegatedListener('mousedown', '.track', (event) => {
-            this.controller.onTrackRowToggle(event);
+        this.addPointerDelegatedListener('.sync-global', (event) => {
+            this.controller.onAlignmentSync(event);
+        });
+    }
+
+    private bindGlobalVolumeControls(): void {
+        this.addDelegatedListener('input', '.volume-slider', (event) => {
+            this.controller.onVolume(event);
+        });
+        this.addDelegatedListener('change', '.volume-slider', () => {
+            this.blurFocusedManagedControl();
+        });
+        this.addDelegatedListener('dblclick', '.volume-slider', (event) => {
+            this.controller.onVolumeReset(event);
+            this.blurFocusedManagedControl();
         });
 
-        this.addDelegatedListener('touchstart', '.sync-global', (event) => {
-            this.controller.onAlignmentSync(event);
+        this.addRootStopPropagationListener('.volume-control', ['touchstart', 'touchmove', 'touchend'], { passive: false });
+        this.addRootStopPropagationListener('.volume-control', ['mousedown', 'mousemove', 'mouseup']);
+    }
+
+    private bindTrackMixControls(): void {
+        this.addDelegatedListener('input', '.track-volume-slider', (event) => {
+            this.controller.onTrackVolume(event);
         });
-        this.addDelegatedListener('mousedown', '.sync-global', (event) => {
-            this.controller.onAlignmentSync(event);
+        this.addDelegatedListener('change', '.track-volume-slider', () => {
+            this.blurFocusedManagedControl();
         });
+        this.addDelegatedListener('dblclick', '.track-volume-slider', (event) => {
+            this.controller.onTrackVolumeReset(event);
+            this.blurFocusedManagedControl();
+        });
+        this.addDelegatedListener('input', '.track-pan-slider', (event) => {
+            this.controller.onTrackPan(event);
+        });
+        this.addDelegatedListener('change', '.track-pan-slider', () => {
+            this.blurFocusedManagedControl();
+        });
+        this.addDelegatedListener('dblclick', '.track-pan-slider', (event) => {
+            this.controller.onTrackPanReset(event);
+            this.blurFocusedManagedControl();
+        });
+
+        this.addRootStopPropagationListener('.track-mix-controls', ['touchstart', 'touchmove', 'touchend'], { passive: false });
+        this.addRootStopPropagationListener('.track-mix-controls', ['mousedown', 'mousemove', 'mouseup']);
+    }
+
+    private bindPresetControls(): void {
+        this.addDelegatedListener('change', '.preset-selector', (event) => {
+            this.controller.onPreset(event);
+            this.blurFocusedManagedControl();
+        });
+
+        this.addDelegatedListener(
+            'wheel',
+            '.preset-selector',
+            (event) => {
+                this.controller.onPresetScroll(event);
+            },
+            undefined,
+            { passive: false }
+        );
+
+        this.addRootStopPropagationListener('.preset-selector, .preset-selector-wrap', ['touchstart', 'touchend'], { passive: false });
+        this.addRootStopPropagationListener('.preset-selector, .preset-selector-wrap', ['mousedown', 'mouseup', 'click']);
+    }
+
+    private bindLoopControls(): void {
+        this.addPointerDelegatedListener('.loop-a', (event) => {
+            this.controller.onSetLoopA(event);
+        });
+        this.addPointerDelegatedListener('.loop-b', (event) => {
+            this.controller.onSetLoopB(event);
+        });
+        this.addPointerDelegatedListener('.loop-toggle', (event) => {
+            this.controller.onToggleLoop(event);
+        });
+        this.addPointerDelegatedListener('.loop-clear', (event) => {
+            this.controller.onClearLoop(event);
+        });
+        this.addPointerDelegatedListener('.loop-marker', (event) => {
+            this.controller.onMarkerDragStart(event);
+        });
+
+        this.addDelegatedListener('contextmenu', '.seekwrap', (event) => {
+            event.preventDefault();
+        });
+    }
+
+    private bindKeyboardShortcuts(): void {
+        this.addListener(window, 'keydown', (event) => {
+            this.controller.onKeyboard(eventToPointerEvent(event));
+        });
+    }
+
+    private bindWaveformControls(): void {
+        this.addPointerDelegatedListener('.waveform-zoom-minimap', (event) => {
+            this.controller.onWaveformMinimapStart(event);
+        });
+        this.addDelegatedListener(
+            'wheel',
+            '.waveform-wrap',
+            (event) => {
+                this.controller.onWaveformZoomWheel(event);
+            },
+            undefined,
+            { passive: false }
+        );
+    }
+
+    bind(): void {
+        this.bindBaseControls();
+        this.bindKeyboardActivation();
+        this.bindSeekLifecycle();
+        this.bindTrackControls();
 
         if (this.features.globalVolume) {
-            this.addDelegatedListener('input', '.volume-slider', (event) => {
-                this.controller.onVolume(event);
-            });
-            this.addDelegatedListener('change', '.volume-slider', () => {
-                this.blurFocusedManagedControl();
-            });
-            this.addDelegatedListener('dblclick', '.volume-slider', (event) => {
-                this.controller.onVolumeReset(event);
-                this.blurFocusedManagedControl();
-            });
-
-            const stopPropagationOnVolume = (event: Event) => {
-                const eventElement = eventTargetAsElement(event.target);
-                if (!eventElement) {
-                    return;
-                }
-                const matched = eventElement.closest('.volume-control');
-                if (matched && this.root.contains(matched)) {
-                    event.stopPropagation();
-                }
-            };
-
-            this.addListener(this.root, 'touchstart', stopPropagationOnVolume as EventListener, { passive: false });
-            this.addListener(this.root, 'touchmove', stopPropagationOnVolume as EventListener, { passive: false });
-            this.addListener(this.root, 'touchend', stopPropagationOnVolume as EventListener, { passive: false });
-            this.addListener(this.root, 'mousedown', stopPropagationOnVolume as EventListener);
-            this.addListener(this.root, 'mousemove', stopPropagationOnVolume as EventListener);
-            this.addListener(this.root, 'mouseup', stopPropagationOnVolume as EventListener);
+            this.bindGlobalVolumeControls();
         }
 
         if (this.features.trackMixControls) {
-            this.addDelegatedListener('input', '.track-volume-slider', (event) => {
-                this.controller.onTrackVolume(event);
-            });
-            this.addDelegatedListener('change', '.track-volume-slider', () => {
-                this.blurFocusedManagedControl();
-            });
-            this.addDelegatedListener('dblclick', '.track-volume-slider', (event) => {
-                this.controller.onTrackVolumeReset(event);
-                this.blurFocusedManagedControl();
-            });
-            this.addDelegatedListener('input', '.track-pan-slider', (event) => {
-                this.controller.onTrackPan(event);
-            });
-            this.addDelegatedListener('change', '.track-pan-slider', () => {
-                this.blurFocusedManagedControl();
-            });
-            this.addDelegatedListener('dblclick', '.track-pan-slider', (event) => {
-                this.controller.onTrackPanReset(event);
-                this.blurFocusedManagedControl();
-            });
-
-            const stopPropagationOnTrackMix = (event: Event) => {
-                const eventElement = eventTargetAsElement(event.target);
-                if (!eventElement) {
-                    return;
-                }
-                const matched = eventElement.closest('.track-mix-controls');
-                if (matched && this.root.contains(matched)) {
-                    event.stopPropagation();
-                }
-            };
-
-            this.addListener(this.root, 'touchstart', stopPropagationOnTrackMix as EventListener, { passive: false });
-            this.addListener(this.root, 'touchmove', stopPropagationOnTrackMix as EventListener, { passive: false });
-            this.addListener(this.root, 'touchend', stopPropagationOnTrackMix as EventListener, { passive: false });
-            this.addListener(this.root, 'mousedown', stopPropagationOnTrackMix as EventListener);
-            this.addListener(this.root, 'mousemove', stopPropagationOnTrackMix as EventListener);
-            this.addListener(this.root, 'mouseup', stopPropagationOnTrackMix as EventListener);
+            this.bindTrackMixControls();
         }
 
         if (this.features.presets && this.controller.presetCount >= 2) {
-            this.addDelegatedListener('change', '.preset-selector', (event) => {
-                this.controller.onPreset(event);
-                this.blurFocusedManagedControl();
-            });
-
-            this.addDelegatedListener(
-                'wheel',
-                '.preset-selector',
-                (event) => {
-                    this.controller.onPresetScroll(event);
-                },
-                undefined,
-                { passive: false }
-            );
-
-            const stopPresetPropagation = (event: Event) => {
-                const eventElement = eventTargetAsElement(event.target);
-                if (!eventElement) {
-                    return;
-                }
-
-                const matched = eventElement.closest('.preset-selector, .preset-selector-wrap');
-                if (matched && this.root.contains(matched)) {
-                    event.stopPropagation();
-                }
-            };
-
-            this.addListener(this.root, 'touchstart', stopPresetPropagation as EventListener, { passive: false });
-            this.addListener(this.root, 'touchend', stopPresetPropagation as EventListener, { passive: false });
-            this.addListener(this.root, 'mousedown', stopPresetPropagation as EventListener);
-            this.addListener(this.root, 'mouseup', stopPresetPropagation as EventListener);
-            this.addListener(this.root, 'click', stopPresetPropagation as EventListener);
+            this.bindPresetControls();
         }
 
         if (this.features.looping) {
-            this.addDelegatedListener('touchstart', '.loop-a', (event) => {
-                this.controller.onSetLoopA(event);
-            });
-            this.addDelegatedListener('mousedown', '.loop-a', (event) => {
-                this.controller.onSetLoopA(event);
-            });
-
-            this.addDelegatedListener('touchstart', '.loop-b', (event) => {
-                this.controller.onSetLoopB(event);
-            });
-            this.addDelegatedListener('mousedown', '.loop-b', (event) => {
-                this.controller.onSetLoopB(event);
-            });
-
-            this.addDelegatedListener('touchstart', '.loop-toggle', (event) => {
-                this.controller.onToggleLoop(event);
-            });
-            this.addDelegatedListener('mousedown', '.loop-toggle', (event) => {
-                this.controller.onToggleLoop(event);
-            });
-
-            this.addDelegatedListener('touchstart', '.loop-clear', (event) => {
-                this.controller.onClearLoop(event);
-            });
-            this.addDelegatedListener('mousedown', '.loop-clear', (event) => {
-                this.controller.onClearLoop(event);
-            });
-
-            this.addDelegatedListener('touchstart', '.loop-marker', (event) => {
-                this.controller.onMarkerDragStart(event);
-            });
-            this.addDelegatedListener('mousedown', '.loop-marker', (event) => {
-                this.controller.onMarkerDragStart(event);
-            });
-
-            this.addDelegatedListener('contextmenu', '.seekwrap', (event) => {
-                event.preventDefault();
-            });
+            this.bindLoopControls();
         }
 
         if (this.features.keyboard) {
-            this.addListener(window, 'keydown', (event) => {
-                this.controller.onKeyboard(eventToPointerEvent(event));
-            });
+            this.bindKeyboardShortcuts();
         }
 
         const hasSheetMusicUi = !!this.root.querySelector('.sheetmusic, .sheetmusic-wrap');
 
         if (this.features.waveform) {
-            this.addDelegatedListener('touchstart', '.waveform-zoom-minimap', (event) => {
-                this.controller.onWaveformMinimapStart(event);
-            });
-            this.addDelegatedListener('mousedown', '.waveform-zoom-minimap', (event) => {
-                this.controller.onWaveformMinimapStart(event);
-            });
-            this.addDelegatedListener(
-                'wheel',
-                '.waveform-wrap',
-                (event) => {
-                    this.controller.onWaveformZoomWheel(event);
-                },
-                undefined,
-                { passive: false }
-            );
-
+            this.bindWaveformControls();
         }
 
         if (this.features.waveform || hasSheetMusicUi) {
