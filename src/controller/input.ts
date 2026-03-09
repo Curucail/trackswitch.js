@@ -7,6 +7,185 @@ import {
 } from './registry';
 import { activateLoopRange } from './playback';
 
+const SHORTCUT_HELP_BLOCKED_KEYS = new Set([
+    ' ',
+    'Spacebar',
+    'Space',
+    'Escape',
+    'Esc',
+    'ArrowLeft',
+    'ArrowRight',
+    'ArrowUp',
+    'ArrowDown',
+    'Home',
+    'r',
+    'R',
+    'a',
+    'A',
+    'b',
+    'B',
+    'l',
+    'L',
+    'c',
+    'C',
+]);
+
+const SHORTCUT_HELP_BLOCKED_CODES = new Set([
+    'KeyR',
+    'KeyA',
+    'KeyB',
+    'KeyL',
+    'KeyC',
+]);
+
+const KEYBOARD_SHORTCUT_HANDLERS: Record<string, (controller: any, event: any) => boolean> = {
+    ' ': function(controller: any) {
+        controller.togglePlay();
+        return true;
+    },
+    Spacebar: function(controller: any) {
+        controller.togglePlay();
+        return true;
+    },
+    Space: function(controller: any) {
+        controller.togglePlay();
+        return true;
+    },
+    Escape: function(controller: any) {
+        controller.stop();
+        return true;
+    },
+    Esc: function(controller: any) {
+        controller.stop();
+        return true;
+    },
+    ArrowLeft: function(controller: any, event: any) {
+        controller.seekRelative(event.shiftKey ? -5 : -2);
+        return true;
+    },
+    ArrowRight: function(controller: any, event: any) {
+        controller.seekRelative(event.shiftKey ? 5 : 2);
+        return true;
+    },
+    ArrowUp: function(controller: any) {
+        if (!controller.features.globalVolume) {
+            return false;
+        }
+        controller.setVolume(controller.state.volume + 0.1);
+        return true;
+    },
+    ArrowDown: function(controller: any) {
+        if (!controller.features.globalVolume) {
+            return false;
+        }
+        controller.setVolume(controller.state.volume - 0.1);
+        return true;
+    },
+    Home: function(controller: any) {
+        controller.seekTo(0);
+        return true;
+    },
+    r: function(controller: any) {
+        controller.dispatch({ type: 'toggle-repeat' });
+        controller.updateMainControls();
+        return true;
+    },
+    R: function(controller: any) {
+        controller.dispatch({ type: 'toggle-repeat' });
+        controller.updateMainControls();
+        return true;
+    },
+    KeyR: function(controller: any) {
+        controller.dispatch({ type: 'toggle-repeat' });
+        controller.updateMainControls();
+        return true;
+    },
+    a: function(controller: any) {
+        if (!controller.features.looping) {
+            return false;
+        }
+        controller.setLoopPoint('A');
+        return true;
+    },
+    A: function(controller: any) {
+        if (!controller.features.looping) {
+            return false;
+        }
+        controller.setLoopPoint('A');
+        return true;
+    },
+    KeyA: function(controller: any) {
+        if (!controller.features.looping) {
+            return false;
+        }
+        controller.setLoopPoint('A');
+        return true;
+    },
+    b: function(controller: any) {
+        if (!controller.features.looping) {
+            return false;
+        }
+        controller.setLoopPoint('B');
+        return true;
+    },
+    B: function(controller: any) {
+        if (!controller.features.looping) {
+            return false;
+        }
+        controller.setLoopPoint('B');
+        return true;
+    },
+    KeyB: function(controller: any) {
+        if (!controller.features.looping) {
+            return false;
+        }
+        controller.setLoopPoint('B');
+        return true;
+    },
+    l: function(controller: any) {
+        if (!controller.features.looping) {
+            return false;
+        }
+        controller.toggleLoop();
+        return true;
+    },
+    L: function(controller: any) {
+        if (!controller.features.looping) {
+            return false;
+        }
+        controller.toggleLoop();
+        return true;
+    },
+    KeyL: function(controller: any) {
+        if (!controller.features.looping) {
+            return false;
+        }
+        controller.toggleLoop();
+        return true;
+    },
+    c: function(controller: any) {
+        if (!controller.features.looping) {
+            return false;
+        }
+        controller.clearLoop();
+        return true;
+    },
+    C: function(controller: any) {
+        if (!controller.features.looping) {
+            return false;
+        }
+        controller.clearLoop();
+        return true;
+    },
+    KeyC: function(controller: any) {
+        if (!controller.features.looping) {
+            return false;
+        }
+        controller.clearLoop();
+        return true;
+    },
+};
+
 function isShortcutHelpToggleKey(event: { key?: string; code?: string }): boolean {
     return event.key === 'F1' || event.code === 'F1';
 }
@@ -16,31 +195,7 @@ function isShortcutSuppressedWhileHelpOpen(key: string, code: string, trackIndex
         return true;
     }
 
-    return key === ' '
-        || key === 'Spacebar'
-        || key === 'Space'
-        || key === 'Escape'
-        || key === 'Esc'
-        || key === 'ArrowLeft'
-        || key === 'ArrowRight'
-        || key === 'ArrowUp'
-        || key === 'ArrowDown'
-        || key === 'Home'
-        || key === 'r'
-        || key === 'R'
-        || key === 'a'
-        || key === 'A'
-        || key === 'b'
-        || key === 'B'
-        || key === 'l'
-        || key === 'L'
-        || key === 'c'
-        || key === 'C'
-        || code === 'KeyR'
-        || code === 'KeyA'
-        || code === 'KeyB'
-        || code === 'KeyL'
-        || code === 'KeyC';
+    return SHORTCUT_HELP_BLOCKED_KEYS.has(key) || SHORTCUT_HELP_BLOCKED_CODES.has(code);
 }
 
 function toggleSoloFromPointerEvent(controller: any, event: any): void {
@@ -91,6 +246,175 @@ function getTrackInputTarget(controller: any, event: any): { target: HTMLInputEl
         target: target,
         trackIndex: trackIndex,
     };
+}
+
+function resolveWaveformMinimapStart(controller: any, event: any): {
+    minimapNode: HTMLElement;
+    seekWrap: HTMLElement;
+    pointerRatio: number;
+    pointerOffsetRatio: number;
+} | null {
+    const minimapNode = closestInRoot(controller.root, event.target, '.waveform-zoom-minimap');
+    if (!minimapNode || !Number.isFinite(event.pageX)) {
+        return null;
+    }
+
+    const wrapper = closestInRoot(controller.root, event.target, '.waveform-wrap');
+    if (!wrapper) {
+        return null;
+    }
+
+    const seekWrap = wrapper.querySelector('.seekwrap[data-seek-surface="waveform"]');
+    if (!(seekWrap instanceof HTMLElement)) {
+        return null;
+    }
+
+    const viewport = controller.renderer.getWaveformMinimapViewport(seekWrap);
+    if (!viewport || viewport.widthRatio >= 1) {
+        return null;
+    }
+
+    const rect = minimapNode.getBoundingClientRect();
+    const minimapWidth = Math.max(1, rect.width || minimapNode.clientWidth);
+    const pointerRatio = Math.max(
+        0,
+        Math.min(1, (((event.pageX as number) - (rect.left + window.scrollX)) / minimapWidth))
+    );
+    const isInsideViewport = pointerRatio >= viewport.startRatio
+        && pointerRatio <= (viewport.startRatio + viewport.widthRatio);
+
+    return {
+        minimapNode: minimapNode,
+        seekWrap: seekWrap,
+        pointerRatio: pointerRatio,
+        pointerOffsetRatio: isInsideViewport
+            ? (pointerRatio - viewport.startRatio)
+            : (viewport.widthRatio / 2),
+    };
+}
+
+function finishSeekEndInteraction(controller: any, event: any): boolean {
+    if (controller.waveformMinimapDragState) {
+        controller.endWaveformMinimapDrag();
+        event.preventDefault();
+        event.stopPropagation();
+        return true;
+    }
+
+    if (controller.pendingWaveformTouchSeek) {
+        if (event.type === 'touchend' && controller.getActiveTouchCount(event) === 0) {
+            controller.applyPendingWaveformTouchSeekTap(event);
+        } else {
+            controller.pendingWaveformTouchSeek = null;
+        }
+
+        controller.seekingElement = null;
+        event.preventDefault();
+        event.stopPropagation();
+        return true;
+    }
+
+    if (controller.pinchZoomState) {
+        if (controller.getActiveTouchCount(event) >= 2) {
+            event.preventDefault();
+            return true;
+        }
+
+        controller.endPinchZoom();
+        event.preventDefault();
+        event.stopPropagation();
+        return true;
+    }
+
+    return false;
+}
+
+function finalizeRightClickLoopSelection(controller: any): void {
+    controller.rightClickDragging = false;
+    controller.loopDragStart = null;
+    const seekTimelineContext = controller.getSeekTimelineContext(controller.seekingElement);
+
+    if (controller.state.loop.pointA !== null && controller.state.loop.pointB !== null) {
+        let loopA = controller.state.loop.pointA;
+        let loopB = controller.state.loop.pointB;
+
+        if (loopA > loopB) {
+            const swappedA = loopB;
+            const swappedB = loopA;
+            controller.state = {
+                ...controller.state,
+                loop: {
+                    ...controller.state.loop,
+                    pointA: swappedA,
+                    pointB: swappedB,
+                },
+            };
+            loopA = swappedA;
+            loopB = swappedB;
+        }
+
+        const localLoopA = seekTimelineContext.fromReferenceTime(loopA);
+        const localLoopB = seekTimelineContext.fromReferenceTime(loopB);
+        if (Math.abs(localLoopB - localLoopA) >= controller.loopMinDistance) {
+            activateLoopRange(controller, loopA, loopB);
+        } else {
+            controller.state = {
+                ...controller.state,
+                loop: {
+                    ...controller.state.loop,
+                    pointA: null,
+                    pointB: null,
+                    enabled: false,
+                },
+            };
+        }
+    }
+}
+
+function handleShortcutHelpKeyboard(controller: any, event: any, key: string, code: string, trackIndex: number | null): boolean {
+    if (!controller.shortcutHelpOpen) {
+        return false;
+    }
+
+    if (key === 'Escape' || key === 'Esc') {
+        event.preventDefault();
+        controller.closeShortcutHelp();
+        event.stopPropagation();
+        return true;
+    }
+
+    if (isShortcutSuppressedWhileHelpOpen(key, code, trackIndex)) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
+    return true;
+}
+
+function handleTrackKeyboardSelection(controller: any, event: any, trackIndex: number | null): boolean {
+    if (trackIndex === null || trackIndex >= controller.runtimes.length) {
+        return false;
+    }
+
+    event.preventDefault();
+    controller.toggleSolo(trackIndex, controller.effectiveSingleSoloMode);
+    event.stopPropagation();
+    return true;
+}
+
+function handleGlobalKeyboardShortcut(controller: any, event: any, key: string): boolean {
+    const handler = KEYBOARD_SHORTCUT_HANDLERS[key];
+    if (!handler) {
+        return false;
+    }
+
+    const handled = handler(controller, event);
+    if (!handled) {
+        return false;
+    }
+
+    event.preventDefault();
+    return true;
 }
 
 export function setKeyboardActive(ctx: any): any {
@@ -283,42 +607,15 @@ export function onWaveformMinimapStart(ctx: any, event: any): any {
             return;
         }
 
-        const minimapNode = closestInRoot(this.root, event.target, '.waveform-zoom-minimap');
-        if (!minimapNode || !Number.isFinite(event.pageX)) {
+        const minimapStart = resolveWaveformMinimapStart(this, event);
+        if (!minimapStart) {
             return;
         }
-
-        const wrapper = closestInRoot(this.root, event.target, '.waveform-wrap');
-        if (!wrapper) {
-            return;
-        }
-
-        const seekWrap = wrapper.querySelector('.seekwrap[data-seek-surface="waveform"]');
-        if (!(seekWrap instanceof HTMLElement)) {
-            return;
-        }
-
-        const viewport = this.renderer.getWaveformMinimapViewport(seekWrap);
-        if (!viewport || viewport.widthRatio >= 1) {
-            return;
-        }
-
-        const rect = minimapNode.getBoundingClientRect();
-        const minimapWidth = Math.max(1, rect.width || minimapNode.clientWidth);
-        const pointerRatio = Math.max(
-            0,
-            Math.min(1, (((event.pageX as number) - (rect.left + window.scrollX)) / minimapWidth))
-        );
-        const isInsideViewport = pointerRatio >= viewport.startRatio
-            && pointerRatio <= (viewport.startRatio + viewport.widthRatio);
-        const pointerOffsetRatio = isInsideViewport
-            ? (pointerRatio - viewport.startRatio)
-            : (viewport.widthRatio / 2);
 
         this.waveformMinimapDragState = {
-            seekWrap: seekWrap,
-            minimapNode: minimapNode,
-            pointerOffsetRatio: pointerOffsetRatio,
+            seekWrap: minimapStart.seekWrap,
+            minimapNode: minimapStart.minimapNode,
+            pointerOffsetRatio: minimapStart.pointerOffsetRatio,
         };
         this.pendingWaveformTouchSeek = null;
         this.seekingElement = null;
@@ -330,8 +627,8 @@ export function onWaveformMinimapStart(ctx: any, event: any): any {
         }
 
         this.renderer.setWaveformMinimapViewportStart(
-            seekWrap,
-            pointerRatio - pointerOffsetRatio
+            minimapStart.seekWrap,
+            minimapStart.pointerRatio - minimapStart.pointerOffsetRatio
         );
         event.preventDefault();
         event.stopPropagation();
@@ -344,35 +641,7 @@ export function onSeekEnd(ctx: any, event: any): any {
             return;
         }
 
-        if (this.waveformMinimapDragState) {
-            this.endWaveformMinimapDrag();
-            event.preventDefault();
-            event.stopPropagation();
-            return;
-        }
-
-        if (this.pendingWaveformTouchSeek) {
-            if (event.type === 'touchend' && this.getActiveTouchCount(event) === 0) {
-                this.applyPendingWaveformTouchSeekTap(event);
-            } else {
-                this.pendingWaveformTouchSeek = null;
-            }
-
-            this.seekingElement = null;
-            event.preventDefault();
-            event.stopPropagation();
-            return;
-        }
-
-        if (this.pinchZoomState) {
-            if (this.getActiveTouchCount(event) >= 2) {
-                event.preventDefault();
-                return;
-            }
-
-            this.endPinchZoom();
-            event.preventDefault();
-            event.stopPropagation();
+        if (finishSeekEndInteraction(this, event)) {
             return;
         }
 
@@ -395,46 +664,7 @@ export function onSeekEnd(ctx: any, event: any): any {
         }
 
         if (this.rightClickDragging) {
-            this.rightClickDragging = false;
-            this.loopDragStart = null;
-            const seekTimelineContext = this.getSeekTimelineContext(this.seekingElement);
-
-            if (this.state.loop.pointA !== null && this.state.loop.pointB !== null) {
-                let loopA = this.state.loop.pointA;
-                let loopB = this.state.loop.pointB;
-
-                if (loopA > loopB) {
-                    const swappedA = loopB;
-                    const swappedB = loopA;
-                    this.state = {
-                        ...this.state,
-                        loop: {
-                            ...this.state.loop,
-                            pointA: swappedA,
-                            pointB: swappedB,
-                        },
-                    };
-                    loopA = swappedA;
-                    loopB = swappedB;
-                }
-
-                const localLoopA = seekTimelineContext.fromReferenceTime(loopA);
-                const localLoopB = seekTimelineContext.fromReferenceTime(loopB);
-                if (Math.abs(localLoopB - localLoopA) >= this.loopMinDistance) {
-                    activateLoopRange(this, loopA, loopB);
-                } else {
-                    this.state = {
-                        ...this.state,
-                        loop: {
-                            ...this.state.loop,
-                            pointA: null,
-                            pointB: null,
-                            enabled: false,
-                        },
-                    };
-                }
-            }
-
+            finalizeRightClickLoopSelection(this);
             this.updateMainControls();
             event.stopPropagation();
             return;
@@ -685,7 +915,6 @@ export function onKeyboard(ctx: any, event: any): any {
         const key = event.key || event.code;
         const code = event.code || '';
         const trackIndex = this.getKeyboardTrackIndex(event);
-        let handled = false;
 
         if (isShortcutHelpToggleKey(event)) {
             event.preventDefault();
@@ -694,133 +923,15 @@ export function onKeyboard(ctx: any, event: any): any {
             return;
         }
 
-        if (this.shortcutHelpOpen) {
-            if (key === 'Escape' || key === 'Esc') {
-                event.preventDefault();
-                this.closeShortcutHelp();
-                event.stopPropagation();
-                return;
-            }
-
-            if (isShortcutSuppressedWhileHelpOpen(key, code, trackIndex)) {
-                event.preventDefault();
-                event.stopPropagation();
-            }
+        if (handleShortcutHelpKeyboard(this, event, key, code, trackIndex)) {
             return;
         }
 
-        if (trackIndex !== null && trackIndex < this.runtimes.length) {
-            event.preventDefault();
-            this.toggleSolo(trackIndex, this.effectiveSingleSoloMode);
-            handled = true;
-        }
-
-        if (handled) {
-            event.stopPropagation();
+        if (handleTrackKeyboardSelection(this, event, trackIndex)) {
             return;
         }
 
-        switch (key) {
-            case ' ':
-            case 'Spacebar':
-            case 'Space':
-                event.preventDefault();
-                this.togglePlay();
-                handled = true;
-                break;
-
-            case 'Escape':
-            case 'Esc':
-                event.preventDefault();
-                this.stop();
-                handled = true;
-                break;
-
-            case 'ArrowLeft':
-                event.preventDefault();
-                this.seekRelative(event.shiftKey ? -5 : -2);
-                handled = true;
-                break;
-
-            case 'ArrowRight':
-                event.preventDefault();
-                this.seekRelative(event.shiftKey ? 5 : 2);
-                handled = true;
-                break;
-
-            case 'ArrowUp':
-                if (this.features.globalVolume) {
-                    event.preventDefault();
-                    this.setVolume(this.state.volume + 0.1);
-                    handled = true;
-                }
-                break;
-
-            case 'ArrowDown':
-                if (this.features.globalVolume) {
-                    event.preventDefault();
-                    this.setVolume(this.state.volume - 0.1);
-                    handled = true;
-                }
-                break;
-
-            case 'Home':
-                event.preventDefault();
-                this.seekTo(0);
-                handled = true;
-                break;
-
-            case 'r':
-            case 'R':
-            case 'KeyR':
-                event.preventDefault();
-                this.dispatch({ type: 'toggle-repeat' });
-                this.updateMainControls();
-                handled = true;
-                break;
-
-            case 'a':
-            case 'A':
-            case 'KeyA':
-                if (this.features.looping) {
-                    event.preventDefault();
-                    this.setLoopPoint('A');
-                    handled = true;
-                }
-                break;
-
-            case 'b':
-            case 'B':
-            case 'KeyB':
-                if (this.features.looping) {
-                    event.preventDefault();
-                    this.setLoopPoint('B');
-                    handled = true;
-                }
-                break;
-
-            case 'l':
-            case 'L':
-            case 'KeyL':
-                if (this.features.looping) {
-                    event.preventDefault();
-                    this.toggleLoop();
-                    handled = true;
-                }
-                break;
-
-            case 'c':
-            case 'C':
-            case 'KeyC':
-                if (this.features.looping) {
-                    event.preventDefault();
-                    this.clearLoop();
-                    handled = true;
-                }
-                break;
-        }
-
-        if (handled) {
+        if (handleGlobalKeyboardShortcut(this, event, key)) {
             event.stopPropagation();
         }
     }).call(ctx, event);
