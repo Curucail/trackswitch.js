@@ -102,14 +102,6 @@ export function load(ctx: any): any {
         this.emit('loaded', {
             longestDuration: this.longestDuration,
         });
-
-        this.renderer.renderWaveforms(
-            this.waveformEngine,
-            this.runtimes,
-            this.longestDuration,
-            this.getWaveformTimelineProjector(),
-            this.getWaveformTimelineContext()
-        );
     }).call(ctx);
 }
 
@@ -186,7 +178,7 @@ export function play(ctx: any): any {
         this.startAudio(startPosition);
         this.pauseOthers();
         this.dispatch({ type: 'set-playing', playing: true });
-        this.updateMainControls();
+        this.updatePlaybackPositionUi();
     }).call(ctx);
 }
 

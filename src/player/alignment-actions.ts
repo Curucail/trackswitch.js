@@ -1,5 +1,6 @@
 import { TrackRuntime } from '../domain/types';
 import { clamp } from '../shared/math';
+import { WarpingMatrixTrackSeries } from '../ui/view-renderer';
 import {
     buildColumnTimeMapping,
     loadNumericCsv,
@@ -11,6 +12,47 @@ import {
 interface TrackAlignmentConverter {
     referenceToTrack: TimeMappingSeries;
     trackToReference: TimeMappingSeries;
+}
+
+function buildWarpingSeries(
+    runtime: TrackRuntime,
+    trackIndex: number,
+    columnKey: string,
+    converter: TrackAlignmentConverter,
+    referenceDuration: number
+): WarpingMatrixTrackSeries {
+    const points = converter.referenceToTrack.points.map((point: { x: number; y: number }) => {
+        return {
+            referenceTime: point.x,
+            trackTime: point.y,
+        };
+    });
+
+    let trackDuration = runtime.baseSource.timing
+        ? runtime.baseSource.timing.effectiveDuration
+        : (runtime.baseSource.buffer ? runtime.baseSource.buffer.duration : 0);
+    let maxMappedTrackTime = Number.NEGATIVE_INFINITY;
+    points.forEach((point: { trackTime: number }) => {
+        if (Number.isFinite(point.trackTime) && point.trackTime > maxMappedTrackTime) {
+            maxMappedTrackTime = point.trackTime;
+        }
+    });
+
+    const resolvedMappedDuration = Number.isFinite(maxMappedTrackTime) && maxMappedTrackTime > 0
+        ? maxMappedTrackTime
+        : referenceDuration;
+    if (!Number.isFinite(trackDuration) || trackDuration <= 0) {
+        trackDuration = resolvedMappedDuration;
+    } else {
+        trackDuration = Math.max(trackDuration, resolvedMappedDuration);
+    }
+
+    return {
+        trackIndex: trackIndex,
+        columnKey: columnKey,
+        points: points,
+        trackDuration: trackDuration,
+    };
 }
 
 export function isAlignmentMode(ctx: any): any {
@@ -243,12 +285,32 @@ export function buildAlignmentContext(ctx: any): any {
             }
         }
 
+        const warpingSeriesByTrack = new Map<number, WarpingMatrixTrackSeries>();
+        converters.forEach((converter: TrackAlignmentConverter, trackIndex: number) => {
+            const column = mappingByTrack.get(trackIndex);
+            const normalizedColumn = typeof column === 'string' ? column.trim() : '';
+            if (!normalizedColumn) {
+                return;
+            }
+
+            const runtime = this.runtimes[trackIndex];
+            if (!runtime) {
+                return;
+            }
+
+            warpingSeriesByTrack.set(
+                trackIndex,
+                buildWarpingSeries(runtime, trackIndex, normalizedColumn, converter, referenceDuration)
+            );
+        });
+
         return {
             referenceDuration: referenceDuration,
             outOfRange: resolveAlignmentOutOfRangeMode(this.alignmentConfig.outOfRange),
             converters: converters,
             columnByTrack: new Map<number, string>(mappingByTrack),
             uniqueColumnOrder: this.collectUniqueAlignmentColumns(mappingByTrack),
+            warpingSeriesByTrack: warpingSeriesByTrack,
         };
     }).call(ctx);
 }
@@ -301,56 +363,10 @@ export function getWarpingMatrixContext(ctx: any): any {
             };
         }
 
-        const trackIndexes = [activeTrackIndex];
-        const seenColumns = new Set<string>();
         const referenceDuration = this.longestDuration;
-        const trackSeries = trackIndexes.map((trackIndex) => {
-            const column = this.alignmentContext?.columnByTrack.get(trackIndex);
-            const normalizedColumn = typeof column === 'string' ? column.trim() : '';
-            if (!normalizedColumn || seenColumns.has(normalizedColumn)) {
-                return null;
-            }
-
-            const converter = this.alignmentContext?.converters.get(trackIndex);
-            if (!converter) {
-                return null;
-            }
-
-            seenColumns.add(normalizedColumn);
-            const points = converter.referenceToTrack.points.map((point: { x: number; y: number }) => {
-                return {
-                    referenceTime: point.x,
-                    trackTime: point.y,
-                };
-            });
-            const runtime = this.runtimes[trackIndex];
-            let trackDuration = runtime.baseSource.timing
-                ? runtime.baseSource.timing.effectiveDuration
-                : (runtime.baseSource.buffer ? runtime.baseSource.buffer.duration : 0);
-            let maxMappedTrackTime = Number.NEGATIVE_INFINITY;
-            points.forEach((point: { trackTime: number }) => {
-                if (Number.isFinite(point.trackTime) && point.trackTime > maxMappedTrackTime) {
-                    maxMappedTrackTime = point.trackTime;
-                }
-            });
-            const resolvedMappedDuration = Number.isFinite(maxMappedTrackTime) && maxMappedTrackTime > 0
-                ? maxMappedTrackTime
-                : referenceDuration;
-            if (!Number.isFinite(trackDuration) || trackDuration <= 0) {
-                trackDuration = resolvedMappedDuration;
-            } else {
-                trackDuration = Math.max(trackDuration, resolvedMappedDuration);
-            }
-
-            return {
-                trackIndex: trackIndex,
-                columnKey: normalizedColumn,
-                points: points,
-                trackDuration: trackDuration,
-            };
-        }).filter((entry): entry is NonNullable<typeof entry> => {
-            return !!entry && entry.points.length > 0;
-        });
+        const trackSeries = this.alignmentContext.warpingSeriesByTrack.has(activeTrackIndex)
+            ? [this.alignmentContext.warpingSeriesByTrack.get(activeTrackIndex) as WarpingMatrixTrackSeries]
+            : [];
 
         return {
             enabled: true,

@@ -317,7 +317,8 @@ export class WaveformEngine {
         context: CanvasRenderingContext2D,
         peaks: Float32Array | null,
         barWidth: number,
-        normalizationPeak?: number
+        normalizationPeak?: number,
+        waveformColor?: string
     ): void {
         const width = canvas.width;
         const height = canvas.height;
@@ -343,8 +344,7 @@ export class WaveformEngine {
             maxPeak = 1;
         }
 
-        const waveformColor = getComputedStyle(canvas).getPropertyValue('--waveform-color').trim() || '#ED8C01';
-        context.fillStyle = waveformColor;
+        context.fillStyle = waveformColor || getComputedStyle(canvas).getPropertyValue('--waveform-color').trim() || '#ED8C01';
 
         for (let x = 0; x < peaks.length && x < width; x += 1) {
             const normalized = peaks[x] / maxPeak;
@@ -358,15 +358,15 @@ export class WaveformEngine {
         canvas: HTMLCanvasElement,
         context: CanvasRenderingContext2D,
         barWidth: number,
-        alpha: number
+        alpha: number,
+        waveformColor?: string
     ): void {
         const width = canvas.width;
         const height = canvas.height;
 
         context.clearRect(0, 0, width, height);
 
-        const waveformColor = getComputedStyle(canvas).getPropertyValue('--waveform-color').trim() || '#ED8C01';
-        context.fillStyle = waveformColor;
+        context.fillStyle = waveformColor || getComputedStyle(canvas).getPropertyValue('--waveform-color').trim() || '#ED8C01';
         context.globalAlpha = alpha;
 
         const bars = Math.max(1, Math.floor(width / barWidth));

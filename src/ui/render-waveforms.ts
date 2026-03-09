@@ -23,7 +23,12 @@ interface WaveformSeekSurfaceMetadata {
     zoomCanvas: HTMLCanvasElement;
     zoomViewportNode: HTMLElement;
     zoomCanvasLastDrawKey: string | null;
-    tiles: Map<number, { canvas: HTMLCanvasElement; lastDrawKey: string | null }>;
+    waveformColor: string | null;
+    tiles: Map<number, {
+        canvas: HTMLCanvasElement;
+        context: CanvasRenderingContext2D | null;
+        lastDrawKey: string | null;
+    }>;
     normalizationPeak: number;
     normalizationCacheKey: string | null;
 }
@@ -135,6 +140,10 @@ function clampWaveformZoom(zoom: number, maximum: number): number {
     }
 
     return clampTime(zoom, MIN_WAVEFORM_ZOOM, maximum);
+}
+
+function resolveWaveformColor(element: HTMLElement): string {
+    return getComputedStyle(element).getPropertyValue('--waveform-color').trim() || '#ED8C01';
 }
 
 function getWaveformSurfaceWidth(surfaceMetadata: WaveformSeekSurfaceMetadata): number {
@@ -319,7 +328,12 @@ export function wrapWaveformCanvases(ctx: any): any {
                     zoomCanvas: zoomCanvas,
                     zoomViewportNode: zoomViewportNode,
                     zoomCanvasLastDrawKey: null,
-                    tiles: new Map<number, { canvas: HTMLCanvasElement; lastDrawKey: string | null }>(),
+                    waveformColor: null,
+                    tiles: new Map<number, {
+                        canvas: HTMLCanvasElement;
+                        context: CanvasRenderingContext2D | null;
+                        lastDrawKey: string | null;
+                    }>(),
                     normalizationPeak: 1,
                     normalizationCacheKey: null,
                 });
@@ -420,7 +434,7 @@ export function forEachVisibleWaveformTile(ctx: any, surfaceMetadata: any, pixel
                 tileCanvas.style.top = '0';
                 tileCanvas.style.display = 'block';
                 surfaceMetadata.tileLayer.appendChild(tileCanvas);
-                tileRecord = { canvas: tileCanvas, lastDrawKey: null };
+                tileRecord = { canvas: tileCanvas, context: null, lastDrawKey: null };
                 surfaceMetadata.tiles.set(tileIndex, tileRecord);
                 isNew = true;
             }
@@ -440,10 +454,11 @@ export function forEachVisibleWaveformTile(ctx: any, surfaceMetadata: any, pixel
                 tileCanvas.height = renderHeight;
             }
 
-            const context = tileCanvas.getContext('2d');
+            const context = tileRecord.context || tileCanvas.getContext('2d');
             if (!context) {
                 continue;
             }
+            tileRecord.context = context;
 
             const renderBarWidth = Math.max(1, Math.round(surfaceMetadata.barWidth * pixelRatio));
             callback({
@@ -590,6 +605,9 @@ function renderWaveformMinimap(
         return;
     }
 
+    const waveformColor = surfaceMetadata.waveformColor || resolveWaveformColor(surfaceMetadata.surface);
+    surfaceMetadata.waveformColor = waveformColor;
+
     const cssWidth = Math.max(1, Math.round(surfaceMetadata.zoomMinimapNode.clientWidth));
     const cssHeight = Math.max(1, Math.round(surfaceMetadata.zoomMinimapNode.clientHeight));
     const renderWidth = Math.max(1, Math.round(cssWidth * pixelRatio));
@@ -618,7 +636,7 @@ function renderWaveformMinimap(
     }
 
     if (fullDuration <= 0) {
-        waveformEngine.drawPlaceholder(canvas, context, 1, 0.2);
+        waveformEngine.drawPlaceholder(canvas, context, 1, 0.2, waveformColor);
         surfaceMetadata.zoomCanvasLastDrawKey = drawKey;
         return;
     }
@@ -631,12 +649,12 @@ function renderWaveformMinimap(
         baseProjector
     );
     if (!mixed) {
-        waveformEngine.drawPlaceholder(canvas, context, 1, 0.2);
+        waveformEngine.drawPlaceholder(canvas, context, 1, 0.2, waveformColor);
         surfaceMetadata.zoomCanvasLastDrawKey = drawKey;
         return;
     }
 
-    waveformEngine.drawWaveform(canvas, context, mixed, 1, normalizationPeak);
+    waveformEngine.drawWaveform(canvas, context, mixed, 1, normalizationPeak, waveformColor);
     surfaceMetadata.zoomCanvasLastDrawKey = drawKey;
 }
 
@@ -775,12 +793,19 @@ export function drawDummyWaveforms(ctx: any, waveformEngine: any): any {
 
         for (let i = 0; i < this.waveformSeekSurfaces.length; i += 1) {
             const surfaceMetadata = this.waveformSeekSurfaces[i];
+            surfaceMetadata.waveformColor = resolveWaveformColor(surfaceMetadata.surface);
             this.forEachVisibleWaveformTile(surfaceMetadata, pixelRatio, (tile: {
                 canvas: HTMLCanvasElement;
                 context: CanvasRenderingContext2D;
                 renderBarWidth: number;
             }) => {
-                waveformEngine.drawPlaceholder(tile.canvas, tile.context, tile.renderBarWidth, 0.3);
+                waveformEngine.drawPlaceholder(
+                    tile.canvas,
+                    tile.context,
+                    tile.renderBarWidth,
+                    0.3,
+                    surfaceMetadata.waveformColor || undefined
+                );
             });
             if (surfaceMetadata.zoom > MIN_WAVEFORM_ZOOM) {
                 renderWaveformMinimap(
@@ -837,6 +862,7 @@ export function renderWaveformsInternal(ctx: any, waveformEngine: any, runtimes:
 
         for (let i = 0; i < this.waveformSeekSurfaces.length; i += 1) {
             const surfaceMetadata = this.waveformSeekSurfaces[i];
+            surfaceMetadata.waveformColor = resolveWaveformColor(surfaceMetadata.surface);
             const waveformSource = surfaceMetadata.waveformSource;
             const sourceRuntimes = this.getWaveformSourceRuntimes(runtimes, waveformSource);
             const fixedWaveformTrackIndex = this.resolveWaveformTrackIndex(runtimes, waveformSource);
@@ -907,7 +933,13 @@ export function renderWaveformsInternal(ctx: any, waveformEngine: any, runtimes:
 
                 const peakCount = Math.max(1, Math.floor(tile.canvas.width / tile.renderBarWidth));
                 if (fullDuration <= 0) {
-                    waveformEngine.drawPlaceholder(tile.canvas, tile.context, tile.renderBarWidth, 0.3);
+                    waveformEngine.drawPlaceholder(
+                        tile.canvas,
+                        tile.context,
+                        tile.renderBarWidth,
+                        0.3,
+                        surfaceMetadata.waveformColor || undefined
+                    );
                     tile.record.lastDrawKey = tileDrawKey;
                     return;
                 }
@@ -915,7 +947,13 @@ export function renderWaveformsInternal(ctx: any, waveformEngine: any, runtimes:
                 const tileStartTime = fullDuration * (tile.tileStartPx / tile.surfaceWidth);
                 const tileDuration = fullDuration * (tile.tileCssWidth / tile.surfaceWidth);
                 if (!Number.isFinite(tileDuration) || tileDuration <= 0) {
-                    waveformEngine.drawPlaceholder(tile.canvas, tile.context, tile.renderBarWidth, 0.3);
+                    waveformEngine.drawPlaceholder(
+                        tile.canvas,
+                        tile.context,
+                        tile.renderBarWidth,
+                        0.3,
+                        surfaceMetadata.waveformColor || undefined
+                    );
                     tile.record.lastDrawKey = tileDrawKey;
                     return;
                 }
@@ -937,7 +975,13 @@ export function renderWaveformsInternal(ctx: any, waveformEngine: any, runtimes:
                 );
 
                 if (!mixed) {
-                    waveformEngine.drawPlaceholder(tile.canvas, tile.context, tile.renderBarWidth, 0.3);
+                    waveformEngine.drawPlaceholder(
+                        tile.canvas,
+                        tile.context,
+                        tile.renderBarWidth,
+                        0.3,
+                        surfaceMetadata.waveformColor || undefined
+                    );
                     tile.record.lastDrawKey = tileDrawKey;
                     return;
                 }
@@ -947,7 +991,8 @@ export function renderWaveformsInternal(ctx: any, waveformEngine: any, runtimes:
                     tile.context,
                     mixed,
                     tile.renderBarWidth,
-                    normalizationPeak
+                    normalizationPeak,
+                    surfaceMetadata.waveformColor || undefined
                 );
                 tile.record.lastDrawKey = tileDrawKey;
             });

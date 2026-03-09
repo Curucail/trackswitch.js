@@ -76,7 +76,12 @@ interface WaveformSeekSurfaceMetadata {
     zoomCanvas: HTMLCanvasElement;
     zoomViewportNode: HTMLElement;
     zoomCanvasLastDrawKey: string | null;
-    tiles: Map<number, { canvas: HTMLCanvasElement; lastDrawKey: string | null }>;
+    waveformColor: string | null;
+    tiles: Map<number, {
+        canvas: HTMLCanvasElement;
+        context: CanvasRenderingContext2D | null;
+        lastDrawKey: string | null;
+    }>;
     normalizationPeak: number;
     normalizationCacheKey: string | null;
 }
@@ -196,6 +201,8 @@ interface WarpingMatrixHostMetadata {
     currentTrackTime: number;
     matrixActivePointerId: number | null;
     lastSizeKey: string | null;
+    layoutDirty: boolean;
+    staticPlotDirty: boolean;
 }
 
 export class ViewRenderer {
@@ -394,6 +401,17 @@ public getPrimaryTempoSeries(host: WarpingMatrixHostMetadata): WarpingMatrixTemp
         return viewRendererWarping.getPrimaryTempoSeries(this, host);
     }
 
+public ensureWarpingLayout(host: WarpingMatrixHostMetadata): void {
+        return viewRendererWarping.ensureWarpingLayout(this, host);
+    }
+
+public applyWarpingMatrixContext(
+        host: WarpingMatrixHostMetadata,
+        context: WarpingMatrixRenderContext
+    ): void {
+        return viewRendererWarping.applyWarpingMatrixContext(this, host, context);
+    }
+
 public updateWarpingMatrix(
         host: WarpingMatrixHostMetadata,
         context: WarpingMatrixRenderContext | undefined
@@ -401,8 +419,19 @@ public updateWarpingMatrix(
         return viewRendererWarping.updateWarpingMatrix(this, host, context);
     }
 
+public updateWarpingMatrixPlaybackState(
+        host: WarpingMatrixHostMetadata,
+        context: WarpingMatrixRenderContext | undefined
+    ): void {
+        return viewRendererWarping.updateWarpingMatrixPlaybackState(this, host, context);
+    }
+
 public renderWarpingMatrixPathPlot(host: WarpingMatrixHostMetadata, pathStrokeWidth: number): void {
         return viewRendererWarping.renderWarpingMatrixPathPlot(this, host, pathStrokeWidth);
+    }
+
+public renderWarpingMatrixPlayhead(host: WarpingMatrixHostMetadata): void {
+        return viewRendererWarping.renderWarpingMatrixPlayhead(this, host);
     }
 
 public renderWarpingMatrixTempoPlot(host: WarpingMatrixHostMetadata): void {
@@ -425,10 +454,10 @@ public buildWarpingMatrixData(
     }
 
 public buildWarpingTempoData(
-        trackSeries: WarpingMatrixTrackSeries[],
+        matrixData: WarpingMatrixMatrixData | null,
         halfWindowPoints: number
     ): WarpingMatrixTempoData {
-        return viewRendererWarping.buildWarpingTempoData(this, trackSeries, halfWindowPoints);
+        return viewRendererWarping.buildWarpingTempoData(this, matrixData, halfWindowPoints);
     }
 
 public interpolateWarpingTrackTime(points: WarpingMatrixPathPoint[], referenceTime: number): number {
@@ -583,6 +612,15 @@ updateMainControls(
         warpingMatrixContext?: WarpingMatrixRenderContext
     ): void {
         return viewRendererCore.updateMainControls(this, state, runtimes, waveformTimelineContext, warpingMatrixContext);
+    }
+
+updatePlaybackPosition(
+        state: TrackSwitchUiState,
+        runtimes: TrackRuntime[],
+        waveformTimelineContext?: WaveformTimelineContext,
+        warpingMatrixContext?: WarpingMatrixRenderContext
+    ): void {
+        return viewRendererCore.updatePlaybackPosition(this, state, runtimes, waveformTimelineContext, warpingMatrixContext);
     }
 
 public updateWaveformZoomIndicators(): void {

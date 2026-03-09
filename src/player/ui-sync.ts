@@ -1,5 +1,21 @@
 import { TrackRuntime, TrackSwitchUiState } from '../domain/types';
 
+function buildUiState(controller: any): TrackSwitchUiState {
+    return {
+        playing: controller.state.playing,
+        repeat: controller.state.repeat,
+        position: controller.state.position,
+        longestDuration: controller.longestDuration,
+        syncEnabled: controller.globalSyncEnabled,
+        syncAvailable: controller.isAlignmentMode()
+            && controller.runtimes.some((runtime: TrackRuntime) => controller.hasSyncedVariant(runtime)),
+        loop: {
+            pointA: controller.state.loop.pointA,
+            pointB: controller.state.loop.pointB,
+            enabled: controller.state.loop.enabled,
+        },
+    };
+}
 
 export function applyTrackProperties(ctx: any): any {
     return (function(this: any) {
@@ -43,22 +59,28 @@ export function applyTrackProperties(ctx: any): any {
 
 export function updateMainControls(ctx: any): any {
     return (function(this: any) {
-        const uiState: TrackSwitchUiState = {
-            playing: this.state.playing,
-            repeat: this.state.repeat,
-            position: this.state.position,
-            longestDuration: this.longestDuration,
-            syncEnabled: this.globalSyncEnabled,
-            syncAvailable: this.isAlignmentMode()
-                && this.runtimes.some((runtime: TrackRuntime) => this.hasSyncedVariant(runtime)),
-            loop: {
-                pointA: this.state.loop.pointA,
-                pointB: this.state.loop.pointB,
-                enabled: this.state.loop.enabled,
-            },
-        };
+        const uiState = buildUiState(this);
 
         this.renderer.updateMainControls(
+            uiState,
+            this.runtimes,
+            this.getWaveformTimelineContext(),
+            this.getWarpingMatrixContext()
+        );
+        this.sheetMusicEngine.updatePosition(this.state.position);
+
+        this.emit('position', {
+            position: this.state.position,
+            duration: this.longestDuration,
+        });
+    }).call(ctx);
+}
+
+export function updatePlaybackPositionUi(ctx: any): any {
+    return (function(this: any) {
+        const uiState = buildUiState(this);
+
+        this.renderer.updatePlaybackPosition(
             uiState,
             this.runtimes,
             this.getWaveformTimelineContext(),

@@ -20,7 +20,12 @@ import { createTrackRuntime } from '../domain/runtime';
 import { AudioEngine } from '../engine/audio-engine';
 import { SheetMusicEngine } from '../engine/sheet-music-engine';
 import { TrackTimelineProjector, WaveformEngine } from '../engine/waveform-engine';
-import { ViewRenderer, WarpingMatrixRenderContext, WaveformTimelineContext } from '../ui/view-renderer';
+import {
+    ViewRenderer,
+    WarpingMatrixRenderContext,
+    WarpingMatrixTrackSeries,
+    WaveformTimelineContext,
+} from '../ui/view-renderer';
 import { InputBinder, InputController } from '../input/dom-event-binder';
 import { derivePresetNames } from '../shared/preset';
 import { ControllerPointerEvent } from '../shared/seek';
@@ -48,6 +53,7 @@ interface AlignmentContext {
     converters: Map<number, TrackAlignmentConverter>;
     columnByTrack: Map<number, string>;
     uniqueColumnOrder: string[];
+    warpingSeriesByTrack: Map<number, WarpingMatrixTrackSeries>;
 }
 
 interface SeekTimelineContext {
@@ -571,6 +577,10 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
     public updateMainControls(): void {
         return controllerUi.updateMainControls(this);
+    }
+
+    public updatePlaybackPositionUi(): void {
+        return controllerUi.updatePlaybackPositionUi(this);
     }
 
     public async initializeSheetMusic(): Promise<void> {

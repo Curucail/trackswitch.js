@@ -792,6 +792,8 @@ export function getPreparedSheetMusicHosts(ctx: any): any {
 
 export function updateMainControls(ctx: any, state: any, runtimes: any, waveformTimelineContext: any, warpingMatrixContext: any): any {
     return (function(this: any, state: any, runtimes: any, waveformTimelineContext: any, warpingMatrixContext: any) {
+        this.updatePlaybackPosition(state, runtimes, waveformTimelineContext, warpingMatrixContext);
+
         this.root.classList.toggle('sync-enabled', state.syncEnabled);
 
         this.queryAll('.playpause').forEach((element: HTMLElement) => {
@@ -808,19 +810,6 @@ export function updateMainControls(ctx: any, state: any, runtimes: any, waveform
             element.classList.toggle('disabled', !state.syncAvailable);
         });
 
-        const seekWraps = this.queryAll('.seekwrap');
-        seekWraps.forEach((seekWrap: HTMLElement) => {
-            this.updateSeekWrapVisuals(seekWrap, state.position, state.longestDuration, state.loop);
-        });
-
-        this.applyFixedWaveformLocalSeekVisuals(state, waveformTimelineContext);
-
-        if (this.features.timer) {
-            this.updateTiming(state.position, state.longestDuration);
-        }
-
-        this.updateWaveformTiming(state, runtimes, waveformTimelineContext);
-        this.updateWaveformZoomIndicators();
         this.warpingMatrixHosts.forEach((host: WarpingMatrixHostMetadata) => {
             this.updateWarpingMatrix(host, warpingMatrixContext);
         });
@@ -843,6 +832,30 @@ export function updateMainControls(ctx: any, state: any, runtimes: any, waveform
             element.classList.toggle('checked', state.loop.enabled);
         });
 
+    
+    }).call(ctx, state, runtimes, waveformTimelineContext, warpingMatrixContext);
+}
+
+export function updatePlaybackPosition(ctx: any, state: any, runtimes: any, waveformTimelineContext: any, warpingMatrixContext: any): any {
+    return (function(this: any, state: any, runtimes: any, waveformTimelineContext: any, warpingMatrixContext: any) {
+        this.root.classList.toggle('sync-enabled', state.syncEnabled);
+
+        const seekWraps = this.queryAll('.seekwrap');
+        seekWraps.forEach((seekWrap: HTMLElement) => {
+            this.updateSeekWrapVisuals(seekWrap, state.position, state.longestDuration, state.loop);
+        });
+
+        this.applyFixedWaveformLocalSeekVisuals(state, waveformTimelineContext);
+
+        if (this.features.timer) {
+            this.updateTiming(state.position, state.longestDuration);
+        }
+
+        this.updateWaveformTiming(state, runtimes, waveformTimelineContext);
+        this.updateWaveformZoomIndicators();
+        this.warpingMatrixHosts.forEach((host: WarpingMatrixHostMetadata) => {
+            this.updateWarpingMatrixPlaybackState(host, warpingMatrixContext);
+        });
     
     }).call(ctx, state, runtimes, waveformTimelineContext, warpingMatrixContext);
 }
