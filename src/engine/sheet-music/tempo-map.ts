@@ -91,16 +91,16 @@ function extractMeasureTempoBpm(measureElement: Element): number | null {
     const directionElements = Array.from(measureElement.querySelectorAll(':scope > direction'));
     for (let index = 0; index < directionElements.length; index += 1) {
         const directionElement = directionElements[index];
-        const soundBpm = parseBpmValue(directionElement.querySelector('sound')?.getAttribute('tempo') ?? null);
-        if (soundBpm !== null) {
-            return soundBpm;
-        }
-
         const metronomeBpm = parseBpmValue(
             directionElement.querySelector('direction-type > metronome > per-minute')?.textContent ?? null
         );
         if (metronomeBpm !== null) {
             return metronomeBpm;
+        }
+
+        const soundBpm = parseBpmValue(directionElement.querySelector('sound')?.getAttribute('tempo') ?? null);
+        if (soundBpm !== null) {
+            return soundBpm;
         }
     }
 
