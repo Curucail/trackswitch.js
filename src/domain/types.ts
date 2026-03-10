@@ -38,6 +38,7 @@ export interface TrackSwitchFeatures {
     muteOtherPlayerInstances: boolean;
     globalVolume: boolean;
     trackMixControls: boolean;
+    customizablePanelOrder: boolean;
     repeat: boolean;
     tabView: boolean;
     iosAudioUnlock: boolean;

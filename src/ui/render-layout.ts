@@ -163,6 +163,68 @@ function setDisplay(element: Element, displayValue: string): void {
     (element as HTMLElement).style.display = displayValue;
 }
 
+function getEventPageY(event: {
+    pageY?: number;
+    originalEvent?: Event & {
+        touches?: ArrayLike<{ pageY: number }>;
+        changedTouches?: ArrayLike<{ pageY: number }>;
+    };
+}): number | null {
+    if (typeof event.pageY === 'number' && Number.isFinite(event.pageY)) {
+        return event.pageY;
+    }
+
+    if (event.originalEvent?.touches && event.originalEvent.touches.length > 0) {
+        return event.originalEvent.touches[0].pageY;
+    }
+
+    if (event.originalEvent?.changedTouches && event.originalEvent.changedTouches.length > 0) {
+        return event.originalEvent.changedTouches[0].pageY;
+    }
+
+    return null;
+}
+
+function resolvePanelHandleLabel(panel: HTMLElement): string {
+    if (panel.classList.contains('track-group')) {
+        return 'Reorder track group panel';
+    }
+
+    if (panel.classList.contains('waveform-wrap')) {
+        return 'Reorder waveform panel';
+    }
+
+    if (panel.classList.contains('sheetmusic-wrap')) {
+        return 'Reorder sheet music panel';
+    }
+
+    if (panel.classList.contains('warping-matrix-wrap')) {
+        return 'Reorder warping matrix panel';
+    }
+
+    const image = panel.querySelector('img');
+    if (image instanceof HTMLImageElement) {
+        if (image.getAttribute('data-per-track-image') === 'true') {
+            return 'Reorder track image panel';
+        }
+
+        return 'Reorder image panel';
+    }
+
+    return 'Reorder panel';
+}
+
+function getReorderablePanels(root: HTMLElement, excluded: HTMLElement[] = []): HTMLElement[] {
+    const excludedSet = new Set(excluded);
+
+    return Array.from(root.children).filter(function(child): child is HTMLElement {
+        return child instanceof HTMLElement
+            && child.classList.contains('ts-stack-section')
+            && child.getAttribute('data-customizable-panel') === 'true'
+            && !excludedSet.has(child);
+    });
+}
+
 function clampTime(value: number, minimum: number, maximum: number): number {
     if (!Number.isFinite(value)) {
         return minimum;
@@ -413,6 +475,7 @@ export function initialize(ctx: any, runtimes: any): any {
         this.wrapWarpingMatrixContainers();
         this.reflowWaveforms();
         this.renderTrackList(runtimes);
+        this.prepareCustomizablePanels();
 
         if (this.query('.seekable:not(.seekable-img-wrap > .seekable)')) {
             this.queryAll('.main-control .seekwrap').forEach(function(seekWrap: HTMLElement) {
@@ -652,6 +715,233 @@ export function renderTrackList(ctx: any, runtimes: any): any {
         });
     
     }).call(ctx, runtimes);
+}
+
+export function prepareCustomizablePanels(ctx: any): any {
+    return (function(this: any) {
+        const root = this.root as HTMLElement;
+        const panels = Array.from(this.root.children).filter(function(child): child is HTMLElement {
+            return child instanceof HTMLElement
+                && child.classList.contains('ts-stack-section')
+                && !child.classList.contains('main-control');
+        });
+
+        if (!this.features.customizablePanelOrder) {
+            panels.forEach((panel: HTMLElement) => {
+                if (!panel.classList.contains('ts-customizable-panel-shell')) {
+                    panel.querySelectorAll('.ts-panel-handle').forEach(function(handle: Element) {
+                        handle.remove();
+                    });
+                    return;
+                }
+
+                const content = panel.querySelector(':scope > [data-customizable-panel-content="true"]');
+                if (!(content instanceof HTMLElement)) {
+                    panel.remove();
+                    return;
+                }
+
+                content.classList.add('ts-stack-section');
+                content.removeAttribute('data-customizable-panel-content');
+                root.insertBefore(content, panel);
+                panel.remove();
+            });
+            return;
+        }
+
+        panels.forEach((panel: HTMLElement, index: number) => {
+            let shell = panel;
+            let content = panel;
+
+            if (!panel.classList.contains('ts-customizable-panel-shell')) {
+                shell = document.createElement('div');
+                shell.className = 'ts-customizable-panel-shell ts-stack-section ts-customizable-panel';
+                root.insertBefore(shell, panel);
+                shell.appendChild(panel);
+                panel.classList.remove('ts-stack-section');
+                panel.setAttribute('data-customizable-panel-content', 'true');
+                content = panel;
+            } else {
+                const shellContent = panel.querySelector(':scope > [data-customizable-panel-content="true"]');
+                if (!(shellContent instanceof HTMLElement)) {
+                    return;
+                }
+
+                content = shellContent;
+                shell.classList.add('ts-customizable-panel');
+            }
+
+            shell.setAttribute('data-customizable-panel', 'true');
+            shell.setAttribute('data-customizable-panel-id', String(index));
+
+            let handle = shell.querySelector(':scope > .ts-panel-handle') as HTMLButtonElement | null;
+            if (!(handle instanceof HTMLButtonElement)) {
+                handle = document.createElement('button');
+                handle.className = 'ts-panel-handle';
+                handle.type = 'button';
+                handle.setAttribute('aria-label', resolvePanelHandleLabel(content));
+                handle.setAttribute('title', 'Reorder panel');
+                handle.innerHTML = '<span class="ts-panel-handle-dots" aria-hidden="true">'
+                    + '<span></span><span></span><span></span>'
+                    + '</span>';
+            }
+
+            if (shell.firstChild !== handle) {
+                shell.insertBefore(handle, shell.firstChild);
+            }
+        });
+    }).call(ctx);
+}
+
+export function startPanelReorder(ctx: any, event: any): any {
+    return (function(this: any, event: any) {
+        if (!this.features.customizablePanelOrder || this.panelDragState) {
+            return false;
+        }
+
+        const handle = event.target instanceof Element
+            ? event.target.closest('.ts-panel-handle')
+            : null;
+        if (!(handle instanceof HTMLElement) || !this.root.contains(handle)) {
+            return false;
+        }
+
+        const panel = handle.closest('.ts-stack-section[data-customizable-panel="true"]');
+        if (!(panel instanceof HTMLElement) || !this.root.contains(panel)) {
+            return false;
+        }
+
+        const pageY = getEventPageY(event);
+        if (pageY === null || !panel.parentElement) {
+            return false;
+        }
+
+        const rect = panel.getBoundingClientRect();
+        const placeholder = document.createElement('div');
+        placeholder.className = 'ts-panel-drop-placeholder';
+        placeholder.style.height = Math.max(1, rect.height) + 'px';
+
+        panel.parentElement.insertBefore(placeholder, panel.nextSibling);
+
+        const originalEvent = event.originalEvent;
+        if (originalEvent instanceof PointerEvent && 'setPointerCapture' in handle) {
+            handle.setPointerCapture(originalEvent.pointerId);
+        }
+
+        panel.classList.add('ts-panel-dragging');
+        panel.style.width = rect.width + 'px';
+        panel.style.height = rect.height + 'px';
+        panel.style.left = rect.left + 'px';
+        panel.style.top = rect.top + 'px';
+        this.root.classList.add('ts-panel-reorder-active');
+
+        this.panelDragState = {
+            handle: handle,
+            panel: panel,
+            placeholder: placeholder,
+            pointerId: originalEvent instanceof PointerEvent ? originalEvent.pointerId : null,
+            pointerOffsetY: pageY - (rect.top + window.scrollY),
+            panelHeight: rect.height,
+        };
+
+        event.preventDefault();
+        event.stopPropagation();
+        return true;
+    }).call(ctx, event);
+}
+
+export function movePanelReorder(ctx: any, event: any): any {
+    return (function(this: any, event: any) {
+        const dragState = this.panelDragState;
+        if (!dragState) {
+            return false;
+        }
+
+        const originalEvent = event.originalEvent;
+        if (
+            dragState.pointerId !== null
+            && originalEvent instanceof PointerEvent
+            && originalEvent.pointerId !== dragState.pointerId
+        ) {
+            return false;
+        }
+
+        const pageY = getEventPageY(event);
+        if (pageY === null) {
+            return false;
+        }
+
+        dragState.panel.style.top = (pageY - window.scrollY - dragState.pointerOffsetY) + 'px';
+
+        const panelCenterY = pageY - dragState.pointerOffsetY + (dragState.panelHeight / 2);
+        const candidates = getReorderablePanels(this.root, [dragState.panel, dragState.placeholder]);
+        let inserted = false;
+
+        candidates.forEach((candidate: HTMLElement) => {
+            if (inserted) {
+                return;
+            }
+
+            const rect = candidate.getBoundingClientRect();
+            const midpoint = rect.top + window.scrollY + (rect.height / 2);
+            if (panelCenterY < midpoint) {
+                this.root.insertBefore(dragState.placeholder, candidate);
+                inserted = true;
+            }
+        });
+
+        if (!inserted) {
+            this.root.appendChild(dragState.placeholder);
+        }
+
+        event.preventDefault();
+        return true;
+    }).call(ctx, event);
+}
+
+export function endPanelReorder(ctx: any, event: any = null): any {
+    return (function(this: any, event: any) {
+        const dragState = this.panelDragState;
+        if (!dragState) {
+            return false;
+        }
+
+        const originalEvent = event?.originalEvent;
+        if (
+            dragState.pointerId !== null
+            && originalEvent instanceof PointerEvent
+            && originalEvent.pointerId !== dragState.pointerId
+        ) {
+            return false;
+        }
+
+        if (
+            dragState.pointerId !== null
+            && 'hasPointerCapture' in dragState.handle
+            && dragState.handle.hasPointerCapture(dragState.pointerId)
+        ) {
+            dragState.handle.releasePointerCapture(dragState.pointerId);
+        }
+
+        if (dragState.placeholder.parentElement) {
+            dragState.placeholder.parentElement.insertBefore(dragState.panel, dragState.placeholder);
+        }
+
+        dragState.panel.classList.remove('ts-panel-dragging');
+        dragState.panel.style.removeProperty('width');
+        dragState.panel.style.removeProperty('height');
+        dragState.panel.style.removeProperty('left');
+        dragState.panel.style.removeProperty('top');
+        dragState.placeholder.remove();
+        this.root.classList.remove('ts-panel-reorder-active');
+        this.panelDragState = null;
+
+        if (event) {
+            event.preventDefault();
+        }
+
+        return true;
+    }).call(ctx, event);
 }
 
 export function wrapSeekableImages(ctx: any): any {
@@ -1189,6 +1479,10 @@ export function showError(ctx: any, message: any, runtimes: any): any {
 
 export function destroy(ctx: any): any {
     return (function(this: any) {
+        if (this.panelDragState) {
+            this.endPanelReorder();
+        }
+
         this.queryAll('.main-control').forEach(function(mainControl: HTMLElement) {
             mainControl.remove();
         });

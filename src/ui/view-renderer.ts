@@ -217,6 +217,15 @@ interface WarpingMatrixHostMetadata {
     tempoSmoothingUsesAutoDefault: boolean;
 }
 
+interface PanelDragState {
+    handle: HTMLElement;
+    panel: HTMLElement;
+    placeholder: HTMLElement;
+    pointerId: number | null;
+    pointerOffsetY: number;
+    panelHeight: number;
+}
+
 export class ViewRenderer {
 
     public readonly root: HTMLElement;
@@ -232,6 +241,7 @@ export class ViewRenderer {
     public readonly onWarpingMatrixSeek?: (referenceTime: number) => void;
     public readonly resolveWarpingMatrixScoreBpm?: (referenceTime: number) => number | null;
     public warpingClipPathCounter = 0;
+    public panelDragState: PanelDragState | null = null;
     public readonly warpingMatrixTempoControlState = new WeakMap<
         HTMLElement,
         { windowSeconds: number; smoothingHalfWindowPoints: number }
@@ -311,6 +321,35 @@ public buildTrackRow(runtime: TrackRuntime, index: number): HTMLElement {
 
 public renderTrackList(runtimes: TrackRuntime[]): void {
         return viewRendererCore.renderTrackList(this, runtimes);
+    }
+
+public prepareCustomizablePanels(): void {
+        return viewRendererCore.prepareCustomizablePanels(this);
+    }
+
+public startPanelReorder(event: {
+        target?: EventTarget | null;
+        pageY?: number;
+        originalEvent?: Event;
+        preventDefault(): void;
+        stopPropagation(): void;
+    }): boolean {
+        return viewRendererCore.startPanelReorder(this, event);
+    }
+
+public movePanelReorder(event: {
+        pageY?: number;
+        originalEvent?: Event;
+        preventDefault(): void;
+    }): boolean {
+        return viewRendererCore.movePanelReorder(this, event);
+    }
+
+public endPanelReorder(event?: {
+        originalEvent?: Event;
+        preventDefault(): void;
+    }): boolean {
+        return viewRendererCore.endPanelReorder(this, event);
     }
 
 public wrapSeekableImages(): void {

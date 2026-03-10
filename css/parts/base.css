@@ -42,6 +42,87 @@
     border-top: 1px solid var(--ts-color-border-mid);
 }
 
+.trackswitch .ts-customizable-panel-shell {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+}
+
+.trackswitch .ts-panel-handle {
+    position: relative;
+    z-index: 1;
+    flex: 0 0 24px;
+    align-self: stretch;
+    width: 20px;
+    min-width: 20px;
+    border: 0;
+    border-right: 1px solid var(--ts-color-border-mid);
+    border-radius: 0;
+    background: color-mix(in srgb, var(--ts-color-surface-base) 78%, var(--ts-color-border-mid) 22%);
+    color: var(--ts-color-text-secondary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    touch-action: none;
+    padding: 0;
+}
+
+.trackswitch .ts-panel-handle:hover {
+    background: color-mix(in srgb, var(--ts-color-surface-base) 68%, var(--ts-color-border-mid) 32%);
+}
+
+.trackswitch .ts-panel-handle:active {
+    cursor: grabbing;
+}
+
+.trackswitch .ts-panel-handle:focus-visible {
+    outline: 2px solid var(--ts-focus-ring-color);
+    outline-offset: 2px;
+}
+
+.trackswitch .ts-panel-handle-dots {
+    width: 4px;
+    height: 16px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 3px;
+}
+
+.trackswitch .ts-panel-handle-dots span {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.trackswitch .ts-customizable-panel-shell > :not(.ts-panel-handle) {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 100%;
+}
+
+.trackswitch .ts-panel-dragging {
+    position: fixed;
+    z-index: 999;
+    margin: 0;
+    opacity: 0.96;
+    cursor: grabbing;
+    pointer-events: none;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.22);
+}
+
+.trackswitch .ts-panel-drop-placeholder {
+    border-top: 2px dashed var(--ts-color-accent);
+    border-bottom: 2px dashed var(--ts-color-accent);
+    background: var(--ts-color-accent-soft-15);
+}
+
+.trackswitch.ts-panel-reorder-active {
+    user-select: none;
+}
+
 /* Shared inline SVG icon geometry */
 .trackswitch .ts-icon-slot {
     display: inline-flex;

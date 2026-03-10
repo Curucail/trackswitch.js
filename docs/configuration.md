@@ -519,6 +519,7 @@ Defaults:
 - `muteOtherPlayerInstances: true`
 - `globalVolume: false`
 - `trackMixControls: false`
+- `customizablePanelOrder: false`
 - `repeat: false`
 - `tabView: false`
 - `iosAudioUnlock: true`
@@ -538,6 +539,7 @@ Feature reference:
 | `muteOtherPlayerInstances` | Pauses other trackswitch players on same page when this one starts | Helpful when multiple demos exist on one page |
 | `globalVolume` | Shows and enables main volume slider | Turn on if audience needs quick loudness control |
 | `trackMixControls` | Shows per-track volume/pan controls | Useful when users compare stem balances |
+| `customizablePanelOrder` | Adds drag handles for rearranging top-level panels | Best when listeners should tailor the layout themselves |
 | `repeat` | Starts with repeat enabled | Independent from loop A/B region |
 | `tabView` | Applies tab-like row styling | Visual preference only |
 | `iosAudioUnlock` | Performs iOS playback unlock attempt on load | Keep enabled for safest mobile behavior |
@@ -554,6 +556,7 @@ Normalization rules:
 - Invalid `mode` values fall back to `'default'`.
 - `exclusiveSolo: true` forces `presets: false`.
 - In `alignment` mode, runtime enforces `exclusiveSolo: true` and `presets: false`.
+- `customizablePanelOrder: true` lets users drag visible top-level panels by handle for the current page session only.
 
 Solo interaction behavior:
 

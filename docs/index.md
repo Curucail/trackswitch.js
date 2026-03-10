@@ -52,6 +52,10 @@ title: trackswitch.js
           <input type="checkbox" name="trackMixControls" checked />
         </label>
         <label class="ts-control-row">
+          <span>Customizable Panel Order</span>
+          <input type="checkbox" name="customizablePanelOrder" />
+        </label>
+        <label class="ts-control-row">
           <span>Presets</span>
           <input type="checkbox" name="presets" checked />
         </label>

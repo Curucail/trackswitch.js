@@ -31,6 +31,9 @@ export interface InputController {
     onPresetScroll(event: ControllerPointerEvent): void;
     onWaveformZoomWheel(event: ControllerPointerEvent): void;
     onWaveformMinimapStart(event: ControllerPointerEvent): void;
+    onPanelReorderStart(event: ControllerPointerEvent): void;
+    onPanelReorderMove(event: ControllerPointerEvent): void;
+    onPanelReorderEnd(event: ControllerPointerEvent): void;
     onSetLoopA(event: ControllerPointerEvent): void;
     onSetLoopB(event: ControllerPointerEvent): void;
     onToggleLoop(event: ControllerPointerEvent): void;
@@ -208,6 +211,28 @@ export class InputBinder {
         });
     }
 
+    private bindPanelReorder(): void {
+        if (!this.features.customizablePanelOrder) {
+            return;
+        }
+
+        this.addDelegatedListener('pointerdown', '.ts-panel-handle', (event) => {
+            this.controller.onPanelReorderStart(event);
+        });
+
+        this.addListener(window, 'pointermove', (event) => {
+            this.controller.onPanelReorderMove(eventToPointerEvent(event));
+        });
+
+        this.addListener(window, 'pointerup', (event) => {
+            this.controller.onPanelReorderEnd(eventToPointerEvent(event));
+        });
+
+        this.addListener(window, 'pointercancel', (event) => {
+            this.controller.onPanelReorderEnd(eventToPointerEvent(event));
+        });
+    }
+
     private bindKeyboardActivation(): void {
         const activateKeyboard = (event: Event) => {
             this.controller.setKeyboardActive();
@@ -359,6 +384,7 @@ export class InputBinder {
 
     bind(): void {
         this.bindBaseControls();
+        this.bindPanelReorder();
         this.bindKeyboardActivation();
         this.bindSeekLifecycle();
         this.bindTrackControls();

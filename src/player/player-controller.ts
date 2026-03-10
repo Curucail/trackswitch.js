@@ -408,6 +408,30 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         return controllerInput.onWaveformMinimapStart(this, event);
     }
 
+    onPanelReorderStart(event: ControllerPointerEvent): void {
+        if (!this.features.customizablePanelOrder) {
+            return;
+        }
+
+        this.renderer.startPanelReorder(event);
+    }
+
+    onPanelReorderMove(event: ControllerPointerEvent): void {
+        if (!this.features.customizablePanelOrder) {
+            return;
+        }
+
+        this.renderer.movePanelReorder(event);
+    }
+
+    onPanelReorderEnd(event: ControllerPointerEvent): void {
+        if (!this.features.customizablePanelOrder) {
+            return;
+        }
+
+        this.renderer.endPanelReorder(event);
+    }
+
     onSetLoopA(event: ControllerPointerEvent): void {
         return controllerInput.onSetLoopA(this, event);
     }
