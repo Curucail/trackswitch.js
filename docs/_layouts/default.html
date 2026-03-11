@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="{{ '/css/style.css' | relative_url }}" />
 </head>
 
-<body{% if page.url == '/' %} class="home-page"{% elsif page.url == '/configuration.html' or page.url == '/examples.html' %} class="docs-page docs-page--narrow"{% endif %}>
+<body{% if page.url == '/' %} class="home-page"{% elsif page.url == '/configuration.html' or page.url == '/examples.html' %} class="docs-page docs-page--narrow"{% elsif page.url == '/citation.html' %} class="docs-page docs-page--cite"{% endif %}>
   {% unless page.url == '/' %}
   <header class="site-masthead">
     <div class="site-masthead__inner">

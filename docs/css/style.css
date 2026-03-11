@@ -202,6 +202,23 @@ kbd {
     max-width: 100%;
 }
 
+.docs-page--cite .site-main {
+    width: min(1180px, calc(100% - (var(--ts-doc-page-gutter) * 2)));
+}
+
+.docs-page--cite .site-main > h1,
+.docs-page--cite .site-main > h2,
+.docs-page--cite .site-main > h3,
+.docs-page--cite .site-main > h4,
+.docs-page--cite .site-main > p,
+.docs-page--cite .site-main > ul,
+.docs-page--cite .site-main > ol,
+.docs-page--cite .site-main > blockquote,
+.docs-page--cite .site-main > .highlighter-rouge,
+.docs-page--cite .site-main > pre {
+    max-width: 100%;
+}
+
 .site-main > p code,
 .site-main > ul code,
 .site-main > ol code,
