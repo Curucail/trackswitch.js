@@ -1,13 +1,17 @@
 /* SEEKABLE/POSTER IMAGE STYLES --------------------------------------------- */
 
 /* Is the display: block added to the wrap in the js necessary? ------------------------------------------------- TODO */
-.trackswitch img {
+.trackswitch.trackswitch img {
     max-width: 100%;
     /* Limit images to 100% width (unless overridden by the user) */
     display: block;
     margin: 0 auto;
     /* Prevent inheritence from kirby styles */
     padding: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
 }
 
 .trackswitch .seekable-img-wrap {
