@@ -753,7 +753,7 @@
     }
 
     function bindCopyButton() {
-      var defaultCopyLabel = 'Copy code for this player';
+      var defaultCopyLabel = 'Copy snippet';
 
       if (!copyQuickstartButton) {
         return;

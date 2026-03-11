@@ -35,9 +35,9 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
   <div class="ts-showcase__layout">
     <aside class="ts-showcase__code-callout" aria-label="Copy player code">
       <h4 class="ts-showcase__code-title">Copy code</h4>
-      <p>Copy the code for this player and paste it into your website.</p>
-      <button id="ts-copy-quickstart" class="ts-copy-btn" type="button">Copy code for this player</button>
-      <p class="ts-showcase__copy-note">The copied code updates as you change the player options.</p>
+      <p>Paste this player into your website.</p>
+      <button id="ts-copy-quickstart" class="ts-copy-btn" type="button">Copy snippet</button>
+      <p class="ts-showcase__copy-note">Updates as you change the options.</p>
     </aside>
 
     <div class="ts-showcase__player-stage">
