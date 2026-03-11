@@ -471,10 +471,6 @@
     }
 
     function renderQuickstartSnippet(model, mode) {
-      if (!quickstartElement) {
-        return;
-      }
-
       if (isAlignmentMode(mode)) {
         renderAlignmentQuickstartSnippet(model);
       } else {
@@ -554,9 +550,12 @@
       ]);
 
       snippetText = snippetLines.join('\n');
+      quickstartText = snippetText;
+      if (!quickstartElement) {
+        return;
+      }
       quickstartElement.innerHTML = highlightSnippet(snippetText);
       quickstartElement.className = 'language-html';
-      quickstartText = snippetText;
     }
 
     function renderAlignmentQuickstartSnippet(model) {
@@ -666,9 +665,12 @@
       ]);
 
       snippetText = snippetLines.join('\n');
+      quickstartText = snippetText;
+      if (!quickstartElement) {
+        return;
+      }
       quickstartElement.innerHTML = highlightSnippet(snippetText);
       quickstartElement.className = 'language-html';
-      quickstartText = snippetText;
     }
 
     function applyModeModel(mode) {
@@ -751,6 +753,8 @@
     }
 
     function bindCopyButton() {
+      var defaultCopyLabel = 'Copy code for this player';
+
       if (!copyQuickstartButton) {
         return;
       }
@@ -763,13 +767,13 @@
           .then(function () {
             copyQuickstartButton.textContent = 'Copied to clipboard';
             setTimeout(function () {
-              copyQuickstartButton.textContent = 'Copy code';
+              copyQuickstartButton.textContent = defaultCopyLabel;
             }, 1200);
           })
           .catch(function () {
             copyQuickstartButton.textContent = 'Copy failed';
             setTimeout(function () {
-              copyQuickstartButton.textContent = 'Copy code';
+              copyQuickstartButton.textContent = defaultCopyLabel;
             }, 1400);
           });
       });
