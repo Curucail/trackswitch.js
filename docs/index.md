@@ -1,5 +1,5 @@
 ---
-title: trackswitch v2
+title: trackswitch.js
 description: Web-Based Multitrack Audio Player for Presenting Scientific Results
 ---
 
@@ -12,7 +12,7 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
     </nav>
 
     <div class="ts-hero__copy">
-      <h1>trackswitch <span class="ts-hero__version">v2</span></h1>
+      <h1>trackswitch.js <span class="ts-hero__version">v2</span></h1>
       <p class="ts-hero__description">Web-Based Multitrack Audio Player for Presenting Scientific Results</p>
     </div>
 
@@ -34,9 +34,9 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
 <section class="ts-showcase">
   <div class="ts-showcase__layout">
     <aside class="ts-showcase__code-callout" aria-label="Copy player code">
-      <h4 class="ts-showcase__code-title">Copy code</h4>
-      <p>Paste this player into your website.</p>
-      <button id="ts-copy-quickstart" class="ts-copy-btn" type="button">Copy snippet</button>
+      <h4 class="ts-showcase__code-title">Copy player code</h4>
+      <p>Paste this player configuration into your website.</p>
+      <button id="ts-copy-quickstart" class="ts-copy-btn" type="button">Copy to clipboard</button>
       <p class="ts-showcase__copy-note">Updates as you change the options.</p>
     </aside>
 

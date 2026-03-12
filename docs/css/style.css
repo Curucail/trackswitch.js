@@ -17,6 +17,9 @@
     --ts-doc-color-focus: rgba(153, 153, 153, 0.55);
     --ts-doc-page-width: 1180px;
     --ts-doc-page-gutter: 24px;
+    --ts-doc-font-text: "IBM Plex Sans", "Segoe UI", sans-serif;
+    --ts-doc-font-ui: "IBM Plex Sans", "Segoe UI", sans-serif;
+    --ts-doc-font-brand: "Archivo", sans-serif;
 }
 
 html {
@@ -28,7 +31,7 @@ html {
 
 body {
     margin: 0;
-    font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+    font-family: var(--ts-doc-font-ui);
     color: var(--ts-doc-color-text-primary);
     background:
         radial-gradient(circle at top, rgba(255, 255, 255, 0.72), transparent 42%),
@@ -58,7 +61,7 @@ kbd {
     box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2), 0 0 0 2px #ffffff inset;
     color: #333333;
     display: inline-block;
-    font-family: "IBM Plex Sans", sans-serif;
+    font-family: var(--ts-doc-font-ui);
     font-size: 11px;
     line-height: 1.4;
     margin: 0 0.1em;
@@ -91,12 +94,17 @@ kbd {
 }
 
 .site-brand {
-    font-family: "Space Grotesk", "Avenir Next", sans-serif;
-    font-size: 1rem;
+    font-family: var(--ts-doc-font-brand);
+    font-size: 0.92rem;
     font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    letter-spacing: 0.01em;
     text-decoration: none;
+}
+
+.site-brand__version {
+    font-size: 0.8em;
+    font-weight: 500;
+    color: #7a7a7a;
 }
 
 .site-nav {
@@ -112,6 +120,7 @@ kbd {
     min-height: 40px;
     padding: 0 0.9rem;
     border-radius: 999px;
+    font-family: var(--ts-doc-font-ui);
     text-decoration: none;
     color: var(--ts-doc-color-text-secondary);
     transition: background-color 0.15s ease, color 0.15s ease;
@@ -153,7 +162,7 @@ kbd {
 .site-main > h2,
 .site-main > h3,
 .site-main > h4 {
-    font-family: "Space Grotesk", "Avenir Next", sans-serif;
+    font-family: var(--ts-doc-font-text);
     letter-spacing: -0.02em;
     line-height: 1.15;
 }
@@ -172,6 +181,8 @@ kbd {
 .site-main > ul li,
 .site-main > ol li,
 .site-main > blockquote {
+    font-family: var(--ts-doc-font-text);
+    font-size: 1.08rem;
     color: var(--ts-doc-color-text-secondary);
 }
 
@@ -402,10 +413,11 @@ kbd {
 
 .ts-hero h1 {
     margin: 0;
-    font-family: "Space Grotesk", "Avenir Next", sans-serif;
-    font-size: clamp(2.1rem, 6.5vw, 4.1rem);
-    line-height: 0.95;
-    letter-spacing: -0.05em;
+    font-family: var(--ts-doc-font-brand);
+    font-size: clamp(1.85rem, 5.6vw, 3.45rem);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.03em;
     color: #2a2a2a;
 }
 
@@ -550,7 +562,7 @@ kbd {
 .ts-control-panel h4,
 .ts-showcase__code-title {
     margin: 0;
-    font-family: "Space Grotesk", "Avenir Next", sans-serif;
+    font-family: var(--ts-doc-font-text);
     font-size: 1rem;
 }
 

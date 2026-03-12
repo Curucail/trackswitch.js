@@ -753,7 +753,7 @@
     }
 
     function bindCopyButton() {
-      var defaultCopyLabel = 'Copy snippet';
+      var defaultCopyLabel = 'Copy to clipboard';
 
       if (!copyQuickstartButton) {
         return;

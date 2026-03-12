@@ -1,6 +1,6 @@
 ---
 title: Cite
-description: Citation information for trackswitch v2
+description: Citation information for trackswitch.js
 ---
 
 # Cite

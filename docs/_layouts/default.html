@@ -13,9 +13,7 @@
   <meta name="theme-color" content="#383838">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap"
-    rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&family=IBM+Plex+Sans:ital,wght@0,100..700;1,100..700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ '/css/trackswitch.min.css' | relative_url }}" />
   <link rel="stylesheet" href="{{ '/css/style.css' | relative_url }}" />
 </head>
@@ -24,7 +22,7 @@
   {% unless page.url == '/' %}
   <header class="site-masthead">
     <div class="site-masthead__inner">
-      <a class="site-brand" href="{{ '/' | relative_url }}">trackswitch v2</a>
+      <a class="site-brand" href="{{ '/' | relative_url }}">trackswitch.js <span class="site-brand__version">v2</span></a>
       <nav class="site-nav" aria-label="Documentation">
         <a href="{{ '/' | relative_url }}"{% if page.url == '/' %} aria-current="page"{% endif %}>Home</a>
         <a href="{{ '/configuration.html' | relative_url }}"{% if page.url == '/configuration.html' %} aria-current="page"{% endif %}>Configuration</a>
