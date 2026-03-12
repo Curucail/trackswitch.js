@@ -1,14 +1,18 @@
 trackswitch.js
 ==============
 
+[![npm version](https://img.shields.io/npm/v/trackswitch)](https://www.npmjs.com/package/trackswitch)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Live Demo](https://img.shields.io/badge/demo-live-black)](https://audiolabs.github.io/trackswitch.js/)
+
 [![Screenshot](examples/screenshot.png)](https://audiolabs.github.io/trackswitch.js/)
 
-trackswitch.js is a web-based multitrack audio player for presenting scientific results.
+**trackswitch.js** is a web-based multitrack audio player for presenting scientific results.
 
 Live Demo
 -------------
 
-- See trackswitch.js in action on our demo website: https://audiolabs.github.io/trackswitch.js/
+- See what **trackswitch.js** can do on our demo website: https://audiolabs.github.io/trackswitch.js/
 
 Installation
 ------------
