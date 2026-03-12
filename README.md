@@ -111,6 +111,11 @@ Programmatic API
 
 `TrackSwitch.createTrackSwitch(rootElement, init)` returns a controller for playback, seeking, looping, presets, and track state. This means that the player can be controlled by your application, independently from the user.
 
+Further Links
+-------------
+- [Documentation](https://audiolabs.github.io/trackswitch.js/configuration.html)
+- [Example usages](https://audiolabs.github.io/trackswitch.js/examples.html)
+
 
 Citation
 --------
