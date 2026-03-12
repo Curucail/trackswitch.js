@@ -14,11 +14,9 @@
 </head>
 
 <body>
-
     <div id="player"></div>
-
+    
     <script src="../dist/js/trackswitch.min.js"></script>
-
     <script type="text/javascript">
         document.addEventListener('DOMContentLoaded', function () {
             TrackSwitch.createTrackSwitch(document.getElementById('player'), {
@@ -36,7 +34,6 @@
                     },
                     {
                         type: 'trackGroup',
-                        // rowHeight: 1,
                         trackGroup: [
                             {
                                 title: 'Violins',
@@ -78,7 +75,7 @@
                     seekBar: true,
                     timer: true,
                     presets: true,
-                    customizablePanelOrder: true,
+                    customizablePanelOrder: false,
                     muteOtherPlayerInstances: true,
                 },
             });

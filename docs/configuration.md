@@ -1,18 +1,19 @@
 ---
-title: trackswitch.js
+title: Configuration
 ---
 
 - [Quick Start](#quick-start)
 - [Configuration Shape](#configuration-shape)
 - [Initialization Requirements](#initialization-requirements)
 - [Top-Level Options](#top-level-options)
+- [Features](#features)
 - [UI Elements](#ui-elements)
   - [Track Group and Track Options](#track-group-and-track-options)
-  - [Image UI Element](#image-ui-element)
-  - [Waveform UI Element](#waveform-ui-element)
-  - [Sheet Music UI Element](#sheet-music-ui-element)
-  - [Warping Matrix UI Element](#warping-matrix-ui-element)
-- [Features](#features)
+  - [Images](#image-ui-element)
+  - [Per-Track Images](#per-track-image-ui-element)
+  - [Waveforms](#waveform-ui-element)
+  - [Sheet Music](#sheet-music-ui-element)
+  - [Warping Matrix](#warping-matrix-ui-element)
 - [Alignment Mode](#alignment-mode)
 - [Keyboard Shortcuts](#keyboard-shortcuts)
 - [Looping Behavior](#looping-behavior)
@@ -20,9 +21,22 @@ title: trackswitch.js
 - [Utility Exports](#utility-exports)
 - [Validation and Common Errors](#validation-and-common-errors)
 
-# Configuration Shape (+ all available flags)
+# Configuration
 
-## Default Mode
+Use this page as the reference for building a `trackswitch.js` player.
+
+If you are starting from scratch, begin with the default mode example, then add UI elements and features as needed. Use alignment mode only when you have timing-mapping data for matching multiple performances to a shared reference timeline.
+
+## Quick Start
+
+- Start with one `trackGroup` and at least one track source.
+- Add optional UI elements such as `image`, `waveform`, `sheetMusic`, or `warpingMatrix`.
+- Enable only the `features` your page actually needs.
+- If you are comparing aligned performances, add `alignment` config and switch `features.mode` to `'alignment'`.
+
+## Configuration Shape
+
+### Default Mode Example
 
 ```javascript
 TrackSwitch.createTrackSwitch(rootElement, {
@@ -142,7 +156,7 @@ TrackSwitch.createTrackSwitch(rootElement, {
 });
 ```
 
-## Alignment Mode
+### Alignment Mode Example
 
 ```javascript
 TrackSwitch.createTrackSwitch(rootElement, {
@@ -257,7 +271,7 @@ TrackSwitch.createTrackSwitch(rootElement, {
 });
 ```
 
-# Initialization Requirements
+## Initialization Requirements
 
 Use:
 
@@ -271,7 +285,7 @@ Required minimum:
 - each `trackGroup` must contain at least one valid track
 - each track must define at least one valid `sources[].src`
 
-# Top-Level Options
+## Top-Level Options
 
 - `presetNames?: string[]`
   - Friendly names for preset indices (`0`, `1`, ...)
@@ -283,7 +297,60 @@ Required minimum:
 - `alignment?: TrackAlignmentConfig`
   - Required when `features.mode` is `'alignment'`
 
-# UI Elements
+## Features
+
+Defaults:
+
+- `mode: 'default'`
+- `exclusiveSolo: false`
+- `muteOtherPlayerInstances: true`
+- `globalVolume: false`
+- `trackMixControls: false`
+- `customizablePanelOrder: false`
+- `repeat: false`
+- `tabView: false`
+- `iosAudioUnlock: true`
+- `keyboard: true`
+- `looping: false`
+- `seekBar: true`
+- `timer: true`
+- `presets: true`
+- `waveform: true`
+
+Feature reference:
+
+| Feature key | What it does | Non-dev note |
+| --- | --- | --- |
+| `mode` (`'default'`/`'alignment'`) | Selects timeline behavior | Use `default` unless you have timing-mapping CSV data |
+| `exclusiveSolo` | Single-solo behavior in track buttons | Only one track can be active at a time |
+| `muteOtherPlayerInstances` | Pauses other trackswitch players on same page when this one starts | Helpful when multiple demos exist on one page |
+| `globalVolume` | Shows and enables main volume slider | Turn on if audience needs quick loudness control |
+| `trackMixControls` | Shows per-track volume/pan controls | Useful when users compare stem balances |
+| `customizablePanelOrder` | Adds drag handles for rearranging top-level panels | Best when listeners should tailor the layout themselves |
+| `repeat` | Starts with repeat enabled | Independent from loop A/B region |
+| `tabView` | Applies tab-like row styling | Visual preference only |
+| `iosAudioUnlock` | Performs iOS playback unlock attempt on load | Keep enabled for safest mobile behavior |
+| `keyboard` | Enables keyboard shortcuts | Good for desktop demos and accessibility |
+| `looping` | Shows loop controls and enables loop shortcuts | Needed for A/B loop practice/listening |
+| `seekBar` | Shows main seekbar | Turn off only if you provide another seekable UI |
+| `timer` | Shows main time display | Useful for precise listening comparisons |
+| `presets` | Enables preset selector behavior | Requires at least 2 preset groups |
+| `waveform` | Enables waveform interactions/rendering | If waveform UI is present, this is forced to `true` |
+
+Normalization rules:
+
+- Unknown feature keys throw an error.
+- Invalid `mode` values fall back to `'default'`.
+- `exclusiveSolo: true` forces `presets: false`.
+- In `alignment` mode, runtime enforces `exclusiveSolo: true` and `presets: false`.
+- `customizablePanelOrder: true` lets users drag visible top-level panels by handle for the current page session only.
+
+Solo interaction behavior:
+
+- In non-exclusive mode (`exclusiveSolo: false`), if no track is selected, playback is silent.
+- `Shift + click` keeps exclusive-select behavior, except when the clicked track is already the only selected track; in that case, all tracks are selected.
+
+## UI Elements
 
 `ui` is rendered in array order. Supported element types:
 
@@ -294,7 +361,7 @@ Required minimum:
 - `sheetMusic`
 - `warpingMatrix`
 
-## Track Group and Track Options
+### Track Group and Track Options
 
 Tracks live in `ui` entries with `type: 'trackGroup'`:
 
@@ -366,7 +433,7 @@ Preset behavior:
 - Preset `0` is auto-applied on initialization when presets exist.
 - Preset selector is visible only if there are at least 2 presets and `features.presets` is `true`.
 
-## Image UI Element
+### Image UI Element
 
 ```javascript
 { type: 'image', src: 'cover.jpg', seekable: true, style: 'margin: 12px auto;' }
@@ -385,7 +452,7 @@ Notes:
 - Seek margins are clamped to `0..100` percent.
 - For seekable images, `seekMarginLeft + seekMarginRight` must be less than `100`.
 
-## Per-Track Image UI Element
+### Per-Track Image UI Element
 
 ```javascript
 { type: 'perTrackImage', seekable: false, style: 'margin: 12px auto;' }
@@ -412,7 +479,7 @@ Notes:
 - For seekable per-track images, `seekMarginLeft + seekMarginRight` must be less than `100`.
 - `perTrackImage` requires `features.exclusiveSolo: true`.
 
-## Waveform UI Element
+### Waveform UI Element
 
 ```javascript
 { type: 'waveform', width: 1200, height: 150, waveformBarWidth: 2, maxZoom: 5, waveformSource: 'audible', timer: true }
@@ -447,7 +514,7 @@ Normalization and behavior:
 - If any waveform UI element exists, waveform rendering is forced on (`features.waveform = true`).
 - When zoomed in, the top-left overlay shows a draggable waveform minimap instead of a numeric zoom badge.
 
-## Sheet Music UI Element
+### Sheet Music UI Element
 
 ```javascript
 {
@@ -484,7 +551,7 @@ Behavior:
 - If MusicXML fails to load, only the sheet panel fails.
 - If measure CSV fails, score can still render but measure sync is disabled.
 
-## Warping Matrix UI Element
+### Warping Matrix UI Element
 
 ```javascript
 { type: 'warpingMatrix', height: 240, tempoSmoothingHalfWindowPoints: 3, globalScoreBPM: 60, style: 'margin: 12px 0;' }
@@ -512,60 +579,7 @@ Behavior:
 - If the warping path cannot be made strictly monotonic, the tempo curve is hidden and a warning message is shown instead.
 - While global `SYNC` is on, the panel is visibly dimmed and non-interactive.
 
-# Features
-
-Defaults:
-
-- `mode: 'default'`
-- `exclusiveSolo: false`
-- `muteOtherPlayerInstances: true`
-- `globalVolume: false`
-- `trackMixControls: false`
-- `customizablePanelOrder: false`
-- `repeat: false`
-- `tabView: false`
-- `iosAudioUnlock: true`
-- `keyboard: true`
-- `looping: false`
-- `seekBar: true`
-- `timer: true`
-- `presets: true`
-- `waveform: true`
-
-Feature reference:
-
-| Feature key | What it does | Non-dev note |
-| --- | --- | --- |
-| `mode` (`'default'`/`'alignment'`) | Selects timeline behavior | Use `default` unless you have timing-mapping CSV data |
-| `exclusiveSolo` | Single-solo behavior in track buttons | Only one track can be active at a time |
-| `muteOtherPlayerInstances` | Pauses other trackswitch players on same page when this one starts | Helpful when multiple demos exist on one page |
-| `globalVolume` | Shows and enables main volume slider | Turn on if audience needs quick loudness control |
-| `trackMixControls` | Shows per-track volume/pan controls | Useful when users compare stem balances |
-| `customizablePanelOrder` | Adds drag handles for rearranging top-level panels | Best when listeners should tailor the layout themselves |
-| `repeat` | Starts with repeat enabled | Independent from loop A/B region |
-| `tabView` | Applies tab-like row styling | Visual preference only |
-| `iosAudioUnlock` | Performs iOS playback unlock attempt on load | Keep enabled for safest mobile behavior |
-| `keyboard` | Enables keyboard shortcuts | Good for desktop demos and accessibility |
-| `looping` | Shows loop controls and enables loop shortcuts | Needed for A/B loop practice/listening |
-| `seekBar` | Shows main seekbar | Turn off only if you provide another seekable UI |
-| `timer` | Shows main time display | Useful for precise listening comparisons |
-| `presets` | Enables preset selector behavior | Requires at least 2 preset groups |
-| `waveform` | Enables waveform interactions/rendering | If waveform UI is present, this is forced to `true` |
-
-Normalization rules:
-
-- Unknown feature keys throw an error.
-- Invalid `mode` values fall back to `'default'`.
-- `exclusiveSolo: true` forces `presets: false`.
-- In `alignment` mode, runtime enforces `exclusiveSolo: true` and `presets: false`.
-- `customizablePanelOrder: true` lets users drag visible top-level panels by handle for the current page session only.
-
-Solo interaction behavior:
-
-- In non-exclusive mode (`exclusiveSolo: false`), if no track is selected, playback is silent.
-- `Shift + click` keeps exclusive-select behavior, except when the clicked track is already the only selected track; in that case, all tracks are selected.
-
-# Alignment Mode
+## Alignment Mode
 
 Alignment config (`init.alignment`):
 
@@ -593,7 +607,7 @@ Alignment behavior summary:
 - Enabling global `SYNC` uses synchronized sources where available.
 - Fixed scalar waveforms (`waveformSource: number`) use local track axis while `SYNC` is off; array sources stay on the reference axis.
 
-# Keyboard Shortcuts
+## Keyboard Shortcuts
 
 When `features.keyboard` is `true`:
 
@@ -620,7 +634,7 @@ Keyboard input goes to the last interacted player instance.
 
 The `F1` help overlay only shows shortcuts that are relevant to the current enabled feature set.
 
-# Looping Behavior
+## Looping Behavior
 
 When looping is enabled, users can set loops via:
 
@@ -634,7 +648,7 @@ Loop behavior:
 - Loop playback takes precedence over full-track repeat
 - Loop region and markers are drawn in seek UI
 
-# Programmatic API
+## Programmatic API
 
 `createTrackSwitch(...)` returns a `TrackSwitchController`.
 
@@ -676,7 +690,7 @@ Events:
 - playback `state`
 - per-track states (`solo`, `volume`, `pan`)
 
-# Utility Exports
+## Utility Exports
 
 Named exports from the ESM package entrypoint (`import { ... } from 'trackswitch'`):
 
@@ -684,3 +698,20 @@ Named exports from the ESM package entrypoint (`import { ... } from 'trackswitch
 - `createInitialPlayerState`, `playerStateReducer`
 - `WaveformEngine`
 - `inferSourceMimeType`, `formatSecondsToHHMMSSmmm`, `parsePresetIndices`
+
+## Validation and Common Errors
+
+Common setup issues:
+
+- Missing `trackGroup`
+  - `init.ui` must include at least one element with `type: 'trackGroup'`.
+- Missing track source
+  - Every track needs at least one `sources[].src`.
+- Invalid alignment setup
+  - `alignment` mode needs `init.alignment`, a valid `referenceTimeColumn`, and `alignment.column` on every track.
+- Invalid seek margins
+  - For seekable `image`, `perTrackImage`, and `waveform`, left and right seek margins together must stay below `100`.
+- Unexpected preset behavior
+  - `presets` are disabled automatically when `exclusiveSolo` is on, including in `alignment` mode.
+- Hidden per-track image
+  - `perTrackImage` only works when `features.exclusiveSolo` is enabled.

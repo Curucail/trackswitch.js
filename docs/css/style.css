@@ -200,6 +200,156 @@ kbd {
     width: min(920px, calc(100% - (var(--ts-doc-page-gutter) * 2)));
 }
 
+.docs-page--config .site-main {
+    width: min(1360px, calc(100% - (var(--ts-doc-page-gutter) * 2)));
+    padding-top: 1rem;
+}
+
+.docs-page--config .site-main > h1,
+.docs-page--config .site-main > h2,
+.docs-page--config .site-main > h3,
+.docs-page--config .site-main > h4,
+.docs-page--config .site-main > p,
+.docs-page--config .site-main > ul,
+.docs-page--config .site-main > ol,
+.docs-page--config .site-main > blockquote,
+.docs-page--config .site-main > .highlighter-rouge,
+.docs-page--config .site-main > pre,
+.docs-page--config .site-main > table {
+    max-width: 900px;
+}
+
+.docs-page--config .site-main > h1 {
+    margin-bottom: 0.7rem;
+    font-size: clamp(2rem, 3.2vw, 2.85rem);
+    letter-spacing: -0.035em;
+    line-height: 1;
+}
+
+.docs-page--config .site-main > h1,
+.docs-page--config .site-main > h2,
+.docs-page--config .site-main > h3,
+.docs-page--config .site-main > h4 {
+    scroll-margin-top: 104px;
+}
+
+.docs-page--config .site-main > h1 + p,
+.docs-page--config .site-main > h1 + p + p {
+    font-size: 1.08rem;
+    color: var(--ts-doc-color-text-secondary);
+}
+
+.docs-page--config .site-main > h2 {
+    margin-top: 3.4rem;
+    padding-top: 1.15rem;
+    border-top: 1px solid rgba(153, 153, 153, 0.35);
+}
+
+.docs-page--config .site-main > h3 {
+    margin-top: 2.2rem;
+    font-size: 1.28rem;
+    color: var(--ts-doc-color-text-primary);
+}
+
+.docs-page--config .site-main > ul:first-of-type {
+    margin: 0 0 1.6rem;
+    padding: 1rem 1.1rem 1rem 1.2rem;
+    list-style: none;
+    background: rgba(255, 255, 255, 0.62);
+    border: 1px solid rgba(153, 153, 153, 0.28);
+    border-radius: 24px;
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.06);
+}
+
+.docs-page--config .site-main > ul:first-of-type > li + li {
+    margin-top: 0.3rem;
+}
+
+.docs-page--config .site-main > ul:first-of-type ul {
+    margin: 0.32rem 0 0;
+    padding-left: 0.85rem;
+    margin-left: 0.25rem;
+    list-style: none;
+    border-left: 1px solid rgba(153, 153, 153, 0.22);
+}
+
+.docs-page--config .site-main > ul:first-of-type li {
+    color: var(--ts-doc-color-text-secondary);
+}
+
+.docs-page--config .site-main > ul:first-of-type ul li {
+    position: relative;
+}
+
+.docs-page--config .site-main > ul:first-of-type ul li::before {
+    content: "";
+    position: absolute;
+    left: -0.55rem;
+    top: 0.82rem;
+    width: 0.32rem;
+    height: 1px;
+    background: rgba(56, 56, 56, 0.45);
+}
+
+.docs-page--config .site-main > ul:first-of-type a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.6rem;
+    padding: 0.05rem 0.45rem;
+    margin-left: -0.45rem;
+    border-radius: 4px;
+    text-decoration: none;
+    color: inherit;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.docs-page--config .site-main > ul:first-of-type a:hover {
+    background: rgba(56, 56, 56, 0.08);
+    color: var(--ts-doc-color-text-primary);
+}
+
+.docs-page--config .site-main > ul:first-of-type li.is-active-parent > a {
+    color: var(--ts-doc-color-text-primary);
+    font-weight: 600;
+}
+
+.docs-page--config .site-main > ul:first-of-type a[aria-current="location"] {
+    background: var(--ts-doc-color-surface-panel-dark);
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.docs-page--config .site-main > table {
+    display: block;
+    overflow-x: auto;
+    border-collapse: collapse;
+    background: rgba(255, 255, 255, 0.55);
+    border: 1px solid rgba(153, 153, 153, 0.28);
+    border-radius: 20px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+}
+
+.docs-page--config .site-main > table th,
+.docs-page--config .site-main > table td {
+    padding: 0.8rem 0.9rem;
+    border-bottom: 1px solid rgba(153, 153, 153, 0.2);
+    text-align: left;
+    vertical-align: top;
+}
+
+.docs-page--config .site-main > table th {
+    font-weight: 700;
+    background: rgba(56, 56, 56, 0.05);
+}
+
+.docs-page--config .site-main > table tr:last-child td {
+    border-bottom: 0;
+}
+
+.docs-page--config .site-main > table td {
+    color: var(--ts-doc-color-text-secondary);
+}
+
 .docs-page--narrow .site-main > h1,
 .docs-page--narrow .site-main > h2,
 .docs-page--narrow .site-main > h3,
@@ -228,6 +378,22 @@ kbd {
 .docs-page--cite .site-main > .highlighter-rouge,
 .docs-page--cite .site-main > pre {
     max-width: 100%;
+}
+
+@media (min-width: 1120px) {
+    .docs-page--config .site-main {
+        padding-left: 450px;
+    }
+
+    .docs-page--config .site-main > ul:first-of-type {
+        position: sticky;
+        top: 96px;
+        float: left;
+        width: 260px;
+        max-height: calc(100vh - 120px);
+        overflow: auto;
+        margin: 0 0 0 -450px;
+    }
 }
 
 .site-main > p code,
