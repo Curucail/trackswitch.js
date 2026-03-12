@@ -411,20 +411,20 @@ kbd {
 
 .site-main > pre,
 .site-main > .highlighter-rouge pre,
-.ts-showcase__code-callout pre,
-.ts-showcase__code-callout .highlighter-rouge pre {
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) pre,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .highlighter-rouge pre {
     overflow-x: auto;
 }
 
 .site-main > pre,
 .site-main > .highlighter-rouge,
-.ts-showcase__code-callout .highlighter-rouge,
-.ts-showcase__code-callout pre,
-.ts-showcase__code-callout .language-html,
-.ts-showcase__code-callout .language-javascript,
-.ts-showcase__code-callout .language-js,
-.ts-showcase__code-callout .language-ts,
-.ts-showcase__code-callout .language-typescript {
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .highlighter-rouge,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) pre,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .language-html,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .language-javascript,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .language-js,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .language-ts,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .language-typescript {
     margin: 0;
     padding: 1.1rem 1.2rem;
     background: var(--ts-doc-color-code-bg);
@@ -434,7 +434,7 @@ kbd {
 }
 
 .site-main > .highlighter-rouge .highlight,
-.ts-showcase__code-callout .highlighter-rouge .highlight {
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .highlighter-rouge .highlight {
     margin: 0;
     padding: 0;
     background: transparent;
@@ -445,8 +445,8 @@ kbd {
 
 .site-main > pre code,
 .site-main > .highlighter-rouge pre code,
-.ts-showcase__code-callout pre code,
-.ts-showcase__code-callout .highlighter-rouge pre code {
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) pre code,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .highlighter-rouge pre code {
     display: block;
     padding: 0;
     background: transparent;
@@ -455,13 +455,13 @@ kbd {
 
 .site-main > pre code span,
 .site-main > .highlighter-rouge pre code span,
-.ts-showcase__code-callout pre code span,
-.ts-showcase__code-callout .highlighter-rouge pre code span,
-.ts-showcase__code-callout .language-html span,
-.ts-showcase__code-callout .language-javascript span,
-.ts-showcase__code-callout .language-js span,
-.ts-showcase__code-callout .language-ts span,
-.ts-showcase__code-callout .language-typescript span {
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) pre code span,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .highlighter-rouge pre code span,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .language-html span,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .language-javascript span,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .language-js span,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .language-ts span,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .language-typescript span {
     padding: 0;
     background: transparent;
     border: 0;
@@ -470,7 +470,7 @@ kbd {
 }
 
 .site-main > .highlighter-rouge code,
-.ts-showcase__code-callout .highlighter-rouge code {
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .highlighter-rouge code {
     color: var(--ts-doc-color-text-primary);
 }
 
@@ -478,10 +478,10 @@ kbd {
 .site-main > .highlighter-rouge .c1,
 .site-main > .highlighter-rouge .cm,
 .site-main > .highlighter-rouge .cp,
-.ts-showcase__code-callout .highlighter-rouge .c,
-.ts-showcase__code-callout .highlighter-rouge .c1,
-.ts-showcase__code-callout .highlighter-rouge .cm,
-.ts-showcase__code-callout .highlighter-rouge .cp {
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .highlighter-rouge .c,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .highlighter-rouge .c1,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .highlighter-rouge .cm,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .highlighter-rouge .cp {
     color: var(--ts-doc-color-text-muted);
     font-style: italic;
 }
@@ -493,13 +493,13 @@ kbd {
 .site-main > .highlighter-rouge .kc,
 .site-main > .highlighter-rouge .nt,
 .site-main > .highlighter-rouge .o,
-.ts-showcase__code-callout .highlighter-rouge .k,
-.ts-showcase__code-callout .highlighter-rouge .kd,
-.ts-showcase__code-callout .highlighter-rouge .kr,
-.ts-showcase__code-callout .highlighter-rouge .kt,
-.ts-showcase__code-callout .highlighter-rouge .kc,
-.ts-showcase__code-callout .highlighter-rouge .nt,
-.ts-showcase__code-callout .highlighter-rouge .o {
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .highlighter-rouge .k,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .highlighter-rouge .kd,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .highlighter-rouge .kr,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .highlighter-rouge .kt,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .highlighter-rouge .kc,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .highlighter-rouge .nt,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .highlighter-rouge .o {
     color: var(--ts-doc-color-accent);
     font-weight: 600;
 }
@@ -509,17 +509,17 @@ kbd {
 .site-main > .highlighter-rouge .s2,
 .site-main > .highlighter-rouge .dl,
 .site-main > .highlighter-rouge .sx,
-.ts-showcase__code-callout .highlighter-rouge .s,
-.ts-showcase__code-callout .highlighter-rouge .s1,
-.ts-showcase__code-callout .highlighter-rouge .s2,
-.ts-showcase__code-callout .highlighter-rouge .dl,
-.ts-showcase__code-callout .highlighter-rouge .sx {
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .highlighter-rouge .s,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .highlighter-rouge .s1,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .highlighter-rouge .s2,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .highlighter-rouge .dl,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .highlighter-rouge .sx {
     color: var(--ts-doc-color-text-error);
     font-weight: 500;
 }
 
 .site-main > .highlighter-rouge .na,
-.ts-showcase__code-callout .highlighter-rouge .na {
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .highlighter-rouge .na {
     color: var(--ts-doc-color-surface-panel-dark);
     font-weight: 600;
 }
@@ -528,10 +528,10 @@ kbd {
 .site-main > .highlighter-rouge .nc,
 .site-main > .highlighter-rouge .nf,
 .site-main > .highlighter-rouge .nb,
-.ts-showcase__code-callout .highlighter-rouge .nx,
-.ts-showcase__code-callout .highlighter-rouge .nc,
-.ts-showcase__code-callout .highlighter-rouge .nf,
-.ts-showcase__code-callout .highlighter-rouge .nb {
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .highlighter-rouge .nx,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .highlighter-rouge .nc,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .highlighter-rouge .nf,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .highlighter-rouge .nb {
     color: var(--ts-doc-color-surface-panel-dark);
 }
 
@@ -539,10 +539,10 @@ kbd {
 .site-main > .highlighter-rouge .mf,
 .site-main > .highlighter-rouge .mh,
 .site-main > .highlighter-rouge .il,
-.ts-showcase__code-callout .highlighter-rouge .mi,
-.ts-showcase__code-callout .highlighter-rouge .mf,
-.ts-showcase__code-callout .highlighter-rouge .mh,
-.ts-showcase__code-callout .highlighter-rouge .il {
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .highlighter-rouge .mi,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .highlighter-rouge .mf,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .highlighter-rouge .mh,
+:is(.ts-showcase__code-callout, .ts-showcase__snippet-panel) .highlighter-rouge .il {
     color: var(--ts-doc-color-text-secondary);
     font-weight: 600;
 }
@@ -666,23 +666,86 @@ kbd {
 }
 
 .ts-showcase__layout {
+    --ts-showcase-side-width: 280px;
+    --ts-showcase-stage-width: 760px;
+    --ts-showcase-gap: 1.8rem;
+    position: relative;
     display: grid;
-    grid-template-columns: minmax(240px, 280px) minmax(560px, 730px) minmax(240px, 280px);
+    grid-template-columns: var(--ts-showcase-side-width) var(--ts-showcase-stage-width) var(--ts-showcase-side-width);
     grid-template-areas: "copy player controls";
-    gap: 1.8rem;
+    gap: var(--ts-showcase-gap);
     align-items: center;
     justify-content: center;
 }
 
 .ts-showcase__player-stage {
     grid-area: player;
+    width: var(--ts-showcase-stage-width);
     display: flex;
-    justify-content: center;
     align-self: center;
 }
 
 .ts-showcase__player-shell {
     width: 100%;
+}
+
+.ts-showcase__snippet-panel {
+    position: absolute;
+    z-index: 25;
+    top: 50%;
+    left: calc(var(--ts-showcase-side-width) + var(--ts-showcase-gap) + 40px);
+    right: 0;
+    height: min(640px, calc(100% - 1.5rem));
+    padding: 1rem 1.05rem;
+    display: flex;
+    align-items: stretch;
+    justify-content: stretch;
+    border: 1px solid rgba(56, 56, 56, 0.14);
+    border-radius: 20px;
+    background: rgba(246, 246, 246, 0.96);
+    box-shadow:
+        0 26px 56px rgba(0, 0, 0, 0.22),
+        inset 0 1px 0 rgba(255, 255, 255, 0.78);
+    opacity: 0;
+    transform: translateY(-50%) scale(0.985);
+    pointer-events: none;
+    transition: opacity 0.24s ease, transform 0.28s ease;
+}
+
+.ts-showcase__snippet-panel .ts-showcase__snippet-shell {
+    width: 100%;
+    max-height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: auto;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.ts-showcase__snippet-panel .ts-showcase__snippet-shell > code,
+.ts-showcase__snippet-panel .ts-showcase__snippet-shell > .language-html,
+.ts-showcase__snippet-panel .ts-showcase__snippet-shell > .language-javascript,
+.ts-showcase__snippet-panel .ts-showcase__snippet-shell > .language-js,
+.ts-showcase__snippet-panel .ts-showcase__snippet-shell > .language-ts,
+.ts-showcase__snippet-panel .ts-showcase__snippet-shell > .language-typescript {
+    display: block;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.ts-showcase__code-callout:hover ~ .ts-showcase__snippet-panel,
+.ts-showcase__code-callout:focus-within ~ .ts-showcase__snippet-panel,
+.ts-showcase__snippet-panel:hover,
+.ts-showcase__snippet-panel:focus-within {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+    pointer-events: auto;
 }
 
 #ts-showcase-player {
@@ -845,6 +908,17 @@ kbd {
     color: var(--ts-doc-color-text-muted);
 }
 
+.ts-showcase__preview-hint {
+    font-size: 0.8rem;
+    line-height: 1.35;
+    color: var(--ts-doc-color-text-muted);
+}
+
+.ts-showcase__snippet-shell code {
+    font-size: 0.73rem;
+    line-height: 1.5;
+}
+
 .ts-copy-btn {
     display: inline-flex;
     align-items: center;
@@ -912,6 +986,14 @@ kbd {
             "player"
             "copy"
             "controls";
+    }
+
+    .ts-showcase__player-stage {
+        width: 100%;
+    }
+
+    .ts-showcase__snippet-panel {
+        display: none;
     }
 }
 
@@ -985,5 +1067,13 @@ kbd {
 
     .site-main > h2 {
         margin-top: 2.3rem;
+    }
+
+    .ts-showcase__preview-hint {
+        display: none;
+    }
+
+    .ts-showcase__snippet-panel {
+        display: none;
     }
 }

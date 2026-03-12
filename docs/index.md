@@ -36,6 +36,7 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
     <aside class="ts-showcase__code-callout" aria-label="Copy player code">
       <h4 class="ts-showcase__code-title">Copy player code</h4>
       <p>Paste this player configuration into your website.</p>
+      <p class="ts-showcase__preview-hint">Hover here to preview the exact code.</p>
       <button id="ts-copy-quickstart" class="ts-copy-btn" type="button">Copy to clipboard</button>
       <p class="ts-showcase__copy-note">Updates as you change the options.</p>
     </aside>
@@ -157,5 +158,9 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
 
       <p id="ts-showcase-note" class="ts-control-note" role="status" aria-live="polite"></p>
     </aside>
+
+    <div class="ts-showcase__snippet-panel" aria-label="Code preview">
+      <pre class="ts-showcase__snippet-shell"><code id="ts-dynamic-quickstart"></code></pre>
+    </div>
   </div>
 </section>

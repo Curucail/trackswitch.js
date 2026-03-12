@@ -3,6 +3,7 @@
 
   var MODE_DEFAULT = 'default';
   var MODE_ALIGNMENT = 'alignment';
+  var SHOWCASE_WAVEFORM_WIDTH = 760;
 
   function createBaseTracks(basePath) {
     return [
@@ -509,7 +510,7 @@
 
       if (model.waveform) {
         snippetLines.push(
-          "      { type: 'waveform', width: 1200, height: 150},"
+          "      { type: 'waveform', width: " + SHOWCASE_WAVEFORM_WIDTH + ", height: 150},"
         );
       }
 
@@ -597,10 +598,10 @@
 
       if (model.waveform) {
         snippetLines.push(
-          "      { type: 'waveform', width: 1200, height: 120, waveformSource: 0},"
+          "      { type: 'waveform', width: " + SHOWCASE_WAVEFORM_WIDTH + ", height: 120, waveformSource: 0},"
         );
         snippetLines.push(
-          "      { type: 'waveform', width: 1200, height: 120, waveformSource: 1},"
+          "      { type: 'waveform', width: " + SHOWCASE_WAVEFORM_WIDTH + ", height: 120, waveformSource: 1},"
         );
       }
 
@@ -816,20 +817,20 @@
         if (isAlignmentMode(currentMode)) {
           uiConfig.push({
             type: 'waveform',
-            width: 1200,
+            width: SHOWCASE_WAVEFORM_WIDTH,
             height: 120,
             waveformSource: 0,
           });
           uiConfig.push({
             type: 'waveform',
-            width: 1200,
+            width: SHOWCASE_WAVEFORM_WIDTH,
             height: 120,
             waveformSource: 1,
           });
         } else {
           uiConfig.push({
             type: 'waveform',
-            width: 1200,
+            width: SHOWCASE_WAVEFORM_WIDTH,
             height: 150,
           });
         }
