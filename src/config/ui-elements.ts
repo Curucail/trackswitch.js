@@ -11,6 +11,7 @@ import {
     TrackSwitchWarpingMatrixConfig,
 } from '../domain/types';
 import { clampPercent } from '../shared/math';
+import { normalizeWaveformSource, serializeWaveformSource } from '../shared/waveform-source';
 import { assertAllowedKeys, toConfigRecord } from './validation';
 
 const uiImageAllowedKeys = ['type', 'src', 'seekable', 'style', 'seekMarginLeft', 'seekMarginRight'] as const;
@@ -100,18 +101,6 @@ function normalizeWaveformMaxZoom(value: unknown): number {
     }
 
     return value;
-}
-
-function normalizeWaveformSource(value: 'audible' | number | undefined): 'audible' | number {
-    if (value === 'audible' || value === undefined) {
-        return 'audible';
-    }
-
-    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
-        return 'audible';
-    }
-
-    return Math.floor(value);
 }
 
 function normalizeWaveformTimer(value: boolean | undefined): boolean | undefined {
@@ -410,7 +399,7 @@ function injectWaveform(root: HTMLElement, waveform: TrackSwitchWaveformConfig):
     canvas.width = toCanvasSize(waveform.width, 1200);
     canvas.height = toCanvasSize(waveform.height, 150);
     canvas.setAttribute('data-waveform-bar-width', String(normalizeWaveformBarWidth(waveform.waveformBarWidth)));
-    canvas.setAttribute('data-waveform-source', String(normalizeWaveformSource(waveform.waveformSource)));
+    canvas.setAttribute('data-waveform-source', serializeWaveformSource(waveform.waveformSource));
     canvas.setAttribute('data-waveform-max-zoom', String(normalizeWaveformMaxZoom(waveform.maxZoom)));
 
     if (typeof waveform.timer === 'boolean') {

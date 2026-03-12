@@ -2,6 +2,7 @@ import { TrackRuntime } from '../domain/types';
 import { closestInRoot } from '../shared/dom';
 import { clamp } from '../shared/math';
 import { getSeekMetrics } from '../shared/seek';
+import { parseWaveformSource, resolveFixedWaveformTrackIndex } from '../shared/waveform-source';
 
 interface SeekTimelineContext {
     duration: number;
@@ -563,17 +564,11 @@ export function getSeekTimelineContext(ctx: any, seekingElement: any): any {
             return referenceContext;
         }
 
-        const waveformSource = seekingElement.getAttribute('data-waveform-source');
-        if (!waveformSource || waveformSource === 'audible') {
+        const waveformSource = parseWaveformSource(seekingElement.getAttribute('data-waveform-source'));
+        const trackIndex = resolveFixedWaveformTrackIndex(this.runtimes.length, waveformSource);
+        if (trackIndex === null) {
             return referenceContext;
         }
-
-        const parsedSource = Number(waveformSource);
-        if (!Number.isFinite(parsedSource) || parsedSource < 0) {
-            return referenceContext;
-        }
-
-        const trackIndex = Math.floor(parsedSource);
         const runtime = this.runtimes[trackIndex];
         if (!runtime) {
             return referenceContext;

@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', function () {
         width: 1200,
         height: 150,
         maxZoom: 5, // optional minimum visible window in seconds
-        waveformSource: 'audible', // or a track index (e.g. 1) for a fixed track waveform
+        waveformSource: 'audible', // or 1 / [0, 2, 3] to limit the waveform to specific tracks
       },
       {
         type: 'trackGroup',
@@ -176,7 +176,7 @@ Alignment mode behavior:
 - `alignment` starts with `SYNC` off and single-track solo behavior (`features.exclusiveSolo`) enforced automatically
 - `alignment`: switching solo track remaps position and restarts playback on the newly active track timeline
 - `alignment`: enabling global `SYNC` allows multi-track listening again, switches synced tracks to synchronized sources, and locks non-synced tracks muted
-- `alignment`: with `SYNC` off, fixed waveforms (`waveformSource: <trackIndex>`) render on their native track timeline and their waveform seek overlays (playhead + loop markers/region) use that same local axis; interactions are converted to reference time internally
+- `alignment`: with `SYNC` off, fixed scalar waveforms (`waveformSource: <trackIndex>`) render on their native track timeline and their waveform seek overlays (playhead + loop markers/region) use that same local axis; array sources stay on the reference axis
 - `alignment`: with `SYNC` on, synced-track timeline mapping is bypassed (identity) and fixed waveforms return to shared reference-axis behavior
 - `alignment`: waveform containers show a top-right timer badge in `current / duration` format; fixed-source waveforms use the track-local axis when `SYNC` is off
 - `alignment`: optional `sheetMusic` UI entries render MusicXML via OpenSheetMusicDisplay and highlight the currently mapped measure using a measure-cursor overlay

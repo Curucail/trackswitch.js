@@ -117,12 +117,8 @@ export class WaveformEngine {
         }
 
         const count = Math.max(1, Math.floor(peakCount));
-        const anySolo = runtimes.some(function(runtime) {
-            return runtime.state.solo;
-        });
-
         const audible = runtimes.filter(function(runtime) {
-            return anySolo ? runtime.state.solo : true;
+            return runtime.state.volume > 0;
         });
 
         if (!audible.length) {
@@ -140,13 +136,29 @@ export class WaveformEngine {
         }
 
         const mappedPeaks = audible
-            .map((runtime) => this.getTrackTimelinePeaks(
-                runtime,
-                count,
-                barWidth,
-                safeTimelineDuration,
-                trackTimelineProjector
-            ))
+            .map((runtime) => {
+                const peaks = this.getTrackTimelinePeaks(
+                    runtime,
+                    count,
+                    barWidth,
+                    safeTimelineDuration,
+                    trackTimelineProjector
+                );
+                if (!peaks) {
+                    return null;
+                }
+
+                const weight = Math.max(0, Math.min(1, runtime.state.volume));
+                if (weight >= 0.999999) {
+                    return peaks;
+                }
+
+                const scaled = new Float32Array(peaks.length);
+                for (let index = 0; index < peaks.length; index += 1) {
+                    scaled[index] = peaks[index] * weight;
+                }
+                return scaled;
+            })
             .filter(function(peaks): peaks is Float32Array {
                 return !!peaks;
             });

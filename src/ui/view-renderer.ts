@@ -4,6 +4,7 @@ import {
     TrackRuntime,
     TrackSwitchFeatures,
     TrackSwitchUiState,
+    WaveformSource,
 } from '../domain/types';
 import { TrackTimelineProjector, WaveformEngine } from '../engine/waveform-engine';
 import * as d3 from 'd3';
@@ -65,7 +66,7 @@ interface WaveformSeekSurfaceMetadata {
     surface: HTMLElement;
     tileLayer: HTMLElement;
     seekWrap: HTMLElement;
-    waveformSource: 'audible' | number;
+    waveformSource: WaveformSource;
     originalHeight: number;
     barWidth: number;
     maxZoomSeconds: number;
@@ -647,14 +648,14 @@ public renderWaveformsInternal(
 
 public getWaveformSourceRuntimes(
         runtimes: TrackRuntime[],
-        waveformSource: 'audible' | number
+        waveformSource: WaveformSource
     ): TrackRuntime[] {
         return viewRendererWaveform.getWaveformSourceRuntimes(this, runtimes, waveformSource);
     }
 
 public resolveWaveformTrackIndex(
         runtimes: TrackRuntime[],
-        waveformSource: 'audible' | number
+        waveformSource: WaveformSource
     ): number | null {
         return viewRendererWaveform.resolveWaveformTrackIndex(this, runtimes, waveformSource);
     }
@@ -690,7 +691,7 @@ public applyFixedWaveformLocalSeekVisuals(
 
 public getLongestWaveformSourceDuration(
         runtimes: TrackRuntime[],
-        waveformSource: 'audible' | number
+        waveformSource: WaveformSource
     ): number {
         return viewRendererWaveform.getLongestWaveformSourceDuration(this, runtimes, waveformSource);
     }

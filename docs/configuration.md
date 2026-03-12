@@ -424,7 +424,7 @@ Fields:
 - `height?: number` (default `150`)
 - `waveformBarWidth?: number` (default `1`)
 - `maxZoom?: number` (default `5`)
-- `waveformSource?: 'audible' | number` (default `'audible'`)
+- `waveformSource?: 'audible' | number | number[]` (default `'audible'`)
 - `timer?: boolean`
 - `style?: string`
 - `seekMarginLeft?: number`
@@ -436,8 +436,10 @@ Normalization and behavior:
 - `maxZoom` is the minimum visible waveform window in seconds.
 - `maxZoom: 0.5` allows zooming in to a half-second excerpt.
 - `maxZoom <= 0` disables waveform zoom.
-- `waveformSource: 'audible'` uses current audible mix.
-- `waveformSource: <trackIndex>` renders a fixed track waveform.
+- `waveformSource: 'audible'` uses the current audible output.
+- `waveformSource: <trackIndex>` limits the waveform to that track, then applies audible-state filtering.
+- `waveformSource: [0, 2, 3]` limits the waveform to those tracks, then applies audible-state filtering.
+- Per-track volume changes scale waveform contribution continuously; tracks at `volume: 0` contribute nothing.
 - `seekMarginLeft + seekMarginRight` must be less than `100`.
 - `timer` default depends on mode if omitted:
   - `default` mode: off
@@ -589,7 +591,7 @@ Alignment behavior summary:
 - Initial state starts with `SYNC` off and single-solo behavior.
 - Switching solo track remaps position through alignment mapping.
 - Enabling global `SYNC` uses synchronized sources where available.
-- Fixed-source waveforms (`waveformSource: number`) use local track axis while `SYNC` is off.
+- Fixed scalar waveforms (`waveformSource: number`) use local track axis while `SYNC` is off; array sources stay on the reference axis.
 
 # Keyboard Shortcuts
 

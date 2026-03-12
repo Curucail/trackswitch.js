@@ -1,8 +1,14 @@
-import { TrackRuntime, TrackSwitchFeatures } from '../domain/types';
+import { TrackRuntime, TrackSwitchFeatures, WaveformSource } from '../domain/types';
 import { sanitizeInlineStyle } from '../shared/dom';
 import { formatSecondsToHHMMSSmmm } from '../shared/format';
 import { clampPercent } from '../shared/math';
 import { TrackTimelineProjector } from '../engine/waveform-engine';
+import {
+    parseWaveformSource,
+    resolveFixedWaveformTrackIndex,
+    resolveWaveformTrackIndices,
+    serializeWaveformSource,
+} from '../shared/waveform-source';
 
 interface WaveformSeekSurfaceMetadata {
     wrapper: HTMLElement;
@@ -11,7 +17,7 @@ interface WaveformSeekSurfaceMetadata {
     surface: HTMLElement;
     tileLayer: HTMLElement;
     seekWrap: HTMLElement;
-    waveformSource: 'audible' | number;
+    waveformSource: WaveformSource;
     originalHeight: number;
     barWidth: number;
     maxZoomSeconds: number;
@@ -94,18 +100,25 @@ function parseWaveformBarWidth(value: string | null, fallback: number): number {
     return Math.max(1, Math.floor(parsed));
 }
 
-function parseWaveformSource(value: string | null): 'audible' | number {
-    const raw = typeof value === 'string' ? value.trim() : '';
-    if (!raw || raw === 'audible') {
-        return 'audible';
+function isWaveformTrackAudible(ctx: any, runtimes: TrackRuntime[], trackIndex: number): boolean {
+    const runtime = runtimes[trackIndex];
+    if (!runtime || runtime.state.volume <= 0) {
+        return false;
     }
 
-    const parsed = Number(raw);
-    if (!Number.isFinite(parsed) || parsed < 0) {
-        return 'audible';
+    if (ctx.features.mode === 'alignment') {
+        return true;
     }
 
-    return Math.floor(parsed);
+    const anySolo = runtimes.some(function(entry: TrackRuntime) {
+        return entry.state.solo;
+    });
+
+    if (anySolo) {
+        return runtime.state.solo;
+    }
+
+    return !!ctx.features.exclusiveSolo;
 }
 
 function parseWaveformTimerEnabled(value: string | null, mode: TrackSwitchFeatures['mode']): boolean {
@@ -294,7 +307,7 @@ export function wrapWaveformCanvases(ctx: any): any {
 
             if (seekWrap instanceof HTMLElement) {
                 seekWrap.setAttribute('data-seek-surface', 'waveform');
-                seekWrap.setAttribute('data-waveform-source', String(waveformSource));
+                seekWrap.setAttribute('data-waveform-source', serializeWaveformSource(waveformSource));
                 const timingNode = timerEnabled
                     ? this.createWaveformTimingNode(overlay)
                     : null;
@@ -557,29 +570,22 @@ export function computeNormalizationPeak(ctx: any, waveformEngine: any, sourceRu
 
 export function buildWaveformNormalizationCacheKey(ctx: any, surfaceMetadata: any, runtimes: any, sourceRuntimes: any, fullDuration: any, renderBarWidth: any, useLocalAxis: any, hasTimelineProjector: any): any {
     return (function(this: any, surfaceMetadata: any, runtimes: any, sourceRuntimes: any, fullDuration: any, renderBarWidth: any, useLocalAxis: any, hasTimelineProjector: any) {
-        const sourceKey = surfaceMetadata.waveformSource === 'audible'
-            ? runtimes.map((runtime: TrackRuntime, index: number) => {
-                const duration = runtime.buffer ? runtime.buffer.duration : 0;
-                const timingDuration = runtime.timing ? runtime.timing.effectiveDuration : 0;
-                return [
-                    index,
-                    runtime.state.solo ? 1 : 0,
-                    Math.round(duration * 1000),
-                    Math.round(timingDuration * 1000),
-                ].join(':');
-            }).join('|')
-            : sourceRuntimes.map((runtime: TrackRuntime, index: number) => {
-                const duration = runtime.buffer ? runtime.buffer.duration : 0;
-                const timingDuration = runtime.timing ? runtime.timing.effectiveDuration : 0;
-                return [
-                    index,
-                    Math.round(duration * 1000),
-                    Math.round(timingDuration * 1000),
-                ].join(':');
-            }).join('|');
+        const sourceKey = runtimes.map((runtime: TrackRuntime, index: number) => {
+            const duration = runtime.buffer ? runtime.buffer.duration : 0;
+            const timingDuration = runtime.timing ? runtime.timing.effectiveDuration : 0;
+            const selected = sourceRuntimes.indexOf(runtime) !== -1 ? 1 : 0;
+            return [
+                index,
+                selected,
+                runtime.state.solo ? 1 : 0,
+                Math.round(runtime.state.volume * 1000),
+                Math.round(duration * 1000),
+                Math.round(timingDuration * 1000),
+            ].join(':');
+        }).join('|');
 
         return [
-            String(surfaceMetadata.waveformSource),
+            serializeWaveformSource(surfaceMetadata.waveformSource),
             useLocalAxis ? 'local' : 'reference',
             hasTimelineProjector ? 'projector' : 'identity',
             Math.round(fullDuration * 1000),
@@ -1014,44 +1020,16 @@ export function renderWaveformsInternal(ctx: any, waveformEngine: any, runtimes:
 
 export function getWaveformSourceRuntimes(ctx: any, runtimes: any, waveformSource: any): any {
     return (function(this: any, runtimes: any, waveformSource: any) {
-        const trackIndex = this.resolveWaveformTrackIndex(runtimes, waveformSource);
-        if (trackIndex === null) {
-            const selected = runtimes.filter(function(runtime: TrackRuntime) {
-                return runtime.state.solo;
-            });
-
-            if (selected.length > 0) {
-                return selected;
-            }
-
-            return this.features.exclusiveSolo ? runtimes : [];
-        }
-
-        const selected = runtimes[trackIndex];
-
-        return [{
-            ...selected,
-            state: {
-                solo: false,
-                volume: selected.state.volume,
-                pan: selected.state.pan,
-            },
-        }];
+        return resolveWaveformTrackIndices(runtimes.length, waveformSource)
+            .filter((trackIndex: number) => isWaveformTrackAudible(this, runtimes, trackIndex))
+            .map((trackIndex: number) => runtimes[trackIndex]);
     
     }).call(ctx, runtimes, waveformSource);
 }
 
 export function resolveWaveformTrackIndex(ctx: any, runtimes: any, waveformSource: any): any {
     return (function(this: any, runtimes: any, waveformSource: any) {
-        if (waveformSource === 'audible') {
-            return null;
-        }
-
-        if (!Number.isFinite(waveformSource) || waveformSource < 0 || waveformSource >= runtimes.length) {
-            return null;
-        }
-
-        return Math.floor(waveformSource);
+        return resolveFixedWaveformTrackIndex(runtimes.length, waveformSource);
     
     }).call(ctx, runtimes, waveformSource);
 }
@@ -1078,11 +1056,13 @@ export function applyFixedWaveformLocalSeekVisuals(ctx: any, state: any, wavefor
         }
 
         this.waveformSeekSurfaces.forEach((surface: WaveformSeekSurfaceMetadata) => {
-            if (surface.waveformSource === 'audible') {
+            const trackIndex = typeof surface.waveformSource === 'number'
+                ? surface.waveformSource
+                : null;
+            if (trackIndex === null) {
                 return;
             }
 
-            const trackIndex = surface.waveformSource;
             const trackDuration = sanitizeDuration(waveformTimelineContext.getTrackDuration(trackIndex));
             if (trackDuration <= 0) {
                 return;
@@ -1126,24 +1106,16 @@ export function getLongestWaveformSourceDuration(ctx: any, runtimes: any, wavefo
                 : (runtime.buffer ? runtime.buffer.duration : 0);
         };
 
-        if (waveformSource === 'audible') {
-            // For audible source, find longest among all tracks
-            let longest = 0;
-            runtimes.forEach(function(runtime: TrackRuntime) {
-                const duration = getRuntimeDuration(runtime);
-                if (duration > longest) {
-                    longest = duration;
-                }
-            });
-            return longest;
-        } else {
-            // For fixed track source, return that track's duration
-            const trackIndex = Math.floor(waveformSource);
-            if (trackIndex >= 0 && trackIndex < runtimes.length) {
-                return getRuntimeDuration(runtimes[trackIndex]);
+        const sourceRuntimes = this.getWaveformSourceRuntimes(runtimes, waveformSource);
+        let longest = 0;
+        sourceRuntimes.forEach(function(runtime: TrackRuntime) {
+            const duration = getRuntimeDuration(runtime);
+            if (duration > longest) {
+                longest = duration;
             }
-            return 0;
-        }
+        });
+
+        return longest;
     
     }).call(ctx, runtimes, waveformSource);
 }
@@ -1157,19 +1129,20 @@ export function updateWaveformTiming(ctx: any, state: any, runtimes: any, wavefo
 
             let position = state.position;
             let duration = this.getLongestWaveformSourceDuration(runtimes, surface.waveformSource);
+            const fixedTrackIndex = resolveFixedWaveformTrackIndex(runtimes.length, surface.waveformSource);
 
             if (
                 waveformTimelineContext
                 && waveformTimelineContext.enabled
-                && surface.waveformSource !== 'audible'
+                && fixedTrackIndex !== null
             ) {
                 const trackDuration = sanitizeDuration(
-                    waveformTimelineContext.getTrackDuration(surface.waveformSource)
+                    waveformTimelineContext.getTrackDuration(fixedTrackIndex)
                 );
                 if (trackDuration > 0) {
                     duration = trackDuration;
                     position = clampTime(
-                        waveformTimelineContext.referenceToTrackTime(surface.waveformSource, state.position),
+                        waveformTimelineContext.referenceToTrackTime(fixedTrackIndex, state.position),
                         0,
                         trackDuration
                     );

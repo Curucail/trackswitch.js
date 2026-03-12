@@ -44,4 +44,5 @@ export type {
     TrackSwitchWaveformConfig,
     TrackSwitchWaveformUiElement,
     TrackSwitchMode,
+    WaveformSource,
 } from './domain/types';
