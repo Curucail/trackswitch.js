@@ -576,7 +576,7 @@ Behavior:
 - Tempo plot derives tempo from a strictly monotonic warping path, fills gaps by linear interpolation on the reference-time frame grid, measures local beat-duration ratios across the configured smoothing span, and maps the result back to tempo percent.
 - If reference points are roughly uniformly spaced, the estimate behaves like a centered finite-difference over a seconds-based span.
 - If reference spacing is irregular, the span is only approximately seconds-based because the effective `reference[k+h] - reference[k-h]` changes along the path.
-- Tempo plot uses a fixed logarithmic y-axis from `10` to `1000`.
+- Tempo plot uses a fixed logarithmic y-axis from `20` to `500`.
 - If `globalScoreBPM` is set, BPM ticks are shown on the left axis and percent ticks on the right.
 - If `globalScoreBPM` is not set, the player tries to derive BPM from the first loaded `sheetMusic` score and otherwise keeps percent-only axis labels.
 - If the warping path cannot be made strictly monotonic, the tempo curve is hidden and a warning message is shown instead.
