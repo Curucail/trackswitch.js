@@ -14,7 +14,6 @@
     "example_dtw/**",
     "example_ulli/**",
     "scripts/**",
-    "test/**",
     "src/types/**/*.d.ts"
   ]
 }
