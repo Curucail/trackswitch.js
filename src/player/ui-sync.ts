@@ -9,6 +9,16 @@ function emitPositionUpdate(controller: TrackSwitchControllerImpl): void {
     controller.emit('position', createPositionEventPayload(controller));
 }
 
+function shouldSuppressWaveformPlaybackFollow(controller: TrackSwitchControllerImpl): boolean {
+    return !!controller.waveformMinimapDragState
+        || !!controller.pinchZoomState
+        || !!controller.pendingWaveformTouchSeek
+        || (
+            controller.state.currentlySeeking
+            && controller.isWaveformSeekSurface(controller.seekingElement)
+        );
+}
+
 export function applyTrackProperties(ctx: TrackSwitchControllerImpl): void {
     const panSupported = ctx.audioEngine.supportsStereoPanning();
     const noSoloFallbackGate = ctx.isAlignmentMode() && ctx.globalSyncEnabled ? 0 : undefined;
@@ -42,12 +52,19 @@ export function applyTrackProperties(ctx: TrackSwitchControllerImpl): void {
 
 export function updateMainControls(ctx: TrackSwitchControllerImpl): void {
     const uiState = createUiState(ctx);
+    const suppressWaveformPlaybackFollow = shouldSuppressWaveformPlaybackFollow(ctx);
 
     ctx.renderer.updateMainControls(
         uiState,
         ctx.runtimes,
         ctx.getWaveformTimelineContext(),
         ctx.getWarpingMatrixContext()
+    );
+    ctx.renderer.updateWaveformPlaybackFollow(
+        uiState,
+        ctx.runtimes,
+        ctx.getWaveformTimelineContext(),
+        suppressWaveformPlaybackFollow
     );
     ctx.sheetMusicEngine.updatePosition(ctx.state.position, ctx.isSyncReferenceAxisActive());
 
@@ -56,12 +73,19 @@ export function updateMainControls(ctx: TrackSwitchControllerImpl): void {
 
 export function updatePlaybackPositionUi(ctx: TrackSwitchControllerImpl): void {
     const uiState = createUiState(ctx);
+    const suppressWaveformPlaybackFollow = shouldSuppressWaveformPlaybackFollow(ctx);
 
     ctx.renderer.updatePlaybackPosition(
         uiState,
         ctx.runtimes,
         ctx.getWaveformTimelineContext(),
         ctx.getWarpingMatrixContext()
+    );
+    ctx.renderer.updateWaveformPlaybackFollow(
+        uiState,
+        ctx.runtimes,
+        ctx.getWaveformTimelineContext(),
+        suppressWaveformPlaybackFollow
     );
     ctx.sheetMusicEngine.updatePosition(ctx.state.position, ctx.isSyncReferenceAxisActive());
 

@@ -2,6 +2,7 @@ export type LoopMarker = 'A' | 'B';
 export type TrackSwitchMode = 'default' | 'alignment';
 export type AlignmentOutOfRangeMode = 'clamp' | 'linear';
 export type WaveformSource = 'audible' | number | number[];
+export type WaveformPlaybackFollowMode = 'off' | 'center' | 'jump';
 
 export interface TrackAlignmentConfig {
     csv: string;
@@ -73,6 +74,7 @@ export interface TrackSwitchWaveformConfig {
     waveformBarWidth?: number;
     maxZoom?: number;
     waveformSource?: WaveformSource;
+    playbackFollowMode?: WaveformPlaybackFollowMode;
     timer?: boolean;
     style?: string;
     seekMarginLeft?: number;

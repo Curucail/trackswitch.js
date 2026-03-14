@@ -65,6 +65,7 @@
     'timer',
     'keyboard',
     'waveform',
+    'waveformPlaybackFollowMode',
     'sheetNotePreview',
     'warpingMatrix',
     'customImage',
@@ -87,6 +88,7 @@
     'timer',
     'keyboard',
     'waveform',
+    'waveformPlaybackFollowMode',
     'sheetNotePreview',
     'warpingMatrix',
     'customImage',
@@ -113,6 +115,7 @@
     timer: true,
     keyboard: true,
     waveform: true,
+    waveformPlaybackFollowMode: 'off',
     sheetNotePreview: false,
     warpingMatrix: false,
     customImage: false,
@@ -192,15 +195,25 @@
     }
 
     function getControl(name) {
-      return controlsRoot.querySelector('input[name="' + name + '"]');
+      return controlsRoot.querySelector(
+        'input[name="' + name + '"], select[name="' + name + '"]'
+      );
     }
 
     function getModeDisabledControlNames(mode) {
       return MODE_DISABLED_CONTROLS[mode] || [];
     }
 
+    function isControlUnavailableInMode(name, mode) {
+      return getModeDisabledControlNames(mode).indexOf(name) !== -1;
+    }
+
     function isControlDisabled(name, model, mode) {
-      if (getModeDisabledControlNames(mode).indexOf(name) !== -1) {
+      if (isControlUnavailableInMode(name, mode)) {
+        return true;
+      }
+
+      if (name === 'waveformPlaybackFollowMode' && !model.waveform) {
         return true;
       }
 
@@ -389,17 +402,24 @@
       CONTROL_NAMES.forEach(function (name) {
         var control = getControl(name);
         var row;
+        var hidden;
         var disabled;
         if (!control) {
           return;
         }
 
-        control.checked = Boolean(model[name]);
+        if (control.type === 'checkbox') {
+          control.checked = Boolean(model[name]);
+        } else {
+          control.value = typeof model[name] === 'string' ? model[name] : '';
+        }
         disabled = isControlDisabled(name, model, currentMode);
         control.disabled = disabled;
 
         row = control.closest('.ts-control-row');
         if (row) {
+          hidden = isControlUnavailableInMode(name, currentMode);
+          row.classList.toggle('is-hidden', hidden);
           row.classList.toggle('is-disabled', disabled);
         }
       });
@@ -410,7 +430,14 @@
       var model = {};
       CONTROL_NAMES.forEach(function (name) {
         var control = getControl(name);
-        model[name] = control ? control.checked : Boolean(fallbackModel[name]);
+        if (!control) {
+          model[name] = fallbackModel[name];
+          return;
+        }
+
+        model[name] = control.type === 'checkbox'
+          ? control.checked
+          : control.value;
       });
       return model;
     }
@@ -418,6 +445,13 @@
     function normalizeControlState(model, mode) {
       var normalized = Object.assign({}, model);
       var notes = [];
+
+      if (
+        normalized.waveformPlaybackFollowMode !== 'center'
+        && normalized.waveformPlaybackFollowMode !== 'jump'
+      ) {
+        normalized.waveformPlaybackFollowMode = 'off';
+      }
 
       if (isAlignmentMode(mode)) {
         if (normalized.customImage) {
@@ -442,7 +476,7 @@
       } else {
         if (normalized.sheetNotePreview) {
           normalized.sheetNotePreview = false;
-          notes.push('Sheet note preview is only available in alignment mode.');
+          notes.push('Score preview is only available in alignment mode.');
         }
         if (normalized.warpingMatrix) {
           normalized.warpingMatrix = false;
@@ -482,6 +516,10 @@
     function renderDefaultQuickstartSnippet(model) {
       var snippetLines;
       var snippetText;
+      var waveformFollowSnippet =
+        model.waveformPlaybackFollowMode !== 'off'
+          ? ", playbackFollowMode: '" + model.waveformPlaybackFollowMode + "'"
+          : '';
 
       snippetLines = [
         '<link rel="stylesheet" href="trackswitch.min.css" />',
@@ -510,7 +548,7 @@
 
       if (model.waveform) {
         snippetLines.push(
-          "      { type: 'waveform', width: " + SHOWCASE_WAVEFORM_WIDTH + ", height: 150},"
+          "      { type: 'waveform', width: " + SHOWCASE_WAVEFORM_WIDTH + ", height: 150" + waveformFollowSnippet + " },"
         );
       }
 
@@ -562,6 +600,10 @@
     function renderAlignmentQuickstartSnippet(model) {
       var snippetLines;
       var snippetText;
+      var waveformFollowSnippet =
+        model.waveformPlaybackFollowMode !== 'off'
+          ? ", playbackFollowMode: '" + model.waveformPlaybackFollowMode + "'"
+          : '';
 
       snippetLines = [
         '<link rel="stylesheet" href="trackswitch.min.css" />',
@@ -587,7 +629,7 @@
           "        type: 'sheetMusic',",
           "        src: 'Schubert_D911-03.xml',",
           "        measureColumn: 'measure',",
-          '        maxHeight: 380,',
+          '        maxHeight: 350,',
           '        renderScale: 0.65,',
           '        followPlayback: true,',
           '        cursorColor: \'#999999\',',
@@ -599,16 +641,16 @@
 
       if (model.waveform) {
         snippetLines.push(
-          "      { type: 'waveform', width: " + SHOWCASE_WAVEFORM_WIDTH + ", height: 120, waveformSource: 0},"
+          "      { type: 'waveform', width: " + SHOWCASE_WAVEFORM_WIDTH + ", height: 100, waveformSource: 0" + waveformFollowSnippet + " },"
         );
         snippetLines.push(
-          "      { type: 'waveform', width: " + SHOWCASE_WAVEFORM_WIDTH + ", height: 120, waveformSource: 1},"
+          "      { type: 'waveform', width: " + SHOWCASE_WAVEFORM_WIDTH + ", height: 100, waveformSource: 1" + waveformFollowSnippet + " },"
         );
       }
 
       if (model.warpingMatrix) {
         snippetLines.push(
-          "      { type: 'warpingMatrix', height: 240 },"
+          "      { type: 'warpingMatrix', height: 200 },"
         );
       }
 
@@ -806,7 +848,7 @@
           type: 'sheetMusic',
           src: basePath + '/Schubert_D911-03.xml',
           measureColumn: 'measure',
-          maxHeight: 380,
+          maxHeight: 350,
           renderScale: 0.65,
           followPlayback: true,
           cursorColor: '#999999',
@@ -816,31 +858,48 @@
 
       if (model.waveform) {
         if (isAlignmentMode(currentMode)) {
-          uiConfig.push({
+          var alignmentWaveformOne = {
             type: 'waveform',
             width: SHOWCASE_WAVEFORM_WIDTH,
-            height: 120,
+            height: 100,
             waveformSource: 0,
-          });
-          uiConfig.push({
+          };
+          var alignmentWaveformTwo = {
             type: 'waveform',
             width: SHOWCASE_WAVEFORM_WIDTH,
-            height: 120,
+            height: 100,
             waveformSource: 1,
-          });
+          };
+
+          if (model.waveformPlaybackFollowMode !== 'off') {
+            alignmentWaveformOne.playbackFollowMode =
+              model.waveformPlaybackFollowMode;
+            alignmentWaveformTwo.playbackFollowMode =
+              model.waveformPlaybackFollowMode;
+          }
+
+          uiConfig.push(alignmentWaveformOne);
+          uiConfig.push(alignmentWaveformTwo);
         } else {
-          uiConfig.push({
+          var waveformConfig = {
             type: 'waveform',
             width: SHOWCASE_WAVEFORM_WIDTH,
             height: 150,
-          });
+          };
+
+          if (model.waveformPlaybackFollowMode !== 'off') {
+            waveformConfig.playbackFollowMode =
+              model.waveformPlaybackFollowMode;
+          }
+
+          uiConfig.push(waveformConfig);
         }
       }
 
       if (isAlignmentMode(currentMode) && model.warpingMatrix) {
         uiConfig.push({
           type: 'warpingMatrix',
-          height: 240,
+          height: 200,
         });
       }
 

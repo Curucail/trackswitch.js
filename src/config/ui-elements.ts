@@ -9,6 +9,7 @@ import {
     TrackSwitchWaveformConfig,
     TrackSwitchTrackGroupUiElement,
     TrackSwitchWarpingMatrixConfig,
+    WaveformPlaybackFollowMode,
 } from '../domain/types';
 import { clampPercent } from '../shared/math';
 import { normalizeWaveformSource, serializeWaveformSource } from '../shared/waveform-source';
@@ -23,6 +24,7 @@ const uiWaveformAllowedKeys = [
     'waveformBarWidth',
     'maxZoom',
     'waveformSource',
+    'playbackFollowMode',
     'timer',
     'style',
     'seekMarginLeft',
@@ -117,6 +119,14 @@ function normalizeWaveformTimer(value: boolean | undefined): boolean | undefined
     return typeof value === 'boolean' ? value : undefined;
 }
 
+function normalizeWaveformPlaybackFollowMode(value: unknown): WaveformPlaybackFollowMode {
+    if (value === 'center' || value === 'jump') {
+        return value;
+    }
+
+    return 'off';
+}
+
 function validateSeekMargins(
     config: { seekMarginLeft?: number; seekMarginRight?: number },
     label: string
@@ -139,6 +149,7 @@ function normalizeWaveformConfig<T extends TrackSwitchWaveformConfig>(waveform: 
         waveformBarWidth: normalizeWaveformBarWidth(waveform.waveformBarWidth),
         maxZoom: normalizeWaveformMaxZoom(waveform.maxZoom),
         waveformSource: normalizeWaveformSource(waveform.waveformSource),
+        playbackFollowMode: normalizeWaveformPlaybackFollowMode(waveform.playbackFollowMode),
         timer: normalizeWaveformTimer(waveform.timer),
     };
 
@@ -393,6 +404,10 @@ function injectWaveform(root: HTMLElement, waveform: TrackSwitchWaveformConfig):
     canvas.setAttribute('data-waveform-bar-width', String(normalizeWaveformBarWidth(waveform.waveformBarWidth)));
     canvas.setAttribute('data-waveform-source', serializeWaveformSource(waveform.waveformSource));
     canvas.setAttribute('data-waveform-max-zoom', String(normalizeWaveformMaxZoom(waveform.maxZoom)));
+    canvas.setAttribute(
+        'data-waveform-playback-follow-mode',
+        normalizeWaveformPlaybackFollowMode(waveform.playbackFollowMode)
+    );
 
     if (typeof waveform.timer === 'boolean') {
         canvas.setAttribute('data-waveform-timer', String(waveform.timer));

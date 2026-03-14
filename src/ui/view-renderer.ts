@@ -4,6 +4,7 @@ import {
     TrackRuntime,
     TrackSwitchFeatures,
     TrackSwitchUiState,
+    WaveformPlaybackFollowMode,
     WaveformSource,
 } from '../domain/types';
 import { TrackTimelineProjector, WaveformEngine } from '../engine/waveform-engine';
@@ -67,6 +68,7 @@ interface WaveformSeekSurfaceMetadata {
     tileLayer: HTMLElement;
     seekWrap: HTMLElement;
     waveformSource: WaveformSource;
+    playbackFollowMode: WaveformPlaybackFollowMode;
     originalHeight: number;
     barWidth: number;
     maxZoomSeconds: number;
@@ -700,6 +702,21 @@ public updateWaveformTiming(
         waveformTimelineContext?: WaveformTimelineContext
     ): void {
         return viewRendererWaveform.updateWaveformTiming(this, state, runtimes, waveformTimelineContext);
+    }
+
+public updateWaveformPlaybackFollow(
+        state: TrackSwitchUiState,
+        runtimes: TrackRuntime[],
+        waveformTimelineContext?: WaveformTimelineContext,
+        suppressFollow = false
+    ): void {
+        return viewRendererWaveform.updateWaveformPlaybackFollow(
+            this,
+            state,
+            runtimes,
+            waveformTimelineContext,
+            suppressFollow
+        );
     }
 
 public updateSeekWrapVisuals(

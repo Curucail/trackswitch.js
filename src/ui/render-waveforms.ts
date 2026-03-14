@@ -1,4 +1,9 @@
-import { TrackRuntime, TrackSwitchFeatures, WaveformSource } from '../domain/types';
+import {
+    TrackRuntime,
+    TrackSwitchFeatures,
+    WaveformPlaybackFollowMode,
+    WaveformSource,
+} from '../domain/types';
 import { sanitizeInlineStyle } from '../shared/dom';
 import { formatSecondsToHHMMSSmmm } from '../shared/format';
 import { clampPercent } from '../shared/math';
@@ -18,6 +23,7 @@ interface WaveformSeekSurfaceMetadata {
     tileLayer: HTMLElement;
     seekWrap: HTMLElement;
     waveformSource: WaveformSource;
+    playbackFollowMode: WaveformPlaybackFollowMode;
     originalHeight: number;
     barWidth: number;
     maxZoomSeconds: number;
@@ -147,6 +153,16 @@ function parseWaveformMaxZoom(value: string | null): number {
     return parsed;
 }
 
+function parseWaveformPlaybackFollowMode(value: string | null): WaveformPlaybackFollowMode {
+    const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+
+    if (normalized === 'center' || normalized === 'jump') {
+        return normalized;
+    }
+
+    return 'off';
+}
+
 function clampWaveformZoom(zoom: number, maximum: number): number {
     if (!Number.isFinite(zoom)) {
         return MIN_WAVEFORM_ZOOM;
@@ -182,6 +198,104 @@ function updateWaveformMinimapViewport(surfaceMetadata: WaveformSeekSurfaceMetad
     const viewportState = getWaveformViewportState(surfaceMetadata);
     surfaceMetadata.zoomViewportNode.style.left = (viewportState.startRatio * minimapWidth) + 'px';
     surfaceMetadata.zoomViewportNode.style.width = Math.max(0, viewportState.widthRatio * minimapWidth) + 'px';
+}
+
+function resolveWaveformPlaybackMetrics(
+    ctx: any,
+    surfaceMetadata: WaveformSeekSurfaceMetadata,
+    state: { position: number },
+    runtimes: TrackRuntime[],
+    waveformTimelineContext?: {
+        enabled: boolean;
+        referenceToTrackTime(trackIndex: number, referenceTime: number): number;
+        getTrackDuration(trackIndex: number): number;
+    }
+): { position: number; duration: number } {
+    let position = state.position;
+    let duration = ctx.getLongestWaveformSourceDuration(runtimes, surfaceMetadata.waveformSource);
+    const fixedTrackIndex = resolveFixedWaveformTrackIndex(runtimes.length, surfaceMetadata.waveformSource);
+
+    if (
+        waveformTimelineContext
+        && waveformTimelineContext.enabled
+        && fixedTrackIndex !== null
+    ) {
+        const trackDuration = sanitizeDuration(
+            waveformTimelineContext.getTrackDuration(fixedTrackIndex)
+        );
+        if (trackDuration > 0) {
+            duration = trackDuration;
+            position = clampTime(
+                waveformTimelineContext.referenceToTrackTime(fixedTrackIndex, state.position),
+                0,
+                trackDuration
+            );
+        } else {
+            duration = 0;
+            position = 0;
+        }
+    }
+
+    const safeDuration = sanitizeDuration(duration);
+    return {
+        position: safeDuration > 0 ? clampTime(position, 0, safeDuration) : 0,
+        duration: safeDuration,
+    };
+}
+
+function resolvePlaybackFollowScrollLeft(
+    surfaceMetadata: WaveformSeekSurfaceMetadata,
+    playheadRatio: number
+): number | null {
+    if (surfaceMetadata.playbackFollowMode === 'off') {
+        return null;
+    }
+
+    const viewportWidth = Math.max(1, surfaceMetadata.scrollContainer.clientWidth);
+    const surfaceWidth = getWaveformSurfaceWidth(surfaceMetadata);
+    const maxScrollLeft = Math.max(0, surfaceWidth - viewportWidth);
+
+    if (maxScrollLeft <= 0) {
+        return null;
+    }
+
+    const playheadPx = clampTime(playheadRatio, 0, 1) * surfaceWidth;
+    const currentScrollLeft = clampTime(surfaceMetadata.scrollContainer.scrollLeft, 0, maxScrollLeft);
+    const visibleStart = currentScrollLeft;
+    const visibleEnd = currentScrollLeft + viewportWidth;
+
+    if (surfaceMetadata.playbackFollowMode === 'center') {
+        return clampTime(playheadPx - (viewportWidth / 2), 0, maxScrollLeft);
+    }
+
+    if (playheadPx < visibleStart || playheadPx > visibleEnd) {
+        return clampTime(playheadPx, 0, maxScrollLeft);
+    }
+
+    return null;
+}
+
+function applyWaveformPlaybackFollowScroll(
+    ctx: any,
+    surfaceMetadata: WaveformSeekSurfaceMetadata,
+    nextScrollLeft: number | null
+): boolean {
+    if (!Number.isFinite(nextScrollLeft)) {
+        return false;
+    }
+
+    const surfaceWidth = getWaveformSurfaceWidth(surfaceMetadata);
+    const maxScrollLeft = Math.max(0, surfaceWidth - surfaceMetadata.scrollContainer.clientWidth);
+    const clampedScrollLeft = clampTime(nextScrollLeft as number, 0, maxScrollLeft);
+
+    if (Math.abs(clampedScrollLeft - surfaceMetadata.scrollContainer.scrollLeft) < 0.000001) {
+        return false;
+    }
+
+    surfaceMetadata.scrollContainer.scrollLeft = clampedScrollLeft;
+    updateWaveformMinimapViewport(surfaceMetadata);
+    ctx.scheduleVisibleWaveformTileRefresh();
+    return true;
 }
 
 function getWaveformMaximumZoom(surfaceMetadata: WaveformSeekSurfaceMetadata, durationSeconds: number): number {
@@ -259,6 +373,9 @@ export function wrapWaveformCanvases(ctx: any): any {
             const waveformSource = parseWaveformSource(canvasElement.getAttribute('data-waveform-source'));
             const barWidth = parseWaveformBarWidth(canvasElement.getAttribute('data-waveform-bar-width'), 1);
             const maxZoomSeconds = parseWaveformMaxZoom(canvasElement.getAttribute('data-waveform-max-zoom'));
+            const playbackFollowMode = parseWaveformPlaybackFollowMode(
+                canvasElement.getAttribute('data-waveform-playback-follow-mode')
+            );
             const timerEnabled = parseWaveformTimerEnabled(
                 canvasElement.getAttribute('data-waveform-timer'),
                 this.features.mode
@@ -330,6 +447,7 @@ export function wrapWaveformCanvases(ctx: any): any {
                     tileLayer: tileLayer,
                     seekWrap: seekWrap,
                     waveformSource: waveformSource,
+                    playbackFollowMode: playbackFollowMode,
                     originalHeight: originalHeight,
                     barWidth: barWidth,
                     maxZoomSeconds: maxZoomSeconds,
@@ -1127,41 +1245,59 @@ export function updateWaveformTiming(ctx: any, state: any, runtimes: any, wavefo
                 return;
             }
 
-            let position = state.position;
-            let duration = this.getLongestWaveformSourceDuration(runtimes, surface.waveformSource);
-            const fixedTrackIndex = resolveFixedWaveformTrackIndex(runtimes.length, surface.waveformSource);
-
-            if (
+            const playbackMetrics = resolveWaveformPlaybackMetrics(
+                this,
+                surface,
+                state,
+                runtimes,
                 waveformTimelineContext
-                && waveformTimelineContext.enabled
-                && fixedTrackIndex !== null
-            ) {
-                const trackDuration = sanitizeDuration(
-                    waveformTimelineContext.getTrackDuration(fixedTrackIndex)
-                );
-                if (trackDuration > 0) {
-                    duration = trackDuration;
-                    position = clampTime(
-                        waveformTimelineContext.referenceToTrackTime(fixedTrackIndex, state.position),
-                        0,
-                        trackDuration
-                    );
-                } else {
-                    duration = 0;
-                    position = 0;
-                }
-            }
-
-            const safeDuration = sanitizeDuration(duration);
-            const safePosition = safeDuration > 0
-                ? clampTime(position, 0, safeDuration)
-                : 0;
-            surface.timingNode.textContent = formatSecondsToHHMMSSmmm(safePosition)
+            );
+            surface.timingNode.textContent = formatSecondsToHHMMSSmmm(playbackMetrics.position)
                 + ' / '
-                + formatSecondsToHHMMSSmmm(safeDuration);
+                + formatSecondsToHHMMSSmmm(playbackMetrics.duration);
         });
     
     }).call(ctx, state, runtimes, waveformTimelineContext);
+}
+
+export function updateWaveformPlaybackFollow(
+    ctx: any,
+    state: any,
+    runtimes: any,
+    waveformTimelineContext: any,
+    suppressFollow: any
+): any {
+    return (function(this: any, state: any, runtimes: any, waveformTimelineContext: any, suppressFollow: any) {
+        if (suppressFollow) {
+            return;
+        }
+
+        this.waveformSeekSurfaces.forEach((surface: WaveformSeekSurfaceMetadata) => {
+            if (surface.playbackFollowMode === 'off') {
+                return;
+            }
+
+            const playbackMetrics = resolveWaveformPlaybackMetrics(
+                this,
+                surface,
+                state,
+                runtimes,
+                waveformTimelineContext
+            );
+            if (playbackMetrics.duration <= 0) {
+                return;
+            }
+
+            applyWaveformPlaybackFollowScroll(
+                this,
+                surface,
+                resolvePlaybackFollowScrollLeft(
+                    surface,
+                    playbackMetrics.position / playbackMetrics.duration
+                )
+            );
+        });
+    }).call(ctx, state, runtimes, waveformTimelineContext, suppressFollow);
 }
 
 export function updateSeekWrapVisuals(ctx: any, seekWrap: any, position: any, duration: any, loop: any): any {

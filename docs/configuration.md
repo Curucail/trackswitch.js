@@ -483,7 +483,16 @@ Notes:
 ### Waveform UI Element
 
 ```javascript
-{ type: 'waveform', width: 1200, height: 150, waveformBarWidth: 2, maxZoom: 5, waveformSource: 'audible', timer: true }
+{
+  type: 'waveform',
+  width: 1200,
+  height: 150,
+  waveformBarWidth: 2,
+  maxZoom: 5,
+  waveformSource: 'audible',
+  playbackFollowMode: 'center',
+  timer: true,
+}
 ```
 
 Fields:
@@ -493,6 +502,7 @@ Fields:
 - `waveformBarWidth?: number` (default `1`)
 - `maxZoom?: number` (default `5`)
 - `waveformSource?: 'audible' | number | number[]` (default `'audible'`)
+- `playbackFollowMode?: 'off' | 'center' | 'jump'` (default `'off'`)
 - `timer?: boolean`
 - `style?: string`
 - `seekMarginLeft?: number`
@@ -507,6 +517,9 @@ Normalization and behavior:
 - `waveformSource: 'audible'` uses the current audible output.
 - `waveformSource: <trackIndex>` limits the waveform to that track, then applies audible-state filtering.
 - `waveformSource: [0, 2, 3]` limits the waveform to those tracks, then applies audible-state filtering.
+- `playbackFollowMode: 'off'` preserves the current behavior and never auto-scrolls the waveform viewport.
+- `playbackFollowMode: 'center'` keeps the playhead centered by scrolling the waveform around it when possible.
+- `playbackFollowMode: 'jump'` only scrolls when the playhead leaves the visible region, then jumps so the playhead becomes the left edge of the viewport.
 - Per-track volume changes scale waveform contribution continuously; tracks at `volume: 0` contribute nothing.
 - `seekMarginLeft + seekMarginRight` must be less than `100`.
 - `timer` default depends on mode if omitted:

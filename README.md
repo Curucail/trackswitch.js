@@ -110,7 +110,7 @@ Features
 - Per-track solo, volume, and pan controls
 - Presets for common track combinations
 - (Seekable) images and per-track images
-- Interactive waveforms with zoom support
+- Interactive waveforms with zoom support and optional playback-follow modes
 - Interactive Sheet music (musicxml) display with playback-following cursor
 - Keyboard shortcuts
 

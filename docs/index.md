@@ -123,6 +123,14 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
           <input type="checkbox" name="waveform" checked />
         </label>
         <label class="ts-control-row">
+          <span>Waveform Follow</span>
+          <select name="waveformPlaybackFollowMode">
+            <option value="off" selected>Off</option>
+            <option value="center">Centered</option>
+            <option value="jump">Jump to Edge</option>
+          </select>
+        </label>
+        <label class="ts-control-row">
           <span>Custom Cover Image</span>
           <input type="checkbox" name="customImage" />
         </label>
@@ -135,11 +143,11 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
           <input type="checkbox" name="trackImageBySolo" />
         </label>
         <label class="ts-control-row">
-          <span>Sheet Note Preview (Alignment)</span>
+          <span>Score</span>
           <input type="checkbox" name="sheetNotePreview" checked />
         </label>
         <label class="ts-control-row">
-          <span>Warping Matrix + Local Tempo Deviation (Alignment)</span>
+          <span>Warping Path + Local Tempo Deviation</span>
           <input type="checkbox" name="warpingMatrix" />
         </label>
       </div>
