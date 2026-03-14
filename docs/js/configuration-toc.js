@@ -95,6 +95,17 @@
   const updateActiveFromScroll = () => {
     ticking = false;
 
+    const scrollBottom = window.scrollY + window.innerHeight;
+    const pageBottom = document.documentElement.scrollHeight;
+    if (scrollBottom >= pageBottom - 4) {
+      const lastId = items[items.length - 1]?.id;
+      if (lastId && lastId !== activeId) {
+        activeId = lastId;
+        setActive(activeId);
+      }
+      return;
+    }
+
     let nextId = items[0].id;
     for (const item of items) {
       const { top } = item.section.getBoundingClientRect();
