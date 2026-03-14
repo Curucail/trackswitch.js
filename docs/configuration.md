@@ -250,6 +250,7 @@ TrackSwitch.createTrackSwitch(rootElement, {
   alignment: {
     csv: 'dtw_alignment.csv',
     referenceTimeColumn: 't_ref_sec',
+    referenceTimeColumnSync: 'perf_b_sec',
     outOfRange: 'clamp',
   },
   features: {
@@ -424,7 +425,7 @@ Source fields (`sources[]` and `alignment.synchronizedSources[]`):
 Source loading notes:
 
 - If multiple `sources` are listed, the first playable source is used.
-- In alignment mode, `synchronizedSources` enables the global `SYNC` button.
+- In alignment mode, `synchronizedSources` enables the global `SYNC` button only when `alignment.referenceTimeColumnSync` is also valid.
 
 Preset behavior:
 
@@ -546,7 +547,9 @@ Behavior:
 
 - `maxWidth` / `maxHeight` are rounded and ignored if `< 1`.
 - `renderScale` must be finite and `> 0`.
-- `measureColumn` uses `init.alignment.referenceTimeColumn` as the reference-time axis.
+- `measureColumn` follows the currently active alignment reference axis.
+  - With `SYNC` off, it uses `init.alignment.referenceTimeColumn`.
+  - With `SYNC` on, it uses `init.alignment.referenceTimeColumnSync`.
 - Clicking a rendered measure seeks to mapped reference time when `init.alignment` and `measureColumn` are both available.
 - If MusicXML fails to load, only the sheet panel fails.
 - If alignment-based measure mapping fails or is not configured, score can still render but measure sync is disabled.
@@ -588,6 +591,7 @@ Alignment config (`init.alignment`):
 
 - `csv: string` (required)
 - `referenceTimeColumn: string` (required)
+- `referenceTimeColumnSync?: string`
 - `outOfRange?: 'clamp' | 'linear'` (default `clamp`)
 
 Per-track alignment config lives at:
@@ -605,16 +609,19 @@ Sheet music measure sync:
 
 - Works in both `default` and `alignment` mode.
 - `sheetMusic.measureColumn` reads measure numbers from `init.alignment.csv`.
-- `measureColumn` may be the same as `alignment.referenceTimeColumn`.
+- `measureColumn` may be the same as either `alignment.referenceTimeColumn` or `alignment.referenceTimeColumnSync`.
 - Without `init.alignment` or `measureColumn`, the score still renders but measure sync is disabled.
 
 Alignment behavior summary:
 
-- `referenceTimeColumn` defines the public timeline axis.
+- The player always uses one active reference axis at a time.
+  - With `SYNC` off, the active axis is `referenceTimeColumn`.
+  - With `SYNC` on, the active axis is `referenceTimeColumnSync`.
 - Seekbar/timer/events use reference time.
 - Initial state starts with `SYNC` off and single-solo behavior.
 - Switching solo track remaps position through alignment mapping.
-- Enabling global `SYNC` uses synchronized sources where available.
+- Enabling global `SYNC` switches the public timeline to `referenceTimeColumnSync` and uses synchronized sources where available.
+- If `referenceTimeColumnSync` is missing or invalid, alignment mode still works but `SYNC` stays unavailable.
 - Fixed scalar waveforms (`waveformSource: number`) use local track axis while `SYNC` is off; array sources stay on the reference axis.
 
 ## Keyboard Shortcuts
@@ -720,7 +727,7 @@ Common setup issues:
 - Invalid alignment setup
   - `alignment` mode needs `init.alignment`, a valid `referenceTimeColumn`, and `alignment.column` on every track.
 - Missing sheet music measure mapping
-  - `sheetMusic.measureColumn` needs `init.alignment.csv` plus `alignment.referenceTimeColumn`; otherwise the score renders without measure sync.
+  - `sheetMusic.measureColumn` needs `init.alignment.csv` plus a valid active alignment reference column; otherwise the score renders without measure sync.
 - Invalid seek margins
   - For seekable `image`, `perTrackImage`, and `waveform`, left and right seek margins together must stay below `100`.
 - Unexpected preset behavior

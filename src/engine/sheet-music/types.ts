@@ -1,11 +1,21 @@
 import { OpenSheetMusicDisplay } from 'opensheetmusicdisplay';
 import type { MeasureMapPoint } from '../../shared/measure-map';
 
+export interface SheetMusicMeasureMapsByAxis {
+    base: MeasureMapPoint[] | null;
+    sync: MeasureMapPoint[] | null;
+}
+
+export interface SheetMusicProjectedTempoSegmentsByAxis {
+    base: SheetMusicProjectedTempoSegment[] | null;
+    sync: SheetMusicProjectedTempoSegment[] | null;
+}
+
 export interface SheetMusicHostConfig {
     host: HTMLElement;
     scrollContainer: HTMLElement | null;
     source: string;
-    measureMapPromise: Promise<MeasureMapPoint[] | null>;
+    measureMapsPromise: Promise<SheetMusicMeasureMapsByAxis>;
     renderScale: number | null;
     followPlayback: boolean;
     cursorColor: string;
@@ -26,7 +36,7 @@ export interface SheetMusicEntryModel {
     host: HTMLElement;
     scrollContainer: HTMLElement | null;
     source: string;
-    measureMapPromise: Promise<MeasureMapPoint[] | null>;
+    measureMapsPromise: Promise<SheetMusicMeasureMapsByAxis>;
     renderScale: number | null;
     followPlayback: boolean;
     cursorColor: string;
@@ -44,7 +54,10 @@ export interface SheetMusicEntryModel {
         };
         cursorElement?: Element | null;
     } | null;
+    syncReferenceTimeEnabled: boolean;
+    measureMaps: SheetMusicMeasureMapsByAxis;
     measureMap: MeasureMapPoint[] | null;
+    projectedTempoSegmentsByAxis: SheetMusicProjectedTempoSegmentsByAxis;
     projectedTempoSegments: SheetMusicProjectedTempoSegment[] | null;
     fallbackTempoBpm: number | null;
     availableMeasures: number[];

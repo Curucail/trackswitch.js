@@ -493,7 +493,7 @@ export function initializeSheetMusic(ctx: any): any {
             cursorAlpha: number;
         }) => {
             const measureColumn = typeof host.measureColumn === 'string' ? host.measureColumn.trim() : '';
-            const measureMapPromise = measureColumn
+            const measureMapsPromise = measureColumn
                 ? (
                     !this.alignmentConfig
                         ? Promise.reject(
@@ -510,20 +510,53 @@ export function initializeSheetMusic(ctx: any): any {
                             );
                         }
 
-                        return buildMeasureMapFromColumns(
+                        const baseMeasureMap = buildMeasureMapFromColumns(
                             parsedCsv.rows,
                             parsedCsv.headers,
                             referenceTimeColumn,
                             measureColumn
                         );
+
+                        const referenceTimeColumnSync = this.resolveReferenceTimeColumnSync(this.alignmentConfig);
+                        let syncMeasureMap = null;
+                        if (
+                            referenceTimeColumnSync
+                            && parsedCsv.headers.indexOf(referenceTimeColumnSync) >= 0
+                        ) {
+                            try {
+                                syncMeasureMap = buildMeasureMapFromColumns(
+                                    parsedCsv.rows,
+                                    parsedCsv.headers,
+                                    referenceTimeColumnSync,
+                                    measureColumn
+                                );
+                            } catch (error) {
+                                console.warn(
+                                    '[trackswitch] Failed to load sync-axis sheet-music measure map:',
+                                    host.source,
+                                    error
+                                );
+                            }
+                        }
+
+                        return {
+                            base: baseMeasureMap,
+                            sync: syncMeasureMap,
+                        };
                     })
-                : Promise.resolve(null);
+                : Promise.resolve({
+                    base: null,
+                    sync: null,
+                });
 
             return {
                 ...host,
-                measureMapPromise: measureMapPromise.catch((error: unknown) => {
+                measureMapsPromise: measureMapsPromise.catch((error: unknown) => {
                     if (!measureColumn) {
-                        return null;
+                        return {
+                            base: null,
+                            sync: null,
+                        };
                     }
 
                     throw error;
@@ -537,7 +570,7 @@ export function initializeSheetMusic(ctx: any): any {
         }
 
         await this.sheetMusicEngine.initialize(hosts);
-        this.sheetMusicEngine.updatePosition(this.state.position);
+        this.sheetMusicEngine.updatePosition(this.state.position, this.isSyncReferenceAxisActive());
     }).call(ctx);
 }
 

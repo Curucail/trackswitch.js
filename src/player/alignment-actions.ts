@@ -15,6 +15,71 @@ interface TrackAlignmentConverter {
     trackToReference: TimeMappingSeries;
 }
 
+type AlignmentReferenceAxisKey = 'base' | 'sync';
+
+function buildAlignmentAxisContext(
+    controller: any,
+    parsedCsv: ParsedNumericCsv,
+    mappingByTrack: Map<number, string>,
+    referenceTimeColumn: string
+): { axis: { referenceTimeColumn: string; referenceDuration: number; converters: Map<number, TrackAlignmentConverter> } | null; error: string | null } {
+    const referenceDuration = controller.resolveReferenceDuration(parsedCsv.rows, referenceTimeColumn);
+    if (typeof referenceDuration === 'string') {
+        return {
+            axis: null,
+            error: referenceDuration,
+        };
+    }
+
+    const converters = new Map<number, TrackAlignmentConverter>();
+    for (const [trackIndex, column] of mappingByTrack) {
+        try {
+            const referenceToTrack = buildColumnTimeMapping(parsedCsv.rows, referenceTimeColumn, column);
+            const trackToReference = buildColumnTimeMapping(parsedCsv.rows, column, referenceTimeColumn);
+
+            converters.set(trackIndex, {
+                referenceToTrack: referenceToTrack,
+                trackToReference: trackToReference,
+            });
+        } catch (error) {
+            return {
+                axis: null,
+                error: error instanceof Error
+                    ? error.message
+                    : 'Failed to build alignment mappings.',
+            };
+        }
+    }
+
+    return {
+        axis: {
+            referenceTimeColumn: referenceTimeColumn,
+            referenceDuration: referenceDuration,
+            converters: converters,
+        },
+        error: null,
+    };
+}
+
+function getAlignmentAxisContext(controller: any, axisKey: AlignmentReferenceAxisKey): any {
+    if (!controller.alignmentContext) {
+        return null;
+    }
+
+    if (axisKey === 'sync') {
+        return controller.alignmentContext.syncAxis;
+    }
+
+    return controller.alignmentContext.baseAxis;
+}
+
+function getActiveAlignmentAxisContext(controller: any): any {
+    return getAlignmentAxisContext(
+        controller,
+        controller.getActiveAlignmentAxisKey()
+    );
+}
+
 function buildWarpingSeries(
     runtime: TrackRuntime,
     trackIndex: number,
@@ -97,8 +162,7 @@ export function toggleGlobalSync(ctx: any): any {
             return;
         }
 
-        const hasAnySyncedTrack = this.runtimes.some((runtime: TrackRuntime) => this.hasSyncedVariant(runtime));
-        if (!hasAnySyncedTrack) {
+        if (!this.isGlobalSyncAvailable()) {
             return;
         }
 
@@ -108,13 +172,31 @@ export function toggleGlobalSync(ctx: any): any {
 
 export function applyGlobalSyncState(ctx: any, syncOn: any): any {
     return (function(this: any, syncOn: any) {
-        if (!this.isAlignmentMode()) {
+        if (!this.isAlignmentMode() || !this.alignmentContext) {
             return;
         }
 
-        const restartPosition = this.state.playing
-            ? clamp(this.currentPlaybackReferencePosition(), 0, this.longestDuration)
-            : clamp(this.state.position, 0, this.longestDuration);
+        if (syncOn && !this.isGlobalSyncAvailable()) {
+            return;
+        }
+
+        const sourceAxisKey = this.getActiveAlignmentAxisKey();
+        const targetAxisKey: AlignmentReferenceAxisKey = syncOn ? 'sync' : 'base';
+        const targetAxis = getAlignmentAxisContext(this, targetAxisKey);
+        if (!targetAxis) {
+            return;
+        }
+
+        const currentPosition = this.state.playing
+            ? this.currentPlaybackReferencePosition()
+            : this.state.position;
+        const mappedPosition = this.mapAlignmentAxisTime(currentPosition, sourceAxisKey, targetAxisKey);
+        const mappedLoopPointA = this.state.loop.pointA === null
+            ? null
+            : this.mapAlignmentAxisTime(this.state.loop.pointA, sourceAxisKey, targetAxisKey);
+        const mappedLoopPointB = this.state.loop.pointB === null
+            ? null
+            : this.mapAlignmentAxisTime(this.state.loop.pointB, sourceAxisKey, targetAxisKey);
 
         if (syncOn) {
             this.preSyncSoloTrackIndex = this.getActiveSoloTrackIndex();
@@ -160,12 +242,32 @@ export function applyGlobalSyncState(ctx: any, syncOn: any): any {
             this.preSyncSoloTrackIndex = null;
         }
 
+        this.longestDuration = targetAxis.referenceDuration;
+        this.state.loop.pointA = mappedLoopPointA === null
+            ? null
+            : clamp(mappedLoopPointA, 0, this.longestDuration);
+        this.state.loop.pointB = mappedLoopPointB === null
+            ? null
+            : clamp(mappedLoopPointB, 0, this.longestDuration);
+        if (
+            this.state.loop.pointA !== null
+            && this.state.loop.pointB !== null
+            && this.state.loop.pointA > this.state.loop.pointB
+        ) {
+            const swappedPoint = this.state.loop.pointA;
+            this.state.loop.pointA = this.state.loop.pointB;
+            this.state.loop.pointB = swappedPoint;
+        }
+
         this.applyTrackProperties();
-        this.dispatch({ type: 'set-position', position: restartPosition });
+        this.dispatch({
+            type: 'set-position',
+            position: clamp(mappedPosition, 0, this.longestDuration),
+        });
 
         if (this.state.playing) {
             this.stopAudio();
-            this.startAudio(restartPosition);
+            this.startAudio(this.state.position);
         }
 
         this.updateMainControls();
@@ -208,7 +310,7 @@ export function initializeAlignmentMode(ctx: any): any {
         this.setEffectiveSoloMode(true);
 
         this.alignmentContext = alignmentContextResult;
-        this.longestDuration = this.alignmentContext.referenceDuration;
+        this.longestDuration = this.alignmentContext.baseAxis.referenceDuration;
 
         const activeTrackIndex = this.getActiveSoloTrackIndex();
         if (activeTrackIndex >= 0) {
@@ -264,30 +366,19 @@ export function buildAlignmentContext(ctx: any): any {
             }
         }
 
-        const referenceDuration = this.resolveReferenceDuration(parsedCsv.rows, referenceTimeColumn);
-        if (typeof referenceDuration === 'string') {
-            return referenceDuration;
+        const baseAxisResult = buildAlignmentAxisContext(
+            this,
+            parsedCsv,
+            mappingByTrack,
+            referenceTimeColumn
+        );
+        if (!baseAxisResult.axis || baseAxisResult.error) {
+            return baseAxisResult.error || 'Failed to build alignment mappings.';
         }
-
-        const converters = new Map<number, TrackAlignmentConverter>();
-        for (const [trackIndex, column] of mappingByTrack) {
-            try {
-                const referenceToTrack = buildColumnTimeMapping(parsedCsv.rows, referenceTimeColumn, column);
-                const trackToReference = buildColumnTimeMapping(parsedCsv.rows, column, referenceTimeColumn);
-
-                converters.set(trackIndex, {
-                    referenceToTrack: referenceToTrack,
-                    trackToReference: trackToReference,
-                });
-            } catch (error) {
-                return error instanceof Error
-                    ? error.message
-                    : 'Failed to build alignment mappings.';
-            }
-        }
+        const baseAxis = baseAxisResult.axis;
 
         const warpingSeriesByTrack = new Map<number, WarpingMatrixTrackSeries>();
-        converters.forEach((converter: TrackAlignmentConverter, trackIndex: number) => {
+        baseAxis.converters.forEach((converter: TrackAlignmentConverter, trackIndex: number) => {
             const column = mappingByTrack.get(trackIndex);
             const normalizedColumn = typeof column === 'string' ? column.trim() : '';
             if (!normalizedColumn) {
@@ -301,14 +392,58 @@ export function buildAlignmentContext(ctx: any): any {
 
             warpingSeriesByTrack.set(
                 trackIndex,
-                buildWarpingSeries(runtime, trackIndex, normalizedColumn, converter, referenceDuration)
+                buildWarpingSeries(runtime, trackIndex, normalizedColumn, converter, baseAxis.referenceDuration)
             );
         });
 
+        const syncReferenceTimeColumn = this.resolveReferenceTimeColumnSync(this.alignmentConfig);
+        let syncAxis = null;
+        let baseToSync = null;
+        let syncToBase = null;
+
+        if (syncReferenceTimeColumn) {
+            if (!availableColumns.has(syncReferenceTimeColumn)) {
+                console.warn(
+                    '[trackswitch] Alignment CSV is missing configured referenceTimeColumnSync:',
+                    syncReferenceTimeColumn
+                );
+            } else {
+                const syncAxisResult = buildAlignmentAxisContext(
+                    this,
+                    parsedCsv,
+                    mappingByTrack,
+                    syncReferenceTimeColumn
+                );
+
+                if (!syncAxisResult.axis || syncAxisResult.error) {
+                    console.warn(
+                        '[trackswitch] Failed to initialize sync reference timeline:',
+                        syncAxisResult.error
+                    );
+                } else {
+                    try {
+                        baseToSync = buildColumnTimeMapping(parsedCsv.rows, referenceTimeColumn, syncReferenceTimeColumn);
+                        syncToBase = buildColumnTimeMapping(parsedCsv.rows, syncReferenceTimeColumn, referenceTimeColumn);
+                        syncAxis = syncAxisResult.axis;
+                    } catch (error) {
+                        syncAxis = null;
+                        baseToSync = null;
+                        syncToBase = null;
+                        console.warn(
+                            '[trackswitch] Failed to build sync reference bridge mappings:',
+                            error
+                        );
+                    }
+                }
+            }
+        }
+
         return {
-            referenceDuration: referenceDuration,
             outOfRange: resolveAlignmentOutOfRangeMode(this.alignmentConfig.outOfRange),
-            converters: converters,
+            baseAxis: baseAxis,
+            syncAxis: syncAxis,
+            baseToSync: baseToSync,
+            syncToBase: syncToBase,
             columnByTrack: new Map<number, string>(mappingByTrack),
             uniqueColumnOrder: this.collectUniqueAlignmentColumns(mappingByTrack),
             warpingSeriesByTrack: warpingSeriesByTrack,
@@ -370,20 +505,25 @@ export function getWarpingMatrixContext(ctx: any): any {
             };
         }
 
+        const baseAxis = this.alignmentContext.baseAxis;
+        const baseReferenceTime = this.globalSyncEnabled
+            ? this.mapAlignmentAxisTime(this.state.position, this.getActiveAlignmentAxisKey(), 'base')
+            : clamp(this.state.position, 0, baseAxis.referenceDuration);
+        const currentScoreBpm = this.sheetMusicEngine.resolveReferenceBpm(baseReferenceTime, 'base');
+
         const activeTrackIndex = this.getActiveSoloTrackIndex();
         if (activeTrackIndex < 0) {
             return {
                 enabled: true,
                 syncEnabled: this.globalSyncEnabled,
-                referenceDuration: this.longestDuration,
-                currentReferenceTime: this.state.position,
-                currentScoreBpm: this.sheetMusicEngine.resolveReferenceBpm(this.state.position),
+                referenceDuration: baseAxis.referenceDuration,
+                currentReferenceTime: baseReferenceTime,
+                currentScoreBpm: currentScoreBpm,
                 columnOrder: this.alignmentContext.uniqueColumnOrder,
                 trackSeries: [],
             };
         }
 
-        const referenceDuration = this.longestDuration;
         const trackSeries = this.alignmentContext.warpingSeriesByTrack.has(activeTrackIndex)
             ? [this.alignmentContext.warpingSeriesByTrack.get(activeTrackIndex) as WarpingMatrixTrackSeries]
             : [];
@@ -391,9 +531,9 @@ export function getWarpingMatrixContext(ctx: any): any {
         return {
             enabled: true,
             syncEnabled: this.globalSyncEnabled,
-            referenceDuration: this.longestDuration,
-            currentReferenceTime: this.state.position,
-            currentScoreBpm: this.sheetMusicEngine.resolveReferenceBpm(this.state.position),
+            referenceDuration: baseAxis.referenceDuration,
+            currentReferenceTime: baseReferenceTime,
+            currentScoreBpm: currentScoreBpm,
             columnOrder: this.alignmentContext.uniqueColumnOrder,
             trackSeries: trackSeries,
         };
@@ -429,6 +569,20 @@ export function resolveReferenceTimeColumn(ctx: any, config: any): any {
         }
 
         return configuredReferenceTimeColumn;
+    }).call(ctx, config);
+}
+
+export function resolveReferenceTimeColumnSync(ctx: any, config: any): any {
+    return (function(this: any, config: any) {
+        const configuredReferenceTimeColumnSync = typeof config.referenceTimeColumnSync === 'string'
+            ? config.referenceTimeColumnSync.trim()
+            : '';
+
+        if (!configuredReferenceTimeColumnSync) {
+            return null;
+        }
+
+        return configuredReferenceTimeColumnSync;
     }).call(ctx, config);
 }
 
@@ -486,6 +640,61 @@ export function getActiveSoloTrackIndex(ctx: any): any {
     }).call(ctx);
 }
 
+export function getActiveAlignmentAxisKey(ctx: any): any {
+    return (function(this: any) {
+        if (!this.alignmentContext || !this.globalSyncEnabled || !this.alignmentContext.syncAxis) {
+            return 'base';
+        }
+
+        return 'sync';
+    }).call(ctx);
+}
+
+export function isSyncReferenceAxisActive(ctx: any): any {
+    return (function(this: any) {
+        return this.getActiveAlignmentAxisKey() === 'sync';
+    }).call(ctx);
+}
+
+export function isGlobalSyncAvailable(ctx: any): any {
+    return (function(this: any) {
+        if (!this.isAlignmentMode() || !this.alignmentContext?.syncAxis) {
+            return false;
+        }
+
+        return this.runtimes.some((runtime: TrackRuntime) => this.hasSyncedVariant(runtime));
+    }).call(ctx);
+}
+
+export function mapAlignmentAxisTime(ctx: any, time: any, fromAxisKey: any, toAxisKey: any): any {
+    return (function(this: any, time: any, fromAxisKey: AlignmentReferenceAxisKey, toAxisKey: AlignmentReferenceAxisKey) {
+        if (!Number.isFinite(time) || !this.alignmentContext) {
+            return Number.isFinite(time) ? time : 0;
+        }
+
+        if (fromAxisKey === toAxisKey) {
+            const targetAxis = getAlignmentAxisContext(this, toAxisKey);
+            return targetAxis
+                ? clamp(time, 0, targetAxis.referenceDuration)
+                : time;
+        }
+
+        const bridge = fromAxisKey === 'base'
+            ? this.alignmentContext.baseToSync
+            : this.alignmentContext.syncToBase;
+        const targetAxis = getAlignmentAxisContext(this, toAxisKey);
+        if (!bridge || !targetAxis) {
+            return time;
+        }
+
+        return clamp(
+            mapTime(bridge, time, this.alignmentContext.outOfRange),
+            0,
+            targetAxis.referenceDuration
+        );
+    }).call(ctx, time, fromAxisKey, toAxisKey);
+}
+
 export function getAlignmentPlaybackTrackIndex(ctx: any): any {
     return (function(this: any) {
         const activeSoloTrackIndex = this.getActiveSoloTrackIndex();
@@ -537,7 +746,8 @@ export function referenceToTrackTime(ctx: any, trackIndex: any, referenceTime: a
             return referenceTime;
         }
 
-        const converter = this.alignmentContext.converters.get(trackIndex);
+        const activeAxis = getActiveAlignmentAxisContext(this);
+        const converter = activeAxis?.converters.get(trackIndex);
         if (!converter) {
             return referenceTime;
         }
@@ -556,7 +766,8 @@ export function trackToReferenceTime(ctx: any, trackIndex: any, trackTime: any):
             return trackTime;
         }
 
-        const converter = this.alignmentContext.converters.get(trackIndex);
+        const activeAxis = getActiveAlignmentAxisContext(this);
+        const converter = activeAxis?.converters.get(trackIndex);
         if (!converter) {
             return trackTime;
         }

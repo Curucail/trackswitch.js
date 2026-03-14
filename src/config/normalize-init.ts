@@ -12,7 +12,7 @@ import { normalizeFeatures } from '../domain/options';
 
 export const TRACKS_REQUIRED_ERROR = 'TrackSwitch requires at least one ui entry with type "trackGroup" and non-empty trackGroup.';
 const initAllowedKeys = ['presetNames', 'features', 'alignment', 'ui'] as const;
-const alignmentAllowedKeys = ['csv', 'referenceTimeColumn', 'outOfRange'] as const;
+const alignmentAllowedKeys = ['csv', 'referenceTimeColumn', 'referenceTimeColumnSync', 'outOfRange'] as const;
 
 function validateInitKeys(init: TrackSwitchInit): void {
     const initRecord = toConfigRecord(init, 'init');

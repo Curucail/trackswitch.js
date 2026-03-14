@@ -1,6 +1,8 @@
 import { requestText } from '../../shared/csv';
 import type {
+    SheetMusicMeasureMapsByAxis,
     SheetMusicProjectedTempoSegment,
+    SheetMusicProjectedTempoSegmentsByAxis,
     SheetMusicTempoSegment,
 } from './types';
 
@@ -18,12 +20,34 @@ export async function loadProjectedTempoMap(
     musicXmlUrl: string,
     measureMap: MeasureMapPointLike[] | null
 ): Promise<{ fallbackTempoBpm: number | null; projectedSegments: SheetMusicProjectedTempoSegment[] }> {
+    const { fallbackTempoBpm, projectedSegmentsByAxis } = await loadProjectedTempoMaps(musicXmlUrl, {
+        base: measureMap,
+        sync: null,
+    });
+
+    return {
+        fallbackTempoBpm: fallbackTempoBpm,
+        projectedSegments: projectedSegmentsByAxis.base || [],
+    };
+}
+
+export async function loadProjectedTempoMaps(
+    musicXmlUrl: string,
+    measureMaps: SheetMusicMeasureMapsByAxis
+): Promise<{ fallbackTempoBpm: number | null; projectedSegmentsByAxis: SheetMusicProjectedTempoSegmentsByAxis }> {
     const xmlText = await requestText(musicXmlUrl, 'MusicXML source');
     const parsed = parseMusicXmlTempoMap(xmlText);
 
     return {
         fallbackTempoBpm: parsed.fallbackTempoBpm,
-        projectedSegments: projectTempoSegmentsToReferenceTime(parsed.measureSegments, measureMap),
+        projectedSegmentsByAxis: {
+            base: measureMaps.base
+                ? projectTempoSegmentsToReferenceTime(parsed.measureSegments, measureMaps.base)
+                : null,
+            sync: measureMaps.sync
+                ? projectTempoSegmentsToReferenceTime(parsed.measureSegments, measureMaps.sync)
+                : null,
+        },
     };
 }
 

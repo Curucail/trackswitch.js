@@ -7,8 +7,7 @@ function buildUiState(controller: any): TrackSwitchUiState {
         position: controller.state.position,
         longestDuration: controller.longestDuration,
         syncEnabled: controller.globalSyncEnabled,
-        syncAvailable: controller.isAlignmentMode()
-            && controller.runtimes.some((runtime: TrackRuntime) => controller.hasSyncedVariant(runtime)),
+        syncAvailable: controller.isGlobalSyncAvailable(),
         loop: {
             pointA: controller.state.loop.pointA,
             pointB: controller.state.loop.pointB,
@@ -67,7 +66,7 @@ export function updateMainControls(ctx: any): any {
             this.getWaveformTimelineContext(),
             this.getWarpingMatrixContext()
         );
-        this.sheetMusicEngine.updatePosition(this.state.position);
+        this.sheetMusicEngine.updatePosition(this.state.position, this.isSyncReferenceAxisActive());
 
         this.emit('position', {
             position: this.state.position,
@@ -86,7 +85,7 @@ export function updatePlaybackPositionUi(ctx: any): any {
             this.getWaveformTimelineContext(),
             this.getWarpingMatrixContext()
         );
-        this.sheetMusicEngine.updatePosition(this.state.position);
+        this.sheetMusicEngine.updatePosition(this.state.position, this.isSyncReferenceAxisActive());
 
         this.emit('position', {
             position: this.state.position,

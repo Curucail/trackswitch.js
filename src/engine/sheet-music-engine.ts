@@ -2,14 +2,17 @@ import { applyConfiguredRenderScale, disposeEntry, initializeEntry, readHostWidt
 import { moveCursorToMeasure, resolveAvailableMeasure, resolveReferenceTimeForMeasure, updatePosition as updateCursorPosition } from './sheet-music/cursor-sync';
 import { handleHostClick, handleHostTouch, handleHostTouchMove, handleHostTouchStart } from './sheet-music/interaction-hit-test';
 import { centerCurrentMeasureInViewport, ensureCurrentMeasureVisible } from './sheet-music/scrolling';
-import { loadProjectedTempoMap } from './sheet-music/tempo-map';
+import { loadProjectedTempoMaps } from './sheet-music/tempo-map';
 import {
     DEFAULT_CURSOR_COLOR,
     sanitizeCursorAlpha,
     sanitizePlaybackPosition,
     sanitizeRenderScale,
 } from './sheet-music/types';
-import type { SheetMusicEntryModel, SheetMusicHostConfig } from './sheet-music/types';
+import type {
+    SheetMusicEntryModel,
+    SheetMusicHostConfig,
+} from './sheet-music/types';
 
 export type { SheetMusicHostConfig } from './sheet-music/types';
 
@@ -18,6 +21,7 @@ export class SheetMusicEngine {
     public entries: SheetMusicEntryModel[] = [];
     public destroyed = false;
     public lastPosition = 0;
+    public syncReferenceTimeEnabled = false;
 
     constructor(onSeekReferenceTime?: (referenceTime: number) => void) {
         this.onSeekReferenceTime = typeof onSeekReferenceTime === 'function'
@@ -34,14 +38,23 @@ export class SheetMusicEngine {
                 host: host.host,
                 scrollContainer: host.scrollContainer || null,
                 source: host.source,
-                measureMapPromise: host.measureMapPromise,
+                measureMapsPromise: host.measureMapsPromise,
                 renderScale: sanitizeRenderScale(host.renderScale),
                 followPlayback: host.followPlayback !== false,
                 cursorColor: host.cursorColor || DEFAULT_CURSOR_COLOR,
                 cursorAlpha: sanitizeCursorAlpha(host.cursorAlpha),
                 osmd: null,
                 measureCursor: null,
+                syncReferenceTimeEnabled: false,
+                measureMaps: {
+                    base: null,
+                    sync: null,
+                },
                 measureMap: null,
+                projectedTempoSegmentsByAxis: {
+                    base: null,
+                    sync: null,
+                },
                 projectedTempoSegments: null,
                 fallbackTempoBpm: null,
                 availableMeasures: [],
@@ -58,10 +71,11 @@ export class SheetMusicEngine {
         });
 
         await Promise.all(this.entries.map((entry) => initializeEntry(this, entry)));
-        this.updatePosition(this.lastPosition);
+        this.updatePosition(this.lastPosition, this.syncReferenceTimeEnabled);
     }
 
-    updatePosition(referencePosition: number): void {
+    updatePosition(referencePosition: number, syncReferenceTimeEnabled = this.syncReferenceTimeEnabled): void {
+        this.applyReferenceTimeline(syncReferenceTimeEnabled);
         updateCursorPosition(this, sanitizePlaybackPosition(referencePosition));
     }
 
@@ -95,7 +109,7 @@ export class SheetMusicEngine {
         });
 
         if (hasRerenderedEntry) {
-            this.updatePosition(this.lastPosition);
+            this.updatePosition(this.lastPosition, this.syncReferenceTimeEnabled);
         }
     }
 
@@ -151,12 +165,43 @@ export class SheetMusicEngine {
         return resolveReferenceTimeForMeasure(measureMap, clickedMeasure);
     }
 
-    public resolveReferenceBpm(referenceTime: number): number | null {
+    public applyReferenceTimeline(syncReferenceTimeEnabled: boolean): void {
+        if (
+            this.syncReferenceTimeEnabled === syncReferenceTimeEnabled
+            && this.entries.every((entry) => entry.syncReferenceTimeEnabled === syncReferenceTimeEnabled)
+        ) {
+            return;
+        }
+
+        this.syncReferenceTimeEnabled = syncReferenceTimeEnabled;
+        this.entries.forEach((entry) => {
+            entry.syncReferenceTimeEnabled = syncReferenceTimeEnabled;
+            entry.measureMap = syncReferenceTimeEnabled
+                ? entry.measureMaps.sync
+                : entry.measureMaps.base;
+            entry.projectedTempoSegments = syncReferenceTimeEnabled
+                ? entry.projectedTempoSegmentsByAxis.sync
+                : entry.projectedTempoSegmentsByAxis.base;
+            entry.syncEnabled = Boolean(
+                entry.osmd
+                && entry.measureMap
+                && entry.measureMap.length > 0
+                && entry.availableMeasures.length > 0
+                && entry.measureCursor
+            );
+            entry.targetMeasure = null;
+        });
+    }
+
+    public resolveReferenceBpm(
+        referenceTime: number,
+        syncReferenceTimeEnabled = this.syncReferenceTimeEnabled
+    ): number | null {
         const sanitizedReferenceTime = sanitizePlaybackPosition(referenceTime);
 
         for (let index = 0; index < this.entries.length; index += 1) {
             const entry = this.entries[index];
-            const resolved = resolveEntryReferenceBpm(entry, sanitizedReferenceTime);
+            const resolved = resolveEntryReferenceBpm(entry, sanitizedReferenceTime, syncReferenceTimeEnabled);
             if (resolved !== null) {
                 return resolved;
             }
@@ -168,20 +213,31 @@ export class SheetMusicEngine {
     public async loadTempoMap(entry: SheetMusicEntryModel): Promise<void> {
         if (!entry.osmd) {
             entry.fallbackTempoBpm = null;
+            entry.projectedTempoSegmentsByAxis = {
+                base: null,
+                sync: null,
+            };
             entry.projectedTempoSegments = null;
             return;
         }
 
         try {
-            const { fallbackTempoBpm, projectedSegments } = await loadProjectedTempoMap(entry.source, entry.measureMap);
+            const { fallbackTempoBpm, projectedSegmentsByAxis } = await loadProjectedTempoMaps(entry.source, entry.measureMaps);
             if (this.destroyed) {
                 return;
             }
 
             entry.fallbackTempoBpm = fallbackTempoBpm;
-            entry.projectedTempoSegments = projectedSegments;
+            entry.projectedTempoSegmentsByAxis = projectedSegmentsByAxis;
+            entry.projectedTempoSegments = entry.syncReferenceTimeEnabled
+                ? projectedSegmentsByAxis.sync
+                : projectedSegmentsByAxis.base;
         } catch (error) {
             entry.fallbackTempoBpm = resolveOsmdFallbackTempo(entry);
+            entry.projectedTempoSegmentsByAxis = {
+                base: null,
+                sync: null,
+            };
             entry.projectedTempoSegments = null;
             console.warn(
                 '[trackswitch] Failed to load score tempo map:',
@@ -192,8 +248,14 @@ export class SheetMusicEngine {
     }
 }
 
-function resolveEntryReferenceBpm(entry: SheetMusicEntryModel, referenceTime: number): number | null {
-    const projectedSegments = entry.projectedTempoSegments || [];
+function resolveEntryReferenceBpm(
+    entry: SheetMusicEntryModel,
+    referenceTime: number,
+    syncReferenceTimeEnabled: boolean
+): number | null {
+    const projectedSegments = syncReferenceTimeEnabled
+        ? (entry.projectedTempoSegmentsByAxis.sync || [])
+        : (entry.projectedTempoSegmentsByAxis.base || []);
     if (projectedSegments.length > 0) {
         let resolvedBpm = projectedSegments[0].bpm;
         for (let index = 0; index < projectedSegments.length; index += 1) {

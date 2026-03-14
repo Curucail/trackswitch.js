@@ -6,6 +6,7 @@ export type WaveformSource = 'audible' | number | number[];
 export interface TrackAlignmentConfig {
     csv: string;
     referenceTimeColumn: string;
+    referenceTimeColumnSync?: string;
     outOfRange?: AlignmentOutOfRangeMode;
 }
 

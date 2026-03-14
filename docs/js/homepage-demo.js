@@ -575,6 +575,7 @@
         '    alignment: {',
         "      csv: 'alignment.csv',",
         "      referenceTimeColumn: 'time_score',",
+        "      referenceTimeColumnSync: 'time_HU33',",
         "      outOfRange: 'clamp',",
         '    },',
         '    ui: [',
@@ -873,6 +874,7 @@
         init.alignment = {
           csv: basePath + '/alignment.csv',
           referenceTimeColumn: 'time_score',
+          referenceTimeColumnSync: 'time_HU33',
           outOfRange: 'clamp',
         };
       } else {

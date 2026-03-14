@@ -16,13 +16,20 @@ export async function initializeEntry(ctx: any, entry: SheetMusicEntryModel): Pr
     entry.host.classList.remove('sheetmusic-error', 'sheetmusic-ready', 'sheetmusic-map-error');
     entry.host.classList.add('sheetmusic-loading');
 
-    const measureMapPromise = entry.measureMapPromise
+    const measureMapsPromise = entry.measureMapsPromise
         .then((points) => {
-            entry.measureMap = points;
+            entry.measureMaps = points;
+            entry.measureMap = entry.syncReferenceTimeEnabled
+                ? points.sync
+                : points.base;
             entry.host.classList.remove('sheetmusic-map-error');
             return points;
         })
         .catch((error) => {
+            entry.measureMaps = {
+                base: null,
+                sync: null,
+            };
             entry.measureMap = null;
             entry.host.classList.add('sheetmusic-map-error');
             console.warn(
@@ -69,6 +76,10 @@ export async function initializeEntry(ctx: any, entry: SheetMusicEntryModel): Pr
     } catch (error) {
         entry.osmd = null;
         entry.measureCursor = null;
+        entry.projectedTempoSegmentsByAxis = {
+            base: null,
+            sync: null,
+        };
         entry.projectedTempoSegments = null;
         entry.fallbackTempoBpm = null;
         entry.availableMeasures = [];
@@ -81,7 +92,7 @@ export async function initializeEntry(ctx: any, entry: SheetMusicEntryModel): Pr
         );
     }
 
-    await measureMapPromise;
+    await measureMapsPromise;
     await ctx.loadTempoMap(entry);
 
     entry.syncEnabled = Boolean(
@@ -232,6 +243,15 @@ export function disposeEntry(entry: SheetMusicEntryModel): void {
 
     entry.osmd = null;
     entry.measureCursor = null;
+    entry.measureMaps = {
+        base: null,
+        sync: null,
+    };
+    entry.measureMap = null;
+    entry.projectedTempoSegmentsByAxis = {
+        base: null,
+        sync: null,
+    };
     entry.projectedTempoSegments = null;
     entry.fallbackTempoBpm = null;
     entry.syncEnabled = false;

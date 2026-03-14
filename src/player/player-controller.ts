@@ -48,10 +48,20 @@ interface TrackAlignmentConverter {
     trackToReference: TimeMappingSeries;
 }
 
-interface AlignmentContext {
+type AlignmentReferenceAxisKey = 'base' | 'sync';
+
+interface AlignmentAxisContext {
+    referenceTimeColumn: string;
     referenceDuration: number;
-    outOfRange: AlignmentOutOfRangeMode;
     converters: Map<number, TrackAlignmentConverter>;
+}
+
+interface AlignmentContext {
+    outOfRange: AlignmentOutOfRangeMode;
+    baseAxis: AlignmentAxisContext;
+    syncAxis: AlignmentAxisContext | null;
+    baseToSync: TimeMappingSeries | null;
+    syncToBase: TimeMappingSeries | null;
     columnByTrack: Map<number, string>;
     uniqueColumnOrder: string[];
     warpingSeriesByTrack: Map<number, WarpingMatrixTrackSeries>;
@@ -678,6 +688,10 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         return controllerAlignment.resolveReferenceTimeColumn(this, config);
     }
 
+    public resolveReferenceTimeColumnSync(config: TrackAlignmentConfig): string | null {
+        return controllerAlignment.resolveReferenceTimeColumnSync(this, config);
+    }
+
     public resolveReferenceDuration(rows: Array<Record<string, number>>, referenceTimeColumn: string): number | string {
         return controllerAlignment.resolveReferenceDuration(this, rows, referenceTimeColumn);
     }
@@ -688,6 +702,26 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
     public getActiveSoloTrackIndex(): number {
         return controllerAlignment.getActiveSoloTrackIndex(this);
+    }
+
+    public getActiveAlignmentAxisKey(): AlignmentReferenceAxisKey {
+        return controllerAlignment.getActiveAlignmentAxisKey(this);
+    }
+
+    public isSyncReferenceAxisActive(): boolean {
+        return controllerAlignment.isSyncReferenceAxisActive(this);
+    }
+
+    public isGlobalSyncAvailable(): boolean {
+        return controllerAlignment.isGlobalSyncAvailable(this);
+    }
+
+    public mapAlignmentAxisTime(
+        time: number,
+        fromAxisKey: AlignmentReferenceAxisKey,
+        toAxisKey: AlignmentReferenceAxisKey
+    ): number {
+        return controllerAlignment.mapAlignmentAxisTime(this, time, fromAxisKey, toAxisKey);
     }
 
     public getAlignmentPlaybackTrackIndex(): number {
