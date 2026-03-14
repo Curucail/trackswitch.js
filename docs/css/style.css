@@ -699,7 +699,7 @@ kbd {
     z-index: 25;
     top: 50%;
     left: calc(var(--ts-showcase-side-width) + var(--ts-showcase-gap) + 40px);
-    right: 0;
+    width: min(750px, calc(100% - var(--ts-showcase-side-width) - var(--ts-showcase-gap) - 40px));
     height: min(640px, calc(100% - 1.5rem));
     padding: 1rem 1.05rem;
     display: flex;
