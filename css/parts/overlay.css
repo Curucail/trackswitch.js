@@ -71,7 +71,7 @@
 
 
 .trackswitch.error .overlay-activation {
-    background: var(--ts-color-surface-panel-dark);
+    background: var(--ts-color-surface-panel-dark-50);
 }
 
 .trackswitch.error .overlay-activation>span {
@@ -83,6 +83,10 @@
     width: 100%;
     top: calc(50% + 35px);
     color: var(--ts-color-text-inverse);
+}
+
+.trackswitch.error .overlay-activation #overlayinfo span.info {
+    display: none;
 }
 
 .trackswitch .overlay-activation #overlayinfo {
