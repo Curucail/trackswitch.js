@@ -30,6 +30,7 @@ import { InputBinder, InputController } from '../input/dom-event-binder';
 import { derivePresetNames } from '../shared/preset';
 import { ControllerPointerEvent } from '../shared/seek';
 import { TimeMappingSeries } from '../shared/alignment';
+import type { ParsedNumericCsv } from '../shared/alignment';
 import {
     allocateInstanceId,
     registerController,
@@ -89,6 +90,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     public readonly renderer: ViewRenderer;
     public readonly inputBinder: InputBinder;
     public readonly alignmentConfig: TrackAlignmentConfig | undefined;
+    public alignmentCsvRequest: Promise<ParsedNumericCsv> | null = null;
 
     public state: PlayerState;
     public longestDuration = 0;
@@ -654,6 +656,10 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
     public async buildAlignmentContext(): Promise<AlignmentContext | string> {
         return controllerAlignment.buildAlignmentContext(this);
+    }
+
+    public loadAlignmentCsv(): Promise<ParsedNumericCsv> {
+        return controllerAlignment.loadAlignmentCsv(this);
     }
 
     public collectUniqueAlignmentColumns(mappingByTrack: Map<number, string>): string[] {

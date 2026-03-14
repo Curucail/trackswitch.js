@@ -17,7 +17,7 @@ interface SheetMusicHostConfig {
     host: HTMLElement;
     scrollContainer: HTMLElement;
     source: string;
-    measureCsv: string;
+    measureColumn: string | null;
     renderScale: number | null;
     followPlayback: boolean;
     cursorColor: string;
@@ -1058,8 +1058,7 @@ export function wrapSheetMusicContainers(ctx: any): any {
             }
 
             const source = parseSheetMusicString(hostElement.getAttribute('data-sheetmusic-src'));
-            const measureCsv = parseSheetMusicString(hostElement.getAttribute('data-sheetmusic-measure-csv'));
-            if (!source || !measureCsv) {
+            if (!source) {
                 return;
             }
 
@@ -1067,7 +1066,7 @@ export function wrapSheetMusicContainers(ctx: any): any {
                 host: hostElement,
                 scrollContainer: scrollContainer,
                 source: source,
-                measureCsv: measureCsv,
+                measureColumn: parseSheetMusicString(hostElement.getAttribute('data-sheetmusic-measure-column')),
                 renderScale: parseSheetMusicRenderScale(hostElement.getAttribute('data-sheetmusic-render-scale')),
                 followPlayback: parseSheetMusicFollowPlayback(hostElement.getAttribute('data-sheetmusic-follow-playback')),
                 cursorColor: parseSheetMusicCursorColor(hostElement.getAttribute('data-sheetmusic-cursor-color')),
@@ -1085,7 +1084,7 @@ export function getPreparedSheetMusicHosts(ctx: any): any {
                 host: entry.host,
                 scrollContainer: entry.scrollContainer,
                 source: entry.source,
-                measureCsv: entry.measureCsv,
+                measureColumn: entry.measureColumn,
                 renderScale: entry.renderScale,
                 followPlayback: entry.followPlayback,
                 cursorColor: entry.cursorColor,

@@ -32,7 +32,7 @@ const uiTrackGroupAllowedKeys = ['type', 'rowHeight', 'trackGroup'] as const;
 const uiSheetMusicAllowedKeys = [
     'type',
     'src',
-    'measureCsv',
+    'measureColumn',
     'maxWidth',
     'maxHeight',
     'renderScale',
@@ -178,9 +178,13 @@ function normalizeSheetMusicFollowPlayback(value: boolean | undefined): boolean 
 
 function normalizeSheetMusicConfig<T extends TrackSwitchSheetMusicConfig>(sheetmusic: T): T {
     const normalizedMaxWidth = normalizeSheetMusicDimension(sheetmusic.maxWidth);
+    const measureColumn = typeof sheetmusic.measureColumn === 'string'
+        ? sheetmusic.measureColumn.trim()
+        : undefined;
 
     return {
         ...sheetmusic,
+        measureColumn: measureColumn && measureColumn.length > 0 ? measureColumn : undefined,
         maxWidth: normalizedMaxWidth,
         maxHeight: normalizeSheetMusicDimension(sheetmusic.maxHeight),
         renderScale: normalizeSheetMusicRenderScale(sheetmusic.renderScale),
@@ -425,7 +429,7 @@ function injectSheetMusic(root: HTMLElement, sheetmusic: TrackSwitchSheetMusicCo
     const container = document.createElement('div');
     container.className = 'sheetmusic';
     container.setAttribute('data-sheetmusic-src', String(sheetmusic.src || ''));
-    container.setAttribute('data-sheetmusic-measure-csv', String(sheetmusic.measureCsv || ''));
+    container.setAttribute('data-sheetmusic-measure-column', String(sheetmusic.measureColumn || ''));
     container.setAttribute(
         'data-sheetmusic-follow-playback',
         String(normalizeSheetMusicFollowPlayback(sheetmusic.followPlayback))

@@ -40,7 +40,7 @@
         title: 'Schubert: Winterreise, D. 911: No. 3 - HU33',
         sources: [{ src: basePath + '/Schubert_D911-03_HU33.wav' }],
         alignment: {
-          column: 't1_sec',
+          column: 'start_HU33',
           synchronizedSources: [{ src: basePath + '/Schubert_D911-03_HU33.wav' }],
         },
       },
@@ -48,7 +48,7 @@
         title: 'Schubert: Winterreise, D. 911: No. 3 - SC06',
         sources: [{ src: basePath + '/Schubert_D911-03_SC06.wav' }],
         alignment: {
-          column: 't2_sec',
+          column: 'start_SC06',
           synchronizedSources: [{ src: basePath + '/Schubert_D911-03_SC06_syncronized.wav' }],
         },
       },
@@ -574,7 +574,7 @@
         "  TrackSwitch.createTrackSwitch(document.getElementById('player'), {",
         '    alignment: {',
         "      csv: 'dtw_alignment.csv',",
-        "      referenceTimeColumn: 't1_sec',",
+        "      referenceTimeColumn: 'measure',",
         "      outOfRange: 'clamp',",
         '    },',
         '    ui: [',
@@ -585,7 +585,7 @@
           '      {',
           "        type: 'sheetMusic',",
           "        src: 'Schubert_D911-03.xml',",
-          "        measureCsv: 'Schubert_D911-03_HU33_measures.csv',",
+          "        measureColumn: 'measure',",
           '        maxHeight: 380,',
           '        renderScale: 0.65,',
           '        followPlayback: true,',
@@ -625,7 +625,7 @@
         "            title: 'SC06',",
         "            sources: [{ src: 'Schubert_D911-03_SC06.wav' }],",
         '            alignment: {',
-        "              column: 't1_sec',",
+        "              column: 'start_HU33',",
         "              synchronizedSources: [{ src: 'Schubert_D911-03_SC06_syncronized.wav' }],",
         '            },',
         '          },',
@@ -633,7 +633,7 @@
         "            title: 'HU33',",
         "            sources: [{ src: 'Schubert_D911-03_HU33.wav' }],",
         '            alignment: {',
-        "              column: 't2_sec',",
+        "              column: 'start_SC06',",
         "              synchronizedSources: [{ src: 'Schubert_D911-03_HU33.wav' }],",
         '            },',
         '          },',
@@ -804,7 +804,7 @@
         uiConfig.push({
           type: 'sheetMusic',
           src: basePath + '/Schubert_D911-03.xml',
-          measureCsv: basePath + '/Schubert_D911-03_HU33_measures.csv',
+          measureColumn: 'measure',
           maxHeight: 380,
           renderScale: 0.65,
           followPlayback: true,
@@ -872,7 +872,7 @@
 
         init.alignment = {
           csv: basePath + '/dtw_alignment.csv',
-          referenceTimeColumn: 't1_sec',
+          referenceTimeColumn: 'measure',
           outOfRange: 'clamp',
         };
       } else {

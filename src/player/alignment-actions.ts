@@ -5,6 +5,7 @@ import {
     buildColumnTimeMapping,
     loadNumericCsv,
     mapTime,
+    ParsedNumericCsv,
     resolveAlignmentOutOfRangeMode,
     TimeMappingSeries,
 } from '../shared/alignment';
@@ -245,7 +246,7 @@ export function buildAlignmentContext(ctx: any): any {
 
         let parsedCsv;
         try {
-            parsedCsv = await loadNumericCsv(this.alignmentConfig.csv);
+            parsedCsv = await this.loadAlignmentCsv();
         } catch (error) {
             return error instanceof Error
                 ? error.message
@@ -312,6 +313,23 @@ export function buildAlignmentContext(ctx: any): any {
             uniqueColumnOrder: this.collectUniqueAlignmentColumns(mappingByTrack),
             warpingSeriesByTrack: warpingSeriesByTrack,
         };
+    }).call(ctx);
+}
+
+export function loadAlignmentCsv(ctx: any): any {
+    return (function(this: any) {
+        if (!this.alignmentConfig?.csv || typeof this.alignmentConfig.csv !== 'string') {
+            return Promise.reject(new Error('Alignment configuration requires a non-empty alignment.csv URL.'));
+        }
+
+        if (!this.alignmentCsvRequest) {
+            this.alignmentCsvRequest = loadNumericCsv(this.alignmentConfig.csv).catch((error: unknown) => {
+                this.alignmentCsvRequest = null;
+                throw error;
+            });
+        }
+
+        return this.alignmentCsvRequest as Promise<ParsedNumericCsv>;
     }).call(ctx);
 }
 

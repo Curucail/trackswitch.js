@@ -5,7 +5,7 @@ export interface SheetMusicHostConfig {
     host: HTMLElement;
     scrollContainer: HTMLElement | null;
     source: string;
-    measureCsv: string;
+    measureMapPromise: Promise<MeasureMapPoint[] | null>;
     renderScale: number | null;
     followPlayback: boolean;
     cursorColor: string;
@@ -26,7 +26,7 @@ export interface SheetMusicEntryModel {
     host: HTMLElement;
     scrollContainer: HTMLElement | null;
     source: string;
-    measureCsv: string;
+    measureMapPromise: Promise<MeasureMapPoint[] | null>;
     renderScale: number | null;
     followPlayback: boolean;
     cursorColor: string;

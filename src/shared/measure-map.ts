@@ -1,34 +1,30 @@
-import { parseCsvRecords, requestText } from './csv';
+import { CsvNumericRow } from './alignment';
 
 export interface MeasureMapPoint {
     start: number;
     measure: number;
 }
 
-export function loadMeasureMapCsv(url: string): Promise<MeasureMapPoint[]> {
-    return requestText(url, 'measure map CSV source').then(function(text) {
-        return parseMeasureMapCsv(text);
-    });
-}
+export function buildMeasureMapFromColumns(
+    rows: CsvNumericRow[],
+    headers: string[],
+    referenceTimeColumn: string,
+    measureColumn: string
+): MeasureMapPoint[] {
+    if (headers.indexOf(referenceTimeColumn) < 0) {
+        throw new Error('Alignment CSV is missing configured referenceTimeColumn: ' + referenceTimeColumn);
+    }
 
-export function parseMeasureMapCsv(csvText: string): MeasureMapPoint[] {
-    const parsed = parseCsvRecords(csvText, {
-        emptyDataError: 'Measure map CSV must include a header and at least one data row.',
-        transformHeader: function(header) {
-            return String(header ?? '').trim().toLowerCase();
-        },
-    });
-
-    if (parsed.headers.indexOf('start') < 0 || parsed.headers.indexOf('measure') < 0) {
-        throw new Error('Measure map CSV header must include "start" and "measure" columns.');
+    if (headers.indexOf(measureColumn) < 0) {
+        throw new Error('Alignment CSV is missing configured measureColumn: ' + measureColumn);
     }
 
     const points: MeasureMapPoint[] = [];
 
-    for (let lineIndex = 0; lineIndex < parsed.rows.length; lineIndex += 1) {
-        const sourceRow = parsed.rows[lineIndex] || {};
-        const start = Number(sourceRow.start);
-        const measure = Number(sourceRow.measure);
+    for (let lineIndex = 0; lineIndex < rows.length; lineIndex += 1) {
+        const sourceRow = rows[lineIndex] || {};
+        const start = Number(sourceRow[referenceTimeColumn]);
+        const measure = Number(sourceRow[measureColumn]);
         if (!Number.isFinite(start) || !Number.isFinite(measure)) {
             continue;
         }
@@ -40,7 +36,13 @@ export function parseMeasureMapCsv(csvText: string): MeasureMapPoint[] {
     }
 
     if (points.length === 0) {
-        throw new Error('Measure map CSV does not contain valid numeric rows.');
+        throw new Error(
+            'Alignment CSV does not contain valid measure-map rows for columns '
+            + referenceTimeColumn
+            + ' -> '
+            + measureColumn
+            + '.'
+        );
     }
 
     points.sort(function(a, b) {

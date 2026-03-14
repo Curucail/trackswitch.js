@@ -80,7 +80,7 @@ export interface TrackSwitchWaveformConfig {
 
 export interface TrackSwitchSheetMusicConfig {
     src: string;
-    measureCsv: string;
+    measureColumn?: string;
     maxWidth?: number;
     maxHeight?: number;
     renderScale?: number;

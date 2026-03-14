@@ -1,4 +1,5 @@
 import { TrackRuntime } from '../domain/types';
+import { buildMeasureMapFromColumns } from '../shared/measure-map';
 import { playerStateReducer } from '../domain/state';
 import { clamp } from '../shared/math';
 import { getSeekMetrics } from '../shared/seek';
@@ -481,7 +482,55 @@ export function applyPreset(ctx: any, presetIndex: any): any {
 
 export function initializeSheetMusic(ctx: any): any {
     return (async function(this: any) {
-        const hosts = this.renderer.getPreparedSheetMusicHosts();
+        const hosts = this.renderer.getPreparedSheetMusicHosts().map((host: {
+            host: HTMLElement;
+            scrollContainer: HTMLElement | null;
+            source: string;
+            measureColumn: string | null;
+            renderScale: number | null;
+            followPlayback: boolean;
+            cursorColor: string;
+            cursorAlpha: number;
+        }) => {
+            const measureColumn = typeof host.measureColumn === 'string' ? host.measureColumn.trim() : '';
+            const measureMapPromise = measureColumn
+                ? (
+                    !this.alignmentConfig
+                        ? Promise.reject(
+                            new Error(
+                                'Sheet music measure sync requires init.alignment when sheetMusic.measureColumn is set.'
+                            )
+                        )
+                        : this.loadAlignmentCsv()
+                ).then((parsedCsv: { headers: string[]; rows: Array<Record<string, number>> }) => {
+                        const referenceTimeColumn = this.resolveReferenceTimeColumn(this.alignmentConfig);
+                        if (!referenceTimeColumn) {
+                            throw new Error(
+                                'Sheet music measure sync requires alignment.referenceTimeColumn when sheetMusic.measureColumn is set.'
+                            );
+                        }
+
+                        return buildMeasureMapFromColumns(
+                            parsedCsv.rows,
+                            parsedCsv.headers,
+                            referenceTimeColumn,
+                            measureColumn
+                        );
+                    })
+                : Promise.resolve(null);
+
+            return {
+                ...host,
+                measureMapPromise: measureMapPromise.catch((error: unknown) => {
+                    if (!measureColumn) {
+                        return null;
+                    }
+
+                    throw error;
+                }),
+            };
+        });
+
         if (hosts.length === 0) {
             this.sheetMusicEngine.destroy();
             return;

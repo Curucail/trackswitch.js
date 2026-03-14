@@ -2,7 +2,6 @@ import {
     CursorType,
     OpenSheetMusicDisplay,
 } from 'opensheetmusicdisplay';
-import { loadMeasureMapCsv } from '../../shared/measure-map';
 import {
     MAX_OSMD_ZOOM,
     MIN_HOST_WIDTH_DELTA_FOR_RERENDER_PX,
@@ -17,7 +16,7 @@ export async function initializeEntry(ctx: any, entry: SheetMusicEntryModel): Pr
     entry.host.classList.remove('sheetmusic-error', 'sheetmusic-ready', 'sheetmusic-map-error');
     entry.host.classList.add('sheetmusic-loading');
 
-    const measureMapPromise = loadMeasureMapCsv(entry.measureCsv)
+    const measureMapPromise = entry.measureMapPromise
         .then((points) => {
             entry.measureMap = points;
             entry.host.classList.remove('sheetmusic-map-error');
@@ -28,7 +27,7 @@ export async function initializeEntry(ctx: any, entry: SheetMusicEntryModel): Pr
             entry.host.classList.add('sheetmusic-map-error');
             console.warn(
                 '[trackswitch] Failed to load sheet-music measure map:',
-                entry.measureCsv,
+                entry.source,
                 error
             );
             return null;

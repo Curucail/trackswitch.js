@@ -34,7 +34,7 @@ export class SheetMusicEngine {
                 host: host.host,
                 scrollContainer: host.scrollContainer || null,
                 source: host.source,
-                measureCsv: host.measureCsv,
+                measureMapPromise: host.measureMapPromise,
                 renderScale: sanitizeRenderScale(host.renderScale),
                 followPlayback: host.followPlayback !== false,
                 cursorColor: host.cursorColor || DEFAULT_CURSOR_COLOR,

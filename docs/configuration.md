@@ -127,7 +127,7 @@ TrackSwitch.createTrackSwitch(rootElement, {
     {
       type: 'sheetMusic',
       src: 'score.musicxml',
-      measureCsv: 'score_measures.csv',
+      measureColumn: 'measure',
       maxWidth: 960,
       maxHeight: 360,
       renderScale: 0.75,
@@ -231,7 +231,7 @@ TrackSwitch.createTrackSwitch(rootElement, {
     {
       type: 'sheetMusic',
       src: 'score.musicxml',
-      measureCsv: 'score_measures.csv',
+      measureColumn: 'measure',
       maxWidth: 960,
       maxHeight: 360,
       renderScale: 0.75,
@@ -520,7 +520,7 @@ Normalization and behavior:
 {
   type: 'sheetMusic',
   src: 'score.musicxml',
-  measureCsv: 'score_measures.csv',
+  measureColumn: 'measure',
   maxWidth: 960,
   maxHeight: 360,
   renderScale: 0.75,
@@ -533,7 +533,7 @@ Normalization and behavior:
 Fields:
 
 - `src: string` (MusicXML URL)
-- `measureCsv: string` (CSV with `start` and `measure` columns)
+- `measureColumn?: string` (column name inside `init.alignment.csv` that contains measure numbers)
 - `maxWidth?: number`
 - `maxHeight?: number`
 - `renderScale?: number`
@@ -546,10 +546,10 @@ Behavior:
 
 - `maxWidth` / `maxHeight` are rounded and ignored if `< 1`.
 - `renderScale` must be finite and `> 0`.
-- `measureCsv` supports comma or semicolon delimiter.
-- Clicking a rendered measure seeks to mapped reference time.
+- `measureColumn` uses `init.alignment.referenceTimeColumn` as the reference-time axis.
+- Clicking a rendered measure seeks to mapped reference time when `init.alignment` and `measureColumn` are both available.
 - If MusicXML fails to load, only the sheet panel fails.
-- If measure CSV fails, score can still render but measure sync is disabled.
+- If alignment-based measure mapping fails or is not configured, score can still render but measure sync is disabled.
 
 ### Warping Matrix UI Element
 
@@ -597,6 +597,13 @@ Alignment requirements:
 - `features.mode` must be `'alignment'`
 - `init.alignment` must be present and valid
 - every track in `ui[].trackGroup[]` must provide `alignment.column`
+
+Sheet music measure sync:
+
+- Works in both `default` and `alignment` mode.
+- `sheetMusic.measureColumn` reads measure numbers from `init.alignment.csv`.
+- `measureColumn` may be the same as `alignment.referenceTimeColumn`.
+- Without `init.alignment` or `measureColumn`, the score still renders but measure sync is disabled.
 
 Alignment behavior summary:
 
@@ -709,6 +716,8 @@ Common setup issues:
   - Every track needs at least one `sources[].src`.
 - Invalid alignment setup
   - `alignment` mode needs `init.alignment`, a valid `referenceTimeColumn`, and `alignment.column` on every track.
+- Missing sheet music measure mapping
+  - `sheetMusic.measureColumn` needs `init.alignment.csv` plus `alignment.referenceTimeColumn`; otherwise the score renders without measure sync.
 - Invalid seek margins
   - For seekable `image`, `perTrackImage`, and `waveform`, left and right seek margins together must stay below `100`.
 - Unexpected preset behavior

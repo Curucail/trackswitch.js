@@ -30,7 +30,7 @@ export interface SheetMusicHostConfig {
     host: HTMLElement;
     scrollContainer: HTMLElement;
     source: string;
-    measureCsv: string;
+    measureColumn: string | null;
     renderScale: number | null;
     followPlayback: boolean;
     cursorColor: string;
