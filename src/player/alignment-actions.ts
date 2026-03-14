@@ -2,124 +2,20 @@ import { TrackRuntime } from '../domain/types';
 import { clamp } from '../shared/math';
 import { WarpingMatrixTrackSeries } from '../ui/view-renderer';
 import {
-    buildColumnTimeMapping,
     loadNumericCsv,
     mapTime,
     ParsedNumericCsv,
     resolveAlignmentOutOfRangeMode,
-    TimeMappingSeries,
+    buildColumnTimeMapping,
 } from '../shared/alignment';
-
-interface TrackAlignmentConverter {
-    referenceToTrack: TimeMappingSeries;
-    trackToReference: TimeMappingSeries;
-}
-
-type AlignmentReferenceAxisKey = 'base' | 'sync';
-
-function buildAlignmentAxisContext(
-    controller: any,
-    parsedCsv: ParsedNumericCsv,
-    mappingByTrack: Map<number, string>,
-    referenceTimeColumn: string
-): { axis: { referenceTimeColumn: string; referenceDuration: number; converters: Map<number, TrackAlignmentConverter> } | null; error: string | null } {
-    const referenceDuration = controller.resolveReferenceDuration(parsedCsv.rows, referenceTimeColumn);
-    if (typeof referenceDuration === 'string') {
-        return {
-            axis: null,
-            error: referenceDuration,
-        };
-    }
-
-    const converters = new Map<number, TrackAlignmentConverter>();
-    for (const [trackIndex, column] of mappingByTrack) {
-        try {
-            const referenceToTrack = buildColumnTimeMapping(parsedCsv.rows, referenceTimeColumn, column);
-            const trackToReference = buildColumnTimeMapping(parsedCsv.rows, column, referenceTimeColumn);
-
-            converters.set(trackIndex, {
-                referenceToTrack: referenceToTrack,
-                trackToReference: trackToReference,
-            });
-        } catch (error) {
-            return {
-                axis: null,
-                error: error instanceof Error
-                    ? error.message
-                    : 'Failed to build alignment mappings.',
-            };
-        }
-    }
-
-    return {
-        axis: {
-            referenceTimeColumn: referenceTimeColumn,
-            referenceDuration: referenceDuration,
-            converters: converters,
-        },
-        error: null,
-    };
-}
-
-function getAlignmentAxisContext(controller: any, axisKey: AlignmentReferenceAxisKey): any {
-    if (!controller.alignmentContext) {
-        return null;
-    }
-
-    if (axisKey === 'sync') {
-        return controller.alignmentContext.syncAxis;
-    }
-
-    return controller.alignmentContext.baseAxis;
-}
-
-function getActiveAlignmentAxisContext(controller: any): any {
-    return getAlignmentAxisContext(
-        controller,
-        controller.getActiveAlignmentAxisKey()
-    );
-}
-
-function buildWarpingSeries(
-    runtime: TrackRuntime,
-    trackIndex: number,
-    columnKey: string,
-    converter: TrackAlignmentConverter,
-    referenceDuration: number
-): WarpingMatrixTrackSeries {
-    const points = converter.referenceToTrack.points.map((point: { x: number; y: number }) => {
-        return {
-            referenceTime: point.x,
-            trackTime: point.y,
-        };
-    });
-
-    let trackDuration = runtime.baseSource.timing
-        ? runtime.baseSource.timing.effectiveDuration
-        : (runtime.baseSource.buffer ? runtime.baseSource.buffer.duration : 0);
-    let maxMappedTrackTime = Number.NEGATIVE_INFINITY;
-    points.forEach((point: { trackTime: number }) => {
-        if (Number.isFinite(point.trackTime) && point.trackTime > maxMappedTrackTime) {
-            maxMappedTrackTime = point.trackTime;
-        }
-    });
-
-    const resolvedMappedDuration = Number.isFinite(maxMappedTrackTime) && maxMappedTrackTime > 0
-        ? maxMappedTrackTime
-        : referenceDuration;
-    if (!Number.isFinite(trackDuration) || trackDuration <= 0) {
-        trackDuration = resolvedMappedDuration;
-    } else {
-        trackDuration = Math.max(trackDuration, resolvedMappedDuration);
-    }
-
-    return {
-        trackIndex: trackIndex,
-        columnKey: columnKey,
-        points: points,
-        trackDuration: trackDuration,
-    };
-}
+import {
+    AlignmentReferenceAxisKey,
+    TrackAlignmentConverter,
+    buildAlignmentAxisContext,
+    buildWarpingSeries,
+    getActiveAlignmentAxisContext,
+    getAlignmentAxisContext,
+} from './alignment-context';
 
 export function isAlignmentMode(ctx: any): any {
     return (function(this: any) {
