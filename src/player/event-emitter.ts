@@ -1,46 +1,47 @@
-import { TrackRuntime } from '../domain/types';
+import type {
+    TrackSwitchEventHandler,
+    TrackSwitchEventMap,
+    TrackSwitchEventName,
+    TrackSwitchSnapshot,
+} from '../domain/types';
+import type { TrackSwitchControllerImpl } from './player-controller';
+import { createControllerSnapshot } from './controller-state';
 
+type UntypedEventHandler = (payload: unknown) => void;
 
-export function getState(ctx: any): any {
-    return (function(this: any) {
-        return {
-            isLoaded: this.isLoaded,
-            isLoading: this.isLoading,
-            isDestroyed: this.isDestroyed,
-            longestDuration: this.longestDuration,
-            features: { ...this.features },
-            state: {
-                ...this.state,
-                loop: { ...this.state.loop },
-            },
-            tracks: this.runtimes.map(function(runtime: TrackRuntime) {
-                return {
-                    solo: runtime.state.solo,
-                    volume: runtime.state.volume,
-                    pan: runtime.state.pan,
-                };
-            }),
-        };
-    }).call(ctx);
+function toUntypedHandler<K extends TrackSwitchEventName>(
+    handler: TrackSwitchEventHandler<K>
+): UntypedEventHandler {
+    return handler as unknown as UntypedEventHandler;
 }
 
-export function on(ctx: any, eventName: any, handler: any): any {
-    return (function(this: any, eventName: any, handler: any) {
-        this.listeners[eventName].add(handler as unknown as (payload: unknown) => void);
-        return () => this.off(eventName, handler);
-    }).call(ctx, eventName, handler);
+export function getState(ctx: TrackSwitchControllerImpl): TrackSwitchSnapshot {
+    return createControllerSnapshot(ctx);
 }
 
-export function off(ctx: any, eventName: any, handler: any): any {
-    return (function(this: any, eventName: any, handler: any) {
-        this.listeners[eventName].delete(handler as unknown as (payload: unknown) => void);
-    }).call(ctx, eventName, handler);
+export function on<K extends TrackSwitchEventName>(
+    ctx: TrackSwitchControllerImpl,
+    eventName: K,
+    handler: TrackSwitchEventHandler<K>
+): () => void {
+    ctx.listeners[eventName].add(toUntypedHandler(handler));
+    return () => off(ctx, eventName, handler);
 }
 
-export function emit(ctx: any, eventName: any, payload: any): any {
-    return (function(this: any, eventName: any, payload: any) {
-        this.listeners[eventName].forEach(function(handler: (payload: unknown) => void) {
-            handler(payload);
-        });
-    }).call(ctx, eventName, payload);
+export function off<K extends TrackSwitchEventName>(
+    ctx: TrackSwitchControllerImpl,
+    eventName: K,
+    handler: TrackSwitchEventHandler<K>
+): void {
+    ctx.listeners[eventName].delete(toUntypedHandler(handler));
+}
+
+export function emit<K extends TrackSwitchEventName>(
+    ctx: TrackSwitchControllerImpl,
+    eventName: K,
+    payload: TrackSwitchEventMap[K]
+): void {
+    ctx.listeners[eventName].forEach((handler) => {
+        handler(payload);
+    });
 }

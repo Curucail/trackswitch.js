@@ -162,11 +162,7 @@ function normalizeCursorAlpha(value: number | undefined): number {
     return value;
 }
 
-function normalizeSheetMusicDimension(value: number | undefined): number | undefined {
-    return normalizePositiveInteger(value);
-}
-
-function normalizeSheetMusicRenderScale(value: number | undefined): number | undefined {
+function normalizePositiveFiniteNumber(value: number | undefined): number | undefined {
     if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
         return undefined;
     }
@@ -183,7 +179,7 @@ function normalizeSheetMusicFollowPlayback(value: boolean | undefined): boolean 
 }
 
 function normalizeSheetMusicConfig<T extends TrackSwitchSheetMusicConfig>(sheetmusic: T): T {
-    const normalizedMaxWidth = normalizeSheetMusicDimension(sheetmusic.maxWidth);
+    const normalizedMaxWidth = normalizePositiveInteger(sheetmusic.maxWidth);
     const measureColumn = typeof sheetmusic.measureColumn === 'string'
         ? sheetmusic.measureColumn.trim()
         : undefined;
@@ -192,43 +188,23 @@ function normalizeSheetMusicConfig<T extends TrackSwitchSheetMusicConfig>(sheetm
         ...sheetmusic,
         measureColumn: measureColumn && measureColumn.length > 0 ? measureColumn : undefined,
         maxWidth: normalizedMaxWidth,
-        maxHeight: normalizeSheetMusicDimension(sheetmusic.maxHeight),
-        renderScale: normalizeSheetMusicRenderScale(sheetmusic.renderScale),
+        maxHeight: normalizePositiveInteger(sheetmusic.maxHeight),
+        renderScale: normalizePositiveFiniteNumber(sheetmusic.renderScale),
         followPlayback: normalizeSheetMusicFollowPlayback(sheetmusic.followPlayback),
         cursorAlpha: normalizeCursorAlpha(sheetmusic.cursorAlpha),
     };
 }
 
-function normalizeWarpingMatrixHeight(value: number | undefined): number | undefined {
-    return normalizePositiveInteger(value);
-}
-
-function normalizeWarpingMatrixTempoSmoothingSeconds(value: number | undefined): number | undefined {
-    if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
-        return undefined;
-    }
-
-    return value;
-}
-
-function normalizeWarpingMatrixGlobalScoreBpm(value: number | undefined): number | undefined {
-    if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
-        return undefined;
-    }
-
-    return value;
-}
-
 function normalizeWarpingMatrixConfig<T extends TrackSwitchWarpingMatrixConfig>(warpingMatrix: T): T {
-    const normalizedTempoSmoothingSeconds = normalizeWarpingMatrixTempoSmoothingSeconds(
+    const normalizedTempoSmoothingSeconds = normalizePositiveFiniteNumber(
         warpingMatrix.tempoSmoothingSeconds
     );
 
     return {
         ...warpingMatrix,
-        height: normalizeWarpingMatrixHeight(warpingMatrix.height),
+        height: normalizePositiveInteger(warpingMatrix.height),
         tempoSmoothingSeconds: normalizedTempoSmoothingSeconds,
-        globalScoreBPM: normalizeWarpingMatrixGlobalScoreBpm(warpingMatrix.globalScoreBPM),
+        globalScoreBPM: normalizePositiveFiniteNumber(warpingMatrix.globalScoreBPM),
     };
 }
 
@@ -343,12 +319,12 @@ function injectWarpingMatrix(root: HTMLElement, warpingMatrix: TrackSwitchWarpin
         container.setAttribute('data-warping-matrix-style', warpingMatrix.style);
     }
 
-    const normalizedHeight = normalizeWarpingMatrixHeight(warpingMatrix.height);
+    const normalizedHeight = normalizePositiveInteger(warpingMatrix.height);
     if (normalizedHeight !== undefined) {
         container.setAttribute('data-warping-matrix-height', String(normalizedHeight));
     }
 
-    const normalizedTempoSmoothingSeconds = normalizeWarpingMatrixTempoSmoothingSeconds(
+    const normalizedTempoSmoothingSeconds = normalizePositiveFiniteNumber(
         warpingMatrix.tempoSmoothingSeconds
     );
     if (normalizedTempoSmoothingSeconds !== undefined) {
@@ -358,7 +334,7 @@ function injectWarpingMatrix(root: HTMLElement, warpingMatrix: TrackSwitchWarpin
         );
     }
 
-    const normalizedGlobalScoreBpm = normalizeWarpingMatrixGlobalScoreBpm(warpingMatrix.globalScoreBPM);
+    const normalizedGlobalScoreBpm = normalizePositiveFiniteNumber(warpingMatrix.globalScoreBPM);
     if (normalizedGlobalScoreBpm !== undefined) {
         container.setAttribute('data-warping-matrix-global-score-bpm', String(normalizedGlobalScoreBpm));
     }
@@ -448,17 +424,17 @@ function injectSheetMusic(root: HTMLElement, sheetmusic: TrackSwitchSheetMusicCo
     );
     container.setAttribute('data-sheetmusic-cursor-alpha', String(normalizeCursorAlpha(sheetmusic.cursorAlpha)));
 
-    const maxWidth = normalizeSheetMusicDimension(sheetmusic.maxWidth);
+    const maxWidth = normalizePositiveInteger(sheetmusic.maxWidth);
     if (maxWidth !== undefined) {
         container.setAttribute('data-sheetmusic-max-width', String(maxWidth));
     }
 
-    const maxHeight = normalizeSheetMusicDimension(sheetmusic.maxHeight);
+    const maxHeight = normalizePositiveInteger(sheetmusic.maxHeight);
     if (maxHeight !== undefined) {
         container.setAttribute('data-sheetmusic-max-height', String(maxHeight));
     }
 
-    const renderScale = normalizeSheetMusicRenderScale(sheetmusic.renderScale);
+    const renderScale = normalizePositiveFiniteNumber(sheetmusic.renderScale);
     if (renderScale !== undefined) {
         container.setAttribute('data-sheetmusic-render-scale', String(renderScale));
     }

@@ -240,6 +240,18 @@ function resolveWarpingMatrixSeriesMaxTrackTime(
 }
 
 function parseWarpingMatrixHeight(value: string | null): number | null {
+    return parseRoundedPositiveIntegerAttribute(value);
+}
+
+function parseWarpingMatrixTempoSmoothingSeconds(value: string | null): number | null {
+    return parsePositiveNumberAttribute(value);
+}
+
+function parseWarpingMatrixGlobalScoreBpm(value: string | null): number | null {
+    return parsePositiveNumberAttribute(value);
+}
+
+function parseRoundedPositiveIntegerAttribute(value: string | null): number | null {
     if (value === null) {
         return null;
     }
@@ -252,20 +264,7 @@ function parseWarpingMatrixHeight(value: string | null): number | null {
     return Math.max(1, Math.round(parsed));
 }
 
-function parseWarpingMatrixTempoSmoothingSeconds(value: string | null): number | null {
-    if (value === null) {
-        return null;
-    }
-
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-        return null;
-    }
-
-    return parsed;
-}
-
-function parseWarpingMatrixGlobalScoreBpm(value: string | null): number | null {
+function parsePositiveNumberAttribute(value: string | null): number | null {
     if (value === null) {
         return null;
     }

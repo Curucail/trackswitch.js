@@ -305,19 +305,14 @@ function parseSheetMusicCursorAlpha(value: string | null): number {
 }
 
 function parseSheetMusicMaxHeight(value: string | null): number | null {
-    if (value === null) {
-        return null;
-    }
-
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed) || parsed < 1) {
-        return null;
-    }
-
-    return Math.max(1, Math.round(parsed));
+    return parseRoundedPositiveIntegerAttribute(value);
 }
 
 function parseSheetMusicMaxWidth(value: string | null): number | null {
+    return parseRoundedPositiveIntegerAttribute(value);
+}
+
+function parseRoundedPositiveIntegerAttribute(value: string | null): number | null {
     if (value === null) {
         return null;
     }

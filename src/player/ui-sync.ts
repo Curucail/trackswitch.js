@@ -1,95 +1,69 @@
-import { TrackRuntime, TrackSwitchUiState } from '../domain/types';
+import type { TrackSwitchControllerImpl } from './player-controller';
+import {
+    createPositionEventPayload,
+    createTrackStateEventPayload,
+    createUiState,
+} from './controller-state';
 
-function buildUiState(controller: any): TrackSwitchUiState {
-    return {
-        playing: controller.state.playing,
-        repeat: controller.state.repeat,
-        position: controller.state.position,
-        longestDuration: controller.longestDuration,
-        syncEnabled: controller.globalSyncEnabled,
-        syncAvailable: controller.isGlobalSyncAvailable(),
-        loop: {
-            pointA: controller.state.loop.pointA,
-            pointB: controller.state.loop.pointB,
-            enabled: controller.state.loop.enabled,
-        },
-    };
+function emitPositionUpdate(controller: TrackSwitchControllerImpl): void {
+    controller.emit('position', createPositionEventPayload(controller));
 }
 
-export function applyTrackProperties(ctx: any): any {
-    return (function(this: any) {
-        const panSupported = this.audioEngine.supportsStereoPanning();
-        const noSoloFallbackGate = this.isAlignmentMode() && this.globalSyncEnabled ? 0 : undefined;
-        if (!panSupported) {
-            this.runtimes.forEach((runtime: TrackRuntime) => {
-                runtime.state.pan = 0;
-            });
-        }
-
-        this.renderer.updateTrackControls(
-            this.runtimes,
-            this.syncLockedTrackIndexes,
-            this.effectiveSingleSoloMode,
-            panSupported,
-            this.globalSyncEnabled
-        );
-        this.audioEngine.applyTrackStateGains(this.runtimes, noSoloFallbackGate);
-        this.renderer.switchPosterImage(this.runtimes);
-        this.renderer.renderWaveforms(
-            this.waveformEngine,
-            this.runtimes,
-            this.longestDuration,
-            this.getWaveformTimelineProjector(),
-            this.getWaveformTimelineContext()
-        );
-
-        this.runtimes.forEach((runtime: TrackRuntime, index: number) => {
-            this.emit('trackState', {
-                index: index,
-                state: {
-                    solo: runtime.state.solo,
-                    volume: runtime.state.volume,
-                    pan: runtime.state.pan,
-                },
-            });
+export function applyTrackProperties(ctx: TrackSwitchControllerImpl): void {
+    const panSupported = ctx.audioEngine.supportsStereoPanning();
+    const noSoloFallbackGate = ctx.isAlignmentMode() && ctx.globalSyncEnabled ? 0 : undefined;
+    if (!panSupported) {
+        ctx.runtimes.forEach((runtime) => {
+            runtime.state.pan = 0;
         });
-    }).call(ctx);
+    }
+
+    ctx.renderer.updateTrackControls(
+        ctx.runtimes,
+        ctx.syncLockedTrackIndexes,
+        ctx.effectiveSingleSoloMode,
+        panSupported,
+        ctx.globalSyncEnabled
+    );
+    ctx.audioEngine.applyTrackStateGains(ctx.runtimes, noSoloFallbackGate);
+    ctx.renderer.switchPosterImage(ctx.runtimes);
+    ctx.renderer.renderWaveforms(
+        ctx.waveformEngine,
+        ctx.runtimes,
+        ctx.longestDuration,
+        ctx.getWaveformTimelineProjector(),
+        ctx.getWaveformTimelineContext()
+    );
+
+    ctx.runtimes.forEach((runtime, index) => {
+        ctx.emit('trackState', createTrackStateEventPayload(index, runtime));
+    });
 }
 
-export function updateMainControls(ctx: any): any {
-    return (function(this: any) {
-        const uiState = buildUiState(this);
+export function updateMainControls(ctx: TrackSwitchControllerImpl): void {
+    const uiState = createUiState(ctx);
 
-        this.renderer.updateMainControls(
-            uiState,
-            this.runtimes,
-            this.getWaveformTimelineContext(),
-            this.getWarpingMatrixContext()
-        );
-        this.sheetMusicEngine.updatePosition(this.state.position, this.isSyncReferenceAxisActive());
+    ctx.renderer.updateMainControls(
+        uiState,
+        ctx.runtimes,
+        ctx.getWaveformTimelineContext(),
+        ctx.getWarpingMatrixContext()
+    );
+    ctx.sheetMusicEngine.updatePosition(ctx.state.position, ctx.isSyncReferenceAxisActive());
 
-        this.emit('position', {
-            position: this.state.position,
-            duration: this.longestDuration,
-        });
-    }).call(ctx);
+    emitPositionUpdate(ctx);
 }
 
-export function updatePlaybackPositionUi(ctx: any): any {
-    return (function(this: any) {
-        const uiState = buildUiState(this);
+export function updatePlaybackPositionUi(ctx: TrackSwitchControllerImpl): void {
+    const uiState = createUiState(ctx);
 
-        this.renderer.updatePlaybackPosition(
-            uiState,
-            this.runtimes,
-            this.getWaveformTimelineContext(),
-            this.getWarpingMatrixContext()
-        );
-        this.sheetMusicEngine.updatePosition(this.state.position, this.isSyncReferenceAxisActive());
+    ctx.renderer.updatePlaybackPosition(
+        uiState,
+        ctx.runtimes,
+        ctx.getWaveformTimelineContext(),
+        ctx.getWarpingMatrixContext()
+    );
+    ctx.sheetMusicEngine.updatePosition(ctx.state.position, ctx.isSyncReferenceAxisActive());
 
-        this.emit('position', {
-            position: this.state.position,
-            duration: this.longestDuration,
-        });
-    }).call(ctx);
+    emitPositionUpdate(ctx);
 }
