@@ -193,6 +193,9 @@ export class InputBinder {
         this.addDelegatedListener('click', '.overlay .activate', (event) => {
             this.controller.onOverlayActivate(event);
         });
+        this.addDelegatedListener('click', '.overlay .info', (event) => {
+            this.controller.onOverlayInfo(event);
+        });
         this.addDelegatedListener('click', '.overlay-shortcuts', (event) => {
             this.controller.onShortcutHelpOverlay(event);
         });

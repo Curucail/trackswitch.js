@@ -196,7 +196,15 @@ function averageExactMatch(points: TimeMappingPoint[], index: number, x: number)
         end += 1;
     }
 
-    return (points[start].y + points[end].y) / 2;
+    let total = 0;
+    let count = 0;
+
+    for (let currentIndex = start; currentIndex <= end; currentIndex += 1) {
+        total += points[currentIndex].y;
+        count += 1;
+    }
+
+    return count > 0 ? total / count : points[index].y;
 }
 
 function extrapolateFromStart(points: TimeMappingPoint[], time: number): number {

@@ -101,7 +101,8 @@ export function normalizeInit(root: HTMLElement, init: TrackSwitchInit): Normali
         ? { ...(init.features ?? {}), waveform: true }
         : init.features;
     const normalizedFeatures = normalizeFeatures(resolvedFeatures as Partial<TrackSwitchFeatures> | undefined);
-    if (hasPerTrackImageUi(resolvedUi) && !normalizedFeatures.exclusiveSolo) {
+    const usesExclusiveSoloMode = normalizedFeatures.exclusiveSolo || normalizedFeatures.mode === 'alignment';
+    if (hasPerTrackImageUi(resolvedUi) && !usesExclusiveSoloMode) {
         throw new Error('Invalid init configuration: perTrackImage requires features.exclusiveSolo to be true.');
     }
 
