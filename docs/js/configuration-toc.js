@@ -7,6 +7,7 @@
   document.documentElement.style.scrollBehavior = 'auto';
 
   const links = Array.from(toc.querySelectorAll('a[href^="#"]'));
+  const masthead = document.querySelector('.site-masthead');
   const items = links
     .map((link) => {
       const href = link.getAttribute('href');
@@ -71,6 +72,26 @@
   const topOffset = 132;
   let ticking = false;
 
+  const syncTocLayout = () => {
+    if (window.innerWidth < 1120) {
+      toc.style.top = '';
+      toc.style.maxHeight = '';
+      return;
+    }
+
+    const mastheadHeight =
+      masthead instanceof HTMLElement ? masthead.offsetHeight : 0;
+    const viewportHeight = window.innerHeight;
+    const minTop = mastheadHeight + 24;
+    const centeredTop = mastheadHeight
+      + Math.max(24, (viewportHeight - mastheadHeight - toc.offsetHeight) / 2);
+    const top = Math.max(minTop, Math.round(centeredTop));
+    const maxHeight = Math.max(240, Math.floor(viewportHeight - top - 24));
+
+    toc.style.top = `${top}px`;
+    toc.style.maxHeight = `${maxHeight}px`;
+  };
+
   const updateActiveFromScroll = () => {
     ticking = false;
 
@@ -99,7 +120,10 @@
   };
 
   window.addEventListener('scroll', requestUpdate, { passive: true });
-  window.addEventListener('resize', requestUpdate, { passive: true });
+  window.addEventListener('resize', () => {
+    syncTocLayout();
+    requestUpdate();
+  }, { passive: true });
   window.addEventListener('hashchange', () => {
     syncFromHash();
     requestUpdate();
@@ -116,5 +140,6 @@
     });
   });
 
+  syncTocLayout();
   requestUpdate();
 })();

@@ -196,6 +196,9 @@ kbd {
 }
 
 .docs-page--config .site-main {
+    --ts-config-toc-width: 260px;
+    --ts-config-toc-gap: 40px;
+    --ts-config-content-width: 900px;
     width: min(1360px, calc(100% - (var(--ts-doc-page-gutter) * 2)));
     padding-top: 1rem;
 }
@@ -211,7 +214,9 @@ kbd {
 .docs-page--config .site-main > .highlighter-rouge,
 .docs-page--config .site-main > pre,
 .docs-page--config .site-main > table {
-    max-width: 900px;
+    max-width: var(--ts-config-content-width);
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .docs-page--config .site-main > h1 {
@@ -261,11 +266,10 @@ kbd {
 }
 
 .docs-page--config .site-main > ul:first-of-type ul {
-    margin: 0.32rem 0 0;
-    padding-left: 0.85rem;
-    margin-left: 0.25rem;
+    margin: 0.28rem 0 0;
+    padding-left: 0.9rem;
+    margin-left: 0;
     list-style: none;
-    border-left: 1px solid rgba(153, 153, 153, 0.22);
 }
 
 .docs-page--config .site-main > ul:first-of-type li {
@@ -279,11 +283,17 @@ kbd {
 .docs-page--config .site-main > ul:first-of-type ul li::before {
     content: "";
     position: absolute;
-    left: -0.55rem;
-    top: 0.82rem;
-    width: 0.32rem;
-    height: 1px;
-    background: rgba(56, 56, 56, 0.45);
+    left: -0.45rem;
+    top: 0.72rem;
+    width: 0.24rem;
+    height: 0.24rem;
+    border-radius: 999px;
+    background: rgba(56, 56, 56, 0.38);
+}
+
+.docs-page--config .site-main > ul:first-of-type ul a {
+    margin-left: 0.5rem;
+    padding-left: 0.45rem;
 }
 
 .docs-page--config .site-main > ul:first-of-type a {
@@ -377,17 +387,24 @@ kbd {
 
 @media (min-width: 1120px) {
     .docs-page--config .site-main {
-        padding-left: 450px;
+        --ts-config-content-width: min(
+            900px,
+            calc(100vw - (var(--ts-doc-page-gutter) * 2) - var(--ts-config-toc-width) - var(--ts-config-toc-gap) - 24px)
+        );
+        padding-left: 0;
     }
 
     .docs-page--config .site-main > ul:first-of-type {
-        position: sticky;
+        position: fixed;
         top: 96px;
-        float: left;
-        width: 260px;
+        width: var(--ts-config-toc-width);
         max-height: calc(100vh - 120px);
         overflow: auto;
-        margin: 0 0 0 -450px;
+        left: max(
+            var(--ts-doc-page-gutter),
+            calc(((100vw - var(--ts-config-content-width)) / 2 - var(--ts-config-toc-width)) / 2)
+        );
+        margin: 0;
     }
 }
 
