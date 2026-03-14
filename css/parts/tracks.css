@@ -5,7 +5,8 @@
 }
 
 .trackswitch li.track {
-    background-color: var(--ts-color-text-muted);
+    --ts-track-row-bg: var(--ts-color-text-muted);
+    background-color: var(--ts-track-row-bg);
     position: relative;
     min-height: 32px;
     /* Required if there is no title defined */
@@ -22,14 +23,13 @@
     border: 1px solid var(--ts-color-border-mid);
 }
 
-/* SPECIFICITY PROBLEMS!!!!!!!!! -------------------------------------------------------------------------------- TODO */
 .trackswitch li.track:not(.tabs):nth-child(even) {
-    background-color: var(--ts-color-surface-base);
+    --ts-track-row-bg: var(--ts-color-surface-base);
 }
 
 .trackswitch li.track.error,
 .trackswitch li.track.error:not(.tabs):nth-child(even) {
-    background-color: var(--ts-color-track-error-bg);
+    --ts-track-row-bg: var(--ts-color-track-error-bg);
 }
 
 .trackswitch li.track .track-error-indicator {
@@ -101,7 +101,7 @@
 
 .trackswitch .control li.loop-a::after,
 .trackswitch .control li.loop-b::after {
-    font-family: Arial, sans-serif;
+    font-family: var(--ts-font-ui);
     font-weight: bold;
     text-indent: 0;
     opacity: 0.5;
@@ -218,7 +218,7 @@
 
 .trackswitch li.track .track-pan-label {
     color: var(--ts-color-text-secondary);
-    font-family: Arial, sans-serif;
+    font-family: var(--ts-font-ui);
     font-size: 12px;
     font-weight: 600;
     letter-spacing: 0.03em;

@@ -4,7 +4,7 @@
     .trackswitch .main-control ul.control {
         gap: 6px 16px;
         min-height: 36px;
-        padding: 8px 12px 8px 12px;
+        padding: 8px 12px;
     }
 
     .trackswitch .main-control .seekwrap {
@@ -165,7 +165,7 @@
         height: 26px;
         line-height: 26px;
         font-size: 14px;
-        padding: 0 0px;
+        padding: 0;
     }
 
     .trackswitch .main-control .volume-control .volume-icon {

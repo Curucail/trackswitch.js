@@ -20,6 +20,7 @@
     --ts-doc-font-text: "IBM Plex Sans", "Segoe UI", sans-serif;
     --ts-doc-font-ui: "IBM Plex Sans", "Segoe UI", sans-serif;
     --ts-doc-font-brand: "Archivo", sans-serif;
+    --ts-doc-font-code: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
 }
 
 html {
@@ -402,7 +403,7 @@ kbd {
 .site-main > blockquote code,
 .ts-showcase__code-callout p code,
 .ts-showcase__code-callout li code {
-    font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+    font-family: var(--ts-doc-font-code);
     background: rgba(0, 0, 0, 0.04);
     padding: 0.08rem 0.32rem;
     border-radius: 0.3rem;
