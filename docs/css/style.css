@@ -24,8 +24,7 @@
 }
 
 html {
-    background:
-        linear-gradient(180deg, #f4f4f4 0%, #ebebeb 50%, #e5e5e5 100%);
+    background: var(--ts-doc-color-surface-base);
     color: var(--ts-doc-color-text-primary);
     scroll-behavior: smooth;
 }
@@ -34,9 +33,7 @@ body {
     margin: 0;
     font-family: var(--ts-doc-font-ui);
     color: var(--ts-doc-color-text-primary);
-    background:
-        radial-gradient(circle at top, rgba(255, 255, 255, 0.72), transparent 42%),
-        linear-gradient(180deg, #f3f3f3 0%, #e7e7e7 100%);
+    background: var(--ts-doc-color-surface-base);
     line-height: 1.6;
 }
 
@@ -89,7 +86,7 @@ kbd {
 .site-masthead__inner {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 1rem;
     min-height: 72px;
 }
@@ -1054,12 +1051,13 @@ kbd {
     .site-masthead__inner {
         min-height: 64px;
         flex-direction: column;
+        align-items: flex-start;
         justify-content: center;
         padding: 0.8rem 0;
     }
 
     .site-nav {
-        justify-content: center;
+        justify-content: flex-start;
     }
 
     .site-main {
