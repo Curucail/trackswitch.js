@@ -102,12 +102,6 @@ kbd {
     text-decoration: none;
 }
 
-.site-brand__version {
-    font-size: 0.8em;
-    font-weight: 500;
-    color: #7a7a7a;
-}
-
 .site-nav {
     display: flex;
     align-items: center;
@@ -588,13 +582,6 @@ kbd {
     color: #2a2a2a;
 }
 
-.ts-hero__version {
-    font-size: 0.48em;
-    font-weight: 500;
-    color: #7a7a7a;
-    vertical-align: middle;
-}
-
 .ts-hero__description {
     max-width: 640px;
     margin: 0;
@@ -708,9 +695,12 @@ kbd {
         0 26px 56px rgba(0, 0, 0, 0.22),
         inset 0 1px 0 rgba(255, 255, 255, 0.78);
     opacity: 0;
+    visibility: hidden;
     transform: translateY(-50%) scale(0.985);
-    pointer-events: none;
-    transition: opacity 0.24s ease, transform 0.28s ease;
+    transition:
+        opacity 0.24s ease 0.1s,
+        transform 0.28s ease 0.1s,
+        visibility 0s linear 0.38s;
 }
 
 .ts-showcase__snippet-panel .ts-showcase__snippet-shell {
@@ -740,13 +730,36 @@ kbd {
     box-shadow: none;
 }
 
+.ts-showcase__snippet-panel .ts-code-tag,
+.ts-showcase__snippet-panel .ts-code-keyword {
+    color: var(--ts-doc-color-accent);
+    font-weight: 600;
+}
+
+.ts-showcase__snippet-panel .ts-code-attr,
+.ts-showcase__snippet-panel .ts-code-key {
+    color: var(--ts-doc-color-surface-panel-dark);
+    font-weight: 600;
+}
+
+.ts-showcase__snippet-panel .ts-code-string {
+    color: var(--ts-doc-color-text-error);
+    font-weight: 500;
+}
+
+.ts-showcase__snippet-panel .ts-code-bool {
+    color: var(--ts-doc-color-text-secondary);
+    font-weight: 600;
+}
+
 .ts-showcase__code-callout:hover ~ .ts-showcase__snippet-panel,
 .ts-showcase__code-callout:focus-within ~ .ts-showcase__snippet-panel,
 .ts-showcase__snippet-panel:hover,
 .ts-showcase__snippet-panel:focus-within {
     opacity: 1;
+    visibility: visible;
     transform: translateY(-50%) scale(1);
-    pointer-events: auto;
+    transition-delay: 0s, 0s, 0s;
 }
 
 #ts-showcase-player {

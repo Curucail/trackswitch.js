@@ -22,7 +22,7 @@
   {% unless page.url == '/' %}
   <header class="site-masthead">
     <div class="site-masthead__inner">
-      <a class="site-brand" href="{{ '/' | relative_url }}">trackswitch.js <span class="site-brand__version">v2</span></a>
+      <a class="site-brand" href="{{ '/' | relative_url }}">trackswitch.js</a>
       <nav class="site-nav" aria-label="Documentation">
         <a href="{{ '/' | relative_url }}"{% if page.url == '/' %} aria-current="page"{% endif %}>Home</a>
         <a href="{{ '/configuration.html' | relative_url }}"{% if page.url == '/configuration.html' %} aria-current="page"{% endif %}>Configuration</a>
@@ -43,7 +43,7 @@
         <img src="{{ '/assets/alabs.png' | relative_url }}" alt="AudioLabs Erlangen" />
       </a>
       <a href="https://www.iis.fraunhofer.de/">
-        <img src="{{ '/assets/iis.png' | relative_url }}" alt="Fraunhofer IIS" />
+        <img src="{{ '/assets/iis.svg' | relative_url }}" alt="Fraunhofer IIS" />
       </a>
       <a href="https://www.fau.de/">
         <img src="{{ '/assets/fau.png' | relative_url }}" alt="FAU Erlangen-Nurnberg" />

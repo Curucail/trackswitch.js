@@ -12,7 +12,7 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
     </nav>
 
     <div class="ts-hero__copy">
-      <h1>trackswitch.js <span class="ts-hero__version">v2</span></h1>
+      <h1>trackswitch.js</h1>
       <p class="ts-hero__description">Web-Based Multitrack Audio Player for Presenting Scientific Results</p>
     </div>
 
