@@ -27,6 +27,7 @@
     "test:package-types": "tsc --project tsconfig.package-smoke.json",
     "test:package-exports": "node scripts/verify-package-exports.mjs",
     "test:measure-map": "node scripts/run-measure-map-tests.mjs",
+    "test:warping-matrix": "node scripts/run-warping-matrix-tests.mjs",
     "test:waveform": "node scripts/run-waveform-tests.mjs",
     "typecheck": "tsc --project tsconfig.json",
     "typecheck:unused": "tsc --project tsconfig.json --noUnusedLocals --noUnusedParameters --pretty false"

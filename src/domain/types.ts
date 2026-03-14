@@ -93,7 +93,7 @@ export interface TrackSwitchSheetMusicConfig {
 export interface TrackSwitchWarpingMatrixConfig {
     style?: string;
     height?: number;
-    tempoSmoothingHalfWindowPoints?: number;
+    tempoSmoothingSeconds?: number;
     globalScoreBPM?: number;
 }
 

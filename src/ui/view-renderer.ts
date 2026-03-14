@@ -203,7 +203,7 @@ interface WarpingMatrixHostMetadata {
     configuredHeight: number | null;
     configuredGlobalScoreBpm: number | null;
     tempoWindowSeconds: number;
-    tempoSmoothingHalfWindowPoints: number;
+    tempoSmoothingSeconds: number;
     colorByColumn: Map<string, string>;
     activeColumnKey: string | null;
     referenceDuration: number;
@@ -214,8 +214,6 @@ interface WarpingMatrixHostMetadata {
     lastSizeKey: string | null;
     layoutDirty: boolean;
     staticPlotDirty: boolean;
-    tempoSmoothingAutoInitialized: boolean;
-    tempoSmoothingUsesAutoDefault: boolean;
 }
 
 interface PanelDragState {
@@ -245,7 +243,7 @@ export class ViewRenderer {
     public panelDragState: PanelDragState | null = null;
     public readonly warpingMatrixTempoControlState = new WeakMap<
         HTMLElement,
-        { windowSeconds: number; smoothingHalfWindowPoints: number }
+        { windowSeconds: number; smoothingSeconds: number }
     >();
 
     constructor(
@@ -280,8 +278,8 @@ public getWarpingMatrixLocalTempoWindowSeconds(host: WarpingMatrixHostMetadata):
         return viewRendererWarping.getWarpingMatrixLocalTempoWindowSeconds(this, host);
     }
 
-public getWarpingMatrixLocalTempoSlopeHalfWindowPoints(host: WarpingMatrixHostMetadata): number {
-        return viewRendererWarping.getWarpingMatrixLocalTempoSlopeHalfWindowPoints(this, host);
+public getWarpingMatrixLocalTempoSmoothingSeconds(host: WarpingMatrixHostMetadata): number {
+        return viewRendererWarping.getWarpingMatrixLocalTempoSmoothingSeconds(this, host);
     }
 
 public updateWarpingMatrixTempoControlLabels(host: WarpingMatrixHostMetadata): void {
@@ -510,9 +508,9 @@ public buildWarpingMatrixData(
 
 public buildWarpingTempoData(
         matrixData: WarpingMatrixMatrixData | null,
-        halfWindowPoints: number
+        smoothingSeconds: number
     ): WarpingMatrixTempoData {
-        return viewRendererWarping.buildWarpingTempoData(this, matrixData, halfWindowPoints);
+        return viewRendererWarping.buildWarpingTempoData(this, matrixData, smoothingSeconds);
     }
 
 public interpolateWarpingTrackTime(points: WarpingMatrixPathPoint[], referenceTime: number): number {

@@ -130,7 +130,7 @@ interface WarpingMatrixHostMetadata {
     configuredHeight: number | null;
     configuredGlobalScoreBpm: number | null;
     tempoWindowSeconds: number;
-    tempoSmoothingHalfWindowPoints: number;
+    tempoSmoothingSeconds: number;
     colorByColumn: Map<string, string>;
     activeColumnKey: string | null;
     referenceDuration: number;
@@ -141,8 +141,6 @@ interface WarpingMatrixHostMetadata {
     lastSizeKey: string | null;
     layoutDirty: boolean;
     staticPlotDirty: boolean;
-    tempoSmoothingAutoInitialized: boolean;
-    tempoSmoothingUsesAutoDefault: boolean;
 }
 
 interface ShortcutHelpEntry {

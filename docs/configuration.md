@@ -243,7 +243,7 @@ TrackSwitch.createTrackSwitch(rootElement, {
     {
       type: 'warpingMatrix',
       height: 240,
-      tempoSmoothingHalfWindowPoints: 3,
+      tempoSmoothingSeconds: 5,
       style: 'margin: 12px 0;',
     },
   ],
@@ -554,14 +554,14 @@ Behavior:
 ### Warping Matrix UI Element
 
 ```javascript
-{ type: 'warpingMatrix', height: 240, tempoSmoothingHalfWindowPoints: 3, globalScoreBPM: 60, style: 'margin: 12px 0;' }
+{ type: 'warpingMatrix', height: 240, tempoSmoothingSeconds: 5, globalScoreBPM: 60, style: 'margin: 12px 0;' }
 ```
 
 Fields:
 
 - `height?: number`
 - `style?: string`
-- `tempoSmoothingHalfWindowPoints?: number`
+- `tempoSmoothingSeconds?: number`
 - `globalScoreBPM?: number`
 
 Behavior:
@@ -571,8 +571,11 @@ Behavior:
   - left: warping path (reference time vs track time)
   - right: local tempo deviation (percent, with baseline at `100`)
 - Tempo plot uses active-track time on x-axis and can seek on click.
-- Tempo plot derives tempo from a strictly monotonic warping path, fills gaps by linear interpolation on the reference-time frame grid, smooths beat-duration ratios with a Hann window, and maps the result back to tempo percent.
-- Tempo smoothing uses Hann-window half-width `k`; default `k = 5`.
+- The `Window (s)` control changes only the visible time range of the tempo plot.
+- The smoothing control sets how many seconds of score time are used for each local tempo estimate; default `5s`.
+- Tempo plot derives tempo from a strictly monotonic warping path, fills gaps by linear interpolation on the reference-time frame grid, measures local beat-duration ratios across the configured smoothing span, and maps the result back to tempo percent.
+- If reference points are roughly uniformly spaced, the estimate behaves like a centered finite-difference over a seconds-based span.
+- If reference spacing is irregular, the span is only approximately seconds-based because the effective `reference[k+h] - reference[k-h]` changes along the path.
 - Tempo plot uses a fixed logarithmic y-axis from `10` to `1000`.
 - If `globalScoreBPM` is set, BPM ticks are shown on the left axis and percent ticks on the right.
 - If `globalScoreBPM` is not set, the player tries to derive BPM from the first loaded `sheetMusic` score and otherwise keeps percent-only axis labels.

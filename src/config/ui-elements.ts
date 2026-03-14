@@ -41,7 +41,13 @@ const uiSheetMusicAllowedKeys = [
     'cursorColor',
     'cursorAlpha',
 ] as const;
-const uiWarpingMatrixAllowedKeys = ['type', 'style', 'height', 'tempoSmoothingHalfWindowPoints', 'globalScoreBPM'] as const;
+const uiWarpingMatrixAllowedKeys = [
+    'type',
+    'style',
+    'height',
+    'tempoSmoothingSeconds',
+    'globalScoreBPM',
+] as const;
 
 const trackAllowedKeys = [
     'title',
@@ -197,8 +203,12 @@ function normalizeWarpingMatrixHeight(value: number | undefined): number | undef
     return normalizePositiveInteger(value);
 }
 
-function normalizeWarpingMatrixTempoSmoothingHalfWindowPoints(value: number | undefined): number | undefined {
-    return normalizePositiveInteger(value);
+function normalizeWarpingMatrixTempoSmoothingSeconds(value: number | undefined): number | undefined {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+        return undefined;
+    }
+
+    return value;
 }
 
 function normalizeWarpingMatrixGlobalScoreBpm(value: number | undefined): number | undefined {
@@ -210,12 +220,14 @@ function normalizeWarpingMatrixGlobalScoreBpm(value: number | undefined): number
 }
 
 function normalizeWarpingMatrixConfig<T extends TrackSwitchWarpingMatrixConfig>(warpingMatrix: T): T {
+    const normalizedTempoSmoothingSeconds = normalizeWarpingMatrixTempoSmoothingSeconds(
+        warpingMatrix.tempoSmoothingSeconds
+    );
+
     return {
         ...warpingMatrix,
         height: normalizeWarpingMatrixHeight(warpingMatrix.height),
-        tempoSmoothingHalfWindowPoints: normalizeWarpingMatrixTempoSmoothingHalfWindowPoints(
-            warpingMatrix.tempoSmoothingHalfWindowPoints
-        ),
+        tempoSmoothingSeconds: normalizedTempoSmoothingSeconds,
         globalScoreBPM: normalizeWarpingMatrixGlobalScoreBpm(warpingMatrix.globalScoreBPM),
     };
 }
@@ -336,13 +348,13 @@ function injectWarpingMatrix(root: HTMLElement, warpingMatrix: TrackSwitchWarpin
         container.setAttribute('data-warping-matrix-height', String(normalizedHeight));
     }
 
-    const normalizedTempoSmoothingHalfWindowPoints = normalizeWarpingMatrixTempoSmoothingHalfWindowPoints(
-        warpingMatrix.tempoSmoothingHalfWindowPoints
+    const normalizedTempoSmoothingSeconds = normalizeWarpingMatrixTempoSmoothingSeconds(
+        warpingMatrix.tempoSmoothingSeconds
     );
-    if (normalizedTempoSmoothingHalfWindowPoints !== undefined) {
+    if (normalizedTempoSmoothingSeconds !== undefined) {
         container.setAttribute(
-            'data-warping-matrix-tempo-smoothing-half-window-points',
-            String(normalizedTempoSmoothingHalfWindowPoints)
+            'data-warping-matrix-tempo-smoothing-seconds',
+            String(normalizedTempoSmoothingSeconds)
         );
     }
 
