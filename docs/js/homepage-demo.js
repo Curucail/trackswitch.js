@@ -40,7 +40,7 @@
         title: 'Schubert: Winterreise, D. 911: No. 3 - HU33',
         sources: [{ src: basePath + '/Schubert_D911-03_HU33.wav' }],
         alignment: {
-          column: 'start_HU33',
+          column: 'time_HU33',
           synchronizedSources: [{ src: basePath + '/Schubert_D911-03_HU33.wav' }],
         },
       },
@@ -48,7 +48,7 @@
         title: 'Schubert: Winterreise, D. 911: No. 3 - SC06',
         sources: [{ src: basePath + '/Schubert_D911-03_SC06.wav' }],
         alignment: {
-          column: 'start_SC06',
+          column: 'time_SC06',
           synchronizedSources: [{ src: basePath + '/Schubert_D911-03_SC06_syncronized.wav' }],
         },
       },
@@ -573,8 +573,8 @@
         "document.addEventListener('DOMContentLoaded', function () {",
         "  TrackSwitch.createTrackSwitch(document.getElementById('player'), {",
         '    alignment: {',
-        "      csv: 'dtw_alignment.csv',",
-        "      referenceTimeColumn: 'measure',",
+        "      csv: 'alignment.csv',",
+        "      referenceTimeColumn: 'time_score',",
         "      outOfRange: 'clamp',",
         '    },',
         '    ui: [',
@@ -625,7 +625,7 @@
         "            title: 'SC06',",
         "            sources: [{ src: 'Schubert_D911-03_SC06.wav' }],",
         '            alignment: {',
-        "              column: 'start_HU33',",
+        "              column: 'time_HU33',",
         "              synchronizedSources: [{ src: 'Schubert_D911-03_SC06_syncronized.wav' }],",
         '            },',
         '          },',
@@ -633,7 +633,7 @@
         "            title: 'HU33',",
         "            sources: [{ src: 'Schubert_D911-03_HU33.wav' }],",
         '            alignment: {',
-        "              column: 'start_SC06',",
+        "              column: 'time_SC06',",
         "              synchronizedSources: [{ src: 'Schubert_D911-03_HU33.wav' }],",
         '            },',
         '          },',
@@ -871,8 +871,8 @@
         });
 
         init.alignment = {
-          csv: basePath + '/dtw_alignment.csv',
-          referenceTimeColumn: 'measure',
+          csv: basePath + '/alignment.csv',
+          referenceTimeColumn: 'time_score',
           outOfRange: 'clamp',
         };
       } else {
