@@ -656,7 +656,7 @@ kbd {
 .ts-showcase__layout {
     --ts-showcase-side-width: 280px;
     --ts-showcase-stage-width: 760px;
-    --ts-showcase-gap: 1.8rem;
+    --ts-showcase-gap: 2.1rem;
     position: relative;
     display: grid;
     grid-template-columns: var(--ts-showcase-side-width) var(--ts-showcase-stage-width) var(--ts-showcase-side-width);
@@ -697,10 +697,11 @@ kbd {
     opacity: 0;
     visibility: hidden;
     transform: translateY(-50%) scale(0.985);
+    pointer-events: none;
     transition:
-        opacity 0.24s ease 0.1s,
-        transform 0.28s ease 0.1s,
-        visibility 0s linear 0.38s;
+        opacity 0.24s ease,
+        transform 0.28s ease,
+        visibility 0s linear 0.28s;
 }
 
 .ts-showcase__snippet-panel .ts-showcase__snippet-shell {
@@ -752,13 +753,11 @@ kbd {
     font-weight: 600;
 }
 
-.ts-showcase__code-callout:hover ~ .ts-showcase__snippet-panel,
-.ts-showcase__code-callout:focus-within ~ .ts-showcase__snippet-panel,
-.ts-showcase__snippet-panel:hover,
-.ts-showcase__snippet-panel:focus-within {
+.ts-showcase.is-snippet-preview-visible .ts-showcase__snippet-panel {
     opacity: 1;
     visibility: visible;
     transform: translateY(-50%) scale(1);
+    pointer-events: auto;
     transition-delay: 0s, 0s, 0s;
 }
 

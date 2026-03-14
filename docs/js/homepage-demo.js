@@ -144,6 +144,7 @@
     var playerRoot = document.getElementById('ts-showcase-player');
     var controlsRoot = document.getElementById('ts-showcase-controls');
     var codeCallout = document.querySelector('.ts-showcase__code-callout');
+    var snippetPanel = document.querySelector('.ts-showcase__snippet-panel');
     var guideArrow = document.querySelector('.ts-showcase__guide-arrow');
     var noteElement = document.getElementById('ts-showcase-note');
     var quickstartElement = document.getElementById('ts-dynamic-quickstart');
@@ -157,6 +158,7 @@
     var rebuildDebounceTimer = null;
     var rebuildToken = 0;
     var quickstartText = '';
+    var snippetPreviewHideTimer = null;
     var arrowFrame = null;
     var arrowPath = null;
     var arrowHeadPath = null;
@@ -248,6 +250,66 @@
       var hasMessages = Array.isArray(messages) && messages.length > 0;
       noteElement.textContent = hasMessages ? messages.join(' ') : '';
       noteElement.classList.toggle('is-visible', hasMessages);
+    }
+
+    function setSnippetPreviewVisible(isVisible) {
+      if (!showcaseRoot || !snippetPanel) {
+        return;
+      }
+
+      showcaseRoot.classList.toggle('is-snippet-preview-visible', isVisible);
+    }
+
+    function clearSnippetPreviewHideTimer() {
+      if (!snippetPreviewHideTimer) {
+        return;
+      }
+
+      clearTimeout(snippetPreviewHideTimer);
+      snippetPreviewHideTimer = null;
+    }
+
+    function scheduleSnippetPreviewHide() {
+      clearSnippetPreviewHideTimer();
+      snippetPreviewHideTimer = setTimeout(function () {
+        setSnippetPreviewVisible(false);
+        snippetPreviewHideTimer = null;
+      }, 100);
+    }
+
+    function bindSnippetPreviewHover() {
+      if (!codeCallout || !snippetPanel) {
+        return;
+      }
+
+      [codeCallout, snippetPanel].forEach(function (element) {
+        element.addEventListener('mouseenter', function () {
+          clearSnippetPreviewHideTimer();
+          setSnippetPreviewVisible(true);
+        });
+
+        element.addEventListener('mouseleave', function () {
+          scheduleSnippetPreviewHide();
+        });
+
+        element.addEventListener('focusin', function () {
+          clearSnippetPreviewHideTimer();
+          setSnippetPreviewVisible(true);
+        });
+
+        element.addEventListener('focusout', function () {
+          setTimeout(function () {
+            if (
+              codeCallout.contains(document.activeElement) ||
+              snippetPanel.contains(document.activeElement)
+            ) {
+              return;
+            }
+
+            scheduleSnippetPreviewHide();
+          }, 0);
+        });
+      });
     }
 
     function updateGuideArrowGeometry() {
@@ -629,7 +691,7 @@
           "        type: 'sheetMusic',",
           "        src: 'Schubert_D911-03.xml',",
           "        measureColumn: 'measure',",
-          '        maxHeight: 350,',
+          '        maxHeight: 370,',
           '        renderScale: 0.65,',
           '        followPlayback: true,',
           '        cursorColor: \'#999999\',',
@@ -848,7 +910,7 @@
           type: 'sheetMusic',
           src: basePath + '/Schubert_D911-03.xml',
           measureColumn: 'measure',
-          maxHeight: 350,
+          maxHeight: 370,
           renderScale: 0.65,
           followPlayback: true,
           cursorColor: '#999999',
@@ -1098,6 +1160,7 @@
     syncModeTabs();
     applyModeModel(currentMode);
     bindCopyButton();
+    bindSnippetPreviewHover();
     bindModeTabs();
     bindControlEvents();
     rebuildPlayer({ preserveState: false });

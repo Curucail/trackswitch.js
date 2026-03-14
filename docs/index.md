@@ -91,10 +91,6 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
           <input type="checkbox" name="trackMixControls" checked />
         </label>
         <label class="ts-control-row">
-          <span>Customizable Panel Order</span>
-          <input type="checkbox" name="customizablePanelOrder" />
-        </label>
-        <label class="ts-control-row">
           <span>Presets</span>
           <input type="checkbox" name="presets" checked />
         </label>
@@ -154,6 +150,10 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
 
       <div class="ts-control-group">
         <h5>Utils</h5>
+        <label class="ts-control-row">
+          <span>Customizable Panel Order</span>
+          <input type="checkbox" name="customizablePanelOrder" />
+        </label>
         <label class="ts-control-row">
           <span>Keyboard Shortcuts</span>
           <input type="checkbox" name="keyboard" checked />
