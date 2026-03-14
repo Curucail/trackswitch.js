@@ -1,5 +1,7 @@
 .trackswitch {
     /* Canonical palette tokens. */
+    --ts-font-ui: Arial, Helvetica, sans-serif;
+
     --ts-color-text-primary: #000000;
     --ts-color-text-inverse: #FFFFFF;
     --ts-color-text-muted: #DDDDDD;
@@ -8,7 +10,7 @@
 
     --ts-color-surface-base: #EEEEEE;
     --ts-color-surface-panel-dark: #383838;
-    --ts-color-surface-panel-dark-50: rgba(38, 38, 38, 0.7);
+    --ts-color-surface-panel-dark-50: rgba(56, 56, 56, 0.5);
     --ts-color-surface-control: #555555;
 
     --ts-color-border-mid: #999999;

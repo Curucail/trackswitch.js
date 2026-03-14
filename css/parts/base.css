@@ -15,7 +15,7 @@
     margin: 10px;
     overflow: hidden;
     color: var(--ts-color-text-primary);
-    font-family: Arial, Helvetica, sans-serif;
+    font-family: var(--ts-font-ui);
     font-size: 16px;
     font-style: normal;
     font-weight: 400;
