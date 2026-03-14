@@ -1,46 +1,32 @@
----
-title: Configuration
----
-
 - [Quick Start](#quick-start)
-- [Configuration Shape](#configuration-shape)
-- [Initialization Requirements](#initialization-requirements)
-- [Top-Level Options](#top-level-options)
-- [Features](#features)
-- [UI Elements](#ui-elements)
-  - [Track Group and Track Options](#track-group-and-track-options)
-  - [Images](#image-ui-element)
-  - [Per-Track Images](#per-track-image-ui-element)
-  - [Waveforms](#waveform-ui-element)
-  - [Sheet Music](#sheet-music-ui-element)
-  - [Warping Matrix](#warping-matrix-ui-element)
-- [Alignment Mode](#alignment-mode)
-- [Keyboard Shortcuts](#keyboard-shortcuts)
-- [Looping Behavior](#looping-behavior)
-- [Programmatic API](#programmatic-api)
-- [Utility Exports](#utility-exports)
-- [Validation and Common Errors](#validation-and-common-errors)
-
-# Configuration
-
-Use this page as the reference for building a `trackswitch.js` player.
-
-If you are starting from scratch, begin with the default mode example, then add UI elements and features as needed. Use alignment mode only when you have timing-mapping data for matching multiple performances to a shared reference timeline.
+  - [Default Mode](#default-mode)
+  - [Alignment Mode](#alignment-mode)
+- [Player-Wide Settings](#player-wide-settings)
+  - [`ui`](#ui)
+  - [`presetNames`](#presetnames)
+  - [`features`](#features)
+  - [`alignment`](#alignment)
+- [UI Elements](#visible-player-sections)
+  - [`trackGroup`](#trackgroup)
+  - [`image`](#image)
+  - [`perTrackImage`](#pertrackimage)
+  - [`waveform`](#waveform)
+  - [`sheetMusic`](#sheetmusic)
+  - [`warpingMatrix`](#warpingmatrix)
+- [Track Settings](#track-settings)
+  - [Track Options](#track-options)
+  - [Audio Source Options](#audio-source-options)
+  - [Track Alignment Options](#track-alignment-options)
+- [Keyboard and Loop Controls](#keyboard-and-loop-controls)
+- [Things to Check](#things-to-check)
 
 ## Quick Start
 
-- Start with one `trackGroup` and at least one track source.
-- Add optional UI elements such as `image`, `waveform`, `sheetMusic`, or `warpingMatrix`.
-- Enable only the `features` your page actually needs.
-- If you are comparing aligned performances, add `alignment` config and switch `features.mode` to `'alignment'`.
-
-## Configuration Shape
-
-### Default Mode Example
+### Default Mode
 
 ```javascript
 TrackSwitch.createTrackSwitch(rootElement, {
-  presetNames: ['All Tracks', 'Strings + Synth', 'Rhythm Section'],
+  presetNames: ['Full Mix', 'Strings', 'Rhythm'],
   ui: [
     {
       type: 'image',
@@ -48,26 +34,15 @@ TrackSwitch.createTrackSwitch(rootElement, {
       seekable: true,
       seekMarginLeft: 5,
       seekMarginRight: 5,
-      style: 'margin: 12px auto;',
-    },
-    {
-      type: 'perTrackImage',
-      seekable: false,
-      seekMarginLeft: 0,
-      seekMarginRight: 0,
-      style: 'margin: 12px auto 24px;',
+      style: 'margin: 0;',
     },
     {
       type: 'waveform',
-      width: 1200,
-      height: 150,
-      waveformBarWidth: 2,
+      height: 160,
       maxZoom: 5,
       waveformSource: 'audible',
-      timer: true,
-      seekMarginLeft: 3,
-      seekMarginRight: 4,
-      style: 'margin: 16px 0;',
+      playbackFollowMode: 'center',
+      style: 'margin: 0;',
     },
     {
       type: 'trackGroup',
@@ -75,118 +50,51 @@ TrackSwitch.createTrackSwitch(rootElement, {
       trackGroup: [
         {
           title: 'Violins',
-          solo: true,
           volume: 0.9,
-          pan: -0.25,
+          pan: -0.2,
           image: 'violins.png',
-          style: 'border-left: 3px solid #9b6bff;',
           presets: [0, 1],
-          sources: [
-            { src: 'violins.mp3', type: 'audio/mpeg' },
-            { src: 'violins.ogg', type: 'audio/ogg' },
-          ],
-        },
-        {
-          title: 'Synths',
-          solo: false,
-          volume: 0.75,
-          pan: 0.2,
-          image: 'synths.png',
-          style: 'border-left: 3px solid #00a7a0;',
-          presets: [0, 1],
-          sources: [
-            { src: 'synths.mp3', type: 'audio/mpeg', startOffsetMs: 0, endOffsetMs: 0 },
-          ],
-        },
-        {
-          title: 'Bass',
-          solo: false,
-          volume: 0.85,
-          pan: -0.05,
-          image: 'bass.png',
-          style: 'border-left: 3px solid #2d8fdd;',
-          presets: [0],
-          sources: [
-            { src: 'bass.mp3', type: 'audio/mpeg', startOffsetMs: 0, endOffsetMs: 0 },
-          ],
+          sources: [{ src: 'violins.mp3' }],
         },
         {
           title: 'Drums',
-          solo: false,
           volume: 1,
           pan: 0,
           image: 'drums.png',
-          style: 'border-left: 3px solid #ff7a18;',
-          presets: [0],
-          sources: [
-            { src: 'drums.mp3', type: 'audio/mpeg' },
-          ],
+          presets: [0, 2],
+          sources: [{ src: 'drums.mp3' }],
         },
       ],
     },
-    {
-      type: 'sheetMusic',
-      src: 'score.musicxml',
-      measureColumn: 'measure',
-      maxWidth: 960,
-      maxHeight: 360,
-      renderScale: 0.75,
-      followPlayback: true,
-      cursorColor: '#999999',
-      cursorAlpha: 0.1,
-      style: 'margin: 20px auto;',
-    },
   ],
   features: {
-    mode: 'default',
-    exclusiveSolo: false,
-    muteOtherPlayerInstances: true,
     globalVolume: true,
     trackMixControls: true,
-    repeat: false,
-    tabView: false,
-    iosAudioUnlock: true,
-    keyboard: true,
     looping: true,
-    seekBar: true,
-    timer: true,
-    presets: false,
-    waveform: true,
+    presets: true,
+    customizablePanelOrder: true,
   },
 });
 ```
 
-### Alignment Mode Example
+### Alignment Mode
 
 ```javascript
 TrackSwitch.createTrackSwitch(rootElement, {
   ui: [
     {
-      type: 'image',
-      src: 'cover.jpg',
-      seekable: true,
-      seekMarginLeft: 5,
-      seekMarginRight: 5,
-      style: 'margin: 12px auto;',
-    },
-    {
       type: 'perTrackImage',
       seekable: true,
       seekMarginLeft: 4,
       seekMarginRight: 4,
-      style: 'margin: 12px auto 24px;',
+      style: 'margin: 0;',
     },
     {
       type: 'waveform',
-      width: 1200,
-      height: 150,
-      waveformBarWidth: 2,
-      maxZoom: 5,
+      height: 160,
       waveformSource: 0,
       timer: true,
-      seekMarginLeft: 3,
-      seekMarginRight: 4,
-      style: 'margin: 16px 0;',
+      style: 'margin: 0;',
     },
     {
       type: 'trackGroup',
@@ -194,37 +102,21 @@ TrackSwitch.createTrackSwitch(rootElement, {
       trackGroup: [
         {
           title: 'Performance A',
-          solo: true,
-          volume: 1,
-          pan: 0,
           image: 'performance-a.png',
-          sources: [
-            { src: 'performance-a.mp3', type: 'audio/mpeg', startOffsetMs: 0, endOffsetMs: 0 },
-          ],
+          sources: [{ src: 'performance-a.mp3' }],
           alignment: {
             column: 'perf_a_sec',
-            synchronizedSources: [
-              { src: 'performance-a_synced.mp3', type: 'audio/mpeg', startOffsetMs: 0, endOffsetMs: 0 },
-            ],
+            synchronizedSources: [{ src: 'performance-a-synced.mp3' }],
           },
-          style: 'border-left: 3px solid #0b84f3;',
         },
         {
           title: 'Performance B',
-          solo: false,
-          volume: 0.95,
-          pan: 0,
           image: 'performance-b.png',
-          sources: [
-            { src: 'performance-b.mp3', type: 'audio/mpeg', startOffsetMs: 0, endOffsetMs: 0 },
-          ],
+          sources: [{ src: 'performance-b.mp3' }],
           alignment: {
             column: 'perf_b_sec',
-            synchronizedSources: [
-              { src: 'performance-b_synced.mp3', type: 'audio/mpeg' },
-            ],
+            synchronizedSources: [{ src: 'performance-b-synced.mp3' }],
           },
-          style: 'border-left: 3px solid #f36f21;',
         },
       ],
     },
@@ -232,139 +124,117 @@ TrackSwitch.createTrackSwitch(rootElement, {
       type: 'sheetMusic',
       src: 'score.musicxml',
       measureColumn: 'measure',
-      maxWidth: 960,
-      maxHeight: 360,
-      renderScale: 0.75,
       followPlayback: true,
-      cursorColor: '#999999',
-      cursorAlpha: 0.1,
-      style: 'margin: 20px auto;',
+      style: 'margin: 0;',
     },
     {
       type: 'warpingMatrix',
       height: 240,
       tempoSmoothingSeconds: 5,
-      style: 'margin: 12px 0;',
+      style: 'margin: 0;',
     },
   ],
   alignment: {
-    csv: 'dtw_alignment.csv',
-    referenceTimeColumn: 't_ref_sec',
-    referenceTimeColumnSync: 'perf_b_sec',
+    csv: 'alignment.csv',
+    referenceTimeColumn: 'score_time_sec',
+    referenceTimeColumnSync: 'synced_time_sec',
     outOfRange: 'clamp',
   },
   features: {
     mode: 'alignment',
-    exclusiveSolo: true,
-    muteOtherPlayerInstances: true,
     globalVolume: true,
     trackMixControls: true,
-    repeat: false,
-    tabView: false,
-    iosAudioUnlock: true,
-    keyboard: true,
     looping: true,
-    seekBar: true,
-    timer: true,
-    presets: false,
-    waveform: true,
   },
 });
 ```
 
-## Initialization Requirements
+## Player-Wide Settings
 
-Use:
+### `ui`
 
-```javascript
-TrackSwitch.createTrackSwitch(rootElement, init)
-```
+`ui` is required. It decides which sections appear in the player and in what order they appear.
 
-Required minimum:
+Use it to add any of these section types:
 
-- `init.ui` must include at least one element with `type: 'trackGroup'`
-- each `trackGroup` must contain at least one valid track
-- each track must define at least one valid `sources[].src`
-
-## Top-Level Options
-
-- `presetNames?: string[]`
-  - Friendly names for preset indices (`0`, `1`, ...)
-  - Missing names fall back to `Preset {index}`
-- `ui: TrackSwitchUiElement[]` (required)
-  - Defines all visible player sections and all tracks
-- `features?: Partial<TrackSwitchFeatures>`
-  - Enables/disables behavior and controls
-- `alignment?: TrackAlignmentConfig`
-  - Required when `features.mode` is `'alignment'`
-
-## Features
-
-Defaults:
-
-- `mode: 'default'`
-- `exclusiveSolo: false`
-- `muteOtherPlayerInstances: true`
-- `globalVolume: false`
-- `trackMixControls: false`
-- `customizablePanelOrder: false`
-- `repeat: false`
-- `tabView: false`
-- `iosAudioUnlock: true`
-- `keyboard: true`
-- `looping: false`
-- `seekBar: true`
-- `timer: true`
-- `presets: true`
-- `waveform: true`
-
-Feature reference:
-
-| Feature key | What it does | Non-dev note |
-| --- | --- | --- |
-| `mode` (`'default'`/`'alignment'`) | Selects timeline behavior | Use `default` unless you have timing-mapping CSV data |
-| `exclusiveSolo` | Single-solo behavior in track buttons | Only one track can be active at a time |
-| `muteOtherPlayerInstances` | Pauses other trackswitch players on same page when this one starts | Helpful when multiple demos exist on one page |
-| `globalVolume` | Shows and enables main volume slider | Turn on if audience needs quick loudness control |
-| `trackMixControls` | Shows per-track volume/pan controls | Useful when users compare stem balances |
-| `customizablePanelOrder` | Adds drag handles for rearranging top-level panels | Best when listeners should tailor the layout themselves |
-| `repeat` | Starts with repeat enabled | Independent from loop A/B region |
-| `tabView` | Applies tab-like row styling | Visual preference only |
-| `iosAudioUnlock` | Performs iOS playback unlock attempt on load | Keep enabled for safest mobile behavior |
-| `keyboard` | Enables keyboard shortcuts | Good for desktop demos and accessibility |
-| `looping` | Shows loop controls and enables loop shortcuts | Needed for A/B loop practice/listening |
-| `seekBar` | Shows main seekbar | Turn off only if you provide another seekable UI |
-| `timer` | Shows main time display | Useful for precise listening comparisons |
-| `presets` | Enables preset selector behavior | Requires at least 2 preset groups |
-| `waveform` | Enables waveform interactions/rendering | If waveform UI is present, this is forced to `true` |
-
-Normalization rules:
-
-- Unknown feature keys throw an error.
-- Invalid `mode` values fall back to `'default'`.
-- `exclusiveSolo: true` forces `presets: false`.
-- In `alignment` mode, runtime enforces `exclusiveSolo: true` and `presets: false`.
-- `customizablePanelOrder: true` lets users drag visible top-level panels by handle for the current page session only.
-
-Solo interaction behavior:
-
-- In non-exclusive mode (`exclusiveSolo: false`), if no track is selected, playback is silent.
-- `Shift + click` keeps exclusive-select behavior, except when the clicked track is already the only selected track; in that case, all tracks are selected.
-
-## UI Elements
-
-`ui` is rendered in array order. Supported element types:
-
+- `trackGroup`
 - `image`
 - `perTrackImage`
 - `waveform`
-- `trackGroup`
 - `sheetMusic`
 - `warpingMatrix`
 
-### Track Group and Track Options
+At least one `trackGroup` section is required because that is where the tracks live.
 
-Tracks live in `ui` entries with `type: 'trackGroup'`:
+### `presetNames`
+
+Use `presetNames` to give friendly names to your saved track combinations.
+
+Example:
+
+```javascript
+presetNames: ['Full Mix', 'Vocals Only', 'Backing Track']
+```
+
+Notes:
+
+- Preset numbers start at `0`.
+- Presets only appear in the ui when you have at least two usable preset choices.
+- Tracks decide which presets they belong to through each track's `presets` setting.
+- If you use presets, `presetNames` should be listed in the same order.
+
+### `features`
+
+Use `features` to turn player tools on or off.
+
+Default settings:
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `mode` | `'default'` | Chooses between a standard multitrack player and an aligned comparison player. |
+| `exclusiveSolo` | `false` | Keeps listening to one track at a time instead of mixing several tracks together. |
+| `muteOtherPlayerInstances` | `true` | Stops another player on the same page when this one starts playing. |
+| `globalVolume` | `false` | Shows a main volume control for the whole player. |
+| `trackMixControls` | `false` | Shows per-track volume and pan controls. |
+| `customizablePanelOrder` | `false` | Lets listeners rearrange the visible sections. |
+| `repeat` | `false` | Starts with repeat already turned on. |
+| `tabView` | `false` | Changes the look of the track rows to a tab-like style. |
+| `iosAudioUnlock` | `true` | Helps playback start more reliably on iPhone and iPad. |
+| `keyboard` | `true` | Turns keyboard shortcuts on. |
+| `looping` | `false` | Shows loop tools and allows A/B looping. |
+| `seekBar` | `true` | Shows the main seek bar. |
+| `timer` | `true` | Shows the main time display. |
+| `presets` | `true` | Shows preset switching when presets are available. |
+| `waveform` | `true` | Keeps waveform display and interaction available. |
+
+Notes:
+
+- `mode: 'default'` is the normal multitrack player.
+- `mode: 'alignment'` is for comparing matched performances on a shared timeline.
+- In alignment mode, the player works one track at a time by default, with optional sync when synced files are available.
+- `customizablePanelOrder` affects the visible sections on the page, not the track order itself.
+
+### `alignment`
+
+| Option | Description |
+| --- | --- |
+| `csv` | The timing data file used to connect the different performances. |
+| `referenceTimeColumn` | The csv column to determine the main shared timeline used by the player. |
+| `referenceTimeColumnSync` | The csv column to determine the shared timeline when Sync is turned on in alignment mode. |
+| `outOfRange` | What the player should do when playback reaches a part of the timing map that has no matching value. |
+
+Choices for `outOfRange`:
+
+- `clamp`: stay at the nearest available mapped point
+- `linear`: continue by extending the mapping trend
+
+## Visible Player Sections
+
+### `trackGroup`
+
+Use `type: 'trackGroup'` to add one or more tracks to the player.
+
+Example:
 
 ```javascript
 {
@@ -373,114 +243,87 @@ Tracks live in `ui` entries with `type: 'trackGroup'`:
   trackGroup: [
     {
       title: 'Drums',
-      solo: false,
-      volume: 1,
-      pan: 0,
       image: 'drums.png',
-      style: 'border-left: 3px solid #4f8dc9;',
       presets: [0, 2],
       sources: [{ src: 'drums.mp3' }],
-      alignment: {
-        column: 't2_sec',
-        synchronizedSources: [{ src: 'drums_synced.mp3' }],
-      },
     },
   ],
 }
 ```
 
-Track group fields:
+Section options:
 
-- `rowHeight?: number` (pixels, rounded to nearest integer, minimum `1`)
-- `trackGroup: TrackDefinition[]` (required, non-empty)
-
-Track fields:
-
-- `title?: string`
-- `solo?: boolean`
-- `volume?: number` (`0..1`, default `1`)
-- `pan?: number` (`-1..1`, default `0`)
-- `image?: string`
-- `style?: string`
-- `presets?: number[]`
-- `sources: TrackSourceDefinition[]` (required)
-- `alignment?: { column?: string; synchronizedSources?: TrackSourceDefinition[] }`
-
-Track notes:
-
-- Track index is the order inside `ui[].trackGroup[]`.
-- In non-exclusive mode (`features.exclusiveSolo: false`), if no track `solo` state is explicitly configured, all tracks start enabled.
-
-Source fields (`sources[]` and `alignment.synchronizedSources[]`):
-
-- `src: string` (required)
-- `type?: string` (optional MIME type override)
-- `startOffsetMs?: number`
-  - positive: trims the start
-  - negative: pads silence at start
-- `endOffsetMs?: number`
-  - positive: trims the end
-  - negative: pads silence at end
-
-Source loading notes:
-
-- If multiple `sources` are listed, the first playable source is used.
-- In alignment mode, `synchronizedSources` enables the global `SYNC` button only when `alignment.referenceTimeColumnSync` is also valid.
-
-Preset behavior:
-
-- Preset indices are `0`-based.
-- Preset count is derived from the highest index used in tracks.
-- Preset `0` is auto-applied on initialization when presets exist.
-- Preset selector is visible only if there are at least 2 presets and `features.presets` is `true`.
-
-### Image UI Element
-
-```javascript
-{ type: 'image', src: 'cover.jpg', seekable: true, style: 'margin: 12px auto;' }
-```
-
-Fields:
-
-- `src: string`
-- `seekable?: boolean`
-- `style?: string`
-- `seekMarginLeft?: number`
-- `seekMarginRight?: number`
+| Option | Description |
+| --- | --- |
+| `rowHeight` | Sets the height of the track rows. |
+| `trackGroup` | The list of tracks shown in this section. |
 
 Notes:
 
-- Seek margins are clamped to `0..100` percent.
-- For seekable images, `seekMarginLeft + seekMarginRight` must be less than `100`.
+- You can use more than one `trackGroup` section.
+- `ui` order controls where each `trackGroup` appears on the page.
 
-### Per-Track Image UI Element
+### `image`
+
+Use `type: 'image'` for one main image, such as cover art, a diagram, or a screenshot.
+
+Example:
 
 ```javascript
-{ type: 'perTrackImage', seekable: false, style: 'margin: 12px auto;' }
+{
+  type: 'image',
+  src: 'cover.jpg',
+  seekable: true,
+  seekMarginLeft: 5,
+  seekMarginRight: 5,
+  style: 'margin: 12px auto;',
+}
 ```
 
-Fields:
+Section options:
 
-- `seekable?: boolean`
-- `style?: string`
-- `seekMarginLeft?: number`
-- `seekMarginRight?: number`
+| Option | Description |
+| --- | --- |
+| `src` | The image file to show. |
+| `seekable` | Lets listeners click the image to jump to a different point in the audio. |
+| `seekMarginLeft` | Leaves a non-seekable area on the left side of the image. |
+| `seekMarginRight` | Leaves a non-seekable area on the right side of the image. |
+| `style` | Lets you fine-tune the look or spacing of the section. |
 
-What it does:
+### `perTrackImage`
 
-- Shows the currently selected track cover (`ui[].trackGroup[].image`) when exactly one track is active.
-- If no selected track image is available, this UI element is hidden.
-- Works in both `default` and `alignment` mode.
+Use `type: 'perTrackImage'` to show the image for the currently active track.
+
+Example:
+
+```javascript
+{
+  type: 'perTrackImage',
+  seekable: false,
+  style: 'margin: 12px auto;',
+}
+```
+
+Section options:
+
+| Option | Description |
+| --- | --- |
+| `seekable` | Lets listeners click the current track image to jump in time. |
+| `seekMarginLeft` | Leaves a non-seekable area on the left side of the image. |
+| `seekMarginRight` | Leaves a non-seekable area on the right side of the image. |
+| `style` | Lets you fine-tune the look or spacing of the section. |
 
 Notes:
 
-- `perTrackImage` is independent from regular `image`.
-- Both `image` and `perTrackImage` may be `seekable: true`.
-- Seek margins are clamped to `0..100` percent.
-- For seekable per-track images, `seekMarginLeft + seekMarginRight` must be less than `100`.
-- `perTrackImage` requires `features.exclusiveSolo: true`.
+- Only works if `exclusiveSolo` is `true`.
+- This section uses each track's `image`.
+- It appears when one active track has an image to show.
 
-### Waveform UI Element
+### `waveform`
+
+Use `type: 'waveform'` to show an interactive waveform.
+
+Example:
 
 ```javascript
 {
@@ -492,43 +335,47 @@ Notes:
   waveformSource: 'audible',
   playbackFollowMode: 'center',
   timer: true,
+  style: 'margin: 16px 0;',
 }
 ```
 
-Fields:
+Section options:
 
-- `width?: number` (default `1200`)
-- `height?: number` (default `150`)
-- `waveformBarWidth?: number` (default `1`)
-- `maxZoom?: number` (default `5`)
-- `waveformSource?: 'audible' | number | number[]` (default `'audible'`)
-- `playbackFollowMode?: 'off' | 'center' | 'jump'` (default `'off'`)
-- `timer?: boolean`
-- `style?: string`
-- `seekMarginLeft?: number`
-- `seekMarginRight?: number`
+| Option | Description |
+| --- | --- |
+| `width` | Starting width of the waveform. |
+| `height` | Height of the waveform. |
+| `waveformBarWidth` | Thickness of the waveform bars. |
+| `maxZoom` | The closest zoom level listeners can reach, in seconds. Smaller numbers allow tighter zoom. |
+| `waveformSource` | Chooses which sound the waveform represents. |
+| `playbackFollowMode` | Decides whether the waveform view follows playback automatically. |
+| `timer` | Shows a small time label inside the waveform panel. |
+| `seekMarginLeft` | Leaves a non-seekable area on the left side. |
+| `seekMarginRight` | Leaves a non-seekable area on the right side. |
+| `style` | Lets you fine-tune the look or spacing of the section. |
 
-Normalization and behavior:
+Choices for `waveformSource`:
 
-- Invalid `waveformBarWidth` values are normalized to `1`.
-- `maxZoom` is the minimum visible waveform window in seconds.
-- `maxZoom: 0.5` allows zooming in to a half-second excerpt.
-- `maxZoom <= 0` disables waveform zoom.
-- `waveformSource: 'audible'` uses the current audible output.
-- `waveformSource: <trackIndex>` limits the waveform to that track, then applies audible-state filtering.
-- `waveformSource: [0, 2, 3]` limits the waveform to those tracks, then applies audible-state filtering.
-- `playbackFollowMode: 'off'` preserves the current behavior and never auto-scrolls the waveform viewport.
-- `playbackFollowMode: 'center'` keeps the playhead centered by scrolling the waveform around it when possible.
-- `playbackFollowMode: 'jump'` only scrolls when the playhead leaves the visible region, then jumps so the playhead becomes the left edge of the viewport.
-- Per-track volume changes scale waveform contribution continuously; tracks at `volume: 0` contribute nothing.
-- `seekMarginLeft + seekMarginRight` must be less than `100`.
-- `timer` default depends on mode if omitted:
-  - `default` mode: off
-  - `alignment` mode: on
-- If any waveform UI element exists, waveform rendering is forced on (`features.waveform = true`).
-- When zoomed in, the top-left overlay shows a draggable waveform minimap instead of a numeric zoom badge.
+- `'audible'`: show what listeners currently hear
+- `0`, `1`, `2`, ...: show one specific track
+- `[0, 2, 3]`: show a chosen set of tracks
 
-### Sheet Music UI Element
+Choices for `playbackFollowMode`:
+
+- `'off'`: keep the waveform still
+- `'center'`: keep playback near the middle while it moves
+- `'jump'`: only move the view when playback leaves the visible area
+
+Notes:
+
+- If you leave out `timer`, the waveform timer is off in a standard player and on in an alignment player.
+- When listeners zoom in, the waveform shows a small overview map for quick navigation.
+
+### `sheetMusic`
+
+Use `type: 'sheetMusic'` to show a MusicXML score.
+
+Example:
 
 ```javascript
 {
@@ -541,209 +388,157 @@ Normalization and behavior:
   followPlayback: true,
   cursorColor: '#999999',
   cursorAlpha: 0.1,
+  style: 'margin: 20px auto;',
 }
 ```
 
-Fields:
+Section options:
 
-- `src: string` (MusicXML URL)
-- `measureColumn?: string` (column name inside `init.alignment.csv` that contains measure numbers)
-- `maxWidth?: number`
-- `maxHeight?: number`
-- `renderScale?: number`
-- `followPlayback?: boolean` (default `true`)
-- `style?: string`
-- `cursorColor?: string`
-- `cursorAlpha?: number` (`0..1`, default `0.1`)
+| Option | Description |
+| --- | --- |
+| `src` | The MusicXML file to show. |
+| `measureColumn` | The column in the alignment data that contains measure numbers. |
+| `maxWidth` | The widest the score area should become. |
+| `maxHeight` | The tallest the score area should become. |
+| `renderScale` | Overall score size. |
+| `followPlayback` | Keeps the score view moving with playback. |
+| `cursorColor` | Color of the playback cursor. |
+| `cursorAlpha` | Transparency of the playback cursor. |
+| `style` | Lets you fine-tune the look or spacing of the section. |
 
-Behavior:
+Notes:
 
-- `maxWidth` / `maxHeight` are rounded and ignored if `< 1`.
-- `renderScale` must be finite and `> 0`.
-- `measureColumn` follows the currently active alignment reference axis.
-  - With `SYNC` off, it uses `init.alignment.referenceTimeColumn`.
-  - With `SYNC` on, it uses `init.alignment.referenceTimeColumnSync`.
-- Clicking a rendered measure seeks to mapped reference time when `init.alignment` and `measureColumn` are both available.
-- If MusicXML fails to load, only the sheet panel fails.
-- If alignment-based measure mapping fails or is not configured, score can still render but measure sync is disabled.
+- The score can still be shown without measure syncing.
+- If `measureColumn` is set and matching alignment data is available, listeners can click measures to jump through the music.
 
-### Warping Matrix UI Element
+### `warpingMatrix`
+
+Use `type: 'warpingMatrix'` to show alignment charts.
+
+Example:
 
 ```javascript
-{ type: 'warpingMatrix', height: 240, tempoSmoothingSeconds: 5, globalScoreBPM: 60, style: 'margin: 12px 0;' }
+{
+  type: 'warpingMatrix',
+  height: 240,
+  tempoSmoothingSeconds: 5,
+  globalScoreBPM: 60,
+  style: 'margin: 12px 0;',
+}
 ```
 
-Fields:
+Section options:
 
-- `height?: number`
-- `style?: string`
-- `tempoSmoothingSeconds?: number`
-- `globalScoreBPM?: number`
+| Option | Description |
+| --- | --- |
+| `height` | Height of the chart area. |
+| `tempoSmoothingSeconds` | How broad the tempo reading should feel. Larger values give a smoother curve. |
+| `globalScoreBPM` | Adds a BPM reading to the tempo chart using this score tempo. |
+| `style` | Lets you fine-tune the look or spacing of the section. |
 
-Behavior:
+Notes:
 
-- Visible only in `alignment` mode.
-- Renders two linked plots:
-  - left: warping path (reference time vs track time)
-  - right: local tempo deviation (percent, with baseline at `100`)
-- Tempo plot uses active-track time on x-axis and can seek on click.
-- The `Window (s)` control changes only the visible time range of the tempo plot.
-- The smoothing control sets how many seconds of score time are used for each local tempo estimate; default `5s`.
-- Tempo plot derives tempo from a strictly monotonic warping path, fills gaps by linear interpolation on the reference-time frame grid, measures local beat-duration ratios across the configured smoothing span, and maps the result back to tempo percent.
-- If reference points are roughly uniformly spaced, the estimate behaves like a centered finite-difference over a seconds-based span.
-- If reference spacing is irregular, the span is only approximately seconds-based because the effective `reference[k+h] - reference[k-h]` changes along the path.
-- Tempo plot uses a fixed logarithmic y-axis from `20` to `500`.
-- If `globalScoreBPM` is set, BPM ticks are shown on the left axis and percent ticks on the right.
-- If `globalScoreBPM` is not set, the player tries to derive BPM from the first loaded `sheetMusic` score and otherwise keeps percent-only axis labels.
-- If the warping path cannot be made strictly monotonic, the tempo curve is hidden and a warning message is shown instead.
-- While global `SYNC` is on, the panel is visibly dimmed and non-interactive.
+- This section is only useful in alignment mode.
+- It shows two views: the timing relationship between the active track and the shared timeline, and the local tempo change over time.
+- When Sync is turned on, this section is dimmed and does not accept interaction.
 
-## Alignment Mode
+## Track Settings
 
-Alignment config (`init.alignment`):
+### Track Options
 
-- `csv: string` (required)
-- `referenceTimeColumn: string` (required)
-- `referenceTimeColumnSync?: string`
-- `outOfRange?: 'clamp' | 'linear'` (default `clamp`)
+Each entry inside `trackGroup` can use these options:
 
-Per-track alignment config lives at:
+| Option | Description |
+| --- | --- |
+| `title` | Name shown in the track list. |
+| `solo` | Starting on/off state for that track. |
+| `volume` | Starting track volume. |
+| `pan` | Starting left-right placement. |
+| `image` | Image used by `perTrackImage` and other track-based visuals. |
+| `style` | Lets you give that track row its own visual styling. |
+| `presets` | Decides which presets include this track. |
+| `sources` | Audio files for this track. |
+| `alignment` | Alignment settings for this track in an aligned comparison player. |
 
-- `ui[].trackGroup[].alignment.column` (required in alignment mode)
-- `ui[].trackGroup[].alignment.synchronizedSources?`
+Notes:
 
-Alignment requirements:
+- `volume` starts at `1` if you do not set it.
+- `pan` starts at `0` if you do not set it.
+- In a regular multitrack player, tracks normally start available for listening unless you set them differently.
+- In a one-track-at-a-time player, only one track stays active at once.
 
-- `features.mode` must be `'alignment'`
-- `init.alignment` must be present and valid
-- every track in `ui[].trackGroup[]` must provide `alignment.column`
+### Audio Source Options
 
-Sheet music measure sync:
+Each entry inside `sources` and `alignment.synchronizedSources` can use these options:
 
-- Works in both `default` and `alignment` mode.
-- `sheetMusic.measureColumn` reads measure numbers from `init.alignment.csv`.
-- `measureColumn` may be the same as either `alignment.referenceTimeColumn` or `alignment.referenceTimeColumnSync`.
-- Without `init.alignment` or `measureColumn`, the score still renders but measure sync is disabled.
+| Option | Description |
+| --- | --- |
+| `src` | Audio file to use. |
+| `type` | Optional file-type hint. |
+| `startOffsetMs` | Trims or pads the beginning of the file. Positive values trim. Negative values add silence. |
+| `endOffsetMs` | Trims or pads the end of the file. Positive values trim. Negative values add silence. |
 
-Alignment behavior summary:
+Notes:
 
-- The player always uses one active reference axis at a time.
-  - With `SYNC` off, the active axis is `referenceTimeColumn`.
-  - With `SYNC` on, the active axis is `referenceTimeColumnSync`.
-- Seekbar/timer/events use reference time.
-- Initial state starts with `SYNC` off and single-solo behavior.
-- Switching solo track remaps position through alignment mapping.
-- Enabling global `SYNC` switches the public timeline to `referenceTimeColumnSync` and uses synchronized sources where available.
-- If `referenceTimeColumnSync` is missing or invalid, alignment mode still works but `SYNC` stays unavailable.
-- Fixed scalar waveforms (`waveformSource: number`) use local track axis while `SYNC` is off; array sources stay on the reference axis.
+- Every track needs at least one `src`.
+- If you list several source files, the player uses the first one that works for the listener's browser.
 
-## Keyboard Shortcuts
+### Track Alignment Options
 
-When `features.keyboard` is `true`:
+Each track can also use an `alignment` block:
 
-- `F1` - open/close the keyboard shortcut help overlay
-- `Space` - play/pause
-- `Escape` - stop + reset position
-- `R` - toggle repeat
-- `← / →` - seek `-2s / +2s`
-- `Shift + ← / →` - seek `-5s / +5s`
-- `Home` - jump to start
-- `↑ / ↓` - volume up/down (`globalVolume` only)
-- `1`..`0` - control tracks `1`..`10`
-  - exclusive solo mode: activate selected track
-  - non-exclusive mode: toggle selected track mute/solo state
+```javascript
+alignment: {
+  column: 'perf_a_sec',
+  synchronizedSources: [{ src: 'performance-a-synced.mp3' }],
+}
+```
 
-When `features.looping` is `true`:
+| Option | Description |
+| --- | --- |
+| `column` | The timing-data column for that performance. |
+| `synchronizedSources` | Extra audio files used when Sync is turned on. |
 
-- `A` - set loop point A
-- `B` - set loop point B
-- `L` - toggle loop
-- `C` - clear loop points
+Notes:
 
-Keyboard input goes to the last interacted player instance.
+- Use these options only in alignment mode.
+- `synchronizedSources` are what make mixed synced playback possible.
+- Sync is only available when the player also has a shared sync timeline through `referenceTimeColumnSync`.
 
-The `F1` help overlay only shows shortcuts that are relevant to the current enabled feature set.
+## Keyboard and Loop Controls
 
-## Looping Behavior
+When `features.keyboard` is on, listeners can use:
 
-When looping is enabled, users can set loops via:
+| Keys | Action |
+| --- | --- |
+| `F1` | Open or close the shortcut help panel |
+| `Space` | Play or pause |
+| `Escape` | Stop and return to the start |
+| `R` | Toggle repeat |
+| `Left / Right` | Jump backward or forward by 2 seconds |
+| `Shift + Left / Shift + Right` | Jump backward or forward by 5 seconds |
+| `Home` | Go to the start |
+| `Up / Down` | Change global volume when `globalVolume` is on |
+| `1` to `0` | Control tracks 1 to 10 |
 
-- loop buttons
-- keyboard shortcuts (`A`, `B`, `L`, `C`)
-- right-click drag on seekable controls (`seekbar`, seekable image, waveform)
+When `features.looping` is on, listeners can also use:
 
-Loop behavior:
+| Keys | Action |
+| --- | --- |
+| `A` | Set loop point A |
+| `B` | Set loop point B |
+| `L` | Turn the loop on or off |
+| `C` | Clear the loop |
 
-- Minimum A/B distance: `100ms`
-- Loop playback takes precedence over full-track repeat
-- Loop region and markers are drawn in seek UI
+Looping is also available through the loop buttons. On seekable controls, listeners can mark a loop region directly with the pointer.
 
-## Programmatic API
+## Things to Check
 
-`createTrackSwitch(...)` returns a `TrackSwitchController`.
-
-Controller methods:
-
-- `load(): Promise<void>`
-- `destroy(): void`
-- `togglePlay(): void`
-- `play(): void`
-- `pause(): void`
-- `stop(): void`
-- `seekTo(seconds: number): void`
-- `seekRelative(seconds: number): void`
-- `setRepeat(enabled: boolean): void`
-- `setVolume(volumeZeroToOne: number): void`
-- `setTrackVolume(trackIndex: number, volumeZeroToOne: number): void`
-- `setTrackPan(trackIndex: number, panMinusOneToOne: number): void`
-- `setLoopPoint(marker: 'A' | 'B'): boolean`
-- `toggleLoop(): boolean`
-- `clearLoop(): void`
-- `toggleSolo(trackIndex: number, exclusive?: boolean): void`
-- `applyPreset(presetIndex: number): void`
-- `getState(): TrackSwitchSnapshot`
-- `on(eventName, handler): () => void`
-- `off(eventName, handler): void`
-
-Events:
-
-- `loaded` payload: `{ longestDuration: number }`
-- `error` payload: `{ message: string }`
-- `position` payload: `{ position: number, duration: number }`
-- `trackState` payload: `{ index: number, state: { solo: boolean, volume: number, pan: number } }`
-
-`getState()` includes:
-
-- loading flags (`isLoaded`, `isLoading`, `isDestroyed`)
-- `longestDuration`
-- normalized `features`
-- playback `state`
-- per-track states (`solo`, `volume`, `pan`)
-
-## Utility Exports
-
-Named exports from the ESM package entrypoint (`import { ... } from 'trackswitch'`):
-
-- `normalizeFeatures`, `defaultFeatures`
-- `createInitialPlayerState`, `playerStateReducer`
-- `WaveformEngine`
-- `inferSourceMimeType`, `formatSecondsToHHMMSSmmm`, `parsePresetIndices`
-
-## Validation and Common Errors
-
-Common setup issues:
-
-- Missing `trackGroup`
-  - `init.ui` must include at least one element with `type: 'trackGroup'`.
-- Missing track source
-  - Every track needs at least one `sources[].src`.
-- Invalid alignment setup
-  - `alignment` mode needs `init.alignment`, a valid `referenceTimeColumn`, and `alignment.column` on every track.
-- Missing sheet music measure mapping
-  - `sheetMusic.measureColumn` needs `init.alignment.csv` plus a valid active alignment reference column; otherwise the score renders without measure sync.
-- Invalid seek margins
-  - For seekable `image`, `perTrackImage`, and `waveform`, left and right seek margins together must stay below `100`.
-- Unexpected preset behavior
-  - `presets` are disabled automatically when `exclusiveSolo` is on, including in `alignment` mode.
-- Hidden per-track image
-  - `perTrackImage` only works when `features.exclusiveSolo` is enabled.
+- `ui` must contain at least one `trackGroup`.
+- Every track must have at least one audio file in `sources`.
+- Seekable `image`, `perTrackImage`, and `waveform` sections need `seekMarginLeft + seekMarginRight` to stay below `100`.
+- `perTrackImage` is meant for setups where one track is active at a time.
+- Presets are most useful when you have at least two preset choices and clear `presetNames`.
+- `sheetMusic.measureColumn` only works for clickable measure syncing when matching alignment data is also available.
+- `warpingMatrix` is for alignment players, not standard multitrack players.
+- In alignment mode, each track needs its own `alignment.column`.
