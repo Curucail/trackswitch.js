@@ -5,14 +5,25 @@ trackswitch.js
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Live Demo](https://img.shields.io/badge/demo-live-black)](https://audiolabs.github.io/trackswitch.js/)
 
-[![Screenshot](examples/screenshot.png)](https://audiolabs.github.io/trackswitch.js/)
+**trackswitch.js** is a web-based multitrack audio player for presenting scientific results. It supports playing multiple audio files simultaneously, enabling users to mix multiple tracks to their liking. 
 
-**trackswitch.js** is a web-based multitrack audio player for presenting scientific results.
+In Alignment mode, users can listen to different performances of the same musical piece, which are synchronized to a reference timeline such that they can be compared side-by-side. Additionally, sheet music can be rendered and used to seek through the performances by clicking on individual measures.
+In the optional "Sync" mode, performances can be listened to simultaneously (synchronized audio files for each performance have to be configured before, e.g. by using a time-scale modification algorithm). 
 
 Live Demo
 -------------
 
 - See what **trackswitch.js** can do on our demo website: https://audiolabs.github.io/trackswitch.js/
+
+Screenshots
+-----------
+### Default Mode
+[![Screenshot](examples/default/screenshot.png)](https://audiolabs.github.io/trackswitch.js/)
+### Alignment Mode
+[![Screenshot](examples/alignment/screenshot.png)](https://audiolabs.github.io/trackswitch.js/)
+
+
+
 
 Installation
 ------------
@@ -85,7 +96,7 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 ```
 
-Take a look into the ```examples/``` folder for a minimal working template.
+Take a look into the ```examples/``` folder for minimal working templates.
 
 Features
 -----------------
@@ -100,7 +111,7 @@ Features
 - Presets for common track combinations
 - (Seekable) images and per-track images
 - Interactive waveforms with zoom support
-- Sheet music (musicxml) display with playback-following cursor
+- Interactive Sheet music (musicxml) display with playback-following cursor
 - Keyboard shortcuts
 
 ### Alignment mode
@@ -108,12 +119,12 @@ Features
 - Compare different performances of the same piece
 - Different timelines for each track synchronized to a shared reference timeline
 - Optional sync mode for mixing synchronized performances together
-- Alignment warping path and tempo deviation visualizations
+- Alignment warping path and local tempo deviation visualizations
 
 Programmatic API
 ----------------
 
-`TrackSwitch.createTrackSwitch(rootElement, init)` returns a controller for playback, seeking, looping, presets, and track state. This means that the player can be controlled by your application, independently from the user.
+`TrackSwitch.createTrackSwitch(rootElement, init)` returns a controller for playback, seeking, looping, presets, and track state. This means that the player can be controlled by your application, independently from the end user.
 
 Further Links
 -------------

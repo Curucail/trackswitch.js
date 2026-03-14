@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Trackswitch.js - Example</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="../../dist/css/trackswitch.min.css">
+    <style media="screen">
+        body {
+            font-family: sans-serif;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="player" style="width: 50%; margin: 0 auto;"></div>
+
+    <script src="../../dist/js/trackswitch.min.js"></script>
+
+    <script type="text/javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            TrackSwitch.createTrackSwitch(document.getElementById('player'), {
+                ui: [
+                    {
+                        type: 'sheetMusic',
+                        src: 'data/Schubert_D911-03.xml',
+                        measureColumn: 'measure',
+                        maxHeight: 370,
+                        maxWidth: 1000,
+                        renderScale: 0.7,
+                        followPlayback: true,
+                        cursorColor: '#999999',
+                        cursorAlpha: 0.4,
+                        // backend: 'canvas',
+                    },
+                    {
+                        type: 'waveform',
+                        waveformSource: 0,
+                        waveformBarWidth: 1,
+                        width: 1200,
+                        height: 100,
+                        timer: true,
+                    },
+                    {
+                        type: 'waveform',
+                        waveformSource: 1,
+                        waveformBarWidth: 1,
+                        width: 1200,
+                        height: 100,
+                        timer: true,
+                    },
+                    {
+                        type: 'warpingMatrix',
+                        height: 200,
+                    },
+                    {
+                        type: 'trackGroup',
+                        trackGroup: [
+                            {
+                                title: 'Schubert: Winterreise, D. 911: No. 3 - HU33',
+                                sources: [{ src: 'data/Schubert_D911-03_HU33.wav' }],
+                                alignment: {
+                                    synchronizedSources: [{ src: 'data/Schubert_D911-03_HU33.wav' }],
+                                    column: 'time_HU33',
+                                }
+                            },
+                            {
+                                title: 'Schubert: Winterreise, D. 911: No. 3 - SC06',
+                                sources: [{ src: 'data/Schubert_D911-03_SC06.wav'}],
+                                alignment: {
+                                    synchronizedSources: [{ src: 'data/Schubert_D911-03_SC06_syncronized.wav' }],
+                                    column: 'time_SC06',
+                                }
+                            },
+                        ],
+                    },
+                ],
+                alignment: {
+                    csv: 'data/alignment.csv',
+                    referenceTimeColumn: 'time_score',
+                    referenceTimeColumnSync: 'time_HU33',
+                    outOfRange: 'clamp',
+                },
+                features: {
+                    mode: 'alignment',
+                    exclusiveSolo: true,
+                    repeat: false,
+                    timer: true,
+                    trackMixControls: true,
+                    seekBar: true,
+                    keyboard: true,
+                    globalVolume: true,
+                    looping: true,
+                    presets: true,
+                    customizablePanelOrder: false,
+                    tabView: false,
+                    iosAudioUnlock: true,
+                    muteOtherPlayerInstances: true,
+                },
+            });
+        });
+    </script>
+</body>
+
+</html>
