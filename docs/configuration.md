@@ -37,13 +37,6 @@ TrackSwitch.createTrackSwitch(rootElement, {
       style: 'margin: 0;',
     },
     {
-      type: 'perTrackImage',
-      seekable: false,
-      seekMarginLeft: 0,
-      seekMarginRight: 0,
-      style: 'margin: 0;',
-    },
-    {
       type: 'waveform',
       width: 1200,
       height: 160,
@@ -85,7 +78,23 @@ TrackSwitch.createTrackSwitch(rootElement, {
         },
       ],
     },
+    {
+      type: 'sheetMusic',
+      src: 'score.musicxml',
+      measureColumn: 'measure',
+      maxWidth: 960,
+      maxHeight: 360,
+      renderScale: 0.75,
+      followPlayback: true,
+      cursorColor: '#999999',
+      cursorAlpha: 0.1,
+      style: 'margin: 0;',
+    },
   ],
+  alignment: {
+    csv: 'alignment.csv',
+    referenceTimeColumn: 'score_time_sec',
+  },
   features: {
     mode: 'default',
     exclusiveSolo: false,
@@ -149,7 +158,6 @@ TrackSwitch.createTrackSwitch(rootElement, {
           pan: 0,
           image: 'performance-a.png',
           style: 'border-left: 3px solid #4f8dc9;',
-          presets: [0],
           sources: [{ src: 'performance-a.mp3', type: 'audio/mpeg', startOffsetMs: 0, endOffsetMs: 0 }],
           alignment: {
             column: 'perf_a_sec',
@@ -165,7 +173,6 @@ TrackSwitch.createTrackSwitch(rootElement, {
           pan: 0.1,
           image: 'performance-b.png',
           style: 'border-left: 3px solid #6c757d;',
-          presets: [0],
           sources: [{ src: 'performance-b.mp3', type: 'audio/mpeg', startOffsetMs: 50, endOffsetMs: 0 }],
           alignment: {
             column: 'perf_b_sec',
