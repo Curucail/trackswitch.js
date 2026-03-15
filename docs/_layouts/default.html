@@ -18,14 +18,14 @@
   <link rel="stylesheet" href="{{ '/css/style.css' | relative_url }}" />
 </head>
 
-<body{% if page.url == '/' %} class="home-page"{% elsif page.url == '/configuration.html' %} class="docs-page docs-page--config"{% elsif page.url == '/examples.html' %} class="docs-page docs-page--narrow"{% elsif page.url == '/citation.html' %} class="docs-page docs-page--cite"{% endif %}>
+<body{% if page.url == '/' %} class="home-page"{% elsif page.url == '/documentation.html' %} class="docs-page docs-page--config"{% elsif page.url == '/examples.html' %} class="docs-page docs-page--narrow"{% elsif page.url == '/citation.html' %} class="docs-page docs-page--cite"{% endif %}>
   {% unless page.url == '/' %}
   <header class="site-masthead">
     <div class="site-masthead__inner">
       <a class="site-brand" href="{{ '/' | relative_url }}">trackswitch.js</a>
       <nav class="site-nav" aria-label="Documentation">
         <a href="{{ '/' | relative_url }}"{% if page.url == '/' %} aria-current="page"{% endif %}>Home</a>
-        <a href="{{ '/configuration.html' | relative_url }}"{% if page.url == '/configuration.html' %} aria-current="page"{% endif %}>Configuration</a>
+        <a href="{{ '/documentation.html' | relative_url }}"{% if page.url == '/documentation.html' %} aria-current="page"{% endif %}>Documentation</a>
         <a href="{{ '/examples.html' | relative_url }}"{% if page.url == '/examples.html' %} aria-current="page"{% endif %}>Examples</a>
         <a href="{{ '/citation.html' | relative_url }}"{% if page.url == '/citation.html' %} aria-current="page"{% endif %}>Cite</a>
       </nav>
@@ -57,7 +57,7 @@
   {% else %}
   <script src="{{ '/js/docs-code-snippets.js' | relative_url }}"></script>
   {% endif %}
-  {% if page.url == '/configuration.html' %}
+  {% if page.url == '/documentation.html' %}
   <script src="{{ '/js/configuration-toc.js' | relative_url }}"></script>
   {% endif %}
 </body>

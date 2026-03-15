@@ -27,19 +27,16 @@
     "THIRD_PARTY_NOTICES.md"
   ],
   "style": "dist/css/trackswitch.min.css",
-  "main": "dist/cjs/index.cjs",
   "module": "dist/esm/index.js",
   "types": "dist/types/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/types/index.d.ts",
-      "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.cjs"
+      "import": "./dist/esm/index.js"
     },
     "./react": {
       "types": "./dist/types/react.d.ts",
-      "import": "./dist/esm/react.js",
-      "require": "./dist/cjs/react.cjs"
+      "import": "./dist/esm/react.js"
     },
     "./style.css": "./dist/css/trackswitch.min.css",
     "./package.json": "./package.json"
@@ -59,6 +56,7 @@
     "build": "npm run build:css && npm run build:js && npm run build:types",
     "build:css": "esbuild css/trackswitch.css --bundle --minify --outfile=dist/css/trackswitch.min.css",
     "build:css:watch": "esbuild css/trackswitch.css --bundle --outfile=dist/css/trackswitch.min.css --watch=forever",
+    "build:docs-assets": "node scripts/sync-docs-assets.mjs",
     "build:js": "node scripts/build-js.mjs",
     "build:js:watch": "node scripts/build-js.mjs --watch",
     "build:types": "tsc --project tsconfig.build.json",

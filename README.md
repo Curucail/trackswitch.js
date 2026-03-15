@@ -55,7 +55,7 @@ Quick Setup
 -----------
 Take a look into the ```examples/``` folder for minimal working HTML templates.
 
-For further information on integrating the player into an ESM / CommonJS / React project, see [Documentation](https://audiolabs.github.io/trackswitch.js/configuration.html)
+For further information on integrating the player into an ESM / React project, see [Documentation](https://audiolabs.github.io/trackswitch.js/documentation.html)
 
 Features
 -----------------
@@ -87,7 +87,7 @@ Programmatic API
 
 Further Links
 -------------
-- [Documentation](https://audiolabs.github.io/trackswitch.js/configuration.html)
+- [Documentation](https://audiolabs.github.io/trackswitch.js/documentation.html)
 - [Example usages](https://audiolabs.github.io/trackswitch.js/examples.html)
 
 

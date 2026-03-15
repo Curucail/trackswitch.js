@@ -87,24 +87,6 @@ function rewriteEsmImportSpecifiers(directory) {
   }
 }
 
-function rewriteCjsRequireSpecifiers(directory) {
-  const outputFiles = collectJavaScriptOutputs(directory, [".cjs"]);
-
-  for (const outputFile of outputFiles) {
-    const source = readFileSync(outputFile, "utf8");
-    const rewritten = source.replace(
-      /(require\()(['"])(\.{1,2}\/[^'"]+)\2(\))/g,
-      (_match, prefix, quote, specifier, suffix) => {
-        return `${prefix}${quote}${addExtensionToRelativeSpecifier(specifier, ".cjs")}${quote}${suffix}`;
-      },
-    );
-
-    if (rewritten !== source) {
-      writeFileSync(outputFile, rewritten, "utf8");
-    }
-  }
-}
-
 const sourceEntryPoints = collectTypeScriptEntryPoints(resolve(rootDir, "src"));
 
 const browserCommonOptions = {
@@ -128,18 +110,6 @@ const esmCommonOptions = {
   outdir: resolve(rootDir, "dist/esm"),
 };
 
-const cjsCommonOptions = {
-  entryPoints: sourceEntryPoints,
-  bundle: false,
-  platform: "browser",
-  format: "cjs",
-  target: "es2017",
-  banner: { js: banner },
-  outbase: resolve(rootDir, "src"),
-  outdir: resolve(rootDir, "dist/cjs"),
-  outExtension: { ".js": ".cjs" },
-};
-
 const minifyOnly = process.argv.includes("--minify-only");
 const watch = process.argv.includes("--watch");
 
@@ -156,9 +126,6 @@ const buildConfigs = minifyOnly
         ...esmCommonOptions,
       },
       {
-        ...cjsCommonOptions,
-      },
-      {
         ...browserCommonOptions,
         outfile: resolve(rootDir, "dist/js/trackswitch.js"),
       },
@@ -173,7 +140,6 @@ if (watch) {
   const contexts = await Promise.all(buildConfigs.map((options) => context(options)));
   await Promise.all(contexts.map((buildContext) => buildContext.watch()));
   rewriteEsmImportSpecifiers(resolve(rootDir, "dist/esm"));
-  rewriteCjsRequireSpecifiers(resolve(rootDir, "dist/cjs"));
 
   const dispose = async () => {
     await Promise.all(contexts.map((buildContext) => buildContext.dispose()));
@@ -187,5 +153,4 @@ if (watch) {
 } else {
   await Promise.all(buildConfigs.map((options) => build(options)));
   rewriteEsmImportSpecifiers(resolve(rootDir, "dist/esm"));
-  rewriteCjsRequireSpecifiers(resolve(rootDir, "dist/cjs"));
 }

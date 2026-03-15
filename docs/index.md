@@ -6,7 +6,7 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
 <section class="ts-hero">
   <div class="ts-hero__row">
     <nav class="site-nav ts-hero__nav" aria-label="Documentation">
-      <a href="{{ '/configuration.html' | relative_url }}">Configuration</a>
+      <a href="{{ '/documentation.html' | relative_url }}">Documentation</a>
       <a href="{{ '/examples.html' | relative_url }}">Examples</a>
       <a href="{{ '/citation.html' | relative_url }}">Cite</a>
     </nav>

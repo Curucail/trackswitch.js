@@ -4,8 +4,11 @@ _site/
 dist/
 example_ulli/
 AGENTS.md
+testings.ipynb
 docs/js/trackswitch.min.js
 docs/css/trackswitch.min.css
+docs/assets/multitracks/
+docs/assets/alignment/
 .jekyll-cache/
 .jekyll-metadata
 .sass-cache/

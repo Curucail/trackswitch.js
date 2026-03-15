@@ -1,6 +1,10 @@
+---
+title: Documentation
+permalink: /documentation.html
+---
+
 - [Quick Minimal Setup](#quick-setup) 
   - [In ESM / TypeScript](#in-esm--typescript)
-  - [In CommonJS](#in-commonjs)
   - [In React](#in-react)
   - [In HTML](#in-html)
 - [Full Options Reference](#full-options-reference)
@@ -48,27 +52,6 @@ const init: TrackSwitchInit = {
 };
 
 createTrackSwitch(document.getElementById('player')!, init);
-```
-
-### In CommonJS {#in-commonjs}
-
-```js
-const { createTrackSwitch } = require('trackswitch');
-require('trackswitch/style.css');
-
-createTrackSwitch(document.getElementById('player'), {
-  ui: [
-    {
-      type: 'trackGroup',
-      trackGroup: [
-        {
-          title: 'Track 1',
-          sources: [{ src: 'track1.mp3' }],
-        },
-      ],
-    },
-  ],
-});
 ```
 
 ### In React {#in-react}
