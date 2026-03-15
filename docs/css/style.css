@@ -315,6 +315,12 @@ kbd {
     transition: background-color 0.15s ease, color 0.15s ease;
 }
 
+.docs-page--config .site-main > ul:first-of-type a code {
+    color: inherit;
+    background: transparent;
+    padding: 0;
+}
+
 .docs-page--config .site-main > ul:first-of-type a:hover {
     background: rgba(56, 56, 56, 0.08);
     color: var(--ts-doc-color-text-primary);

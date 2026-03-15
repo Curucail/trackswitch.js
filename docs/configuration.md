@@ -1,4 +1,4 @@
-- [Quick Start](#quick-start)
+- [Quick Reference](#quick-reference)
   - [Default Mode](#default-mode)
   - [Alignment Mode](#alignment-mode)
 - [Player-Wide Settings](#player-wide-settings)
@@ -20,7 +20,7 @@
 - [Keyboard and Loop Controls](#keyboard-and-loop-controls)
 - [Things to Check](#things-to-check)
 
-## Quick Start
+## Quick Reference
 
 ### Default Mode
 
@@ -521,7 +521,7 @@ Looping is also available through the loop buttons. On seekable controls, loop r
 - Every track must have at least one audio file in `sources`.
 - Seekable `image`, `perTrackImage`, and `waveform` sections need `seekMarginLeft + seekMarginRight` to stay below `100`.
 - `perTrackImage` is meant for setups where one track is active at a time.
-- Presets are most useful when you have at least two preset choices and clear `presetNames`.
+- Presets are only shown in the UI when you have at least two preset choices.
 - `sheetMusic.measureColumn` only works for clickable measure syncing when matching alignment data is also available.
-- `warpingMatrix` is for alignment players, not standard multitrack players.
+- `warpingMatrix` works for alignment mode only, not default mode.
 - In alignment mode, each track needs its own `alignment.column`.
