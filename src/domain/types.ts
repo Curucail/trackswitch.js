@@ -68,7 +68,6 @@ export interface TrackSwitchPerTrackImageConfig {
 }
 
 export interface TrackSwitchWaveformConfig {
-    width?: number;
     height?: number;
     waveformBarWidth?: number;
     maxZoom?: number;

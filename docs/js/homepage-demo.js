@@ -3,8 +3,6 @@
 
   var MODE_DEFAULT = 'default';
   var MODE_ALIGNMENT = 'alignment';
-  var SHOWCASE_WAVEFORM_WIDTH = 760;
-
   function createBaseTracks(basePath) {
     return [
       {
@@ -610,7 +608,7 @@
 
       if (model.waveform) {
         snippetLines.push(
-          "      { type: 'waveform', width: " + SHOWCASE_WAVEFORM_WIDTH + ", height: 150" + waveformFollowSnippet + " },"
+          "      { type: 'waveform', height: 150" + waveformFollowSnippet + " },"
         );
       }
 
@@ -702,10 +700,10 @@
 
       if (model.waveform) {
         snippetLines.push(
-          "      { type: 'waveform', width: " + SHOWCASE_WAVEFORM_WIDTH + ", height: 100, waveformSource: 0" + waveformFollowSnippet + " },"
+          "      { type: 'waveform', height: 100, waveformSource: 0" + waveformFollowSnippet + " },"
         );
         snippetLines.push(
-          "      { type: 'waveform', width: " + SHOWCASE_WAVEFORM_WIDTH + ", height: 100, waveformSource: 1" + waveformFollowSnippet + " },"
+          "      { type: 'waveform', height: 100, waveformSource: 1" + waveformFollowSnippet + " },"
         );
       }
 
@@ -920,13 +918,11 @@
         if (isAlignmentMode(currentMode)) {
           var alignmentWaveformOne = {
             type: 'waveform',
-            width: SHOWCASE_WAVEFORM_WIDTH,
             height: 100,
             waveformSource: 0,
           };
           var alignmentWaveformTwo = {
             type: 'waveform',
-            width: SHOWCASE_WAVEFORM_WIDTH,
             height: 100,
             waveformSource: 1,
           };
@@ -943,7 +939,6 @@
         } else {
           var waveformConfig = {
             type: 'waveform',
-            width: SHOWCASE_WAVEFORM_WIDTH,
             height: 150,
           };
 

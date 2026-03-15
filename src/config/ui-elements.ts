@@ -19,7 +19,6 @@ const uiImageAllowedKeys = ['type', 'src', 'seekable', 'style', 'seekMarginLeft'
 const uiPerTrackImageAllowedKeys = ['type', 'seekable', 'style', 'seekMarginLeft', 'seekMarginRight'] as const;
 const uiWaveformAllowedKeys = [
     'type',
-    'width',
     'height',
     'waveformBarWidth',
     'maxZoom',
@@ -399,7 +398,7 @@ function createImageElement(image: Pick<TrackSwitchImageConfig, 'seekable' | 'st
 function injectWaveform(root: HTMLElement, waveform: TrackSwitchWaveformConfig): void {
     const canvas = document.createElement('canvas');
     canvas.className = 'waveform';
-    canvas.width = toCanvasSize(waveform.width, 1200);
+    canvas.width = 1200;
     canvas.height = toCanvasSize(waveform.height, 150);
     canvas.setAttribute('data-waveform-bar-width', String(normalizeWaveformBarWidth(waveform.waveformBarWidth)));
     canvas.setAttribute('data-waveform-source', serializeWaveformSource(waveform.waveformSource));

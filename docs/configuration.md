@@ -38,7 +38,6 @@ TrackSwitch.createTrackSwitch(rootElement, {
     },
     {
       type: 'waveform',
-      width: 1200,
       height: 160,
       waveformBarWidth: 2,
       maxZoom: 5,
@@ -136,7 +135,6 @@ TrackSwitch.createTrackSwitch(rootElement, {
     },
     {
       type: 'waveform',
-      width: 1400,
       height: 160,
       waveformBarWidth: 3,
       maxZoom: 8,
@@ -449,7 +447,6 @@ Example:
 ```javascript
 {
   type: 'waveform',
-  width: 1200,
   height: 150,
   waveformBarWidth: 2,
   maxZoom: 5,
@@ -464,7 +461,6 @@ Section options:
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `width?` | `number` | `1200` | Starting width of the waveform. |
 | `height?` | `number` | `150` | Height of the waveform. |
 | `waveformBarWidth?` | `number` | `1` | Thickness of the waveform bars. |
 | `maxZoom?` | `number` | `5` | The closest zoom level listeners can reach, in seconds. Smaller numbers allow tighter zoom. |
