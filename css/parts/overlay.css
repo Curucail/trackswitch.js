@@ -1,0 +1,260 @@
+/* OVERLAY STYLES ----------------------------------------------------------- */
+
+@keyframes trackswitch-shortcut-overlay-fade {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes trackswitch-shortcut-content-fade {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.trackswitch .overlay {
+    background-color: var(--ts-color-overlay-dim);
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+}
+
+.trackswitch .overlay.is-hidden {
+    display: none;
+}
+
+.trackswitch .overlay-activation>span,
+.trackswitch .overlay-activation>p {
+    display: block;
+    position: absolute;
+    text-align: center;
+}
+
+.trackswitch .overlay-activation>span {
+    background-color: var(--ts-color-overlay-button);
+    width: 56px;
+    height: 56px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-indent: 0;
+    line-height: 1;
+    font-size: 0;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.trackswitch .overlay-activation>span.loading {
+    cursor: inherit;
+}
+
+.trackswitch .overlay-activation>span .ts-icon-slot {
+    font-size: 30pt;
+    width: auto;
+    height: auto;
+    color: var(--ts-color-text-primary);
+}
+
+
+.trackswitch.error .overlay-activation {
+    background: var(--ts-color-surface-panel-dark-50);
+}
+
+.trackswitch.error .overlay-activation>span {
+    background: var(--ts-color-text-error);
+    cursor: inherit;
+}
+
+.trackswitch.error .overlay-activation p {
+    width: 100%;
+    top: calc(50% + 35px);
+    color: var(--ts-color-text-inverse);
+}
+
+.trackswitch.error .overlay-activation #overlayinfo span.info {
+    display: none;
+}
+
+.trackswitch .overlay-activation #overlayinfo {
+    min-height: 24px;
+    width: max-content;
+    max-width: min(92%, 420px);
+    top: calc(50% + 44px);
+    left: 50%;
+    transform: translateX(-50%);
+    padding-bottom: 8px;
+    color: var(--ts-color-text-primary);
+    text-align: center;
+    font-size: 14pt;
+}
+
+.trackswitch .overlay-activation #overlayinfo span.info {
+    position: relative;
+    width: auto;
+    cursor: default;
+    text-indent: 0;
+    font-size: 0;
+    opacity: 0.45;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.trackswitch .overlay-activation #overlayinfo span.info .ts-icon-slot {
+    font-size: 16pt;
+    width: auto;
+    height: auto;
+    background: transparent;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.trackswitch .overlay-activation #overlayinfo span.info:focus,
+.trackswitch .overlay-activation #overlayinfo span.info:active,
+.trackswitch .overlay-activation #overlayinfo span.info .ts-icon-slot:focus,
+.trackswitch .overlay-activation #overlayinfo span.info .ts-icon-slot:active {
+    outline: none;
+    background: transparent;
+    box-shadow: none;
+}
+
+.trackswitch .overlay-activation #overlayinfo span.text {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--ts-color-surface-base);
+    color: var(--ts-color-surface-panel-dark);
+    border: 1px solid var(--ts-color-text-muted);
+    border-radius: 6px;
+    padding: 8px 10px;
+    white-space: nowrap;
+    line-height: 1.25;
+    font-family: var(--ts-font-ui);
+}
+
+.trackswitch .overlay-activation #overlayinfo:hover span.info {
+    opacity: 0.95;
+}
+
+.trackswitch .overlay-activation #overlayinfo:hover span.text {
+    display: block;
+}
+
+.trackswitch .overlay-activation #overlayinfo span.text strong {
+    font-weight: bold;
+}
+
+.trackswitch .overlay-activation #overlayinfo a {
+    color: var(--ts-color-accent);
+    text-decoration: underline;
+}
+
+.trackswitch .overlay-shortcuts {
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    background-color: var(--ts-color-overlay-dim);
+    animation: trackswitch-shortcut-overlay-fade 180ms ease-out;
+}
+
+.trackswitch .shortcut-help-panel {
+    width: min(560px, 100%);
+    max-height: min(82vh, 560px);
+    overflow: auto;
+    padding: 12px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    background: rgba(72, 72, 72, 0.96);
+    color: var(--ts-color-text-inverse);
+    font-size: 13px;
+    animation: trackswitch-shortcut-content-fade 220ms ease-out;
+    outline: none;
+}
+
+.trackswitch .shortcut-help-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.trackswitch .shortcut-help-heading {
+    color: var(--ts-color-text-inverse);
+    font-family: inherit;
+}
+
+.trackswitch .shortcut-help-title {
+    display: block;
+    margin: 0 0 4px;
+    font-size: 17px;
+    line-height: 1.1;
+    font-weight: 700;
+    font-family: inherit;
+    letter-spacing: 0;
+    color: inherit;
+}
+
+.trackswitch .shortcut-help-heading p,
+.trackswitch .shortcut-help-footer {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.2;
+    color: rgba(255, 255, 255, 0.78);
+    font-weight: 400;
+    font-family: inherit;
+}
+
+.trackswitch .shortcut-help-list {
+    display: grid;
+    gap: 0;
+}
+
+.trackswitch .shortcut-help-item {
+    display: grid;
+    grid-template-columns: minmax(116px, 180px) minmax(0, 1fr);
+    gap: 10px;
+    align-items: start;
+    padding: 6px 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    opacity: 0;
+    animation: trackswitch-shortcut-content-fade 220ms ease-out forwards;
+    animation-delay: var(--ts-shortcut-delay, 40ms);
+}
+
+.trackswitch .shortcut-help-keys {
+    display: inline-flex;
+    align-items: center;
+    min-height: 18px;
+    padding: 0;
+    color: rgba(255, 255, 255, 0.92);
+    font-weight: 600;
+    line-height: 1.1;
+}
+
+.trackswitch .shortcut-help-action {
+    color: rgba(255, 255, 255, 0.84);
+    line-height: 1.2;
+}
+
+.trackswitch .shortcut-help-footer {
+    margin-top: 8px;
+}

@@ -1,0 +1,324 @@
+
+/* Narrow container fallback: seekbar moves to full-width row 2 */
+@container (max-width: 1000px) {
+    .trackswitch .main-control ul.control {
+        gap: 6px 16px;
+        min-height: 36px;
+        padding: 8px 12px;
+    }
+
+    .trackswitch .main-control .seekwrap {
+        order: 100;
+        flex: 1 0 100%;
+        min-width: 0;
+    }
+
+    .trackswitch .main-control .timing {
+        order: 50;
+        margin-left: auto;
+    }
+}
+
+/* Main-control layout adapts to container width, not viewport width. */
+@container (max-width: 767px) {
+    .trackswitch .main-control .volume,
+    .trackswitch .main-control .preset-selector-wrap {
+        align-self: center;
+    }
+
+    .trackswitch .main-control .timing {
+        order: 200;
+        flex: 0 0 auto;
+        margin-left: auto;
+        text-align: right;
+    }
+
+    .trackswitch .main-control .seekwrap {
+        order: 300;
+        flex: 1 0 100%;
+        min-width: 0;
+    }
+}
+
+@container (max-width: 500px) {
+    /* Phone layout:
+       Row 1: playback | volume
+       Row 2: preset | loop-group
+       Row 3: timing (centered, alone)
+       Row 4: seekbar (full width) */
+
+    .trackswitch .main-control ul.control {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 18px 14px;
+    }
+
+    .trackswitch .main-control .playback-group>.playback-controls {
+        gap: 20px;
+    }
+
+    .trackswitch .main-control .playback-group {
+        order: 10;
+        min-width: 0;
+    }
+
+    .trackswitch .main-control .volume {
+        order: 20;
+        justify-self: end;
+        margin: 0;
+    }
+
+    .trackswitch .main-control .loop-group {
+        order: 50;
+        justify-self: end;
+        margin: 0;
+    }
+
+    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-a,
+    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-b {
+        width: 24px;
+        height: 24px;
+    }
+
+    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-toggle,
+    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-clear {
+        width: 26px;
+        height: 26px;
+    }
+
+    .trackswitch .main-control .preset-selector-wrap {
+        order: 40;
+        min-width: 0;
+        margin: 0;
+    }
+
+    /* Keep preset left and looping right when both controls are enabled. */
+    .trackswitch .main-control ul.control:has(> .preset-selector-wrap):has(> .loop-group)>.preset-selector-wrap {
+        grid-column: 1;
+        justify-self: start;
+    }
+
+    .trackswitch .main-control ul.control:has(> .preset-selector-wrap):has(> .loop-group)>.loop-group {
+        grid-column: 2;
+        justify-self: end;
+    }
+
+    /* In preset+loop layouts without volume, keep timer on row 1 right. */
+    .trackswitch .main-control ul.control:has(> .preset-selector-wrap):has(> .loop-group):not(:has(> .volume))>.timing {
+        order: 20;
+        grid-column: 2;
+        justify-self: end;
+        margin-left: auto;
+        text-align: right;
+    }
+
+    .trackswitch .main-control .timing {
+        order: 200;
+        grid-column: 1 / -1;
+        justify-self: center;
+        margin: 0;
+        text-align: center;
+    }
+
+    /* If optional groups are absent, keep timing in row 1 at right. */
+    .trackswitch .main-control ul.control:not(:has(> .volume, > .loop-group, > .preset-selector-wrap))>.timing {
+        order: 20;
+        grid-column: auto;
+        justify-self: end;
+        margin-left: auto;
+        text-align: right;
+    }
+
+    .trackswitch .main-control .seekwrap {
+        order: 300;
+        grid-column: 1 / -1;
+        width: 100%;
+        min-width: 0;
+        margin: 0;
+        padding: 0;
+    }
+}
+
+
+/* Tablet/mobile adjustments */
+@media (max-width: 767px) {
+    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-a,
+    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-b,
+    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-toggle,
+    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-clear {
+        z-index: 2;
+        touch-action: manipulation;
+        pointer-events: auto;
+    }
+
+    .trackswitch .main-control .control li.button .ts-icon-slot {
+        font-size: 20px;
+    }
+
+    .trackswitch .main-control .playback-group>.playback-controls {
+        gap: 16px;
+    }
+
+    .trackswitch .main-control .sync-global {
+        min-width: 68px;
+        height: 26px;
+        line-height: 26px;
+        font-size: 14px;
+        padding: 0;
+    }
+
+    .trackswitch .main-control .volume-control .volume-icon {
+        font-size: 20px;
+        margin-right: 12px;
+    }
+
+    .trackswitch .main-control .volume-slider,
+    .trackswitch .warping-tempo-slider {
+        --ts-slider-thumb-size: 16px;
+    }
+
+    .trackswitch .main-control .control>li.loop-group>.loop-controls {
+        gap: 6px;
+        position: relative;
+        top: 2px;
+    }
+
+    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.button {
+        width: 28px;
+        height: 28px;
+    }
+
+    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-a::after,
+    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-b::after {
+        width: 22px;
+        height: 22px;
+        font-size: 13px;
+    }
+
+    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-toggle,
+    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-clear {
+        width: 24px;
+        height: 28px;
+    }
+
+    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-toggle .ts-icon-slot,
+    .trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-clear .ts-icon-slot {
+        font-size: 20px;
+    }
+
+    .trackswitch .main-control .preset-selector {
+        font-size: 14px;
+    }
+
+    .trackswitch .main-control .timing {
+        font-size: 16px;
+    }
+
+    .trackswitch .overlay-activation #overlayinfo {
+        font-size: 8pt;
+        top: calc(50% + 42px);
+    }
+
+    .trackswitch .overlay-activation #overlayinfo span.info .ts-icon-slot {
+        font-size: 13pt;
+    }
+
+    .trackswitch .overlay-activation #overlayinfo span.text {
+        font-size: 11pt;
+        line-height: 1.2;
+    }
+
+    .trackswitch .overlay-shortcuts {
+        padding: 8px;
+    }
+
+    .trackswitch .shortcut-help-panel {
+        padding: 10px 12px;
+        font-size: 12px;
+    }
+
+    .trackswitch .shortcut-help-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+        margin-bottom: 6px;
+    }
+
+    .trackswitch .shortcut-help-item {
+        grid-template-columns: 1fr;
+        gap: 2px;
+        padding: 5px 0;
+    }
+
+    .trackswitch .shortcut-help-keys {
+        justify-content: flex-start;
+        min-height: auto;
+    }
+
+    .trackswitch .shortcut-help-title {
+        font-size: 15px;
+    }
+
+    .trackswitch .shortcut-help-heading p,
+    .trackswitch .shortcut-help-footer {
+        font-size: 11px;
+        line-height: 1.15;
+    }
+
+    .trackswitch li.track {
+        min-height: 40px;
+    }
+
+    .trackswitch li.track .track-mix-controls {
+        gap: 10px;
+        padding-left: 10px;
+    }
+
+    .trackswitch li.track .mix-slider {
+        width: 68px;
+    }
+
+    .trackswitch li.track .track-volume-icon {
+        font-size: 18px;
+        margin-right: 10px;
+    }
+
+    .trackswitch li.track .mix-slider::-webkit-slider-thumb {
+        width: 16px;
+        height: 16px;
+    }
+
+    .trackswitch li.track .mix-slider::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+    }
+
+    .trackswitch .warping-plot-host .warping-plot-axis text {
+        font-size: 16px;
+    }
+
+    .trackswitch .warping-matrix-panel {
+        min-height: 180px;
+    }
+}
+
+@media (max-width: 500px) {
+    .trackswitch li.track .track-mix-controls {
+        gap: 8px;
+        padding-left: 8px;
+    }
+
+    .trackswitch li.track .mix-slider {
+        width: 56px;
+    }
+
+    .trackswitch li.track .track-pan-label {
+        min-width: 22px;
+        font-size: 11px;
+    }
+
+    .trackswitch .warping-plot-host .warping-plot-axis text {
+        font-size: 18px;
+    }
+}

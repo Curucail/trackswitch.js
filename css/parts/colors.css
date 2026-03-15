@@ -1,0 +1,25 @@
+.trackswitch {
+    /* Canonical palette tokens. */
+    --ts-font-ui: Arial, Helvetica, sans-serif;
+
+    --ts-color-text-primary: #000000;
+    --ts-color-text-inverse: #FFFFFF;
+    --ts-color-text-muted: #DDDDDD;
+    --ts-color-text-secondary: #666666;
+    --ts-color-text-error: #C03328;
+
+    --ts-color-surface-base: #EEEEEE;
+    --ts-color-surface-panel-dark: #383838;
+    --ts-color-surface-panel-dark-50: rgba(56, 56, 56, 0.5);
+    --ts-color-surface-control: #555555;
+
+    --ts-color-border-mid: #999999;
+
+    --ts-color-accent: #ED8C01;
+    --ts-color-accent-soft-15: rgba(237, 140, 1, 0.12);
+    --ts-color-accent-soft-30: rgba(237, 140, 1, 0.25);
+    --ts-color-overlay-dim: rgba(0, 0, 0, 0.5);
+    --ts-color-overlay-button: #F1C40F;
+    --ts-color-track-error-bg: #DD9B9B;
+    --ts-focus-ring-color: rgba(237, 140, 1, 0.45);
+}

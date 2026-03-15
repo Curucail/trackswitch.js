@@ -1,735 +1,586 @@
----
-title: trackswitch.js
----
+- [Quick Reference](#quick-reference)
+  - [Default Mode](#default-mode)
+  - [Alignment Mode](#alignment-mode)
+- [Player-Wide Settings](#player-wide-settings)
+  - [`ui`](#ui)
+  - [`presetNames`](#presetnames)
+  - [`features`](#features)
+  - [`alignment`](#alignment)
+- [Track Settings](#track-settings)
+  - [`trackGroup`](#trackgroup)
+  - [Track Options](#track-options)
+  - [Audio Source Options](#audio-source-options)
+  - [Track Alignment Options](#track-alignment-options)
+- [Visualizations](#visualizations)
+  - [`image`](#image)
+  - [`perTrackImage`](#pertrackimage)
+  - [`waveform`](#waveform)
+  - [`sheetMusic`](#sheetmusic)
+  - [`warpingMatrix`](#warpingmatrix)
+- [Keyboard and Loop Controls](#keyboard-and-loop-controls)
+- [Things to Check](#things-to-check)
 
-- [Initialization](#initialization)
-- [Configuration](#configuration)
-    - [Tracks](#tracks)
-        - [Fallback Audio Files](#fallback-audio-files)
-        - [Track Styling](#track-styling)
-        - [Solo Tracks](#solo-tracks)
-        - [Mute Tracks](#mute-tracks)
-        - [Track Timing Offsets](#track-timing-offsets)
-        - [Track Presets](#track-presets)
-    - [Player Behavior](#player-behavior)
-        - [Keyboard Shortcuts](#keyboard-shortcuts)
-        - [Loop/Section Repeat](#loopsection-repeat)
-    - [Additional Player Elements](#additional-player-elements)
-        - [Waveform Visualization](#waveform-visualization)
-        - [Seekable Image](#seekable-image)
+## Quick Reference
 
-# Initialization
-
-Trackswitch requires jQuery (v3.7.x) and Fontawesome to be included to work, e.g.
-
-```html
-<!-- ... -->
-
-<link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous" />
-<link rel="stylesheet" href="trackswitch.min.css" />
-
-<!-- ... -->
-
-<div class="player">
-  <p>
-      Example trackswitch.js instance.
-  </p>
-  <img src="mix.png" class="seekable"/>
-  <ts-track title="Drums" data-img="drums.png">
-      <ts-source src="drums.mp3" type="audio/mpeg"></ts-source>
-  </ts-track>
-  <ts-track title="Synth" data-img="synth.png">
-      <ts-source src="synth.mp3" type="audio/mpeg"></ts-source>
-  </ts-track>
-  <ts-track title="Bass" data-img="bass.png">
-      <ts-source src="bass.mp3" type="audio/mpeg"></ts-source>
-  </ts-track>
-  <ts-track title="Violins" data-img="violins.png">
-      <ts-source src="violins.mp3" type="audio/mpeg"></ts-source>
-  </ts-track>
-</div>
-
-<!-- ... -->
-
-<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="crossorigin="anonymous"></script>
-<script src="trackswitch.min.js"></script>
-<script type="text/javascript">
-    jQuery(document).ready(function() {
-        jQuery(".player").trackSwitch();
-    });
-</script>
-
-<!-- ... -->
-```
-
-Alternatively you can of course use [Browserify](http://browserify.org/).
-
-# Configuration
-
-## Tracks
-
-Each track is contained in one `ts-track` element and must contain one or more `ts-source` elements:
-
-```html
-<div class="player">
-    <ts-track title="Violins">
-        <ts-source src="violins.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Synth">
-        <ts-source src="synth.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Bass">
-        <ts-source src="bass.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Drums">
-        <ts-source src="drums.mp3"></ts-source>
-    </ts-track>
-</div>
-```
-
-<div class="player" style="margin-top: 30px; margin-bottom: 60px;">
-    <ts-track title="Violins">
-        <ts-source src="data/multitracks/violins.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Synth">
-        <ts-source src="data/multitracks/synth.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Bass">
-        <ts-source src="data/multitracks/bass.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Drums">
-        <ts-source src="data/multitracks/drums.mp3"></ts-source>
-    </ts-track>
-</div>
-
-Note that each `ts-source` should always contain a closing element.
-
-### Fallback Audio Files
-
-Due to a [messy Browser compatibility situation](https://developer.mozilla.org/en-US/docs/Web/HTML/Supported_media_formats#Browser_compatibility) it is recommended you define multiple `ts-source`s with different formats for each `ts-track`.
-
-It is recommended, but not required, that you to define the [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Complete_list_of_MIME_types) in each `ts-source`.
-
-```html
-<div class="player">
-    <ts-track title="Violins">
-        <ts-source src="violins.mp3" type="audio/mpeg"></ts-source>
-        <ts-source src="violins.mp4" type="audio/mp4"></ts-source>
-    </ts-track>
-    <ts-track title="Synth">
-        <ts-source src="synth.mp3" type="audio/mpeg"></ts-source>
-        <ts-source src="synth.mp4" type="audio/mp4"></ts-source>
-    </ts-track>
-    <ts-track title="Bass">
-        <ts-source src="bass.mp3" type="audio/mpeg"></ts-source>
-        <ts-source src="bass.mp4" type="audio/mp4"></ts-source>
-    </ts-track>
-    <ts-track title="Drums">
-        <ts-source src="drums.mp3" type="audio/mpeg"></ts-source>
-        <ts-source src="drums.mp4" type="audio/mp4"></ts-source>
-    </ts-track>
-</div>
-```
-
-### Track Styling
-
-You can use CSS to style each individual `ts-track` element:
-
-```html
-<div class="player">
-    <ts-track title="Violins" style="background-color: #156090;">
-        <ts-source src="violins.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Synth" style="background-color: #15737D;">
-        <ts-source src="synth.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Bass" style="background-color: #158769;">
-        <ts-source src="bass.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Drums" style="background-color: #159858;">
-        <ts-source src="drums.mp3"></ts-source>
-    </ts-track>
-</div>
-```
-
-<div class="player" style="margin-top: 30px; margin-bottom: 60px;">
-    <ts-track title="Violins" style="background-color: #156090;">
-        <ts-source src="data/multitracks/violins.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Synth" style="background-color: #15737D;">
-        <ts-source src="data/multitracks/synth.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Bass" style="background-color: #158769;">
-        <ts-source src="data/multitracks/bass.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Drums" style="background-color: #159858;">
-        <ts-source src="data/multitracks/drums.mp3"></ts-source>
-    </ts-track>
-</div>
-
-### Solo Tracks
-
-You can preselect **solo** for individual tracks by using the `solo` attribute within the `ts-track` element, like this: `<ts-track title="Violins" solo>`.
-
-```html
-<div class="player">
-    <ts-track title="Violins" solo>
-        <ts-source src="violins.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Synth" solo>
-        <ts-source src="synth.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Bass">
-        <ts-source src="bass.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Drums">
-        <ts-source src="drums.mp3"></ts-source>
-    </ts-track>
-</div>
-```
-
-<div class="player" style="margin-top: 30px; margin-bottom: 60px;">
-    <ts-track title="Violins" solo>
-        <ts-source src="data/multitracks/violins.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Synth" solo>
-        <ts-source src="data/multitracks/synth.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Bass">
-        <ts-source src="data/multitracks/bass.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Drums">
-        <ts-source src="data/multitracks/drums.mp3"></ts-source>
-    </ts-track>
-</div>
-
-### Mute Tracks
-
-You can preselect **mute** for individual tracks by using the `mute` attribute within the `ts-track` element, like this: `<ts-track title="Bass" mute>`.
-
-```html
-<div class="player">
-    <ts-track title="Violins">
-        <ts-source src="violins.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Synth">
-        <ts-source src="synth.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Bass" mute>
-        <ts-source src="bass.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Drums" mute>
-        <ts-source src="drums.mp3"></ts-source>
-    </ts-track>
-</div>
-```
-
-<div class="player" style="margin-top: 30px; margin-bottom: 60px;">
-    <ts-track title="Violins">
-        <ts-source src="data/multitracks/violins.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Synth">
-        <ts-source src="data/multitracks/synth.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Bass" mute>
-        <ts-source src="data/multitracks/bass.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Drums" mute>
-        <ts-source src="data/multitracks/drums.mp3"></ts-source>
-    </ts-track>
-</div>
-
-### Track Timing Offsets
-
-Each `ts-source` can optionally define millisecond offsets to trim or pad a track on the timeline using the `start-offset-ms` and `end-offset-ms` attributes.
-
-- Positive values **trim** from the start/end of the audio.
-- Negative values **pad** with silence before/after the audio.
-
-The offsets apply to the specific `ts-source` that is decoded. Use these to align and synchronize tracks that start late, end early, or include unwanted lead-in/lead-out.
-
-```html
-<div class="player">
-    <ts-track title="Violins">
-        <ts-source src="violins.mp3" start-offset-ms="-250" end-offset-ms="0"></ts-source>
-    </ts-track>
-    <ts-track title="Synth">
-        <ts-source src="synth.mp3" start-offset-ms="120" end-offset-ms="80"></ts-source>
-    </ts-track>
-</div>
-```
-
-### Track Presets
-
-Track presets allow you to define different solo configurations that can be quickly selected via a dropdown menu in the control bar. This is useful for comparing different instrumental combinations (e.g., "Vocals Only", "Drums + Bass", "Full Mix").
-
-**Defining Presets**
-
-To use presets, add a `preset-names` attribute to the player div with comma-separated preset names:
-
-```html
-<div class="player" preset-names="All Tracks,Violins & Synths,Drums & Bass,Drums Only">
-    <ts-track title="Violins" presets="0,1">
-        <ts-source src="violins.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Synths" presets="0,1">
-        <ts-source src="synth.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Bass" presets="0,2">
-        <ts-source src="bass.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Drums" presets="0,2,3">
-        <ts-source src="drums.mp3"></ts-source>
-    </ts-track>
-</div>
-```
-
-<div class="player" style="margin-top: 30px; margin-bottom: 60px;" preset-names="All Tracks,Violins & Synths,Drums & Bass,Drums Only">
-    <ts-track title="Violins" presets="0,1">
-        <ts-source src="data/multitracks/violins.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Synths" presets="0,1">
-        <ts-source src="data/multitracks/synth.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Bass" presets="0,2">
-        <ts-source src="data/multitracks/bass.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Drums" presets="0,2,3">
-        <ts-source src="data/multitracks/drums.mp3"></ts-source>
-    </ts-track>
-</div>
-
-Each `ts-track` element uses the `presets` attribute to define which presets it belongs to (as comma-separated preset indices, 0-indexed).
-
-If no tracks explicitly define their preset membership, they won't appear in any preset except those they're assigned to.
-
-If you don't define `preset-names`, preset names will be auto-generated as "Preset 0", "Preset 1", etc.:
-
-**Preset Dropdown Visibility**
-
-The preset selector dropdown only appears in the control bar when **2 or more presets** are defined. With 0 or 1 presets, the dropdown is hidden.
-
-**Preset Behavior**
-
-When a preset is selected:
-- All tracks belonging to that preset are **soloed**
-- All tracks NOT belonging to that preset are **unsoloed**
-- All **mute states are reset to unmuted** (no tracks are muted)
-
-**Interacting with Presets**
-
-- **Click the dropdown** to open the preset selector menu
-- **Scroll the mouse wheel** while hovering over the dropdown to cycle through presets
-
-Presets can be combined with other player controls—solo, mute, and repeat buttons continue to work normally after a preset is selected.
-
-## Player Behavior
-
-The player allows for several different settings to be enabled or disabled. This is done using a settings object, for example:
+### Default Mode
 
 ```javascript
-var settings = {
-    onlyradiosolo: true,
-    repeat: true,
-};
-$(".player").trackSwitch(settings);
-```
-
-<div class="customplayer" style="margin-top: 30px; margin-bottom: 60px;">
-    <ts-track title="Violins">
-        <ts-source src="data/multitracks/violins.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Synth">
-        <ts-source src="data/multitracks/synth.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Bass">
-        <ts-source src="data/multitracks/bass.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Drums">
-        <ts-source src="data/multitracks/drums.mp3"></ts-source>
-    </ts-track>
-</div>
-
-The player accepts the following options (defaults shown):
-
- - `mute` (`boolean`): Show mute buttons. Default: `true`.
- - `solo` (`boolean`): Show solo buttons. Default: `true`.
- - `globalsolo` (`boolean`): Pause other trackswitch instances when playback starts in the current player. Default: `true`.
- - `globalvolume` (`boolean`): Enable the shared output volume slider. Default: `false`.
- - `repeat` (`boolean`): Initialize player with repeat enabled. Default: `false`.
- - `radiosolo` (`boolean`): Allow only one track to be soloed at a time (equivalent to making <kbd>shift</kbd>+click solo behavior the default). Default: `false`.
- - `onlyradiosolo` (`boolean`): Convenience mode for one-track-at-a-time comparison; forces `mute: false` and `radiosolo: true` and makes the whole track row clickable. Default: `false`.
- - `tabview` (`boolean`): Arrange tracks in a compact tab-like layout. Default: `false`.
- - `iosunmute` (`boolean`): Run a one-time iOS/iPadOS playback unlock on first user interaction to reduce silent-switch playback issues. Default: `true`.
- - `keyboard` (`boolean`): Enable keyboard shortcuts for the active player instance. Default: `true`.
- - `looping` (`boolean`): Enable A/B loop controls (buttons, markers, right-click drag, and loop-related keyboard shortcuts). Default: `true`.
- - `seekbar` (`boolean`): Show or hide the main control-bar seekbar. Seekable images and waveforms remain interactive regardless of this setting. Default: `true`.
- - `waveform` (`boolean`): Enable waveform visualization for `<canvas class="waveform">` elements. Default: `true`.
- - `waveformBarWidth` (`number`): Width in pixels for each waveform bar. Default: `1`.
-
-Option normalization rules:
-
- - If both `mute` and `solo` are disabled, `solo` is automatically re-enabled.
- - If `onlyradiosolo` is enabled, `mute` is forced to `false` and `radiosolo` is forced to `true`.
- - If `waveformBarWidth` is invalid or lower than `1`, it is set to `1`.
-
-### Keyboard Shortcuts
-
-trackswitch.js includes keyboard shortcuts for all playback controls when `keyboard` is enabled.
-
-Keyboard input is scoped to the last player you interacted with (mouse or touch).
-
-**Playback Controls**
-- <kbd>Space</kbd> - Play / Pause
-- <kbd>Escape</kbd> - Stop playback and reset to beginning
-- <kbd>R</kbd> - Toggle repeat mode
-
-**Seeking**
-- <kbd>←</kbd> / <kbd>→</kbd> - Seek backward/forward 2 seconds
-- <kbd>Shift</kbd> + <kbd>←</kbd> / <kbd>→</kbd> - Seek backward/forward 5 seconds
-- <kbd>Home</kbd> - Jump to start
-
-**Volume**
-- <kbd>↑</kbd> / <kbd>↓</kbd> - Increase/decrease volume by 10% (when `globalvolume` is enabled)
-
-**Loop/Section Repeat** (available when `looping` is enabled)
-- <kbd>A</kbd> - Set loop point A at current position
-- <kbd>B</kbd> - Set loop point B at current position
-- <kbd>L</kbd> - Toggle loop on/off
-- <kbd>C</kbd> - Clear loop points
-
-When multiple players exist on a page, only the active (last interacted) player receives keyboard input.
-
-### Loop/Section Repeat
-
-When `looping` is enabled, the player supports A/B loop functionality for repeating specific sections of audio. This is useful for practicing, analyzing, or focusing on particular parts of a track.
-
-**Setting Loop Points**
-
-There are multiple ways to define loop points:
-
-1. **Keyboard Shortcuts**: Press <kbd>A</kbd> to set the start point and <kbd>B</kbd> to set the end point at the current playback position. Use <kbd>L</kbd> to toggle the loop on/off, and <kbd>C</kbd> to clear both loop points.
-
-2. **UI Buttons**: Click the **A** and **B** buttons in the control bar to set loop points. The loop toggle button (⟲) enables or disables looping, and the clear button (✕) removes the loop points.
-
-3. **Right-Click Drag**: Right-click and drag across any seek area (main seekbar, seekable image, or waveform) to quickly select a loop region. The loop automatically enables when both points are set this way.
-
-Once loop points are set, markers appear on the seekbar. You can drag these markers to adjust the loop boundaries. A minimum distance of 100ms (0.1s) is enforced between points.
-
-**Loop Behavior**
-
-- When loop points are set, a semi-transparent orange overlay appears on the seekbar showing the loop region.
-- During playback, the audio will automatically jump back to point A when reaching point B.
-- The loop takes precedence over the track repeat function.
-- When seeking with keyboard shortcuts (<kbd>←</kbd>/<kbd>→</kbd>) while a loop is active, the playback position wraps around the loop boundaries with offset preservation, creating smooth circular navigation.
-- If playback is started outside the loop region while looping is enabled, it will automatically jump to the loop start point.
-
-## Additional Player Elements
-
-You can add additional elements directly into the player, e.g. a paragraph `<p>` with some custom styling.
-
-```html
-<div class="player">
-    <p style="text-align: center;">Example with padded and centered text.</p>
-    <ts-track title="Violins">
-        <ts-source src="violins.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Synth">
-        <ts-source src="synth.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Bass">
-        <ts-source src="bass.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Drums">
-        <ts-source src="drums.mp3"></ts-source>
-    </ts-track>
-</div>
-```
-
-<div class="player" style="margin-top: 30px; margin-bottom: 60px;">
-    <p style="text-align: center;">Example with padded and centered text.</p>
-    <ts-track title="Violins">
-        <ts-source src="data/multitracks/violins.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Synth">
-        <ts-source src="data/multitracks/synth.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Bass">
-        <ts-source src="data/multitracks/bass.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Drums">
-        <ts-source src="data/multitracks/drums.mp3"></ts-source>
-    </ts-track>
-</div>
-
-### Waveform Visualization
-
-TrackSwitch.js includes dynamic waveform visualization that displays audio waveforms directly in the player. The waveforms are automatically generated from decoded audio data, are fully interactive for seeking, and adapt to track solo/mute states in real-time.
-
-**Basic Usage**
-
-To add waveform visualization, simply include a `<canvas class="waveform">` element in your player:
-
-```html
-<div class="player">
-    <canvas class="waveform" width="1200" height="200"></canvas>
-    <ts-track title="Violins">
-        <ts-source src="violins.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Synth">
-        <ts-source src="synth.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Bass">
-        <ts-source src="bass.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Drums">
-        <ts-source src="drums.mp3"></ts-source>
-    </ts-track>
-</div>
-```
-
-<div class="player" style="margin-top: 30px; margin-bottom: 60px;">
-    <canvas class="waveform" width="1200" height="200"></canvas>
-    <ts-track title="Violins">
-        <ts-source src="data/multitracks/violins.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Synth">
-        <ts-source src="data/multitracks/synth.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Bass">
-        <ts-source src="data/multitracks/bass.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Drums">
-        <ts-source src="data/multitracks/drums.mp3"></ts-source>
-    </ts-track>
-</div>
-
-The waveform will be automatically generated when the audio loads. Before loading, a placeholder waveform with random amplitudes is displayed at 30% opacity.
-
-**Canvas Attributes**
-
-- `width` - Resolution width in pixels (recommended: 1200). Higher values provide more detail.
-- `height` - Display height in pixels (recommended: 120-200). This height remains consistent across screen sizes.
-- `data-waveform-style` - Custom inline styles for the waveform wrapper (e.g., `"margin: 20px auto; max-width: 900px;"`)
-- `data-seek-margin-left` / `data-seek-margin-right` - Seekable area margins as percentage (optional)
-
-**Configuration Options**
-
-Control waveform behavior through the player initialization settings:
-
-```javascript
-jQuery(".player").trackSwitch({
-    waveform: true,         // Enable/disable waveform visualization (default: true)
-    waveformBarWidth: 1     // Width of each waveform bar in pixels (default: 1)
+TrackSwitch.createTrackSwitch(rootElement, {
+  presetNames: ['Full Mix', 'Strings', 'Rhythm'],
+  ui: [
+    {
+      type: 'image',
+      src: 'cover.jpg',
+      seekable: true,
+      seekMarginLeft: 5,
+      seekMarginRight: 5,
+      style: 'margin: 0;',
+    },
+    {
+      type: 'waveform',
+      height: 160,
+      waveformBarWidth: 2,
+      maxZoom: 5,
+      waveformSource: 'audible',
+      playbackFollowMode: 'center',
+      timer: false,
+      seekMarginLeft: 3,
+      seekMarginRight: 4,
+      style: 'margin: 0;',
+    },
+    {
+      type: 'trackGroup',
+      rowHeight: 44,
+      trackGroup: [
+        {
+          title: 'Violins',
+          solo: true,
+          volume: 0.9,
+          pan: -0.2,
+          image: 'violins.png',
+          style: 'border-left: 3px solid #4f8dc9;',
+          presets: [0, 1],
+          sources: [
+            { src: 'violins.mp3', type: 'audio/mpeg', startOffsetMs: 0, endOffsetMs: 0 },
+            { src: 'violins.ogg', type: 'audio/ogg' },
+          ],
+        },
+        {
+          title: 'Drums',
+          solo: false,
+          volume: 1,
+          pan: 0,
+          image: 'drums.png',
+          style: 'border-left: 3px solid #ed8c01;',
+          presets: [0, 2],
+          sources: [{ src: 'drums.mp3', type: 'audio/mpeg', startOffsetMs: -120, endOffsetMs: 250 }],
+        },
+      ],
+    },
+    {
+      type: 'sheetMusic',
+      src: 'score.musicxml',
+      measureColumn: 'measure',
+      maxWidth: 960,
+      maxHeight: 360,
+      renderScale: 0.75,
+      followPlayback: true,
+      cursorColor: '#999999',
+      cursorAlpha: 0.1,
+      style: 'margin: 0;',
+    },
+  ],
+  alignment: {
+    csv: 'alignment.csv',
+    referenceTimeColumn: 'score_time_sec',
+  },
+  features: {
+    mode: 'default',
+    exclusiveSolo: false,
+    muteOtherPlayerInstances: true,
+    globalVolume: true,
+    trackMixControls: true,
+    repeat: false,
+    tabView: false,
+    iosAudioUnlock: true,
+    keyboard: true,
+    looping: true,
+    seekBar: true,
+    timer: true,
+    presets: true,
+    customizablePanelOrder: true,
+  },
 });
 ```
 
-- `waveform` (boolean) - Enable or disable waveform visualization. Default: `true`
-- `waveformBarWidth` (number) - Width of each waveform bar in pixels. Default: `1`
-  - `1` - High resolution, dense detail
-  - `2` - Balanced appearance
-  - `3-4` - Chunky, bold style, easier to see on small displays
-  - `5+` - Sparse, artistic style
+### Alignment Mode
 
-**Waveform Behavior**
+```javascript
+TrackSwitch.createTrackSwitch(rootElement, {
+  ui: [
+    {
+      type: 'image',
+      src: 'score-overview.jpg',
+      seekable: false,
+      seekMarginLeft: 0,
+      seekMarginRight: 0,
+      style: 'margin: 0;',
+    },
+    {
+      type: 'perTrackImage',
+      seekable: true,
+      seekMarginLeft: 4,
+      seekMarginRight: 4,
+      style: 'margin: 0;',
+    },
+    {
+      type: 'waveform',
+      height: 160,
+      waveformBarWidth: 3,
+      maxZoom: 8,
+      waveformSource: 0,
+      playbackFollowMode: 'jump',
+      timer: true,
+      seekMarginLeft: 3,
+      seekMarginRight: 4,
+      style: 'margin: 0;',
+    },
+    {
+      type: 'trackGroup',
+      rowHeight: 44,
+      trackGroup: [
+        {
+          title: 'Performance A',
+          solo: true,
+          volume: 1,
+          pan: 0,
+          image: 'performance-a.png',
+          style: 'border-left: 3px solid #4f8dc9;',
+          sources: [{ src: 'performance-a.mp3', type: 'audio/mpeg', startOffsetMs: 0, endOffsetMs: 0 }],
+          alignment: {
+            column: 'perf_a_sec',
+            synchronizedSources: [
+              { src: 'performance-a-synced.mp3', type: 'audio/mpeg', startOffsetMs: 0, endOffsetMs: 0 },
+            ],
+          },
+        },
+        {
+          title: 'Performance B',
+          solo: false,
+          volume: 0.92,
+          pan: 0.1,
+          image: 'performance-b.png',
+          style: 'border-left: 3px solid #6c757d;',
+          sources: [{ src: 'performance-b.mp3', type: 'audio/mpeg', startOffsetMs: 50, endOffsetMs: 0 }],
+          alignment: {
+            column: 'perf_b_sec',
+            synchronizedSources: [{ src: 'performance-b-synced.mp3', type: 'audio/mpeg' }],
+          },
+        },
+      ],
+    },
+    {
+      type: 'sheetMusic',
+      src: 'score.musicxml',
+      measureColumn: 'measure',
+      maxWidth: 960,
+      maxHeight: 360,
+      renderScale: 0.75,
+      followPlayback: true,
+      cursorColor: '#999999',
+      cursorAlpha: 0.1,
+      style: 'margin: 0;',
+    },
+    {
+      type: 'warpingMatrix',
+      height: 240,
+      tempoSmoothingSeconds: 5,
+      globalScoreBPM: 60,
+      style: 'margin: 0;',
+    },
+  ],
+  alignment: {
+    csv: 'alignment.csv',
+    referenceTimeColumn: 'score_time_sec',
+    referenceTimeColumnSync: 'synced_time_sec',
+    outOfRange: 'clamp',
+  },
+  features: {
+    mode: 'alignment',
+    exclusiveSolo: true,
+    muteOtherPlayerInstances: true,
+    globalVolume: true,
+    trackMixControls: true,
+    repeat: false,
+    tabView: false,
+    iosAudioUnlock: true,
+    keyboard: true,
+    looping: true,
+    seekBar: true,
+    timer: true,
+    presets: false,
+    customizablePanelOrder: false,
+  },
+});
+```
 
-The waveform dynamically represents what you're currently hearing.
-Waveforms automatically update when you change solo/mute states, providing real-time visual feedback of your audio mix.
+## Player-Wide Settings
 
-All waveforms visualizations are automatically normalized so the highest peak fills approximately 95% of the canvas height.
+### `ui`
 
-**Interactive Features**
+`ui` is required. It decides which sections appear in the player and in what order they appear.
 
-- **Seeking**: Click or drag anywhere on the waveform to seek through the audio
-- **Loop Markers**: When A/B loop is enabled, loop markers and regions display over the waveform
-- **Responsive**: Waveform width automatically adapts to container size while maintaining consistent height
+Use it to add any of these section types:
 
-**Customization**
+- `trackGroup`
+- `image`
+- `perTrackImage`
+- `waveform`
+- `sheetMusic`
+- `warpingMatrix`
 
-Customize waveform colors using CSS custom properties:
+At least one `trackGroup` section is required because that is where the tracks live.
 
-```css
-.player canvas.waveform {
-    --waveform-color: #4ECDC4;  /* Change waveform color (default: #ED8C01) */
-    background-color: rgba(0, 0, 0, 0.05);  /* Change background */
+### `presetNames`
+
+Use `presetNames` to create ensembles and name your track combinations.
+
+Example:
+
+```javascript
+presetNames: ['Full Mix', 'Vocals Only', 'Backing Track']
+```
+
+Notes:
+
+- Preset numbers start at `0`.
+- Presets only appear in the ui when you have at least two usable preset choices.
+- Tracks decide which presets they belong to through each track's `presets` setting.
+- If you use presets, `presetNames` assigns names to preset IDs in numerical order.
+
+### `features`
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `mode?` | `'default' | 'alignment'` | `'default'` | Chooses between a standard multitrack player and an aligned performance comparison player. |
+| `exclusiveSolo?` | `boolean` | `false` | Listen to one track at a time only instead of mixing several tracks together. |
+| `muteOtherPlayerInstances?` | `boolean` | `true` | Stops another player on the same page when this one starts playing. |
+| `globalVolume?` | `boolean` | `false` | Shows a main volume control for the whole player. |
+| `trackMixControls?` | `boolean` | `false` | Shows per-track volume and pan controls. |
+| `customizablePanelOrder?` | `boolean` | `false` | Lets listeners rearrange the visible UI elements. Affects the visible sections on the page, not the track order itself. |
+| `repeat?` | `boolean` | `false` | Starts with repeat already turned on. |
+| `tabView?` | `boolean` | `false` | Changes the look of the track rows to a tab-like style. |
+| `iosAudioUnlock?` | `boolean` | `true` | Helps playback start more reliably on iPhone and iPad. Recommended to leave this on. |
+| `keyboard?` | `boolean` | `true` | Enable keyboard shortcuts. |
+| `looping?` | `boolean` | `false` | Show loop tools and allow A/B looping. |
+| `seekBar?` | `boolean` | `true` | Show the main seekbar. |
+| `timer?` | `boolean` | `true` | Show the main time display. |
+| `presets?` | `boolean` | `true` | Show preset switching UI element when presets are available. |
+
+### `alignment`
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `csv` | `string` | `-` | The timing data file used to connect the different performances. |
+| `referenceTimeColumn` | `string` | `-` | The csv column to determine the main shared timeline used by the player. A usual setup would be to align tracks to a reference timeline calculated from the score. |
+| `referenceTimeColumnSync?` | `string` | none | The csv column to determine the shared timeline when Sync is turned on in alignment mode. |
+| `outOfRange?` | `'clamp' | 'linear'` | `'clamp'` | What the player should do when playback reaches a part of the timing map that has no matching value. |
+
+## Track Settings
+
+### `trackGroup`
+
+Use `type: 'trackGroup'` to add one or more tracks to the player.
+
+Example:
+
+```javascript
+{
+  type: 'trackGroup',
+  rowHeight: 44,
+  trackGroup: [
+    {
+      title: 'Drums',
+      image: 'drums.png',
+      presets: [0, 2],
+      sources: [{ src: 'drums.mp3' }],
+    },
+  ],
 }
 ```
 
-You can also style the waveform wrapper:
+Section options:
 
-```css
-.jquery-trackswitch .waveform-wrap {
-    margin: 15px 0;
-    border-radius: 8px;
-    overflow: hidden;
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `rowHeight?` | `number` | none | Sets the height of the track rows. |
+| `trackGroup` | `object[]` | `-` | The list of tracks shown in this section. |
+
+Notes:
+
+- You can use more than one `trackGroup` section.
+- `ui` order controls where each `trackGroup` appears on the page.
+
+### Track Options
+
+Each entry inside `trackGroup` can use these options:
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `title?` | `string` | none | Name shown in the track list. |
+| `solo?` | `boolean` | `false` | Starting on/off state for that track. |
+| `volume?` | `number` | `1` | Starting track volume. Starts at `1` if you do not set it. |
+| `pan?` | `number` | `0` | Starting left-right placement. Starts at `0` if you do not set it. |
+| `image?` | `string` | none | Image used by `perTrackImage` and other track-based visuals. |
+| `presets?` | `number[]` | none | Decides which presets include this track. |
+| `sources` | `object[]` | `-` | Audio files for this track. |
+| `alignment?` | `object` | none | Alignment settings for this track in an aligned comparison player. |
+| `style?` | `string` | none | Lets you give that track row its own visual styling. |
+
+### Audio Source Options
+
+Each entry inside `sources` and `alignment.synchronizedSources` can use these options:
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `src` | `string` | `-` | Audio file to use. |
+| `type?` | `string` | none | Optional file-type hint. If you omit it, trackswitch.js recognizes these source file extensions automatically: `.aac`, `.aif`, `.aiff`, `.au`, `.flac`, `.m4a`, `.mp1`, `.mp2`, `.mp3`, `.mp4`, `.mpeg`, `.mpg`, `.oga`, `.ogg`, `.wav`, `.webm`. |
+| `startOffsetMs?` | `number` | `0` | Trims or pads the beginning of the file. Positive values trim. Negative values add silence. |
+| `endOffsetMs?` | `number` | `0` | Trims or pads the end of the file. Positive values trim. Negative values add silence. |
+
+Notes:
+
+- Every track needs at least one `src`.
+- If you list several source files, the player uses the first one that works for the listener's browser.
+
+### Track Alignment Options
+
+Each track can also use an `alignment` block:
+
+```javascript
+trackGroup: [
+    {
+      title: 'Drums',
+      sources: [{ src: 'drums.mp3' }],
+      alignment: {
+        column: 'perf_a_sec',
+        synchronizedSources: [{ src: 'performance-a-synced.mp3' }],
+      }
+    },
+  ],
+```
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `column?` | `string` | none | The timing-data column for that performance. |
+| `synchronizedSources?` | `object[]` | none | Extra audio files used when Sync is turned on. |
+
+Notes:
+
+- Use these options only in alignment mode.
+- `synchronizedSources` are what make mixed synced playback possible.
+- Sync is only available when the player also has a shared sync timeline through `referenceTimeColumnSync`.
+
+## Visualizations
+
+### `image`
+
+Use `type: 'image'` for one main image, such as cover art, a diagram, or a screenshot.
+
+Example:
+
+```javascript
+{
+  type: 'image',
+  src: 'cover.jpg',
+  seekable: true,
+  seekMarginLeft: 5,
+  seekMarginRight: 5,
+  style: 'margin: 12px auto;',
 }
 ```
 
-**Technical Details**
+Section options:
 
-- **Rendering**: Uses Canvas 2D `fillRect` operations under the hood for optimal performance
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `src` | `string` | `-` | The image file to show. |
+| `seekable?` | `boolean` | `false` | Lets listeners click the image to jump to a different point in the audio. |
+| `seekMarginLeft?` | `number` | `0` | Leaves a non-seekable area on the left side of the image. |
+| `seekMarginRight?` | `number` | `0` | Leaves a non-seekable area on the right side of the image. |
+| `style?` | `string` | none | Lets you fine-tune the look of the section with CSS. |
 
-### Seekable Image
+### `perTrackImage`
 
-**Instead of auto-generated waveforms like above**, you can include other images related to the audio content, which can optionally act as a seekable play-head area. In the example below, the player below will contain two images, the first of which will also act as a seekable player. **Any number of the images can be set, but only one seekable image is acceptable**.
+Use `type: 'perTrackImage'` to show the image for the currently active track.
 
-```html
-<div class="player">
-    <img class="seekable" src="mix.png">
-    <img src="cover.jpg">
-    <ts-track title="Violins">
-        <ts-source src="violins.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Synth">
-        <ts-source src="synth.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Bass">
-        <ts-source src="bass.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Drums">
-        <ts-source src="drums.mp3"></ts-source>
-    </ts-track>
-</div>
+Example:
+
+```javascript
+{
+  type: 'perTrackImage',
+  seekable: false,
+  style: 'margin: 12px auto;',
+}
 ```
 
-<div class="player" style="margin-top: 30px; margin-bottom: 60px;">
-    <img class="seekable" src="data/multitracks/mix.png" />
-    <ts-track title="Violins">
-        <ts-source src="data/multitracks/violins.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Synth">
-        <ts-source src="data/multitracks/synth.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Bass">
-        <ts-source src="data/multitracks/bass.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Drums">
-        <ts-source src="data/multitracks/drums.mp3"></ts-source>
-    </ts-track>
-</div>
+Section options:
 
-**Seekable Image Start/Stop Margin**
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `seekable?` | `boolean` | `false` | Lets listeners click the current track image to jump in time. |
+| `seekMarginLeft?` | `number` | `0` | Leaves a non-seekable area on the left side of the image. |
+| `seekMarginRight?` | `number` | `0` | Leaves a non-seekable area on the right side of the image. |
+| `style?` | `string` | none | Lets you fine-tune the look or spacing of the section with CSS. |
 
-As you can see, the start end end times of the plot don't exactly match with
-the seekhead. In this situation you can specify the seekable area margin for each seekable image.
+Notes:
 
-This can be done by specifying the start and stop points as a percentage of the image using the `data-seek-margin-left` and `data-seek-margin-right` attributes.
+- Only works if `exclusiveSolo` is `true`.
+- This section uses each track's `image` attribute.
 
-```html
-<div class="player">
-    <img class="seekable" data-seek-margin-left="4" data-seek-margin-right="4" src="mix.png">
-    <ts-track title="Violins" data-img="violins.png">
-        <ts-source src="violins.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Synth" data-img="synth.png">
-        <ts-source src="synth.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Bass" data-img="bass.png">
-        <ts-source src="bass.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Drums" data-img="drums.png">
-        <ts-source src="drums.mp3"></ts-source>
-    </ts-track>
-</div>
-  ```
+### `waveform`
 
-<div class="player" style="margin-top: 30px; margin-bottom: 60px;">
-    <img class="seekable" data-seek-margin-left="4" data-seek-margin-right="4" src="data/multitracks/mix.png">
-    <ts-track title="Violins" data-img="data/multitracks/violins.png">
-        <ts-source src="data/multitracks/violins.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Synth" data-img="data/multitracks/synth.png">
-        <ts-source src="data/multitracks/synth.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Bass" data-img="data/multitracks/bass.png">
-        <ts-source src="data/multitracks/bass.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Drums" data-img="data/multitracks/drums.png">
-        <ts-source src="data/multitracks/drums.mp3"></ts-source>
-    </ts-track>
-</div>
+Use `type: 'waveform'` to show an interactive waveform.
 
+Example:
 
-**Seekable Image For Each Track**
-
-You can optionally define a more specific image to replace the default when a particular track is played back in solo. This is done by adding an image link in the `data-img` attribute of the chosen `ts-track` element, as seen below.
-
-```html
-<div class="player">
-    <img class="seekable" data-seek-margin-left="4" data-seek-margin-right="4" src="mix.png">
-    <ts-track title="Violins" data-img="violins.png">
-        <ts-source src="violins.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Synth" data-img="synth.png">
-        <ts-source src="synth.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Bass" data-img="bass.png">
-        <ts-source src="bass.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Drums" data-img="drums.png">
-        <ts-source src="drums.mp3"></ts-source>
-    </ts-track>
-</div>
+```javascript
+{
+  type: 'waveform',
+  height: 150,
+  waveformBarWidth: 2,
+  maxZoom: 5,
+  waveformSource: 'audible',
+  playbackFollowMode: 'center',
+  timer: true,
+  style: 'margin: 16px 0;',
+}
 ```
 
-<div class="customplayer" style="margin-top: 30px; margin-bottom: 60px;">
-    <img class="seekable" data-seek-margin-left="4" data-seek-margin-right="4" src="data/multitracks/mix.png">
-    <ts-track title="Violins" data-img="data/multitracks/violins.png">
-        <ts-source src="data/multitracks/violins.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Synth" data-img="data/multitracks/synth.png">
-        <ts-source src="data/multitracks/synth.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Bass" data-img="data/multitracks/bass.png">
-        <ts-source src="data/multitracks/bass.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Drums" data-img="data/multitracks/drums.png">
-        <ts-source src="data/multitracks/drums.mp3"></ts-source>
-    </ts-track>
-</div>
+Section options:
 
-In the example above, there is a default image as well as specific images defined for the track.
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `height?` | `number` | `150` | Height of the waveform. |
+| `waveformBarWidth?` | `number` | `1` | Thickness of the waveform bars. |
+| `maxZoom?` | `number` | `5` | The closest zoom level listeners can reach, in seconds. Smaller numbers allow tighter zoom. |
+| `waveformSource?` | `'audible' | number | number[]` | `'audible'` | Chooses which sound the waveform represents. |
+| `playbackFollowMode?` | `'off' | 'center' | 'jump'` | `'off'` | Decides whether the waveform view follows playback automatically. |
+| `timer?` | `boolean` | Standard: `false`; Alignment: `true` | Shows a small time label inside the waveform panel. |
+| `seekMarginLeft?` | `number` | `0` | Leaves a non-seekable area on the left side. |
+| `seekMarginRight?` | `number` | `0` | Leaves a non-seekable area on the right side. |
+| `style?` | `string` | none | Lets you fine-tune the look or spacing of the section with CSS. |
 
-You do not need to define a specific image for every track. If there is no image defined for a track when it is soloed, the default image will be used.
+Notes:
 
-**Seekable Image Styling**
+- If you leave out `timer`, the waveform timer is off in a standard player and on in an alignment player.
+- When listeners zoom in, the waveform shows a small overview map for quick navigation.
 
-The images can be positioned using normal CSS (eg, `width` and `margin` properties). For non-seekable images, this style can be applied using the `style` attribute.
+### `sheetMusic`
 
-**For `seekable` images this style must be defined in a 'data-style' properly rather than the usual 'style' property.**
+Use `type: 'sheetMusic'` to show a MusicXML score.
 
-```html
-<div class="player">
-    <img style="margin: 20px auto;" src="cover.jpg">
-    <img data-style="width: 80%; margin: auto;" class="seekable" data-seek-margin-left="4" data-seek-margin-right="4" src="mix.png">
-    <ts-track title="Violins" data-img="violins.png">
-        <ts-source src="violins.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Synth" data-img="synth.png">
-        <ts-source src="synth.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Bass" data-img="bass.png">
-        <ts-source src="bass.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Drums" data-img="drums.png">
-        <ts-source src="drums.mp3"></ts-source>
-    </ts-track>
-</div>
+Example:
+
+```javascript
+{
+  type: 'sheetMusic',
+  src: 'score.musicxml',
+  measureColumn: 'measure',
+  maxWidth: 960,
+  maxHeight: 360,
+  renderScale: 0.75,
+  followPlayback: true,
+  cursorColor: '#999999',
+  cursorAlpha: 0.1,
+  style: 'margin: 20px auto;',
+}
 ```
 
-<div class="player" style="margin-top: 30px; margin-bottom: 60px;">
-    <img style="margin: 20px auto;" src="data/multitracks/cover.jpg">
-    <img data-style="width: 80%; margin: auto;" class="seekable" data-seek-margin-left="4" data-seek-margin-right="4" src="data/multitracks/mix.png">
-    <ts-track title="Violins" data-img="data/multitracks/violins.png">
-        <ts-source src="data/multitracks/violins.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Synth" data-img="data/multitracks/synth.png">
-        <ts-source src="data/multitracks/synth.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Bass" data-img="data/multitracks/bass.png">
-        <ts-source src="data/multitracks/bass.mp3"></ts-source>
-    </ts-track>
-    <ts-track title="Drums" data-img="data/multitracks/drums.png">
-        <ts-source src="data/multitracks/drums.mp3"></ts-source>
-    </ts-track>
-</div>
+Section options:
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `src` | `string` | `-` | The MusicXML file to show. |
+| `measureColumn?` | `string` | none | The column in the alignment data that contains measure numbers for score following. |
+| `maxWidth?` | `number` | none | The widest the score area should become. |
+| `maxHeight?` | `number` | none | The tallest the score area should become. |
+| `renderScale?` | `number` | auto | Determines the size of rendered score elements. |
+| `followPlayback?` | `boolean` | `true` | Keeps the score view moving with playback. |
+| `cursorColor?` | `string` | `'#999999'` | Color of the playback follow cursor. |
+| `cursorAlpha?` | `number` | `0.1` | Transparency of the playback follow cursor. |
+| `style?` | `string` | none | Lets you fine-tune the look or spacing of the section with CSS. |
+
+Notes:
+
+- The score can still be shown without measure syncing.
+- If `measureColumn` is set and matching alignment data is available, listeners can click measures to jump through the music.
+
+### `warpingMatrix`
+
+Use `type: 'warpingMatrix'` to show interactive warping path and local tempo deviation graphs in alignment mode.
+
+Example:
+
+```javascript
+{
+  type: 'warpingMatrix',
+  height: 240,
+  tempoSmoothingSeconds: 5,
+  globalScoreBPM: 60,
+  style: 'margin: 12px 0;',
+}
+```
+
+Section options:
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `height?` | `number` | auto | Height of the chart area. |
+| `tempoSmoothingSeconds?` | `number` | `5` | How much the local tempo deviation graph should be smoothed. Tempo Deviation is computed as a central differences variant of the warping path. Larger values give a smoother curve. |
+| `globalScoreBPM?` | `number` | none | Adds a global BPM to the tempo chart using this score tempo. If at least one score sheet is added somewhere in the player, the BPM is determined automatically from the MusicXML score (also dynamically changing BPM in the score is considered). |
+| `style?` | `string` | none | Lets you fine-tune the look or spacing of the section with CSS. |
+
+Notes:
+
+- This section is only useful in alignment mode.
+- It shows two views: the timing relationship between the active track and the reference timeline, and the local tempo deviation of the active track over time.
+- This section is only enabled in unsynced alignment mode.
+
+## Keyboard and Loop Controls
+
+When `features.keyboard` is on, you can use keyboard shortcuts:
+
+| Keys | Action |
+| --- | --- |
+| `F1` | Open or close the shortcut help panel |
+| `Space` | Play or pause |
+| `Escape` | Stop and return to the start |
+| `R` | Toggle repeat |
+| `Left / Right` | Jump backward or forward by 2 seconds |
+| `Shift + Left / Shift + Right` | Jump backward or forward by 5 seconds |
+| `Home` | Go to the start |
+| `Up / Down` | Change global volume when `globalVolume` is on |
+| `1` to `0` | Control tracks 1 to 10 |
+
+When `features.looping` is on, you can also use:
+
+| Keys | Action |
+| --- | --- |
+| `A` | Set loop point A |
+| `B` | Set loop point B |
+| `L` | Turn the loop on or off |
+| `C` | Clear the loop |
+
+Looping is also available through the loop buttons. On seekable controls, loop regions can be marked directly using right-click on mouse.
+
+## Things to Check
+
+- `ui` must contain at least one `trackGroup`.
+- Every track must have at least one audio file in `sources`.
+- Seekable `image`, `perTrackImage`, and `waveform` sections need `seekMarginLeft + seekMarginRight` to stay below `100`.
+- `perTrackImage` is meant for setups where one track is active at a time (`exclusiveSolo: true`).
+- Presets are only shown in the UI when you have at least two preset choices.
+- `sheetMusic.measureColumn` only works for clickable measure syncing when matching alignment data is also available.
+- `warpingMatrix` works for unsynced alignment mode only, not default mode.
+- In alignment mode, each track needs its own `alignment.column`.

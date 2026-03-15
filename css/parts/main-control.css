@@ -1,0 +1,265 @@
+/* MAIN CONTROL STYLES ------------------------------------------------------ */
+
+/* Desktop (default): auto-compacting flex layout
+   Row 1: playback | volume | loop | preset | seekbar | timing
+   Seekbar moves to row 2 (full width) if container is too narrow */
+
+.trackswitch .main-control {
+    container-type: inline-size;
+}
+
+.trackswitch .main-control ul.control {
+    background-color: var(--ts-color-surface-panel-dark);
+    min-height: 36px;
+    padding: 4px 12px;
+    color: var(--ts-color-text-muted);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 16px;
+}
+
+.trackswitch .main-control .playback-group {
+    order: 10;
+}
+
+.trackswitch .main-control .sync-global {
+    order: 15;
+}
+
+.trackswitch .main-control .volume {
+    order: 20;
+}
+
+.trackswitch .main-control .loop-group {
+    order: 30;
+}
+
+.trackswitch .main-control .preset-selector-wrap {
+    order: 40;
+}
+
+.trackswitch .main-control .timing {
+    order: 60;
+    margin-left: auto;
+}
+
+.trackswitch .main-control .seekwrap {
+    order: 50;
+    flex: 1 1 240px;
+}
+
+/* Playback group (play/stop/repeat) */
+.trackswitch .main-control .playback-group>.playback-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.trackswitch .main-control .playback-group>.playback-controls>li.button {
+    margin: 0;
+}
+
+.trackswitch .main-control .playback-group>.playback-controls>li.repeat .ts-icon-svg {
+    transform: scale(0.9);
+}
+
+/* Generic button styles within main-control */
+.trackswitch .main-control .button {
+    width: 15px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.trackswitch .main-control .sync-global {
+    width: auto;
+    min-width: 38px;
+    height: 22px;
+    text-indent: 0;
+    line-height: 20px;
+    font-family: var(--ts-font-ui);
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 0.4px;
+    opacity: 0.7;
+    border: 1px solid currentColor;
+    border-radius: 3px;
+    padding: 0 6px;
+    box-sizing: border-box;
+    text-align: center;
+}
+
+.trackswitch .main-control .sync-global.checked {
+    opacity: 1;
+}
+
+.trackswitch .main-control .sync-global.disabled {
+    opacity: 0.35;
+    cursor: default;
+    pointer-events: none;
+}
+
+
+/* Timing */
+.trackswitch .main-control .timing {
+    font-family: monospace;
+    white-space: nowrap;
+}
+
+/* Seekbar */
+.trackswitch .main-control .seekwrap {
+    overflow: hidden;
+    height: 28px;
+    cursor: pointer;
+    min-width: 200px;
+    width: 100%;
+}
+
+.trackswitch .main-control .seekwrap .seekbar {
+    background-color: var(--ts-color-accent);
+    height: 6px;
+    margin: 11px 4px 0 0;
+    position: relative;
+    box-shadow: 4px 0 0 0 var(--ts-color-accent);
+}
+
+.trackswitch .main-control .seekwrap .seekbar .seekhead {
+    background-color: var(--ts-color-accent);
+    position: absolute;
+    width: 5px;
+    height: 22px;
+    top: -8px;
+    left: 0;
+    transform: translateX(-10%);
+    z-index: 4;
+}
+
+.trackswitch .main-control .seekwrap .seekbar .loop-marker {
+    position: absolute;
+    width: 8px;
+    height: 22px;
+    top: -8px;
+    display: none;
+    z-index: 2;
+    cursor: ew-resize;
+    margin-left: -4px;
+    background: transparent;
+}
+
+.trackswitch .main-control .seekwrap .seekbar .loop-marker::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    inset-block: 0;
+    width: 2px;
+    background-color: var(--ts-color-surface-panel-dark);
+    transform: translateX(-50%);
+}
+
+.trackswitch .main-control .seekwrap .seekbar .loop-region {
+    position: absolute;
+    inset-block: 0;
+    display: none;
+    background-color: var(--ts-color-accent-soft-15);
+    z-index: 1;
+}
+
+.trackswitch .main-control .seekwrap .seekbar .loop-region.active {
+    background-color: var(--ts-color-accent-soft-30);
+}
+
+/* Volume control */
+.trackswitch .main-control .volume-control {
+    display: flex;
+    align-items: center;
+}
+
+.trackswitch .main-control .volume-icon {
+    font-size: 16px;
+    color: var(--ts-color-text-muted);
+    margin-right: 8px;
+    width: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.trackswitch .main-control .volume-slider {
+    --ts-slider-track-color: var(--ts-color-surface-control);
+}
+
+/* Loop group */
+.trackswitch .main-control .control>li.loop-group>.loop-controls {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.trackswitch .main-control .control>li.loop-group>.loop-controls>li.button {
+    margin: 0;
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-a::after,
+.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-b::after {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid currentColor;
+    border-radius: 3px;
+    padding: 0;
+    font-size: 12px;
+    font-family: var(--ts-font-ui);
+    font-weight: bold;
+    line-height: 1;
+    text-indent: 0;
+}
+
+.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-toggle,
+.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-clear {
+    width: 18px;
+    height: 22px;
+}
+
+.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-toggle .ts-icon-slot,
+.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-clear .ts-icon-slot {
+    font-size: 16px;
+    width: 1em;
+    height: 1em;
+}
+
+/* Preset selector */
+.trackswitch .main-control .preset-selector-wrap {
+    position: relative;
+    z-index: 3;
+}
+
+.trackswitch .main-control .preset-selector {
+    background-color: var(--ts-color-surface-control);
+    color: var(--ts-color-text-muted);
+    border: 1px solid var(--ts-color-surface-panel-dark);
+    padding: 4px 6px 4px 8px;
+    font-size: 13px;
+    cursor: pointer;
+    border-radius: 4px;
+    pointer-events: auto;
+    touch-action: manipulation;
+}
+
+.trackswitch .main-control .preset-selector:focus,
+.trackswitch .main-control .preset-selector:focus-visible {
+    outline: none;
+    box-shadow: none;
+}
+
+.trackswitch .main-control .preset-selector option {
+    background-color: var(--ts-color-surface-panel-dark);
+    color: var(--ts-color-text-muted);
+}

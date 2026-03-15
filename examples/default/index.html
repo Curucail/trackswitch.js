@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Trackswitch.js - Example</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="../../dist/css/trackswitch.min.css">
+    <style media="screen">
+        body {
+            font-family: sans-serif;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="player" style="width: 50%; margin: 0 auto;"></div>
+    
+    <script src="../../dist/js/trackswitch.min.js"></script>
+    <script type="text/javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            TrackSwitch.createTrackSwitch(document.getElementById('player'), {
+                presetNames: ['All Tracks', 'Violins & Synths', 'Drums & Bass', 'Drums Only'],
+                ui: [
+                    {
+                        type: 'image',
+                        src: 'data/cover.png',
+                        seekable: true,
+                    },
+                    {
+                        type: 'waveform',
+                        height: 150,
+                        waveformBarWidth: 1,
+                    },
+                    {
+                        type: 'trackGroup',
+                        trackGroup: [
+                            {
+                                title: 'Violins',
+                                image: 'data/violins.png',
+                                presets: [0, 1],
+                                sources: [{ src: 'data/violins.mp3' }],
+                            },
+                            {
+                                title: 'Synths',
+                                image: 'data/synth.png',
+                                presets: [0, 1],
+                                sources: [{ src: 'data/synth.mp3' }],
+                            },
+                            {
+                                title: 'Bass',
+                                image: 'data/bass.png',
+                                presets: [0, 2],
+                                sources: [{ src: 'data/bass.mp3' }],
+                            },
+                            {
+                                title: 'Drums',
+                                image: 'data/drums.png',
+                                presets: [0, 2, 3],
+                                sources: [{ src: 'data/drums.mp3' }],
+                            },
+                        ],
+                    },
+                ],
+                features: {
+                    mode: 'default',
+                    exclusiveSolo: false,
+                    globalVolume: true,
+                    trackMixControls: true,
+                    repeat: false,
+                    tabView: false,
+                    iosAudioUnlock: true,
+                    keyboard: true,
+                    looping: true,
+                    seekBar: true,
+                    timer: true,
+                    presets: true,
+                    customizablePanelOrder: false,
+                    muteOtherPlayerInstances: true,
+                },
+            });
+        });
+    </script>
+</body>
+
+</html>

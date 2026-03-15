@@ -1,23 +1,31 @@
 {
   "name": "trackswitch",
-  "version": "0.1.0",
+  "version": "2.0.0",
+  "type": "module",
   "author": "Nils Werner (nils.werner@audiolabs-erlangen.de)",
   "description": "Multitrack Audio Player",
   "homepage": "https://github.com/audiolabs/trackswitch.js",
   "license": "MIT",
   "scripts": {
-    "build": "npm run build:css && npm run build:js",
-    "build:css": "sass css/reset.sass dist/tmp/reset.css && npm run concat:css && npm run minify:css",
-    "build:js": "npm run transpile:ts && npm run concat:js && npm run minify:js",
-    "concat:css": "node build/concat-css.js",
-    "concat:js": "node build/concat-js.js",
-    "minify:css": "esbuild dist/tmp/concat.css --minify --outfile=dist/css/trackswitch.min.css",
-    "minify:js": "esbuild dist/js/trackswitch.js --minify --outfile=dist/js/trackswitch.min.js",
+    "audit": "node scripts/run-audit-suite.mjs",
+    "audit:css": "node scripts/audit-css-selectors.mjs",
+    "audit:dead": "knip --config knip.json --production --include exports,files --no-exit-code --reporter compact",
+    "audit:dup": "jscpd --config .jscpd.json src css",
+    "audit:smells": "eslint --config eslint.audit.config.mjs src --ext .ts --cache --cache-location node_modules/.cache/eslint-audit --format stylish",
+    "build": "npm run build:css && npm run build:js && npm run build:types",
+    "build:css": "esbuild css/trackswitch.css --bundle --minify --outfile=dist/css/trackswitch.min.css",
+    "build:css:watch": "esbuild css/trackswitch.css --bundle --outfile=dist/css/trackswitch.min.css --watch=forever",
+    "build:js": "node scripts/build-js.mjs",
+    "build:js:watch": "node scripts/build-js.mjs --watch",
+    "build:types": "tsc --project tsconfig.build.json",
+    "minify:js": "node scripts/build-js.mjs --minify-only",
     "clean": "rimraf dist",
+    "dev": "npm run build && sh -c 'npm run dev:watch & npm run dev:serve & wait'",
+    "dev:watch": "sh -c 'npm run build:css:watch & npm run build:js:watch & wait'",
+    "dev:serve": "live-server --host=0.0.0.0 --port=8080 --watch=dist,examples,css,src",
     "prebuild": "npm run clean",
-    "transpile:ts": "tsc --project tsconfig.build.json",
     "typecheck": "tsc --project tsconfig.json",
-    "test": "npm run transpile:ts && node --test"
+    "typecheck:unused": "tsc --project tsconfig.json --noUnusedLocals --noUnusedParameters --pretty false"
   },
   "repository": {
     "type": "git",
@@ -26,18 +34,47 @@
   "bugs": {
     "url": "https://github.com/audiolabs/trackswitch.js/issues"
   },
-  "style": "dist/css/trackswitch.css",
-  "main": "dist/js/trackswitch",
+  "style": "dist/css/trackswitch.min.css",
+  "main": "dist/esm/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/esm/index.js"
+    },
+    "./dist/css/trackswitch.min.css": "./dist/css/trackswitch.min.css",
+    "./dist/js/trackswitch.js": "./dist/js/trackswitch.js",
+    "./dist/js/trackswitch.min.js": "./dist/js/trackswitch.min.js",
+    "./package.json": "./package.json"
+  },
+  "unpkg": "dist/js/trackswitch.min.js",
+  "jsdelivr": "dist/js/trackswitch.min.js",
+  "files": [
+    "dist/",
+    "LICENSE",
+    "README.md",
+    "THIRD_PARTY_NOTICES.md"
+  ],
   "dependencies": {
-    "font-awesome": "^4.2.0",
-    "jquery": ">=3.7.0 <3.8.0"
+    "@fortawesome/fontawesome-svg-core": "^7.2.0",
+    "@fortawesome/free-regular-svg-icons": "^7.2.0",
+    "@fortawesome/free-solid-svg-icons": "^7.2.0",
+    "d3": "^7.9.0",
+    "opensheetmusicdisplay": "^1.9.7",
+    "papaparse": "^5.5.3"
   },
   "devDependencies": {
-    "@types/jquery": "^3.5.33",
+    "@types/d3": "^7.4.3",
+    "@typescript-eslint/eslint-plugin": "^8.57.0",
+    "@typescript-eslint/parser": "^8.57.0",
     "esbuild": "^0.27.3",
-    "jsdom": "^24.1.1",
+    "eslint": "^10.0.3",
+    "eslint-plugin-sonarjs": "^4.0.1",
+    "jscpd": "^4.0.8",
+    "knip": "^5.86.0",
+    "live-server": "^1.2.2",
     "rimraf": "^6.0.0",
-    "sass": "^1.83.0",
     "typescript": "^5.9.3"
   }
 }

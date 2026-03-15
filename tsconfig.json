@@ -1,14 +1,16 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "module": "none",
+    "module": "ES2020",
+    "moduleResolution": "Bundler",
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "types": ["jquery"]
+    "lib": ["DOM", "ES2017"]
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "src/**/*.d.ts"
   ],
   "exclude": [
     "dist",

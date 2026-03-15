@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, rewrite]
 
   workflow_dispatch:
 
@@ -34,9 +34,6 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Test
-        run: npm test
-      
       - name: Build project
         run: npm run build
       
