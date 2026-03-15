@@ -1,42 +1,29 @@
 {
   "name": "trackswitch",
   "version": "2.0.0",
+  "description": "Multitrack Audio Player",
+  "license": "MIT",
   "type": "module",
   "author": "Nils Werner (nils.werner@audiolabs-erlangen.de)",
-  "description": "Multitrack Audio Player",
+  "contributors": [
+    "Manuel Peters (manuel.peters@audiolabs-erlangen.de)"
+  ],
   "homepage": "https://github.com/audiolabs/trackswitch.js",
-  "license": "MIT",
-  "scripts": {
-    "audit": "node scripts/run-audit-suite.mjs",
-    "audit:css": "node scripts/audit-css-selectors.mjs",
-    "audit:dead": "knip --config knip.json --production --include exports,files --no-exit-code --reporter compact",
-    "audit:dup": "jscpd --config .jscpd.json src css",
-    "audit:smells": "eslint --config eslint.audit.config.mjs src --ext .ts --cache --cache-location node_modules/.cache/eslint-audit --format stylish",
-    "build": "npm run build:css && npm run build:js && npm run build:types",
-    "build:css": "esbuild css/trackswitch.css --bundle --minify --outfile=dist/css/trackswitch.min.css",
-    "build:css:watch": "esbuild css/trackswitch.css --bundle --outfile=dist/css/trackswitch.min.css --watch=forever",
-    "build:js": "node scripts/build-js.mjs",
-    "build:js:watch": "node scripts/build-js.mjs --watch",
-    "build:types": "tsc --project tsconfig.build.json",
-    "minify:js": "node scripts/build-js.mjs --minify-only",
-    "clean": "rimraf dist",
-    "dev": "npm run build && sh -c 'npm run dev:watch & npm run dev:serve & wait'",
-    "dev:watch": "sh -c 'npm run build:css:watch & npm run build:js:watch & wait'",
-    "dev:serve": "live-server --host=0.0.0.0 --port=8080 --watch=dist,examples,css,src",
-    "prebuild": "npm run clean",
-    "typecheck": "tsc --project tsconfig.json",
-    "typecheck:unused": "tsc --project tsconfig.json --noUnusedLocals --noUnusedParameters --pretty false"
-  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/audiolabs/trackswitch.js.git"
+    "url": "git+https://github.com/audiolabs/trackswitch.js.git"
   },
   "bugs": {
     "url": "https://github.com/audiolabs/trackswitch.js/issues"
   },
+  "files": [
+    "dist/",
+    "LICENSE",
+    "README.md",
+    "THIRD_PARTY_NOTICES.md"
+  ],
   "style": "dist/css/trackswitch.min.css",
   "main": "dist/esm/index.js",
-  "module": "dist/esm/index.js",
   "types": "dist/types/index.d.ts",
   "exports": {
     ".": {
@@ -50,12 +37,27 @@
   },
   "unpkg": "dist/js/trackswitch.min.js",
   "jsdelivr": "dist/js/trackswitch.min.js",
-  "files": [
-    "dist/",
-    "LICENSE",
-    "README.md",
-    "THIRD_PARTY_NOTICES.md"
-  ],
+  "scripts": {
+    "clean": "rimraf dist",
+    "build": "npm run build:css && npm run build:js && npm run build:types",
+    "build:css": "esbuild css/trackswitch.css --bundle --minify --outfile=dist/css/trackswitch.min.css",
+    "build:css:watch": "esbuild css/trackswitch.css --bundle --outfile=dist/css/trackswitch.min.css --watch=forever",
+    "build:js": "node scripts/build-js.mjs",
+    "build:js:watch": "node scripts/build-js.mjs --watch",
+    "build:types": "tsc --project tsconfig.build.json",
+    "dev": "npm run build && sh -c 'npm run dev:watch & npm run dev:serve & wait'",
+    "dev:serve": "live-server --host=0.0.0.0 --port=8080 --watch=dist,examples,css,src",
+    "dev:watch": "sh -c 'npm run build:css:watch & npm run build:js:watch & wait'",
+    "minify:js": "node scripts/build-js.mjs --minify-only",
+    "prebuild": "npm run clean",
+    "typecheck": "tsc --project tsconfig.json",
+    "typecheck:unused": "tsc --project tsconfig.json --noUnusedLocals --noUnusedParameters --pretty false",
+    "audit": "node scripts/run-audit-suite.mjs",
+    "audit:css": "node scripts/audit-css-selectors.mjs",
+    "audit:dead": "knip --config knip.json --production --include exports,files --no-exit-code --reporter compact",
+    "audit:dup": "jscpd --config .jscpd.json src css",
+    "audit:smells": "eslint --config eslint.audit.config.mjs src --ext .ts --cache --cache-location node_modules/.cache/eslint-audit --format stylish"
+  },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^7.2.0",
     "@fortawesome/free-regular-svg-icons": "^7.2.0",
