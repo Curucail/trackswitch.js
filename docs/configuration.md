@@ -1,4 +1,9 @@
-- [Quick Reference](#quick-reference)
+- [Quick Setup](#quick-setup) 
+  - [In ESM / TypeScript](#in-esm--typescript)
+  - [In CommonJS](#in-commonjs)
+  - [In React](#in-react)
+  - [In HTML](#in-html)
+- [Full Options Reference](#quick-reference)
   - [Default Mode](#default-mode)
   - [Alignment Mode](#alignment-mode)
 - [Player-Wide Settings](#player-wide-settings)
@@ -20,7 +25,112 @@
 - [Keyboard and Loop Controls](#keyboard-and-loop-controls)
 - [Things to Check](#things-to-check)
 
-## Quick Reference
+## Quick Setup
+
+### In ESM / TypeScript
+
+```ts
+import { createTrackSwitch, type TrackSwitchInit } from 'trackswitch';
+import 'trackswitch/style.css';
+
+const init: TrackSwitchInit = {
+  ui: [
+    {
+      type: 'trackGroup',
+      trackGroup: [
+        {
+          title: 'Track 1',
+          sources: [{ src: 'track1.mp3' }],
+        },
+      ],
+    },
+  ],
+};
+
+createTrackSwitch(document.getElementById('player')!, init);
+```
+
+### In CommonJS
+
+```js
+const { createTrackSwitch } = require('trackswitch');
+require('trackswitch/style.css');
+
+createTrackSwitch(document.getElementById('player'), {
+  ui: [
+    {
+      type: 'trackGroup',
+      trackGroup: [
+        {
+          title: 'Track 1',
+          sources: [{ src: 'track1.mp3' }],
+        },
+      ],
+    },
+  ],
+});
+```
+
+### In React
+
+```tsx
+import { useMemo } from 'react';
+import { TrackSwitchPlayer, type TrackSwitchInit } from 'trackswitch/react';
+import 'trackswitch/style.css';
+
+export function ExamplePlayer() {
+  const init = useMemo<TrackSwitchInit>(() => {
+    return {
+      ui: [
+        {
+          type: 'trackGroup',
+          trackGroup: [
+            {
+              title: 'Track 1',
+              sources: [{ src: '/audio/track1.mp3' }],
+            },
+          ],
+        },
+      ],
+    };
+  }, []);
+
+  return <TrackSwitchPlayer init={init} className="trackswitch-host" />;
+}
+```
+
+If you prefer hooks, `trackswitch/react` also exports `useTrackSwitch()`.
+
+Use the React entrypoint only in client components. The player itself needs the browser DOM and Web Audio APIs, even though the package can be imported in a server-rendered project.
+
+### In HTML
+
+```html
+<link rel="stylesheet" href="trackswitch.min.css">
+<script src="trackswitch.min.js"></script>
+
+<div id="player"></div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  TrackSwitch.createTrackSwitch(document.getElementById('player'), {
+    ui: [
+      {
+        type: 'trackGroup',
+        trackGroup: [
+          {
+            title: 'Track 1',
+            sources: [{ src: 'track1.mp3', type: 'audio/mpeg' }],
+          },
+        ],
+      },
+    ],
+  });
+});
+</script>
+```
+
+## Full Options Reference
 
 ### Default Mode
 

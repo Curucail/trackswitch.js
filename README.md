@@ -34,14 +34,14 @@ Install from npm:
 npm install trackswitch
 ```
 
-Or download directly from Github Releases:
+Or download the browser bundle from GitHub Releases:
 
 ```text
-dist/
-├── css/
-│   └── trackswitch.min.css
-├── js/
-    └── trackswitch.min.js
+trackswitch-release/
+├── trackswitch.min.css
+├── trackswitch.min.js
+├── LICENSE
+└── THIRD_PARTY_NOTICES.md
 ```
 
 Or build locally:
@@ -52,89 +52,9 @@ Or build locally:
 
 Quick Setup
 -----------
+Take a look into the ```examples/``` folder for minimal working HTML templates.
 
-### In ESM / TypeScript project
-
-```ts
-import { createTrackSwitch, type TrackSwitchInit } from 'trackswitch';
-import 'trackswitch/style.css';
-
-const init: TrackSwitchInit = {
-  ui: [
-    {
-      type: 'trackGroup',
-      trackGroup: [
-        {
-          title: 'Track 1',
-          sources: [{ src: 'track1.mp3' }],
-        },
-      ],
-    },
-  ],
-};
-
-createTrackSwitch(document.getElementById('player')!, init);
-```
-
-### In React project
-
-```tsx
-import { useMemo } from 'react';
-import { TrackSwitchPlayer, type TrackSwitchInit } from 'trackswitch/react';
-import 'trackswitch/style.css';
-
-export function ExamplePlayer() {
-  const init = useMemo<TrackSwitchInit>(() => {
-    return {
-      ui: [
-        {
-          type: 'trackGroup',
-          trackGroup: [
-            {
-              title: 'Track 1',
-              sources: [{ src: '/audio/track1.mp3' }],
-            },
-          ],
-        },
-      ],
-    };
-  }, []);
-
-  return <TrackSwitchPlayer init={init} className="trackswitch-host" />;
-}
-```
-
-If you prefer hooks, `trackswitch/react` also exports `useTrackSwitch()`.
-
-Use the React entrypoint only in client components. The player itself needs the browser DOM and Web Audio APIs, even though the package can be imported in a server-rendered project.
-
-### In HTML
-
-```html
-<link rel="stylesheet" href="dist/css/trackswitch.min.css">
-<script src="dist/js/trackswitch.min.js"></script>
-<div id="player"></div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-  TrackSwitch.createTrackSwitch(document.getElementById('player'), {
-    ui: [
-      {
-        type: 'trackGroup',
-        trackGroup: [
-          {
-            title: 'Track 1',
-            sources: [{ src: 'track1.mp3', type: 'audio/mpeg' }],
-          },
-        ],
-      },
-    ],
-  });
-});
-</script>
-```
-
-Take a look into the ```examples/``` folder for minimal working templates.
+For further information on integrating the player into an ESM / CommonJS / React project, see [Documentation](https://audiolabs.github.io/trackswitch.js/configuration.html)
 
 Features
 -----------------

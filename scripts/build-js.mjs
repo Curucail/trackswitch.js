@@ -41,18 +41,18 @@ function collectTypeScriptEntryPoints(directory) {
   return entryPoints.sort();
 }
 
-function collectJavaScriptOutputs(directory) {
+function collectJavaScriptOutputs(directory, extensions = [".js"]) {
   const outputs = [];
   const entries = readdirSync(directory, { withFileTypes: true });
 
   for (const entry of entries) {
     const absolutePath = resolve(directory, entry.name);
     if (entry.isDirectory()) {
-      outputs.push(...collectJavaScriptOutputs(absolutePath));
+      outputs.push(...collectJavaScriptOutputs(absolutePath, extensions));
       continue;
     }
 
-    if (entry.isFile() && entry.name.endsWith(".js")) {
+    if (entry.isFile() && extensions.some((extension) => entry.name.endsWith(extension))) {
       outputs.push(absolutePath);
     }
   }
@@ -60,26 +60,44 @@ function collectJavaScriptOutputs(directory) {
   return outputs.sort();
 }
 
-function addJsExtensionToRelativeSpecifier(specifier) {
+function addExtensionToRelativeSpecifier(specifier, extension) {
   if (!specifier.startsWith(".") || /\.[a-z0-9]+$/i.test(specifier)) {
     return specifier;
   }
 
-  return `${specifier}.js`;
+  return `${specifier}${extension}`;
 }
 
 function rewriteEsmImportSpecifiers(directory) {
-  const outputFiles = collectJavaScriptOutputs(directory);
+  const outputFiles = collectJavaScriptOutputs(directory, [".js"]);
 
   for (const outputFile of outputFiles) {
     const source = readFileSync(outputFile, "utf8");
     const rewritten = source
       .replace(/(from\s+)(['"])(\.{1,2}\/[^'"]+)\2/g, (_match, prefix, quote, specifier) => {
-        return `${prefix}${quote}${addJsExtensionToRelativeSpecifier(specifier)}${quote}`;
+        return `${prefix}${quote}${addExtensionToRelativeSpecifier(specifier, ".js")}${quote}`;
       })
       .replace(/(import\()(['"])(\.{1,2}\/[^'"]+)\2(\))/g, (_match, prefix, quote, specifier, suffix) => {
-        return `${prefix}${quote}${addJsExtensionToRelativeSpecifier(specifier)}${quote}${suffix}`;
+        return `${prefix}${quote}${addExtensionToRelativeSpecifier(specifier, ".js")}${quote}${suffix}`;
       });
+
+    if (rewritten !== source) {
+      writeFileSync(outputFile, rewritten, "utf8");
+    }
+  }
+}
+
+function rewriteCjsRequireSpecifiers(directory) {
+  const outputFiles = collectJavaScriptOutputs(directory, [".cjs"]);
+
+  for (const outputFile of outputFiles) {
+    const source = readFileSync(outputFile, "utf8");
+    const rewritten = source.replace(
+      /(require\()(['"])(\.{1,2}\/[^'"]+)\2(\))/g,
+      (_match, prefix, quote, specifier, suffix) => {
+        return `${prefix}${quote}${addExtensionToRelativeSpecifier(specifier, ".cjs")}${quote}${suffix}`;
+      },
+    );
 
     if (rewritten !== source) {
       writeFileSync(outputFile, rewritten, "utf8");
@@ -110,6 +128,18 @@ const esmCommonOptions = {
   outdir: resolve(rootDir, "dist/esm"),
 };
 
+const cjsCommonOptions = {
+  entryPoints: sourceEntryPoints,
+  bundle: false,
+  platform: "browser",
+  format: "cjs",
+  target: "es2017",
+  banner: { js: banner },
+  outbase: resolve(rootDir, "src"),
+  outdir: resolve(rootDir, "dist/cjs"),
+  outExtension: { ".js": ".cjs" },
+};
+
 const minifyOnly = process.argv.includes("--minify-only");
 const watch = process.argv.includes("--watch");
 
@@ -126,6 +156,9 @@ const buildConfigs = minifyOnly
         ...esmCommonOptions,
       },
       {
+        ...cjsCommonOptions,
+      },
+      {
         ...browserCommonOptions,
         outfile: resolve(rootDir, "dist/js/trackswitch.js"),
       },
@@ -140,6 +173,7 @@ if (watch) {
   const contexts = await Promise.all(buildConfigs.map((options) => context(options)));
   await Promise.all(contexts.map((buildContext) => buildContext.watch()));
   rewriteEsmImportSpecifiers(resolve(rootDir, "dist/esm"));
+  rewriteCjsRequireSpecifiers(resolve(rootDir, "dist/cjs"));
 
   const dispose = async () => {
     await Promise.all(contexts.map((buildContext) => buildContext.dispose()));
@@ -153,4 +187,5 @@ if (watch) {
 } else {
   await Promise.all(buildConfigs.map((options) => build(options)));
   rewriteEsmImportSpecifiers(resolve(rootDir, "dist/esm"));
+  rewriteCjsRequireSpecifiers(resolve(rootDir, "dist/cjs"));
 }
