@@ -30,6 +30,11 @@
       "types": "./dist/types/index.d.ts",
       "import": "./dist/esm/index.js"
     },
+    "./react": {
+      "types": "./dist/types/react.d.ts",
+      "import": "./dist/esm/react.js"
+    },
+    "./style.css": "./dist/css/trackswitch.min.css",
     "./dist/css/trackswitch.min.css": "./dist/css/trackswitch.min.css",
     "./dist/js/trackswitch.js": "./dist/js/trackswitch.js",
     "./dist/js/trackswitch.min.js": "./dist/js/trackswitch.min.js",
@@ -37,6 +42,14 @@
   },
   "unpkg": "dist/js/trackswitch.min.js",
   "jsdelivr": "dist/js/trackswitch.min.js",
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
   "scripts": {
     "clean": "rimraf dist",
     "build": "npm run build:css && npm run build:js && npm run build:types",

@@ -53,11 +53,11 @@ Or build locally:
 Quick Setup
 -----------
 
-### From ESM / TypeScript project
+### In ESM / TypeScript project
 
 ```ts
 import { createTrackSwitch, type TrackSwitchInit } from 'trackswitch';
-import 'trackswitch/dist/css/trackswitch.min.css';
+import 'trackswitch/style.css';
 
 const init: TrackSwitchInit = {
   ui: [
@@ -76,7 +76,39 @@ const init: TrackSwitchInit = {
 createTrackSwitch(document.getElementById('player')!, init);
 ```
 
-### From HTML
+### In React project
+
+```tsx
+import { useMemo } from 'react';
+import { TrackSwitchPlayer, type TrackSwitchInit } from 'trackswitch/react';
+import 'trackswitch/style.css';
+
+export function ExamplePlayer() {
+  const init = useMemo<TrackSwitchInit>(() => {
+    return {
+      ui: [
+        {
+          type: 'trackGroup',
+          trackGroup: [
+            {
+              title: 'Track 1',
+              sources: [{ src: '/audio/track1.mp3' }],
+            },
+          ],
+        },
+      ],
+    };
+  }, []);
+
+  return <TrackSwitchPlayer init={init} className="trackswitch-host" />;
+}
+```
+
+If you prefer hooks, `trackswitch/react` also exports `useTrackSwitch()`.
+
+Use the React entrypoint only in client components. The player itself needs the browser DOM and Web Audio APIs, even though the package can be imported in a server-rendered project.
+
+### In HTML
 
 ```html
 <link rel="stylesheet" href="dist/css/trackswitch.min.css">

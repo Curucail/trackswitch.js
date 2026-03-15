@@ -36,6 +36,17 @@ const esmCommonOptions = {
   outfile: resolve(rootDir, "dist/esm/index.js"),
 };
 
+const reactEsmOptions = {
+  entryPoints: [resolve(rootDir, "src/react.ts")],
+  bundle: true,
+  platform: "browser",
+  format: "esm",
+  target: "es2017",
+  banner: { js: banner },
+  external: ["react"],
+  outfile: resolve(rootDir, "dist/esm/react.js"),
+};
+
 const minifyOnly = process.argv.includes("--minify-only");
 const watch = process.argv.includes("--watch");
 
@@ -50,6 +61,9 @@ const buildConfigs = minifyOnly
   : [
       {
         ...esmCommonOptions,
+      },
+      {
+        ...reactEsmOptions,
       },
       {
         ...browserCommonOptions,
