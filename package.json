@@ -2,6 +2,17 @@
   "name": "trackswitch",
   "version": "2.0.0",
   "description": "Multitrack Audio Player",
+  "keywords": [
+    "audio",
+    "player",
+    "multitrack",
+    "web-audio",
+    "music",
+    "waveform",
+    "sheet-music",
+    "alignment",
+    "react"
+  ],
   "license": "MIT",
   "type": "module",
   "sideEffects": [
