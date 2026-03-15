@@ -364,6 +364,17 @@ kbd {
     color: var(--ts-doc-color-text-secondary);
 }
 
+.docs-page--config .site-main > table th:not(:last-child),
+.docs-page--config .site-main > table td:not(:last-child) {
+    width: 1%;
+    white-space: nowrap;
+}
+
+.docs-page--config .site-main > table th:last-child,
+.docs-page--config .site-main > table td:last-child {
+    width: 100%;
+}
+
 .docs-page--narrow .site-main > h1,
 .docs-page--narrow .site-main > h2,
 .docs-page--narrow .site-main > h3,
