@@ -1,4 +1,4 @@
-- [Quick Setup](#quick-setup) 
+- [Quick Minimal Setup](#quick-setup) 
   - [In ESM / TypeScript](#in-esm--typescript)
   - [In CommonJS](#in-commonjs)
   - [In React](#in-react)
@@ -25,7 +25,7 @@
 - [Keyboard and Loop Controls](#keyboard-and-loop-controls)
 - [Things to Check](#things-to-check)
 
-## Quick Setup {#quick-setup}
+## Quick Minimal Setup {#quick-setup}
 
 ### In ESM / TypeScript {#in-esm--typescript}
 
