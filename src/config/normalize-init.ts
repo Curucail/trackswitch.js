@@ -2,7 +2,6 @@ import {
     NormalizedTrackGroupLayout,
     NormalizedTrackSwitchConfig,
     TrackDefinition,
-    TrackSwitchFeatures,
     TrackSwitchInit,
     TrackSwitchUiElement,
 } from '../domain/types';
@@ -94,13 +93,7 @@ export function normalizeInit(root: HTMLElement, init: TrackSwitchInit): Normali
     const resolvedUi = Array.isArray(init.ui)
         ? init.ui.map(normalizeUiElement)
         : undefined;
-    const waveformRequiredByUi = Boolean(resolvedUi && resolvedUi.some(function(entry) {
-        return entry.type === 'waveform';
-    }));
-    const resolvedFeatures = waveformRequiredByUi
-        ? { ...(init.features ?? {}), waveform: true }
-        : init.features;
-    const normalizedFeatures = normalizeFeatures(resolvedFeatures as Partial<TrackSwitchFeatures> | undefined);
+    const normalizedFeatures = normalizeFeatures(init.features);
     const usesExclusiveSoloMode = normalizedFeatures.exclusiveSolo || normalizedFeatures.mode === 'alignment';
     if (hasPerTrackImageUi(resolvedUi) && !usesExclusiveSoloMode) {
         throw new Error('Invalid init configuration: perTrackImage requires features.exclusiveSolo to be true.');
@@ -117,7 +110,7 @@ export function normalizeInit(root: HTMLElement, init: TrackSwitchInit): Normali
     return {
         tracks: resolvedTrackData.tracks,
         presetNames: init.presetNames,
-        features: resolvedFeatures,
+        features: init.features,
         alignment: init.alignment,
         ui: resolvedUi,
         trackGroups: resolvedTrackData.trackGroups,

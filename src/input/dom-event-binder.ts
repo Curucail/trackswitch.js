@@ -412,13 +412,14 @@ export class InputBinder {
             this.bindKeyboardShortcuts();
         }
 
+        const hasWaveformUi = !!this.root.querySelector('.waveform, .waveform-wrap');
         const hasSheetMusicUi = !!this.root.querySelector('.sheetmusic, .sheetmusic-wrap');
 
-        if (this.features.waveform) {
+        if (hasWaveformUi) {
             this.bindWaveformControls();
         }
 
-        if (this.features.waveform || hasSheetMusicUi) {
+        if (hasWaveformUi || hasSheetMusicUi) {
             this.addListener(window, 'resize', () => {
                 this.controller.onResize();
             });

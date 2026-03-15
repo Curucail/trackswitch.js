@@ -356,10 +356,6 @@ export function getCanvasPixelRatio(ctx: any): any {
 
 export function wrapWaveformCanvases(ctx: any): any {
     return (function(this: any) {
-        if (!this.features.waveform) {
-            return;
-        }
-
         const canvases = this.root.querySelectorAll('canvas.waveform');
         canvases.forEach((canvasElement: Element) => {
             if (!(canvasElement instanceof HTMLCanvasElement)) {
@@ -907,7 +903,7 @@ export function setWaveformZoom(ctx: any, seekWrap: any, zoom: any, durationSeco
 
 export function drawDummyWaveforms(ctx: any, waveformEngine: any): any {
     return (function(this: any, waveformEngine: any) {
-        if (!this.features.waveform || this.waveformSeekSurfaces.length === 0) {
+        if (this.waveformSeekSurfaces.length === 0) {
             return;
         }
 
@@ -973,7 +969,7 @@ export function renderWaveforms(ctx: any, waveformEngine: any, runtimes: any, ti
 
 export function renderWaveformsInternal(ctx: any, waveformEngine: any, runtimes: any, timelineDuration: any, trackTimelineProjector: any, waveformTimelineContext: any, performReflow: any, forceRedrawVisibleTiles: any): any {
     return (function(this: any, waveformEngine: any, runtimes: any, timelineDuration: any, trackTimelineProjector: any, waveformTimelineContext: any, performReflow: any, forceRedrawVisibleTiles: any) {
-        if (!this.features.waveform || this.waveformSeekSurfaces.length === 0) {
+        if (this.waveformSeekSurfaces.length === 0) {
             return;
         }
 

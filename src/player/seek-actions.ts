@@ -150,10 +150,6 @@ export function onSeekMove(ctx: any, event: any): any {
 
 export function onWaveformZoomWheel(ctx: any, event: any): any {
     return (function(this: any, event: any) {
-        if (!this.features.waveform) {
-            return;
-        }
-
         const wheelEvent = event.originalEvent as WheelEvent | undefined;
         const deltaY = wheelEvent?.deltaY;
         if (typeof deltaY !== 'number' || !Number.isFinite(deltaY) || deltaY === 0) {
@@ -292,7 +288,6 @@ export function tryStartPendingWaveformTouchSeek(ctx: any, event: any, seekWrap:
     return (function(this: any, event: any, seekWrap: any) {
         if (
             event.type !== 'touchstart'
-            || !this.features.waveform
             || !this.isWaveformSeekSurface(seekWrap)
             || this.getActiveTouchCount(event) !== 1
             || !seekWrap
@@ -441,7 +436,7 @@ export function getActiveTouchCount(ctx: any, event: any): any {
 
 export function tryStartPinchZoom(ctx: any, event: any, seekWrap: any): any {
     return (function(this: any, event: any, seekWrap: any) {
-        if (!this.features.waveform || event.type !== 'touchstart') {
+        if (event.type !== 'touchstart') {
             return false;
         }
 

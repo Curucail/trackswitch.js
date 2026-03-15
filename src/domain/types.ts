@@ -50,7 +50,6 @@ export interface TrackSwitchFeatures {
     seekBar: boolean;
     timer: boolean;
     presets: boolean;
-    waveform: boolean;
 }
 
 export interface TrackSwitchImageConfig {

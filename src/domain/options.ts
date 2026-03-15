@@ -15,7 +15,6 @@ export const defaultFeatures: Readonly<TrackSwitchFeatures> = {
     seekBar: true,
     timer: true,
     presets: true,
-    waveform: true,
 };
 
 const featureKeys = new Set<keyof TrackSwitchFeatures>(Object.keys(defaultFeatures) as Array<keyof TrackSwitchFeatures>);
