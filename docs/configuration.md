@@ -3,7 +3,7 @@
   - [In CommonJS](#in-commonjs)
   - [In React](#in-react)
   - [In HTML](#in-html)
-- [Full Options Reference](#quick-reference)
+- [Full Options Reference](#full-options-reference)
   - [Default Mode](#default-mode)
   - [Alignment Mode](#alignment-mode)
 - [Player-Wide Settings](#player-wide-settings)
@@ -25,9 +25,9 @@
 - [Keyboard and Loop Controls](#keyboard-and-loop-controls)
 - [Things to Check](#things-to-check)
 
-## Quick Setup
+## Quick Setup {#quick-setup}
 
-### In ESM / TypeScript
+### In ESM / TypeScript {#in-esm--typescript}
 
 ```ts
 import { createTrackSwitch, type TrackSwitchInit } from 'trackswitch';
@@ -50,7 +50,7 @@ const init: TrackSwitchInit = {
 createTrackSwitch(document.getElementById('player')!, init);
 ```
 
-### In CommonJS
+### In CommonJS {#in-commonjs}
 
 ```js
 const { createTrackSwitch } = require('trackswitch');
@@ -71,7 +71,7 @@ createTrackSwitch(document.getElementById('player'), {
 });
 ```
 
-### In React
+### In React {#in-react}
 
 ```tsx
 import { useMemo } from 'react';
@@ -103,7 +103,7 @@ If you prefer hooks, `trackswitch/react` also exports `useTrackSwitch()`.
 
 Use the React entrypoint only in client components. The player itself needs the browser DOM and Web Audio APIs, even though the package can be imported in a server-rendered project.
 
-### In HTML
+### In HTML {#in-html}
 
 ```html
 <link rel="stylesheet" href="trackswitch.min.css">
@@ -130,9 +130,9 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 ```
 
-## Full Options Reference
+## Full Options Reference {#full-options-reference}
 
-### Default Mode
+### Default Mode {#default-mode}
 
 ```javascript
 TrackSwitch.createTrackSwitch(rootElement, {
@@ -223,7 +223,7 @@ TrackSwitch.createTrackSwitch(rootElement, {
 });
 ```
 
-### Alignment Mode
+### Alignment Mode {#alignment-mode}
 
 ```javascript
 TrackSwitch.createTrackSwitch(rootElement, {
@@ -334,9 +334,9 @@ TrackSwitch.createTrackSwitch(rootElement, {
 });
 ```
 
-## Player-Wide Settings
+## Player-Wide Settings {#player-wide-settings}
 
-### `ui`
+### `ui` {#ui}
 
 `ui` is required. It decides which sections appear in the player and in what order they appear.
 
@@ -351,7 +351,7 @@ Use it to add any of these section types:
 
 At least one `trackGroup` section is required because that is where the tracks live.
 
-### `presetNames`
+### `presetNames` {#presetnames}
 
 Use `presetNames` to create ensembles and name your track combinations.
 
@@ -368,7 +368,7 @@ Notes:
 - Tracks decide which presets they belong to through each track's `presets` setting.
 - If you use presets, `presetNames` assigns names to preset IDs in numerical order.
 
-### `features`
+### `features` {#features}
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -387,7 +387,7 @@ Notes:
 | `timer?` | `boolean` | `true` | Show the main time display. |
 | `presets?` | `boolean` | `true` | Show preset switching UI element when presets are available. |
 
-### `alignment`
+### `alignment` {#alignment}
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -396,9 +396,9 @@ Notes:
 | `referenceTimeColumnSync?` | `string` | none | The csv column to determine the shared timeline when Sync is turned on in alignment mode. |
 | `outOfRange?` | `'clamp' | 'linear'` | `'clamp'` | What the player should do when playback reaches a part of the timing map that has no matching value. |
 
-## Track Settings
+## Track Settings {#track-settings}
 
-### `trackGroup`
+### `trackGroup` {#trackgroup}
 
 Use `type: 'trackGroup'` to add one or more tracks to the player.
 
@@ -431,7 +431,7 @@ Notes:
 - You can use more than one `trackGroup` section.
 - `ui` order controls where each `trackGroup` appears on the page.
 
-### Track Options
+### Track Options {#track-options}
 
 Each entry inside `trackGroup` can use these options:
 
@@ -447,7 +447,7 @@ Each entry inside `trackGroup` can use these options:
 | `alignment?` | `object` | none | Alignment settings for this track in an aligned comparison player. |
 | `style?` | `string` | none | Lets you give that track row its own visual styling. |
 
-### Audio Source Options
+### Audio Source Options {#audio-source-options}
 
 Each entry inside `sources` and `alignment.synchronizedSources` can use these options:
 
@@ -463,7 +463,7 @@ Notes:
 - Every track needs at least one `src`.
 - If you list several source files, the player uses the first one that works for the listener's browser.
 
-### Track Alignment Options
+### Track Alignment Options {#track-alignment-options}
 
 Each track can also use an `alignment` block:
 
@@ -491,9 +491,9 @@ Notes:
 - `synchronizedSources` are what make mixed synced playback possible.
 - Sync is only available when the player also has a shared sync timeline through `referenceTimeColumnSync`.
 
-## Visualizations
+## Visualizations {#visualizations}
 
-### `image`
+### `image` {#image}
 
 Use `type: 'image'` for one main image, such as cover art, a diagram, or a screenshot.
 
@@ -520,7 +520,7 @@ Section options:
 | `seekMarginRight?` | `number` | `0` | Leaves a non-seekable area on the right side of the image. |
 | `style?` | `string` | none | Lets you fine-tune the look of the section with CSS. |
 
-### `perTrackImage`
+### `perTrackImage` {#pertrackimage}
 
 Use `type: 'perTrackImage'` to show the image for the currently active track.
 
@@ -548,7 +548,7 @@ Notes:
 - Only works if `exclusiveSolo` is `true`.
 - This section uses each track's `image` attribute.
 
-### `waveform`
+### `waveform` {#waveform}
 
 Use `type: 'waveform'` to show an interactive waveform.
 
@@ -586,7 +586,7 @@ Notes:
 - If you leave out `timer`, the waveform timer is off in a standard player and on in an alignment player.
 - When listeners zoom in, the waveform shows a small overview map for quick navigation.
 
-### `sheetMusic`
+### `sheetMusic` {#sheetmusic}
 
 Use `type: 'sheetMusic'` to show a MusicXML score.
 
@@ -626,7 +626,7 @@ Notes:
 - The score can still be shown without measure syncing.
 - If `measureColumn` is set and matching alignment data is available, listeners can click measures to jump through the music.
 
-### `warpingMatrix`
+### `warpingMatrix` {#warpingmatrix}
 
 Use `type: 'warpingMatrix'` to show interactive warping path and local tempo deviation graphs in alignment mode.
 
@@ -657,7 +657,7 @@ Notes:
 - It shows two views: the timing relationship between the active track and the reference timeline, and the local tempo deviation of the active track over time.
 - This section is only enabled in unsynced alignment mode.
 
-## Keyboard and Loop Controls
+## Keyboard and Loop Controls {#keyboard-and-loop-controls}
 
 When `features.keyboard` is on, you can use keyboard shortcuts:
 
@@ -684,7 +684,7 @@ When `features.looping` is on, you can also use:
 
 Looping is also available through the loop buttons. On seekable controls, loop regions can be marked directly using right-click on mouse.
 
-## Things to Check
+## Things to Check {#things-to-check}
 
 - `ui` must contain at least one `trackGroup`.
 - Every track must have at least one audio file in `sources`.
