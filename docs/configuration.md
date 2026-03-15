@@ -10,7 +10,7 @@
   - [Track Options](#track-options)
   - [Audio Source Options](#audio-source-options)
   - [Track Alignment Options](#track-alignment-options)
-- [UI Elements](#visible-player-sections)
+- [UI Elements](#ui-elements)
   - [`trackGroup`](#trackgroup)
   - [`image`](#image)
   - [`perTrackImage`](#pertrackimage)
@@ -223,6 +223,46 @@ Notes:
 | `referenceTimeColumnSync?` | `string` | The csv column to determine the shared timeline when Sync is turned on in alignment mode. |
 | `outOfRange?` | `'clamp' | 'linear'` | What the player should do when playback reaches a part of the timing map that has no matching value. |
 
+## Track Settings
+
+### Track Options
+
+Each entry inside `trackGroup` can use these options:
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `title?` | `string` | Name shown in the track list. |
+| `solo?` | `boolean` | Starting on/off state for that track. |
+| `volume?` | `number` | Starting track volume. |
+| `pan?` | `number` | Starting left-right placement. |
+| `image?` | `string` | Image used by `perTrackImage` and other track-based visuals. |
+| `style?` | `string` | Lets you give that track row its own visual styling. |
+| `presets?` | `number[]` | Decides which presets include this track. |
+| `sources` | `object[]` | Audio files for this track. |
+| `alignment?` | `object` | Alignment settings for this track in an aligned comparison player. |
+
+Notes:
+
+- `volume` starts at `1` if you do not set it.
+- `pan` starts at `0` if you do not set it.
+- In a regular multitrack player, tracks normally start available for listening unless you set them differently.
+- In a one-track-at-a-time player, only one track stays active at once.
+
+### Audio Source Options
+
+Each entry inside `sources` and `alignment.synchronizedSources` can use these options:
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `src` | `string` | Audio file to use. |
+| `type?` | `string` | Optional file-type hint. |
+| `startOffsetMs?` | `number` | Trims or pads the beginning of the file. Positive values trim. Negative values add silence. |
+| `endOffsetMs?` | `number` | Trims or pads the end of the file. Positive values trim. Negative values add silence. |
+
+Notes:
+
+- Every track needs at least one `src`.
+- If you list several source files, the player uses the first one that works for the listener's browser.
 
 ### Track Alignment Options
 
@@ -245,7 +285,6 @@ Notes:
 - Use these options only in alignment mode.
 - `synchronizedSources` are what make mixed synced playback possible.
 - Sync is only available when the player also has a shared sync timeline through `referenceTimeColumnSync`.
-
 
 ## UI Elements
 
@@ -449,47 +488,6 @@ Notes:
 - It shows two views: the timing relationship between the active track and the shared timeline, and the local tempo change over time.
 - When Sync is turned on, this section is dimmed and does not accept interaction.
 
-## Track Settings
-
-### Track Options
-
-Each entry inside `trackGroup` can use these options:
-
-| Option | Type | Description |
-| --- | --- | --- |
-| `title?` | `string` | Name shown in the track list. |
-| `solo?` | `boolean` | Starting on/off state for that track. |
-| `volume?` | `number` | Starting track volume. |
-| `pan?` | `number` | Starting left-right placement. |
-| `image?` | `string` | Image used by `perTrackImage` and other track-based visuals. |
-| `style?` | `string` | Lets you give that track row its own visual styling. |
-| `presets?` | `number[]` | Decides which presets include this track. |
-| `sources` | `object[]` | Audio files for this track. |
-| `alignment?` | `object` | Alignment settings for this track in an aligned comparison player. |
-
-Notes:
-
-- `volume` starts at `1` if you do not set it.
-- `pan` starts at `0` if you do not set it.
-- In a regular multitrack player, tracks normally start available for listening unless you set them differently.
-- In a one-track-at-a-time player, only one track stays active at once.
-
-### Audio Source Options
-
-Each entry inside `sources` and `alignment.synchronizedSources` can use these options:
-
-| Option | Type | Description |
-| --- | --- | --- |
-| `src` | `string` | Audio file to use. |
-| `type?` | `string` | Optional file-type hint. |
-| `startOffsetMs?` | `number` | Trims or pads the beginning of the file. Positive values trim. Negative values add silence. |
-| `endOffsetMs?` | `number` | Trims or pads the end of the file. Positive values trim. Negative values add silence. |
-
-Notes:
-
-- Every track needs at least one `src`.
-- If you list several source files, the player uses the first one that works for the listener's browser.
-
 ## Keyboard and Loop Controls
 
 When `features.keyboard` is on, listeners can use:
@@ -515,7 +513,7 @@ When `features.looping` is on, listeners can also use:
 | `L` | Turn the loop on or off |
 | `C` | Clear the loop |
 
-Looping is also available through the loop buttons. On seekable controls, listeners can mark a loop region directly with the pointer.
+Looping is also available through the loop buttons. On seekable controls, loop regions can be marked directly using right-click on mouse.
 
 ## Things to Check
 
