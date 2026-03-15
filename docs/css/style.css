@@ -12,6 +12,14 @@
     --ts-doc-color-accent: #ED8C01;
     --ts-doc-color-code-bg: #ececec;
     --ts-doc-color-code-line: #d0d0d0;
+    --ts-doc-color-code-bg-dark: #20242b;
+    --ts-doc-color-code-line-dark: #343b45;
+    --ts-doc-color-code-text-dark: #eef3f7;
+    --ts-doc-color-code-muted-dark: #99a4b2;
+    --ts-doc-color-code-string-dark: #ffb780;
+    --ts-doc-color-code-keyword-dark: #ffd36d;
+    --ts-doc-color-code-name-dark: #8fd8c9;
+    --ts-doc-color-code-number-dark: #c7b7ff;
     --ts-doc-color-shadow: rgba(0, 0, 0, 0.14);
     --ts-doc-color-shadow-strong: rgba(0, 0, 0, 0.2);
     --ts-doc-color-focus: rgba(153, 153, 153, 0.55);
@@ -147,6 +155,7 @@ kbd {
 .site-main > ul,
 .site-main > ol,
 .site-main > blockquote,
+.site-main > .ts-doc-code-block,
 .site-main > .highlighter-rouge {
     max-width: 760px;
 }
@@ -208,6 +217,7 @@ kbd {
 .docs-page--config .site-main > ul,
 .docs-page--config .site-main > ol,
 .docs-page--config .site-main > blockquote,
+.docs-page--config .site-main > .ts-doc-code-block,
 .docs-page--config .site-main > .highlighter-rouge,
 .docs-page--config .site-main > pre,
 .docs-page--config .site-main > table {
@@ -323,7 +333,9 @@ kbd {
 
 .docs-page--config .site-main > table {
     display: block;
+    width: 100%;
     overflow-x: auto;
+    box-sizing: border-box;
     border-collapse: collapse;
     background: rgba(255, 255, 255, 0.55);
     border: 1px solid rgba(153, 153, 153, 0.28);
@@ -360,6 +372,7 @@ kbd {
 .docs-page--narrow .site-main > ul,
 .docs-page--narrow .site-main > ol,
 .docs-page--narrow .site-main > blockquote,
+.docs-page--narrow .site-main > .ts-doc-code-block,
 .docs-page--narrow .site-main > .highlighter-rouge,
 .docs-page--narrow .site-main > pre {
     max-width: 100%;
@@ -377,6 +390,7 @@ kbd {
 .docs-page--cite .site-main > ul,
 .docs-page--cite .site-main > ol,
 .docs-page--cite .site-main > blockquote,
+.docs-page--cite .site-main > .ts-doc-code-block,
 .docs-page--cite .site-main > .highlighter-rouge,
 .docs-page--cite .site-main > pre {
     max-width: 100%;
@@ -984,6 +998,127 @@ kbd {
 
 .ts-copy-btn:hover {
     background: #ffffff;
+}
+
+.ts-doc-code-block {
+    position: relative;
+    margin: 0;
+    overflow: hidden;
+    border-radius: 20px;
+}
+
+.site-main > .ts-doc-code-block {
+    margin: 1.4rem 0 1.6rem;
+}
+
+.ts-doc-code-block__button {
+    position: absolute;
+    top: 0.85rem;
+    right: 0.85rem;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 78px;
+    min-height: 34px;
+    padding: 0.4rem 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--ts-doc-color-code-text-dark);
+    border-radius: 999px;
+    font-family: var(--ts-doc-font-ui);
+    font-size: 0.76rem;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: background-color 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+}
+
+.ts-doc-code-block__button:hover {
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.22);
+}
+
+.ts-doc-code-block__button.is-copied {
+    background: rgba(237, 140, 1, 0.16);
+    border-color: rgba(237, 140, 1, 0.42);
+    color: #ffd9a8;
+}
+
+.ts-doc-code-block > pre,
+.ts-doc-code-block > .highlighter-rouge,
+.ts-doc-code-block > .highlighter-rouge .highlight {
+    margin: 0;
+}
+
+.ts-doc-code-block > pre,
+.ts-doc-code-block > .highlighter-rouge,
+.ts-doc-code-block > .highlighter-rouge pre {
+    background: var(--ts-doc-color-code-bg-dark);
+    border: 1px solid var(--ts-doc-color-code-line-dark);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.ts-doc-code-block > pre,
+.ts-doc-code-block > .highlighter-rouge {
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.ts-doc-code-block > pre,
+.ts-doc-code-block > .highlighter-rouge pre {
+    padding: 1.2rem 1.25rem;
+    padding-right: 6.25rem;
+    overflow-x: auto;
+}
+
+.ts-doc-code-block > pre code,
+.ts-doc-code-block > .highlighter-rouge code,
+.ts-doc-code-block > .highlighter-rouge pre code,
+.ts-doc-code-block > pre code span,
+.ts-doc-code-block > .highlighter-rouge pre code span {
+    color: var(--ts-doc-color-code-text-dark);
+}
+
+.ts-doc-code-block > .highlighter-rouge .c,
+.ts-doc-code-block > .highlighter-rouge .c1,
+.ts-doc-code-block > .highlighter-rouge .cm,
+.ts-doc-code-block > .highlighter-rouge .cp {
+    color: var(--ts-doc-color-code-muted-dark);
+}
+
+.ts-doc-code-block > .highlighter-rouge .k,
+.ts-doc-code-block > .highlighter-rouge .kd,
+.ts-doc-code-block > .highlighter-rouge .kr,
+.ts-doc-code-block > .highlighter-rouge .kt,
+.ts-doc-code-block > .highlighter-rouge .kc,
+.ts-doc-code-block > .highlighter-rouge .nt,
+.ts-doc-code-block > .highlighter-rouge .o {
+    color: var(--ts-doc-color-code-keyword-dark);
+}
+
+.ts-doc-code-block > .highlighter-rouge .s,
+.ts-doc-code-block > .highlighter-rouge .s1,
+.ts-doc-code-block > .highlighter-rouge .s2,
+.ts-doc-code-block > .highlighter-rouge .dl,
+.ts-doc-code-block > .highlighter-rouge .sx {
+    color: var(--ts-doc-color-code-string-dark);
+}
+
+.ts-doc-code-block > .highlighter-rouge .na,
+.ts-doc-code-block > .highlighter-rouge .nx,
+.ts-doc-code-block > .highlighter-rouge .nc,
+.ts-doc-code-block > .highlighter-rouge .nf,
+.ts-doc-code-block > .highlighter-rouge .nb {
+    color: var(--ts-doc-color-code-name-dark);
+}
+
+.ts-doc-code-block > .highlighter-rouge .mi,
+.ts-doc-code-block > .highlighter-rouge .mf,
+.ts-doc-code-block > .highlighter-rouge .mh,
+.ts-doc-code-block > .highlighter-rouge .il {
+    color: var(--ts-doc-color-code-number-dark);
 }
 
 .site-footer {

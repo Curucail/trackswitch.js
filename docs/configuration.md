@@ -6,6 +6,10 @@
   - [`presetNames`](#presetnames)
   - [`features`](#features)
   - [`alignment`](#alignment)
+- [Track Settings](#track-settings)
+  - [Track Options](#track-options)
+  - [Audio Source Options](#audio-source-options)
+  - [Track Alignment Options](#track-alignment-options)
 - [UI Elements](#visible-player-sections)
   - [`trackGroup`](#trackgroup)
   - [`image`](#image)
@@ -13,10 +17,6 @@
   - [`waveform`](#waveform)
   - [`sheetMusic`](#sheetmusic)
   - [`warpingMatrix`](#warpingmatrix)
-- [Track Settings](#track-settings)
-  - [Track Options](#track-options)
-  - [Audio Source Options](#audio-source-options)
-  - [Track Alignment Options](#track-alignment-options)
 - [Keyboard and Loop Controls](#keyboard-and-loop-controls)
 - [Things to Check](#things-to-check)
 
@@ -189,23 +189,23 @@ Use `features` to turn player tools on or off.
 
 Default settings:
 
-| Option | Default | Description |
-| --- | --- | --- |
-| `mode` | `'default'` | Chooses between a standard multitrack player and an aligned comparison player. |
-| `exclusiveSolo` | `false` | Keeps listening to one track at a time instead of mixing several tracks together. |
-| `muteOtherPlayerInstances` | `true` | Stops another player on the same page when this one starts playing. |
-| `globalVolume` | `false` | Shows a main volume control for the whole player. |
-| `trackMixControls` | `false` | Shows per-track volume and pan controls. |
-| `customizablePanelOrder` | `false` | Lets listeners rearrange the visible sections. |
-| `repeat` | `false` | Starts with repeat already turned on. |
-| `tabView` | `false` | Changes the look of the track rows to a tab-like style. |
-| `iosAudioUnlock` | `true` | Helps playback start more reliably on iPhone and iPad. |
-| `keyboard` | `true` | Turns keyboard shortcuts on. |
-| `looping` | `false` | Shows loop tools and allows A/B looping. |
-| `seekBar` | `true` | Shows the main seek bar. |
-| `timer` | `true` | Shows the main time display. |
-| `presets` | `true` | Shows preset switching when presets are available. |
-| `waveform` | `true` | Keeps waveform display and interaction available. |
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `mode?` | `'default' | 'alignment'` | `'default'` | Chooses between a standard multitrack player and an aligned comparison player. |
+| `exclusiveSolo?` | `boolean` | `false` | Keeps listening to one track at a time instead of mixing several tracks together. |
+| `muteOtherPlayerInstances?` | `boolean` | `true` | Stops another player on the same page when this one starts playing. |
+| `globalVolume?` | `boolean` | `false` | Shows a main volume control for the whole player. |
+| `trackMixControls?` | `boolean` | `false` | Shows per-track volume and pan controls. |
+| `customizablePanelOrder?` | `boolean` | `false` | Lets listeners rearrange the visible sections. |
+| `repeat?` | `boolean` | `false` | Starts with repeat already turned on. |
+| `tabView?` | `boolean` | `false` | Changes the look of the track rows to a tab-like style. |
+| `iosAudioUnlock?` | `boolean` | `true` | Helps playback start more reliably on iPhone and iPad. |
+| `keyboard?` | `boolean` | `true` | Turns keyboard shortcuts on. |
+| `looping?` | `boolean` | `false` | Shows loop tools and allows A/B looping. |
+| `seekBar?` | `boolean` | `true` | Shows the main seek bar. |
+| `timer?` | `boolean` | `true` | Shows the main time display. |
+| `presets?` | `boolean` | `true` | Shows preset switching when presets are available. |
+| `waveform?` | `boolean` | `true` | Keeps waveform display and interaction available. |
 
 Notes:
 
@@ -216,19 +216,38 @@ Notes:
 
 ### `alignment`
 
-| Option | Description |
-| --- | --- |
-| `csv` | The timing data file used to connect the different performances. |
-| `referenceTimeColumn` | The csv column to determine the main shared timeline used by the player. |
-| `referenceTimeColumnSync` | The csv column to determine the shared timeline when Sync is turned on in alignment mode. |
-| `outOfRange` | What the player should do when playback reaches a part of the timing map that has no matching value. |
+| Option | Type | Description |
+| --- | --- | --- |
+| `csv` | `string` | The timing data file used to connect the different performances. |
+| `referenceTimeColumn` | `string` | The csv column to determine the main shared timeline used by the player. |
+| `referenceTimeColumnSync?` | `string` | The csv column to determine the shared timeline when Sync is turned on in alignment mode. |
+| `outOfRange?` | `'clamp' | 'linear'` | What the player should do when playback reaches a part of the timing map that has no matching value. |
 
-Choices for `outOfRange`:
 
-- `clamp`: stay at the nearest available mapped point
-- `linear`: continue by extending the mapping trend
+### Track Alignment Options
 
-## Visible Player Sections
+Each track can also use an `alignment` block:
+
+```javascript
+alignment: {
+  column: 'perf_a_sec',
+  synchronizedSources: [{ src: 'performance-a-synced.mp3' }],
+}
+```
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `column?` | `string` | The timing-data column for that performance. |
+| `synchronizedSources?` | `object[]` | Extra audio files used when Sync is turned on. |
+
+Notes:
+
+- Use these options only in alignment mode.
+- `synchronizedSources` are what make mixed synced playback possible.
+- Sync is only available when the player also has a shared sync timeline through `referenceTimeColumnSync`.
+
+
+## UI Elements
 
 ### `trackGroup`
 
@@ -253,10 +272,10 @@ Example:
 
 Section options:
 
-| Option | Description |
-| --- | --- |
-| `rowHeight` | Sets the height of the track rows. |
-| `trackGroup` | The list of tracks shown in this section. |
+| Option | Type | Description |
+| --- | --- | --- |
+| `rowHeight?` | `number` | Sets the height of the track rows. |
+| `trackGroup` | `object[]` | The list of tracks shown in this section. |
 
 Notes:
 
@@ -282,13 +301,13 @@ Example:
 
 Section options:
 
-| Option | Description |
-| --- | --- |
-| `src` | The image file to show. |
-| `seekable` | Lets listeners click the image to jump to a different point in the audio. |
-| `seekMarginLeft` | Leaves a non-seekable area on the left side of the image. |
-| `seekMarginRight` | Leaves a non-seekable area on the right side of the image. |
-| `style` | Lets you fine-tune the look or spacing of the section. |
+| Option | Type | Description |
+| --- | --- | --- |
+| `src` | `string` | The image file to show. |
+| `seekable?` | `boolean` | Lets listeners click the image to jump to a different point in the audio. |
+| `seekMarginLeft?` | `number` | Leaves a non-seekable area on the left side of the image. |
+| `seekMarginRight?` | `number` | Leaves a non-seekable area on the right side of the image. |
+| `style?` | `string` | Lets you fine-tune the look or spacing of the section. |
 
 ### `perTrackImage`
 
@@ -306,12 +325,12 @@ Example:
 
 Section options:
 
-| Option | Description |
-| --- | --- |
-| `seekable` | Lets listeners click the current track image to jump in time. |
-| `seekMarginLeft` | Leaves a non-seekable area on the left side of the image. |
-| `seekMarginRight` | Leaves a non-seekable area on the right side of the image. |
-| `style` | Lets you fine-tune the look or spacing of the section. |
+| Option | Type | Description |
+| --- | --- | --- |
+| `seekable?` | `boolean` | Lets listeners click the current track image to jump in time. |
+| `seekMarginLeft?` | `number` | Leaves a non-seekable area on the left side of the image. |
+| `seekMarginRight?` | `number` | Leaves a non-seekable area on the right side of the image. |
+| `style?` | `string` | Lets you fine-tune the look or spacing of the section. |
 
 Notes:
 
@@ -341,30 +360,18 @@ Example:
 
 Section options:
 
-| Option | Description |
-| --- | --- |
-| `width` | Starting width of the waveform. |
-| `height` | Height of the waveform. |
-| `waveformBarWidth` | Thickness of the waveform bars. |
-| `maxZoom` | The closest zoom level listeners can reach, in seconds. Smaller numbers allow tighter zoom. |
-| `waveformSource` | Chooses which sound the waveform represents. |
-| `playbackFollowMode` | Decides whether the waveform view follows playback automatically. |
-| `timer` | Shows a small time label inside the waveform panel. |
-| `seekMarginLeft` | Leaves a non-seekable area on the left side. |
-| `seekMarginRight` | Leaves a non-seekable area on the right side. |
-| `style` | Lets you fine-tune the look or spacing of the section. |
-
-Choices for `waveformSource`:
-
-- `'audible'`: show what listeners currently hear
-- `0`, `1`, `2`, ...: show one specific track
-- `[0, 2, 3]`: show a chosen set of tracks
-
-Choices for `playbackFollowMode`:
-
-- `'off'`: keep the waveform still
-- `'center'`: keep playback near the middle while it moves
-- `'jump'`: only move the view when playback leaves the visible area
+| Option | Type | Description |
+| --- | --- | --- |
+| `width?` | `number` | Starting width of the waveform. |
+| `height?` | `number` | Height of the waveform. |
+| `waveformBarWidth?` | `number` | Thickness of the waveform bars. |
+| `maxZoom?` | `number` | The closest zoom level listeners can reach, in seconds. Smaller numbers allow tighter zoom. |
+| `waveformSource?` | `'audible' | number | number[]` | Chooses which sound the waveform represents. |
+| `playbackFollowMode?` | `'off' | 'center' | 'jump'` | Decides whether the waveform view follows playback automatically. |
+| `timer?` | `boolean` | Shows a small time label inside the waveform panel. |
+| `seekMarginLeft?` | `number` | Leaves a non-seekable area on the left side. |
+| `seekMarginRight?` | `number` | Leaves a non-seekable area on the right side. |
+| `style?` | `string` | Lets you fine-tune the look or spacing of the section. |
 
 Notes:
 
@@ -394,17 +401,17 @@ Example:
 
 Section options:
 
-| Option | Description |
-| --- | --- |
-| `src` | The MusicXML file to show. |
-| `measureColumn` | The column in the alignment data that contains measure numbers. |
-| `maxWidth` | The widest the score area should become. |
-| `maxHeight` | The tallest the score area should become. |
-| `renderScale` | Overall score size. |
-| `followPlayback` | Keeps the score view moving with playback. |
-| `cursorColor` | Color of the playback cursor. |
-| `cursorAlpha` | Transparency of the playback cursor. |
-| `style` | Lets you fine-tune the look or spacing of the section. |
+| Option | Type | Description |
+| --- | --- | --- |
+| `src` | `string` | The MusicXML file to show. |
+| `measureColumn?` | `string` | The column in the alignment data that contains measure numbers. |
+| `maxWidth?` | `number` | The widest the score area should become. |
+| `maxHeight?` | `number` | The tallest the score area should become. |
+| `renderScale?` | `number` | Overall score size. |
+| `followPlayback?` | `boolean` | Keeps the score view moving with playback. |
+| `cursorColor?` | `string` | Color of the playback cursor. |
+| `cursorAlpha?` | `number` | Transparency of the playback cursor. |
+| `style?` | `string` | Lets you fine-tune the look or spacing of the section. |
 
 Notes:
 
@@ -429,12 +436,12 @@ Example:
 
 Section options:
 
-| Option | Description |
-| --- | --- |
-| `height` | Height of the chart area. |
-| `tempoSmoothingSeconds` | How broad the tempo reading should feel. Larger values give a smoother curve. |
-| `globalScoreBPM` | Adds a BPM reading to the tempo chart using this score tempo. |
-| `style` | Lets you fine-tune the look or spacing of the section. |
+| Option | Type | Description |
+| --- | --- | --- |
+| `height?` | `number` | Height of the chart area. |
+| `tempoSmoothingSeconds?` | `number` | How broad the tempo reading should feel. Larger values give a smoother curve. |
+| `globalScoreBPM?` | `number` | Adds a BPM reading to the tempo chart using this score tempo. |
+| `style?` | `string` | Lets you fine-tune the look or spacing of the section. |
 
 Notes:
 
@@ -448,17 +455,17 @@ Notes:
 
 Each entry inside `trackGroup` can use these options:
 
-| Option | Description |
-| --- | --- |
-| `title` | Name shown in the track list. |
-| `solo` | Starting on/off state for that track. |
-| `volume` | Starting track volume. |
-| `pan` | Starting left-right placement. |
-| `image` | Image used by `perTrackImage` and other track-based visuals. |
-| `style` | Lets you give that track row its own visual styling. |
-| `presets` | Decides which presets include this track. |
-| `sources` | Audio files for this track. |
-| `alignment` | Alignment settings for this track in an aligned comparison player. |
+| Option | Type | Description |
+| --- | --- | --- |
+| `title?` | `string` | Name shown in the track list. |
+| `solo?` | `boolean` | Starting on/off state for that track. |
+| `volume?` | `number` | Starting track volume. |
+| `pan?` | `number` | Starting left-right placement. |
+| `image?` | `string` | Image used by `perTrackImage` and other track-based visuals. |
+| `style?` | `string` | Lets you give that track row its own visual styling. |
+| `presets?` | `number[]` | Decides which presets include this track. |
+| `sources` | `object[]` | Audio files for this track. |
+| `alignment?` | `object` | Alignment settings for this track in an aligned comparison player. |
 
 Notes:
 
@@ -471,39 +478,17 @@ Notes:
 
 Each entry inside `sources` and `alignment.synchronizedSources` can use these options:
 
-| Option | Description |
-| --- | --- |
-| `src` | Audio file to use. |
-| `type` | Optional file-type hint. |
-| `startOffsetMs` | Trims or pads the beginning of the file. Positive values trim. Negative values add silence. |
-| `endOffsetMs` | Trims or pads the end of the file. Positive values trim. Negative values add silence. |
+| Option | Type | Description |
+| --- | --- | --- |
+| `src` | `string` | Audio file to use. |
+| `type?` | `string` | Optional file-type hint. |
+| `startOffsetMs?` | `number` | Trims or pads the beginning of the file. Positive values trim. Negative values add silence. |
+| `endOffsetMs?` | `number` | Trims or pads the end of the file. Positive values trim. Negative values add silence. |
 
 Notes:
 
 - Every track needs at least one `src`.
 - If you list several source files, the player uses the first one that works for the listener's browser.
-
-### Track Alignment Options
-
-Each track can also use an `alignment` block:
-
-```javascript
-alignment: {
-  column: 'perf_a_sec',
-  synchronizedSources: [{ src: 'performance-a-synced.mp3' }],
-}
-```
-
-| Option | Description |
-| --- | --- |
-| `column` | The timing-data column for that performance. |
-| `synchronizedSources` | Extra audio files used when Sync is turned on. |
-
-Notes:
-
-- Use these options only in alignment mode.
-- `synchronizedSources` are what make mixed synced playback possible.
-- Sync is only available when the player also has a shared sync timeline through `referenceTimeColumnSync`.
 
 ## Keyboard and Loop Controls
 

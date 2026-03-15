@@ -54,7 +54,10 @@
   <script src="{{ '/js/trackswitch.min.js' | relative_url }}"></script>
   {% if page.url == '/' %}
   <script src="{{ '/js/homepage-demo.js' | relative_url }}"></script>
-  {% elsif page.url == '/configuration.html' %}
+  {% else %}
+  <script src="{{ '/js/docs-code-snippets.js' | relative_url }}"></script>
+  {% endif %}
+  {% if page.url == '/configuration.html' %}
   <script src="{{ '/js/configuration-toc.js' | relative_url }}"></script>
   {% endif %}
 </body>
