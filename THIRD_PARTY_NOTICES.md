@@ -1,34 +1,43 @@
 # Third-Party Notices
 
-This project includes third-party software in distributed browser artifacts
-(`dist/js/trackswitch.js`, `dist/js/trackswitch.min.js`, `dist/esm/index.js`,
-and `dist/css/trackswitch.min.css`).
+This project includes third-party software and third-party artwork in
+distributed package artifacts under `dist/`.
 
 This document lists the third-party packages bundled into those artifacts and
 the applicable license notices.
 
 ## Scope
 
-- This notice file applies to browser bundles produced by this repository.
-- The package list below reflects the current browser bundle graph rooted at
-  `src/index.ts`, including third-party code embedded in published browser
-  builds consumed by that graph.
+- This notice file applies to the published package artifacts produced by this
+  repository.
+- `dist/js/trackswitch.js` and `dist/js/trackswitch.min.js` are self-contained
+  browser bundles and include third-party runtime code listed below.
+- `dist/esm/**/*.js` preserves external package imports for runtime
+  dependencies, but it does include embedded Font Awesome SVG path data from
+  `src/ui/icons.ts`.
+- `dist/css/trackswitch.min.css` is project-authored CSS.
 - The project code itself remains licensed under MIT (see `LICENSE`).
 
 ## Included Third-Party Packages
 
-### Directly bundled packages
+### Runtime packages bundled into `dist/js/*`
 
 | Package | Version | License |
 | --- | --- | --- |
-| @fortawesome/fontawesome-svg-core | 7.2.0 | MIT |
-| @fortawesome/free-solid-svg-icons | 7.2.0 | CC-BY-4.0 AND MIT |
-| @fortawesome/free-regular-svg-icons | 7.2.0 | CC-BY-4.0 AND MIT |
 | d3 | 7.9.0 | ISC |
 | opensheetmusicdisplay | 1.9.7 | BSD-3-Clause |
 | papaparse | 5.5.3 | MIT |
 
-### Additional packages bundled via `d3`
+### Embedded third-party artwork in distributed JavaScript
+
+| Source | Version | License |
+| --- | --- | --- |
+| Font Awesome Free SVG icon data extracted from `@fortawesome/free-solid-svg-icons` | 7.2.0 | CC-BY-4.0 |
+| Font Awesome Free SVG icon data extracted from `@fortawesome/free-regular-svg-icons` | 7.2.0 | CC-BY-4.0 |
+
+No Font Awesome runtime/package code is bundled in the published artifacts.
+
+### Additional packages bundled via `d3` in `dist/js/*`
 
 - ISC: `d3-array` 3.2.4, `d3-axis` 3.0.0, `d3-brush` 3.0.0, `d3-chord` 3.0.1,
   `d3-color` 3.1.0, `d3-contour` 4.0.2, `d3-delaunay` 6.0.4,
@@ -43,7 +52,7 @@ the applicable license notices.
 - BSD-3-Clause: `d3-ease` 3.0.1.
 - Unlicense: `robust-predicates` 3.0.2.
 
-### Additional packages embedded in the published `opensheetmusicdisplay` browser build
+### Additional packages embedded in the published `opensheetmusicdisplay` browser build inside `dist/js/*`
 
 - MIT: `vexflow` 1.2.93, `loglevel` 1.9.2, `typescript-collections` 1.3.3,
   `lie` 3.3.0, `setimmediate` 1.0.5, and `immediate` 3.0.6.
@@ -56,8 +65,8 @@ the applicable license notices.
 - `jszip` is available under dual licensing (MIT OR GPL-3.0-or-later). For
   this distribution, the MIT option is used.
 - `pako` carries both MIT and Zlib license terms.
-- Font Awesome free SVG packages include multiple license scopes: icon assets
-  are covered by CC-BY-4.0, while the packaged code/runtime is covered by MIT.
+- The distributed JavaScript contains Font Awesome icon artwork only. It does
+  not contain Font Awesome runtime/package code.
 - The Font Awesome SIL OFL 1.1 license for font files does not apply here
   because these distributed artifacts do not bundle Font Awesome webfont or
   desktop font files.
@@ -100,7 +109,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-### MIT (applies to: `vexflow`, `jszip` [MIT option], `pako`, `loglevel`, `typescript-collections`, `lie`, `setimmediate`, `immediate`, `papaparse`, `@fortawesome/fontawesome-svg-core`, `@fortawesome/free-solid-svg-icons` [code/runtime], `@fortawesome/free-regular-svg-icons` [code/runtime])
+### MIT (applies to: `vexflow`, `jszip` [MIT option], `pako`, `loglevel`, `typescript-collections`, `lie`, `setimmediate`, `immediate`, `papaparse`)
 
 Applicable copyright notices:
 
@@ -113,8 +122,6 @@ Applicable copyright notices:
 - Copyright (c) 2012 Barnesandnoble.com, llc, Donavon West, and Domenic Denicola (`setimmediate`)
 - Copyright (c) 2012 Barnesandnoble.com, llc, Donavon West, Domenic Denicola, Brian Cavalier (`immediate`)
 - Copyright (c) 2015 Matthew Holt (`papaparse`)
-- Copyright (c) 2026 Fonticons, Inc. (`@fortawesome/fontawesome-svg-core`, `@fortawesome/free-solid-svg-icons` code/runtime, `@fortawesome/free-regular-svg-icons` code/runtime)
-
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
 the Software without restriction, including without limitation the rights to
@@ -133,7 +140,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-### CC BY 4.0 (applies to: `@fortawesome/free-solid-svg-icons` and `@fortawesome/free-regular-svg-icons` icon assets packaged as SVG/JS)
+### CC BY 4.0 (applies to: Font Awesome Free icon artwork embedded as SVG path data)
 
 Font Awesome Free icons are licensed under Creative Commons Attribution 4.0
 International.

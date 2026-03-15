@@ -2,16 +2,16 @@ import { AudioDownloadSizeInfo, NormalizedTrackGroupLayout, TrackRuntime } from 
 import { escapeHtml, sanitizeInlineStyle } from '../shared/dom';
 import { formatBytesToHumanReadable, formatSecondsToHHMMSSmmm } from '../shared/format';
 import { clampPercent } from '../shared/math';
-import * as d3 from 'd3';
+import type { ScaleContinuousNumeric, ScaleLinear, Selection } from 'd3';
 import { getHostIconSlot, renderIconSlotHtml, setHostIcon } from './icons';
 
-type SvgSelection = d3.Selection<SVGSVGElement, unknown, null, undefined>;
-type GroupSelection = d3.Selection<SVGGElement, unknown, null, undefined>;
-type PathSelection = d3.Selection<SVGPathElement, unknown, null, undefined>;
-type RectSelection = d3.Selection<SVGRectElement, unknown, null, undefined>;
-type LineSelection = d3.Selection<SVGLineElement, unknown, null, undefined>;
-type CircleSelection = d3.Selection<SVGCircleElement, unknown, null, undefined>;
-type TextSelection = d3.Selection<SVGTextElement, unknown, null, undefined>;
+type SvgSelection = Selection<SVGSVGElement, unknown, null, undefined>;
+type GroupSelection = Selection<SVGGElement, unknown, null, undefined>;
+type PathSelection = Selection<SVGPathElement, unknown, null, undefined>;
+type RectSelection = Selection<SVGRectElement, unknown, null, undefined>;
+type LineSelection = Selection<SVGLineElement, unknown, null, undefined>;
+type CircleSelection = Selection<SVGCircleElement, unknown, null, undefined>;
+type TextSelection = Selection<SVGTextElement, unknown, null, undefined>;
 
 interface SheetMusicHostConfig {
     host: HTMLElement;
@@ -75,8 +75,8 @@ interface WarpingMatrixPlotState {
     pathByColumn: Map<string, PathSelection>;
     guideDiagonal: LineSelection;
     playhead: CircleSelection;
-    xScale: d3.ScaleLinear<number, number>;
-    yScale: d3.ScaleLinear<number, number>;
+    xScale: ScaleLinear<number, number>;
+    yScale: ScaleLinear<number, number>;
     margins: WarpingPlotMargins;
     innerWidth: number;
     innerHeight: number;
@@ -96,8 +96,8 @@ interface WarpingTempoPlotState {
     path: PathSelection;
     baseline: LineSelection;
     centerLine: LineSelection;
-    xScale: d3.ScaleLinear<number, number>;
-    yScale: d3.ScaleContinuousNumeric<number, number>;
+    xScale: ScaleLinear<number, number>;
+    yScale: ScaleContinuousNumeric<number, number>;
     margins: WarpingPlotMargins;
     innerWidth: number;
     innerHeight: number;

@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build, context } from "esbuild";
@@ -16,6 +16,79 @@ const banner = [
   " */",
 ].join("\n");
 
+function collectTypeScriptEntryPoints(directory) {
+  const entryPoints = [];
+  const entries = readdirSync(directory, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const absolutePath = resolve(directory, entry.name);
+    if (entry.isDirectory()) {
+      entryPoints.push(...collectTypeScriptEntryPoints(absolutePath));
+      continue;
+    }
+
+    if (!entry.isFile()) {
+      continue;
+    }
+
+    if (!entry.name.endsWith(".ts") || entry.name.endsWith(".d.ts")) {
+      continue;
+    }
+
+    entryPoints.push(absolutePath);
+  }
+
+  return entryPoints.sort();
+}
+
+function collectJavaScriptOutputs(directory) {
+  const outputs = [];
+  const entries = readdirSync(directory, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const absolutePath = resolve(directory, entry.name);
+    if (entry.isDirectory()) {
+      outputs.push(...collectJavaScriptOutputs(absolutePath));
+      continue;
+    }
+
+    if (entry.isFile() && entry.name.endsWith(".js")) {
+      outputs.push(absolutePath);
+    }
+  }
+
+  return outputs.sort();
+}
+
+function addJsExtensionToRelativeSpecifier(specifier) {
+  if (!specifier.startsWith(".") || /\.[a-z0-9]+$/i.test(specifier)) {
+    return specifier;
+  }
+
+  return `${specifier}.js`;
+}
+
+function rewriteEsmImportSpecifiers(directory) {
+  const outputFiles = collectJavaScriptOutputs(directory);
+
+  for (const outputFile of outputFiles) {
+    const source = readFileSync(outputFile, "utf8");
+    const rewritten = source
+      .replace(/(from\s+)(['"])(\.{1,2}\/[^'"]+)\2/g, (_match, prefix, quote, specifier) => {
+        return `${prefix}${quote}${addJsExtensionToRelativeSpecifier(specifier)}${quote}`;
+      })
+      .replace(/(import\()(['"])(\.{1,2}\/[^'"]+)\2(\))/g, (_match, prefix, quote, specifier, suffix) => {
+        return `${prefix}${quote}${addJsExtensionToRelativeSpecifier(specifier)}${quote}${suffix}`;
+      });
+
+    if (rewritten !== source) {
+      writeFileSync(outputFile, rewritten, "utf8");
+    }
+  }
+}
+
+const sourceEntryPoints = collectTypeScriptEntryPoints(resolve(rootDir, "src"));
+
 const browserCommonOptions = {
   entryPoints: [resolve(rootDir, "src/index.ts")],
   bundle: true,
@@ -27,24 +100,14 @@ const browserCommonOptions = {
 };
 
 const esmCommonOptions = {
-  entryPoints: [resolve(rootDir, "src/index.ts")],
-  bundle: true,
+  entryPoints: sourceEntryPoints,
+  bundle: false,
   platform: "browser",
   format: "esm",
   target: "es2017",
   banner: { js: banner },
-  outfile: resolve(rootDir, "dist/esm/index.js"),
-};
-
-const reactEsmOptions = {
-  entryPoints: [resolve(rootDir, "src/react.ts")],
-  bundle: true,
-  platform: "browser",
-  format: "esm",
-  target: "es2017",
-  banner: { js: banner },
-  external: ["react"],
-  outfile: resolve(rootDir, "dist/esm/react.js"),
+  outbase: resolve(rootDir, "src"),
+  outdir: resolve(rootDir, "dist/esm"),
 };
 
 const minifyOnly = process.argv.includes("--minify-only");
@@ -63,9 +126,6 @@ const buildConfigs = minifyOnly
         ...esmCommonOptions,
       },
       {
-        ...reactEsmOptions,
-      },
-      {
         ...browserCommonOptions,
         outfile: resolve(rootDir, "dist/js/trackswitch.js"),
       },
@@ -79,6 +139,7 @@ const buildConfigs = minifyOnly
 if (watch) {
   const contexts = await Promise.all(buildConfigs.map((options) => context(options)));
   await Promise.all(contexts.map((buildContext) => buildContext.watch()));
+  rewriteEsmImportSpecifiers(resolve(rootDir, "dist/esm"));
 
   const dispose = async () => {
     await Promise.all(contexts.map((buildContext) => buildContext.dispose()));
@@ -91,4 +152,5 @@ if (watch) {
   await new Promise(() => {});
 } else {
   await Promise.all(buildConfigs.map((options) => build(options)));
+  rewriteEsmImportSpecifiers(resolve(rootDir, "dist/esm"));
 }

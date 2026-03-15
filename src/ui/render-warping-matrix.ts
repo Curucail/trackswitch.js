@@ -1,13 +1,24 @@
 import { sanitizeInlineStyle } from '../shared/dom';
-import * as d3 from 'd3';
+import {
+    axisBottom,
+    axisLeft,
+    axisRight,
+    line,
+    scaleLinear,
+    scaleLog,
+    select,
+    type ScaleContinuousNumeric,
+    type ScaleLinear,
+    type Selection,
+} from 'd3';
 
-type SvgSelection = d3.Selection<SVGSVGElement, unknown, null, undefined>;
-type GroupSelection = d3.Selection<SVGGElement, unknown, null, undefined>;
-type PathSelection = d3.Selection<SVGPathElement, unknown, null, undefined>;
-type RectSelection = d3.Selection<SVGRectElement, unknown, null, undefined>;
-type LineSelection = d3.Selection<SVGLineElement, unknown, null, undefined>;
-type CircleSelection = d3.Selection<SVGCircleElement, unknown, null, undefined>;
-type TextSelection = d3.Selection<SVGTextElement, unknown, null, undefined>;
+type SvgSelection = Selection<SVGSVGElement, unknown, null, undefined>;
+type GroupSelection = Selection<SVGGElement, unknown, null, undefined>;
+type PathSelection = Selection<SVGPathElement, unknown, null, undefined>;
+type RectSelection = Selection<SVGRectElement, unknown, null, undefined>;
+type LineSelection = Selection<SVGLineElement, unknown, null, undefined>;
+type CircleSelection = Selection<SVGCircleElement, unknown, null, undefined>;
+type TextSelection = Selection<SVGTextElement, unknown, null, undefined>;
 
 interface WarpingMatrixDataPoint {
     referenceTime: number;
@@ -72,8 +83,8 @@ interface WarpingMatrixPlotState {
     pathByColumn: Map<string, PathSelection>;
     guideDiagonal: LineSelection;
     playhead: CircleSelection;
-    xScale: d3.ScaleLinear<number, number>;
-    yScale: d3.ScaleLinear<number, number>;
+    xScale: ScaleLinear<number, number>;
+    yScale: ScaleLinear<number, number>;
     margins: WarpingPlotMargins;
     innerWidth: number;
     innerHeight: number;
@@ -93,8 +104,8 @@ interface WarpingTempoPlotState {
     path: PathSelection;
     baseline: LineSelection;
     centerLine: LineSelection;
-    xScale: d3.ScaleLinear<number, number>;
-    yScale: d3.ScaleContinuousNumeric<number, number>;
+    xScale: ScaleLinear<number, number>;
+    yScale: ScaleContinuousNumeric<number, number>;
     margins: WarpingPlotMargins;
     innerWidth: number;
     innerHeight: number;
@@ -622,7 +633,7 @@ export function createWarpingMatrixPlotState(ctx: any, plotHost: any, width: any
         const clipId = 'warping-matrix-clip-' + this.warpingClipPathCounter;
         this.warpingClipPathCounter += 1;
 
-        const svg = d3.select(plotHost)
+        const svg = select(plotHost)
             .append('svg')
             .attr('class', 'warping-plot-svg')
             .attr('width', width)
@@ -685,8 +696,8 @@ export function createWarpingMatrixPlotState(ctx: any, plotHost: any, width: any
             pathByColumn: new Map<string, PathSelection>(),
             guideDiagonal: guideDiagonal,
             playhead: playhead,
-            xScale: d3.scaleLinear(),
-            yScale: d3.scaleLinear(),
+            xScale: scaleLinear(),
+            yScale: scaleLinear(),
             margins: margins,
             innerWidth: innerWidth,
             innerHeight: innerHeight,
@@ -713,7 +724,7 @@ export function createWarpingTempoPlotState(ctx: any, plotHost: any, width: any,
         const clipId = 'warping-tempo-clip-' + this.warpingClipPathCounter;
         this.warpingClipPathCounter += 1;
 
-        const svg = d3.select(plotHost)
+        const svg = select(plotHost)
             .append('svg')
             .attr('class', 'warping-plot-svg')
             .attr('width', width)
@@ -786,8 +797,8 @@ export function createWarpingTempoPlotState(ctx: any, plotHost: any, width: any,
             path: path,
             baseline: baseline,
             centerLine: centerLine,
-            xScale: d3.scaleLinear(),
-            yScale: d3.scaleLog(),
+            xScale: scaleLinear(),
+            yScale: scaleLog(),
             margins: margins,
             innerWidth: innerWidth,
             innerHeight: innerHeight,
@@ -1305,10 +1316,10 @@ export function renderWarpingMatrixPathPlot(ctx: any, host: any, pathStrokeWidth
 
         const xTickCount = Math.max(2, Math.round(squareSize / 90));
         const yTickCount = Math.max(2, Math.round(squareSize / 60));
-        plot.xAxis.call(d3.axisBottom(plot.xScale).ticks(xTickCount));
-        plot.yAxis.call(d3.axisLeft(plot.yScale).ticks(yTickCount));
+        plot.xAxis.call(axisBottom(plot.xScale).ticks(xTickCount));
+        plot.yAxis.call(axisLeft(plot.yScale).ticks(yTickCount));
 
-        const line = d3.line<WarpingMatrixPathPoint>()
+        const matrixLine = line<WarpingMatrixPathPoint>()
             .defined((point) => {
                 return Number.isFinite(point.referenceTime) && Number.isFinite(point.trackTime);
             })
@@ -1330,7 +1341,7 @@ export function renderWarpingMatrixPathPlot(ctx: any, host: any, pathStrokeWidth
                 path
                     .attr('stroke', host.colorByColumn.get(columnKey) || WARPING_MATRIX_PRIMARY_COLOR)
                     .attr('stroke-width', pathStrokeWidth)
-                    .attr('d', line(seriesData.pointsByReferenceTime) || null);
+                    .attr('d', matrixLine(seriesData.pointsByReferenceTime) || null);
             });
         }
 
@@ -1511,10 +1522,10 @@ export function renderWarpingMatrixTempoPlot(ctx: any, host: any): any {
             .range([tempoPlot.innerHeight, 0]);
 
         const xTickCount = Math.max(2, Math.round(tempoPlot.innerWidth / 90));
-        tempoPlot.xAxis.call(d3.axisBottom(tempoPlot.xScale).ticks(xTickCount));
+        tempoPlot.xAxis.call(axisBottom(tempoPlot.xScale).ticks(xTickCount));
         const showBpmAxis = Number.isFinite(displayedScoreBpm) && (displayedScoreBpm as number) > 0;
         tempoPlot.yAxis.call(
-            d3.axisLeft(tempoPlot.yScale)
+            axisLeft(tempoPlot.yScale)
                 .tickValues(WARPING_MATRIX_TEMPO_AXIS_TICKS)
                 .tickFormat((tickValue) => {
                     const numericTick = Number(tickValue);
@@ -1533,7 +1544,7 @@ export function renderWarpingMatrixTempoPlot(ctx: any, host: any): any {
             tempoPlot.yAxisRight
                 .style('display', null)
                 .call(
-                    d3.axisRight(tempoPlot.yScale)
+                    axisRight(tempoPlot.yScale)
                         .tickValues(WARPING_MATRIX_TEMPO_AXIS_TICKS)
                         .tickFormat((tickValue) => {
                             const numericTick = Number(tickValue);
@@ -1553,7 +1564,7 @@ export function renderWarpingMatrixTempoPlot(ctx: any, host: any): any {
             .style('display', showBpmAxis ? null : 'none');
 
         const visibleTempoSeries = showMonotonicityMessage ? [] : sliceTempoSeriesForDomain(tempoSeries, xDomain);
-        const tempoLine = d3.line<WarpingMatrixTempoPoint>()
+        const tempoLine = line<WarpingMatrixTempoPoint>()
             .defined((point) => {
                 return (
                     Number.isFinite(point.trackTime)

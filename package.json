@@ -4,6 +4,7 @@
   "description": "Multitrack Audio Player",
   "license": "MIT",
   "type": "module",
+  "sideEffects": false,
   "author": "Nils Werner (nils.werner@audiolabs-erlangen.de)",
   "contributors": [
     "Manuel Peters (manuel.peters@audiolabs-erlangen.de)"
@@ -24,6 +25,7 @@
   ],
   "style": "dist/css/trackswitch.min.css",
   "main": "dist/esm/index.js",
+  "module": "dist/esm/index.js",
   "types": "dist/types/index.d.ts",
   "exports": {
     ".": {
@@ -35,9 +37,6 @@
       "import": "./dist/esm/react.js"
     },
     "./style.css": "./dist/css/trackswitch.min.css",
-    "./dist/css/trackswitch.min.css": "./dist/css/trackswitch.min.css",
-    "./dist/js/trackswitch.js": "./dist/js/trackswitch.js",
-    "./dist/js/trackswitch.min.js": "./dist/js/trackswitch.min.js",
     "./package.json": "./package.json"
   },
   "unpkg": "dist/js/trackswitch.min.js",
@@ -67,9 +66,6 @@
     "typecheck:unused": "tsc --project tsconfig.json --noUnusedLocals --noUnusedParameters --pretty false"
   },
   "dependencies": {
-    "@fortawesome/fontawesome-svg-core": "^7.2.0",
-    "@fortawesome/free-regular-svg-icons": "^7.2.0",
-    "@fortawesome/free-solid-svg-icons": "^7.2.0",
     "d3": "^7.9.0",
     "opensheetmusicdisplay": "^1.9.7",
     "papaparse": "^5.5.3"

@@ -1,9 +1,10 @@
-import { GraphicalMeasure, PointF2D } from 'opensheetmusicdisplay';
+import { GraphicalMeasure, PointF2D } from './osmd';
 import {
     DEFAULT_GRAPHICAL_MEASURE_CLASS_NAME,
     TOUCH_TAP_MOVE_THRESHOLD_PX,
 } from './types';
 import type { SheetMusicEntryModel } from './types';
+import type { PointF2DType } from './osmd';
 
 export function handleHostClick(ctx: any, entry: SheetMusicEntryModel, event: MouseEvent): void {
     handleHostInteraction(ctx, entry, event);
@@ -113,10 +114,10 @@ export function handleHostInteraction(ctx: any, entry: SheetMusicEntryModel, eve
 
 export function resolveClickedMeasure(entry: SheetMusicEntryModel, event: MouseEvent | TouchEvent): number | null {
     const graphicSheet = entry.osmd?.GraphicSheet as {
-        domToSvg?: (point: PointF2D) => PointF2D;
-        svgToOsmd?: (point: PointF2D) => PointF2D;
-        GetNearestObject?: (point: PointF2D, className: string) => unknown;
-        GetNearestStaffEntry?: (point: PointF2D) => unknown;
+        domToSvg?: (point: PointF2DType) => PointF2DType;
+        svgToOsmd?: (point: PointF2DType) => PointF2DType;
+        GetNearestObject?: (point: PointF2DType, className: string) => unknown;
+        GetNearestStaffEntry?: (point: PointF2DType) => unknown;
         MeasureList?: unknown;
     } | undefined;
     if (!graphicSheet) {
@@ -208,9 +209,9 @@ function resolveGraphicalMeasureClassName(): string {
 
 function findNearestMeasureObject(
     graphicSheet: {
-        GetNearestObject?: (point: PointF2D, className: string) => unknown;
+        GetNearestObject?: (point: PointF2DType, className: string) => unknown;
     },
-    point: PointF2D,
+    point: PointF2DType,
     runtimeMeasureClassName: string
 ): unknown {
     if (typeof graphicSheet.GetNearestObject !== 'function') {
@@ -243,7 +244,7 @@ function extractParentMeasureFromStaffEntry(staffEntry: unknown): unknown {
     return candidate.parentMeasure ?? candidate.ParentMeasure ?? null;
 }
 
-function resolveMeasureFromMeasureList(measureListRaw: unknown, point: PointF2D): number | null {
+function resolveMeasureFromMeasureList(measureListRaw: unknown, point: PointF2DType): number | null {
     if (!Array.isArray(measureListRaw)) {
         return null;
     }
@@ -296,7 +297,7 @@ function resolveMeasureFromMeasureList(measureListRaw: unknown, point: PointF2D)
 }
 
 function extractMeasureBoundingBox(measure: unknown): {
-    pointLiesInsideBorders?: (position: PointF2D) => boolean;
+    pointLiesInsideBorders?: (position: PointF2DType) => boolean;
     Center?: unknown;
     center?: unknown;
 } | null {
@@ -315,13 +316,13 @@ function extractMeasureBoundingBox(measure: unknown): {
     }
 
     return box as {
-        pointLiesInsideBorders?: (position: PointF2D) => boolean;
+        pointLiesInsideBorders?: (position: PointF2DType) => boolean;
         Center?: unknown;
         center?: unknown;
     };
 }
 
-function extractBoundingBoxCenter(box: { Center?: unknown; center?: unknown }): PointF2D | null {
+function extractBoundingBoxCenter(box: { Center?: unknown; center?: unknown }): PointF2DType | null {
     const centerCandidate = box.Center ?? box.center;
     if (!centerCandidate || typeof centerCandidate !== 'object') {
         return null;

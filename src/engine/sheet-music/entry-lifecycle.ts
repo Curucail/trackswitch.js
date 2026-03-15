@@ -1,7 +1,7 @@
 import {
     CursorType,
     OpenSheetMusicDisplay,
-} from 'opensheetmusicdisplay';
+} from './osmd';
 import {
     MAX_OSMD_ZOOM,
     MIN_HOST_WIDTH_DELTA_FOR_RERENDER_PX,
@@ -294,7 +294,7 @@ export function rebindMeasureCursor(entry: SheetMusicEntryModel): SheetMusicCurs
     return entry.measureCursor as SheetMusicCursor;
 }
 
-export function collectAvailableMeasures(osmd: OpenSheetMusicDisplay): number[] {
+export function collectAvailableMeasures(osmd: import('./osmd').OpenSheetMusicDisplayType): number[] {
     const sourceMeasures = osmd.Sheet?.SourceMeasures;
     if (!Array.isArray(sourceMeasures)) {
         return [];

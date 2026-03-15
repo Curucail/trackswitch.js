@@ -1,5 +1,5 @@
-import { OpenSheetMusicDisplay } from 'opensheetmusicdisplay';
 import type { MeasureMapPoint } from '../../shared/measure-map';
+import type { OpenSheetMusicDisplayType } from './osmd';
 
 export interface SheetMusicMeasureMapsByAxis {
     base: MeasureMapPoint[] | null;
@@ -41,7 +41,7 @@ export interface SheetMusicEntryModel {
     followPlayback: boolean;
     cursorColor: string;
     cursorAlpha: number;
-    osmd: OpenSheetMusicDisplay | null;
+    osmd: OpenSheetMusicDisplayType | null;
     measureCursor: {
         reset?: () => void;
         show?: () => void;
