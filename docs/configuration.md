@@ -37,11 +37,23 @@ TrackSwitch.createTrackSwitch(rootElement, {
       style: 'margin: 0;',
     },
     {
+      type: 'perTrackImage',
+      seekable: false,
+      seekMarginLeft: 0,
+      seekMarginRight: 0,
+      style: 'margin: 0;',
+    },
+    {
       type: 'waveform',
+      width: 1200,
       height: 160,
+      waveformBarWidth: 2,
       maxZoom: 5,
       waveformSource: 'audible',
       playbackFollowMode: 'center',
+      timer: false,
+      seekMarginLeft: 3,
+      seekMarginRight: 4,
       style: 'margin: 0;',
     },
     {
@@ -50,27 +62,43 @@ TrackSwitch.createTrackSwitch(rootElement, {
       trackGroup: [
         {
           title: 'Violins',
+          solo: true,
           volume: 0.9,
           pan: -0.2,
           image: 'violins.png',
+          style: 'border-left: 3px solid #4f8dc9;',
           presets: [0, 1],
-          sources: [{ src: 'violins.mp3' }],
+          sources: [
+            { src: 'violins.mp3', type: 'audio/mpeg', startOffsetMs: 0, endOffsetMs: 0 },
+            { src: 'violins.ogg', type: 'audio/ogg' },
+          ],
         },
         {
           title: 'Drums',
+          solo: false,
           volume: 1,
           pan: 0,
           image: 'drums.png',
+          style: 'border-left: 3px solid #ed8c01;',
           presets: [0, 2],
-          sources: [{ src: 'drums.mp3' }],
+          sources: [{ src: 'drums.mp3', type: 'audio/mpeg', startOffsetMs: -120, endOffsetMs: 250 }],
         },
       ],
     },
   ],
   features: {
+    mode: 'default',
+    exclusiveSolo: false,
+    muteOtherPlayerInstances: true,
     globalVolume: true,
     trackMixControls: true,
+    repeat: false,
+    tabView: false,
+    iosAudioUnlock: true,
+    keyboard: true,
     looping: true,
+    seekBar: true,
+    timer: true,
     presets: true,
     customizablePanelOrder: true,
   },
@@ -83,6 +111,14 @@ TrackSwitch.createTrackSwitch(rootElement, {
 TrackSwitch.createTrackSwitch(rootElement, {
   ui: [
     {
+      type: 'image',
+      src: 'score-overview.jpg',
+      seekable: false,
+      seekMarginLeft: 0,
+      seekMarginRight: 0,
+      style: 'margin: 0;',
+    },
+    {
       type: 'perTrackImage',
       seekable: true,
       seekMarginLeft: 4,
@@ -91,9 +127,15 @@ TrackSwitch.createTrackSwitch(rootElement, {
     },
     {
       type: 'waveform',
+      width: 1400,
       height: 160,
+      waveformBarWidth: 3,
+      maxZoom: 8,
       waveformSource: 0,
+      playbackFollowMode: 'jump',
       timer: true,
+      seekMarginLeft: 3,
+      seekMarginRight: 4,
       style: 'margin: 0;',
     },
     {
@@ -102,20 +144,32 @@ TrackSwitch.createTrackSwitch(rootElement, {
       trackGroup: [
         {
           title: 'Performance A',
+          solo: true,
+          volume: 1,
+          pan: 0,
           image: 'performance-a.png',
-          sources: [{ src: 'performance-a.mp3' }],
+          style: 'border-left: 3px solid #4f8dc9;',
+          presets: [0],
+          sources: [{ src: 'performance-a.mp3', type: 'audio/mpeg', startOffsetMs: 0, endOffsetMs: 0 }],
           alignment: {
             column: 'perf_a_sec',
-            synchronizedSources: [{ src: 'performance-a-synced.mp3' }],
+            synchronizedSources: [
+              { src: 'performance-a-synced.mp3', type: 'audio/mpeg', startOffsetMs: 0, endOffsetMs: 0 },
+            ],
           },
         },
         {
           title: 'Performance B',
+          solo: false,
+          volume: 0.92,
+          pan: 0.1,
           image: 'performance-b.png',
-          sources: [{ src: 'performance-b.mp3' }],
+          style: 'border-left: 3px solid #6c757d;',
+          presets: [0],
+          sources: [{ src: 'performance-b.mp3', type: 'audio/mpeg', startOffsetMs: 50, endOffsetMs: 0 }],
           alignment: {
             column: 'perf_b_sec',
-            synchronizedSources: [{ src: 'performance-b-synced.mp3' }],
+            synchronizedSources: [{ src: 'performance-b-synced.mp3', type: 'audio/mpeg' }],
           },
         },
       ],
@@ -124,13 +178,19 @@ TrackSwitch.createTrackSwitch(rootElement, {
       type: 'sheetMusic',
       src: 'score.musicxml',
       measureColumn: 'measure',
+      maxWidth: 960,
+      maxHeight: 360,
+      renderScale: 0.75,
       followPlayback: true,
+      cursorColor: '#999999',
+      cursorAlpha: 0.1,
       style: 'margin: 0;',
     },
     {
       type: 'warpingMatrix',
       height: 240,
       tempoSmoothingSeconds: 5,
+      globalScoreBPM: 60,
       style: 'margin: 0;',
     },
   ],
@@ -142,9 +202,19 @@ TrackSwitch.createTrackSwitch(rootElement, {
   },
   features: {
     mode: 'alignment',
+    exclusiveSolo: true,
+    muteOtherPlayerInstances: true,
     globalVolume: true,
     trackMixControls: true,
+    repeat: false,
+    tabView: false,
+    iosAudioUnlock: true,
+    keyboard: true,
     looping: true,
+    seekBar: true,
+    timer: true,
+    presets: false,
+    customizablePanelOrder: false,
   },
 });
 ```
@@ -168,7 +238,7 @@ At least one `trackGroup` section is required because that is where the tracks l
 
 ### `presetNames`
 
-Use `presetNames` to give friendly names to your saved track combinations.
+Use `presetNames` to create ensembles and name to your track combinations.
 
 Example:
 
@@ -185,34 +255,22 @@ Notes:
 
 ### `features`
 
-Use `features` to turn player tools on or off.
-
-Default settings:
-
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `mode?` | `'default' | 'alignment'` | `'default'` | Chooses between a standard multitrack player and an aligned comparison player. |
-| `exclusiveSolo?` | `boolean` | `false` | Keeps listening to one track at a time instead of mixing several tracks together. |
+| `mode?` | `'default' | 'alignment'` | `'default'` | Chooses between a standard multitrack player and an aligned performance comparison player. |
+| `exclusiveSolo?` | `boolean` | `false` | Listen to one track at a time only instead of mixing several tracks together. |
 | `muteOtherPlayerInstances?` | `boolean` | `true` | Stops another player on the same page when this one starts playing. |
 | `globalVolume?` | `boolean` | `false` | Shows a main volume control for the whole player. |
 | `trackMixControls?` | `boolean` | `false` | Shows per-track volume and pan controls. |
-| `customizablePanelOrder?` | `boolean` | `false` | Lets listeners rearrange the visible sections. |
+| `customizablePanelOrder?` | `boolean` | `false` | Lets listeners rearrange the visible UI elements. Affects the visible sections on the page, not the track order itself. |
 | `repeat?` | `boolean` | `false` | Starts with repeat already turned on. |
 | `tabView?` | `boolean` | `false` | Changes the look of the track rows to a tab-like style. |
-| `iosAudioUnlock?` | `boolean` | `true` | Helps playback start more reliably on iPhone and iPad. |
-| `keyboard?` | `boolean` | `true` | Turns keyboard shortcuts on. |
-| `looping?` | `boolean` | `false` | Shows loop tools and allows A/B looping. |
-| `seekBar?` | `boolean` | `true` | Shows the main seek bar. |
-| `timer?` | `boolean` | `true` | Shows the main time display. |
-| `presets?` | `boolean` | `true` | Shows preset switching when presets are available. |
-| `waveform?` | `boolean` | `true` | Keeps waveform display and interaction available. |
-
-Notes:
-
-- `mode: 'default'` is the normal multitrack player.
-- `mode: 'alignment'` is for comparing matched performances on a shared timeline.
-- In alignment mode, the player works one track at a time by default, with optional sync when synced files are available.
-- `customizablePanelOrder` affects the visible sections on the page, not the track order itself.
+| `iosAudioUnlock?` | `boolean` | `true` | Helps playback start more reliably on iPhone and iPad. Recommended to leave this on. |
+| `keyboard?` | `boolean` | `true` | Enable keyboard shortcuts. |
+| `looping?` | `boolean` | `false` | Show loop tools and allow A/B looping. |
+| `seekBar?` | `boolean` | `true` | Show the main seekbar. |
+| `timer?` | `boolean` | `true` | Show the main time display. |
+| `presets?` | `boolean` | `true` | Show preset switching UI element when presets are available. |
 
 ### `alignment`
 
@@ -233,20 +291,13 @@ Each entry inside `trackGroup` can use these options:
 | --- | --- | --- |
 | `title?` | `string` | Name shown in the track list. |
 | `solo?` | `boolean` | Starting on/off state for that track. |
-| `volume?` | `number` | Starting track volume. |
-| `pan?` | `number` | Starting left-right placement. |
+| `volume?` | `number` | Starting track volume. Starts at `1` if you do not set it. |
+| `pan?` | `number` | Starting left-right placement. Starts at `0` if you do not set it. |
 | `image?` | `string` | Image used by `perTrackImage` and other track-based visuals. |
-| `style?` | `string` | Lets you give that track row its own visual styling. |
 | `presets?` | `number[]` | Decides which presets include this track. |
 | `sources` | `object[]` | Audio files for this track. |
 | `alignment?` | `object` | Alignment settings for this track in an aligned comparison player. |
-
-Notes:
-
-- `volume` starts at `1` if you do not set it.
-- `pan` starts at `0` if you do not set it.
-- In a regular multitrack player, tracks normally start available for listening unless you set them differently.
-- In a one-track-at-a-time player, only one track stays active at once.
+| `style?` | `string` | Lets you give that track row its own visual styling. |
 
 ### Audio Source Options
 
