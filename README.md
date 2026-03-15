@@ -38,8 +38,9 @@ Or download the browser bundle from GitHub Releases:
 
 ```text
 trackswitch-release/
-├── trackswitch.min.css
-├── trackswitch.min.js
+├── dist/
+│   ├── css/trackswitch.min.css
+│   └── js/trackswitch.min.js
 ├── LICENSE
 └── THIRD_PARTY_NOTICES.md
 ```

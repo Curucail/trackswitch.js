@@ -582,8 +582,8 @@
           : '';
 
       snippetLines = [
-        '<link rel="stylesheet" href="trackswitch.min.css" />',
-        '<script src="trackswitch.min.js"></script>',
+        '<link rel="stylesheet" href="dist/css/trackswitch.min.css" />',
+        '<script src="dist/js/trackswitch.min.js"></script>',
         '',
         '<div id="player"></div>',
         '',
@@ -665,11 +665,11 @@
           : '';
 
       snippetLines = [
-        '<link rel="stylesheet" href="trackswitch.min.css" />',
+        '<link rel="stylesheet" href="dist/css/trackswitch.min.css" />',
         '',
         '<div id="player"></div>',
         '',
-        '<script src="trackswitch.min.js"></script>',
+        '<script src="dist/js/trackswitch.min.js"></script>',
         '<script>',
         "document.addEventListener('DOMContentLoaded', function () {",
         "  TrackSwitch.createTrackSwitch(document.getElementById('player'), {",

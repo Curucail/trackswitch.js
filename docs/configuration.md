@@ -106,8 +106,8 @@ Use the React entrypoint only in client components. The player itself needs the 
 ### In HTML {#in-html}
 
 ```html
-<link rel="stylesheet" href="trackswitch.min.css">
-<script src="trackswitch.min.js"></script>
+<link rel="stylesheet" href="dist/css/trackswitch.min.css">
+<script src="dist/js/trackswitch.min.js"></script>
 
 <div id="player"></div>
 
