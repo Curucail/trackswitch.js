@@ -44,6 +44,12 @@ dist/
     └── trackswitch.min.js
 ```
 
+Or build locally:
+
+1. Clone Repo
+2. `npm install`
+3. `npm run build`
+
 Quick Setup
 -----------
 

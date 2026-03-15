@@ -405,7 +405,7 @@ export function getWarpingMatrixContext(ctx: any): any {
         const baseReferenceTime = this.globalSyncEnabled
             ? this.mapAlignmentAxisTime(this.state.position, this.getActiveAlignmentAxisKey(), 'base')
             : clamp(this.state.position, 0, baseAxis.referenceDuration);
-        const currentScoreBpm = this.sheetMusicEngine.resolveReferenceBpm(baseReferenceTime, 'base');
+        const currentScoreBpm = this.sheetMusicEngine.resolveReferenceBpm(baseReferenceTime, false);
 
         const activeTrackIndex = this.getActiveSoloTrackIndex();
         if (activeTrackIndex < 0) {
@@ -668,7 +668,7 @@ export function trackToReferenceTime(ctx: any, trackIndex: any, trackTime: any):
             return trackTime;
         }
 
-        return mapTime(converter.trackToReference, trackTime, 'linear');
+        return mapTime(converter.trackToReference, trackTime, this.alignmentContext.outOfRange);
     }).call(ctx, trackIndex, trackTime);
 }
 
