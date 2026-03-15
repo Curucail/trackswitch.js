@@ -34,6 +34,9 @@
   "bugs": {
     "url": "https://github.com/audiolabs/trackswitch.js/issues"
   },
+  "publishConfig": {
+    "provenance": true
+  },
   "files": [
     "dist/",
     "LICENSE",
