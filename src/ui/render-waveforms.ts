@@ -1257,8 +1257,8 @@ export function applyFixedWaveformLocalSeekVisuals(ctx: any, state: any, wavefor
                     surface.seekWrap.classList.add('aligned-playhead');
                     const w = surface.seekWrap.offsetWidth;
                     const h = surface.seekWrap.offsetHeight;
-                    const localPx = clampPercent((localPosition / seekDuration) * 100) / 100 * w;
-                    const refPx = clampPercent((state.position / seekDuration) * 100) / 100 * w;
+                    const localPx = (localPosition / seekDuration) * w;
+                    const refPx = (state.position / seekDuration) * w;
                     const vertExtentRaw = parseFloat(getComputedStyle(surface.seekWrap).getPropertyValue('--seekhead-vertical-extent').trim());
                     const vertExtent = Number.isFinite(vertExtentRaw) ? Math.max(0, Math.min(0.5, vertExtentRaw)) : 0.35;
                     const segTop = h * (0.5 - vertExtent);
