@@ -619,6 +619,7 @@ export function getWaveformTimelineContext(ctx: any): any {
 
                 return duration;
             },
+            getTrackCount: (): number => this.runtimes.length,
         };
     }).call(ctx);
 }

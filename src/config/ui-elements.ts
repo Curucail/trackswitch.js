@@ -25,6 +25,7 @@ const uiWaveformAllowedKeys = [
     'waveformSource',
     'playbackFollowMode',
     'timer',
+    'alignedPlayhead',
     'style',
     'seekMarginLeft',
     'seekMarginRight',
@@ -118,6 +119,14 @@ function normalizeWaveformTimer(value: boolean | undefined): boolean | undefined
     return typeof value === 'boolean' ? value : undefined;
 }
 
+function normalizeWaveformAlignedPlayhead(value: boolean | undefined): boolean | undefined {
+    if (value === undefined) {
+        return undefined;
+    }
+
+    return typeof value === 'boolean' ? value : undefined;
+}
+
 function normalizeWaveformPlaybackFollowMode(value: unknown): WaveformPlaybackFollowMode {
     if (value === 'center' || value === 'jump') {
         return value;
@@ -150,6 +159,7 @@ function normalizeWaveformConfig<T extends TrackSwitchWaveformConfig>(waveform: 
         waveformSource: normalizeWaveformSource(waveform.waveformSource),
         playbackFollowMode: normalizeWaveformPlaybackFollowMode(waveform.playbackFollowMode),
         timer: normalizeWaveformTimer(waveform.timer),
+        alignedPlayhead: normalizeWaveformAlignedPlayhead(waveform.alignedPlayhead),
     };
 
     validateSeekMargins(normalized, 'ui.waveform');
@@ -410,6 +420,10 @@ function injectWaveform(root: HTMLElement, waveform: TrackSwitchWaveformConfig):
 
     if (typeof waveform.timer === 'boolean') {
         canvas.setAttribute('data-waveform-timer', String(waveform.timer));
+    }
+
+    if (typeof waveform.alignedPlayhead === 'boolean') {
+        canvas.setAttribute('data-waveform-aligned-playhead', String(waveform.alignedPlayhead));
     }
 
     if (typeof waveform.style === 'string') {

@@ -72,6 +72,22 @@
     z-index: 4; 
 }
 
+.trackswitch .waveform-wrap .seekwrap .seekhead-ref-hook {
+    position: absolute;
+    height: 2px;
+    display: none;
+    background-color: var(--ts-color-surface-panel-dark);
+    z-index: 4;
+}
+
+.trackswitch .waveform-wrap .seekwrap .seekhead-ref-hook-top {
+    top: 0;
+}
+
+.trackswitch .waveform-wrap .seekwrap .seekhead-ref-hook-bottom {
+    bottom: 0;
+}
+
 .trackswitch .waveform-wrap .seekwrap .loop-marker {
     position: absolute;
     width: 10px;

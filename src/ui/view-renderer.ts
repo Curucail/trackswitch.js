@@ -25,6 +25,7 @@ export interface WaveformTimelineContext {
     enabled: boolean;
     referenceToTrackTime(trackIndex: number, referenceTime: number): number;
     getTrackDuration(trackIndex: number): number;
+    getTrackCount(): number;
 }
 
 export interface SheetMusicHostConfig {
@@ -88,6 +89,7 @@ interface WaveformSeekSurfaceMetadata {
     }>;
     normalizationPeak: number;
     normalizationCacheKey: string | null;
+    alignedPlayhead: boolean;
 }
 
 interface LatestWaveformRenderInput {

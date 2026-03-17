@@ -43,6 +43,7 @@ interface WaveformSeekSurfaceMetadata {
     }>;
     normalizationPeak: number;
     normalizationCacheKey: string | null;
+    alignedPlayhead: boolean;
 }
 
 const MIN_WAVEFORM_ZOOM = 1;
@@ -54,6 +55,8 @@ function buildSeekWrap(leftPercent: number, rightPercent: number): string {
         + '<div class="loop-marker marker-a"></div>'
         + '<div class="loop-marker marker-b"></div>'
         + '<div class="seekhead"></div>'
+        + '<div class="seekhead-ref-hook seekhead-ref-hook-top"></div>'
+        + '<div class="seekhead-ref-hook seekhead-ref-hook-bottom"></div>'
         + '</div>';
 }
 
@@ -130,6 +133,14 @@ function isWaveformTrackAudible(ctx: any, runtimes: TrackRuntime[], trackIndex: 
 function parseWaveformTimerEnabled(value: string | null, mode: TrackSwitchFeatures['mode']): boolean {
     if (value === null) {
         return mode === 'alignment';
+    }
+
+    return value.trim().toLowerCase() === 'true';
+}
+
+function parseWaveformAlignedPlayheadEnabled(value: string | null): boolean {
+    if (value === null) {
+        return false;
     }
 
     return value.trim().toLowerCase() === 'true';
@@ -376,6 +387,9 @@ export function wrapWaveformCanvases(ctx: any): any {
                 canvasElement.getAttribute('data-waveform-timer'),
                 this.features.mode
             );
+            const alignedPlayhead = parseWaveformAlignedPlayheadEnabled(
+                canvasElement.getAttribute('data-waveform-aligned-playhead')
+            );
             const originalHeight = canvasElement.height;
 
             const wrapper = document.createElement('div');
@@ -463,6 +477,7 @@ export function wrapWaveformCanvases(ctx: any): any {
                     }>(),
                     normalizationPeak: 1,
                     normalizationCacheKey: null,
+                    alignedPlayhead: alignedPlayhead,
                 });
 
                 scrollContainer.addEventListener('scroll', () => {
@@ -980,6 +995,14 @@ export function renderWaveformsInternal(ctx: any, waveformEngine: any, runtimes:
         const pixelRatio = this.getCanvasPixelRatio();
         const safeTimelineDuration = Number.isFinite(timelineDuration) && timelineDuration > 0 ? timelineDuration : 0;
 
+        let longestTrackDuration = 0;
+        if (waveformTimelineContext && waveformTimelineContext.enabled) {
+            for (let ti = 0; ti < waveformTimelineContext.getTrackCount(); ti++) {
+                const d = sanitizeDuration(waveformTimelineContext.getTrackDuration(ti));
+                if (d > longestTrackDuration) longestTrackDuration = d;
+            }
+        }
+
         for (let i = 0; i < this.waveformSeekSurfaces.length; i += 1) {
             const surfaceMetadata = this.waveformSeekSurfaces[i];
             surfaceMetadata.waveformColor = resolveWaveformColor(surfaceMetadata.surface);
@@ -993,7 +1016,9 @@ export function renderWaveformsInternal(ctx: any, waveformEngine: any, runtimes:
                 && waveformTimelineContext.enabled
                 && fixedWaveformTrackIndex !== null
                 && localTrackDuration > 0;
-            const fullDuration = useLocalAxis ? localTrackDuration : safeTimelineDuration;
+            const fullDuration = useLocalAxis
+                ? (longestTrackDuration > 0 ? longestTrackDuration : localTrackDuration)
+                : safeTimelineDuration;
             const baseProjector: TrackTimelineProjector = useLocalAxis
                 ? ((_runtime, trackTimelineTimeSeconds) => trackTimelineTimeSeconds)
                 : (trackTimelineProjector || ((_runtime, trackTimelineTimeSeconds) => trackTimelineTimeSeconds));
@@ -1166,7 +1191,19 @@ export function updateWaveformZoomIndicators(ctx: any): any {
 export function applyFixedWaveformLocalSeekVisuals(ctx: any, state: any, waveformTimelineContext: any): any {
     return (function(this: any, state: any, waveformTimelineContext: any) {
         if (!waveformTimelineContext || !waveformTimelineContext.enabled) {
+            this.waveformSeekSurfaces.forEach((surface: WaveformSeekSurfaceMetadata) => {
+                const topHook = surface.seekWrap.querySelector('.seekhead-ref-hook-top') as HTMLElement | null;
+                const bottomHook = surface.seekWrap.querySelector('.seekhead-ref-hook-bottom') as HTMLElement | null;
+                if (topHook) setDisplay(topHook, 'none');
+                if (bottomHook) setDisplay(bottomHook, 'none');
+            });
             return;
+        }
+
+        let longestTrackDuration = 0;
+        for (let ti = 0; ti < waveformTimelineContext.getTrackCount(); ti++) {
+            const d = sanitizeDuration(waveformTimelineContext.getTrackDuration(ti));
+            if (d > longestTrackDuration) longestTrackDuration = d;
         }
 
         this.waveformSeekSurfaces.forEach((surface: WaveformSeekSurfaceMetadata) => {
@@ -1181,6 +1218,8 @@ export function applyFixedWaveformLocalSeekVisuals(ctx: any, state: any, wavefor
             if (trackDuration <= 0) {
                 return;
             }
+
+            const seekDuration = longestTrackDuration > 0 ? longestTrackDuration : trackDuration;
 
             const localPosition = clampTime(
                 waveformTimelineContext.referenceToTrackTime(trackIndex, state.position),
@@ -1202,13 +1241,38 @@ export function applyFixedWaveformLocalSeekVisuals(ctx: any, state: any, wavefor
                 orderedPointB = previousA;
             }
 
-            this.updateSeekWrapVisuals(surface.seekWrap, localPosition, trackDuration, {
+            this.updateSeekWrapVisuals(surface.seekWrap, localPosition, seekDuration, {
                 pointA: orderedPointA,
                 pointB: orderedPointB,
                 enabled: state.loop.enabled,
             });
+
+            const topHook = surface.seekWrap.querySelector('.seekhead-ref-hook-top') as HTMLElement | null;
+            const bottomHook = surface.seekWrap.querySelector('.seekhead-ref-hook-bottom') as HTMLElement | null;
+            if (topHook && bottomHook) {
+                if (surface.alignedPlayhead && seekDuration > 0) {
+                    const localPct = clampPercent((localPosition / seekDuration) * 100);
+                    const refPct = clampPercent((state.position / seekDuration) * 100);
+                    const leftPct = Math.min(localPct, refPct);
+                    const widthPct = Math.abs(refPct - localPct);
+                    if (widthPct > 0) {
+                        setLeftPercent(topHook, leftPct);
+                        setWidthPercent(topHook, widthPct);
+                        setDisplay(topHook, 'block');
+                        setLeftPercent(bottomHook, leftPct);
+                        setWidthPercent(bottomHook, widthPct);
+                        setDisplay(bottomHook, 'block');
+                    } else {
+                        setDisplay(topHook, 'none');
+                        setDisplay(bottomHook, 'none');
+                    }
+                } else {
+                    setDisplay(topHook, 'none');
+                    setDisplay(bottomHook, 'none');
+                }
+            }
         });
-    
+
     }).call(ctx, state, waveformTimelineContext);
 }
 
