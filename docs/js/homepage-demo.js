@@ -610,7 +610,7 @@
 
       if (model.customImage) {
         snippetLines.push(
-          "      { type: 'image', src: 'cover.jpg', seekable: " + Boolean(model.seekableImage) + ", style: 'margin: 12px auto;' },"
+          "      { type: 'image', src: 'cover.png', seekable: " + Boolean(model.seekableImage) + ", style: 'margin: 12px auto;' },"
         );
       }
 
@@ -905,7 +905,7 @@
       if (model.customImage && !isAlignmentMode(currentMode)) {
         uiConfig.push({
           type: 'image',
-          src: basePath + '/cover.jpg',
+          src: basePath + '/cover.png',
           seekable: Boolean(model.seekableImage),
         });
       }

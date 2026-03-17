@@ -183,7 +183,7 @@
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 10px;
     background: rgba(72, 72, 72, 0.96);
-    color: var(--ts-color-text-inverse);
+    color: #fff;
     font-size: 13px;
     animation: trackswitch-shortcut-content-fade 220ms ease-out;
     outline: none;
@@ -198,7 +198,7 @@
 }
 
 .trackswitch .shortcut-help-heading {
-    color: var(--ts-color-text-inverse);
+    color: #fff;
     font-family: inherit;
 }
 
@@ -233,7 +233,7 @@
     grid-template-columns: minmax(116px, 180px) minmax(0, 1fr);
     gap: 10px;
     align-items: start;
-    padding: 6px 0;
+    padding: 8px 0;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     opacity: 0;
     animation: trackswitch-shortcut-content-fade 220ms ease-out forwards;
@@ -245,13 +245,13 @@
     align-items: center;
     min-height: 18px;
     padding: 0;
-    color: rgba(255, 255, 255, 0.92);
+    color: #fff;
     font-weight: 600;
     line-height: 1.1;
 }
 
 .trackswitch .shortcut-help-action {
-    color: rgba(255, 255, 255, 0.84);
+    color: #fff;
     line-height: 1.2;
 }
 
