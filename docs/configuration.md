@@ -234,6 +234,7 @@ TrackSwitch.createTrackSwitch(rootElement, {
       waveformSource: 0,
       playbackFollowMode: 'jump',
       timer: true,
+      alignedPlayhead: true,
       seekMarginLeft: 3,
       seekMarginRight: 4,
       style: 'margin: 0;',
@@ -560,6 +561,7 @@ Section options:
 | `waveformSource?` | `'audible' | number | number[]` | `'audible'` | Chooses which sound the waveform represents. |
 | `playbackFollowMode?` | `'off' | 'center' | 'jump'` | `'off'` | Decides whether the waveform view follows playback automatically. |
 | `timer?` | `boolean` | Standard: `false`; Alignment: `true` | Shows a small time label inside the waveform panel. |
+| `alignedPlayhead?` | `boolean` | `false` | Draws a diagonal Z-shaped indicator that shows where the reference timeline position is relative to this track's local playhead. Only has an effect in alignment mode and requires `waveformSource` to be a track index (number). |
 | `seekMarginLeft?` | `number` | `0` | Leaves a non-seekable area on the left side. |
 | `seekMarginRight?` | `number` | `0` | Leaves a non-seekable area on the right side. |
 | `style?` | `string` | none | Lets you fine-tune the look or spacing of the section with CSS. |
