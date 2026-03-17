@@ -127,6 +127,10 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
           </select>
         </label>
         <label class="ts-control-row">
+          <span>Aligned Playhead</span>
+          <input type="checkbox" name="alignedPlayhead" />
+        </label>
+        <label class="ts-control-row">
           <span>Custom Cover Image</span>
           <input type="checkbox" name="customImage" />
         </label>

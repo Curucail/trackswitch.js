@@ -64,6 +64,7 @@
     'keyboard',
     'waveform',
     'waveformPlaybackFollowMode',
+    'alignedPlayhead',
     'sheetNotePreview',
     'warpingMatrix',
     'customImage',
@@ -87,6 +88,7 @@
     'keyboard',
     'waveform',
     'waveformPlaybackFollowMode',
+    'alignedPlayhead',
     'sheetNotePreview',
     'warpingMatrix',
     'customImage',
@@ -99,7 +101,7 @@
   ];
 
   var MODE_DISABLED_CONTROLS = {
-    default: ['sheetNotePreview', 'warpingMatrix'],
+    default: ['sheetNotePreview', 'warpingMatrix', 'alignedPlayhead'],
     alignment: ['customImage', 'seekableImage', 'presets', 'exclusiveSolo', 'trackImageBySolo'],
   };
 
@@ -114,6 +116,7 @@
     keyboard: true,
     waveform: true,
     waveformPlaybackFollowMode: 'off',
+    alignedPlayhead: false,
     sheetNotePreview: false,
     warpingMatrix: false,
     customImage: false,
@@ -214,6 +217,10 @@
       }
 
       if (name === 'waveformPlaybackFollowMode' && !model.waveform) {
+        return true;
+      }
+
+      if (name === 'alignedPlayhead' && !model.waveform) {
         return true;
       }
 
@@ -699,11 +706,12 @@
       }
 
       if (model.waveform) {
+        var alignedPlayheadSnippet = model.alignedPlayhead ? ', alignedPlayhead: true' : '';
         snippetLines.push(
-          "      { type: 'waveform', height: 100, waveformSource: 0" + waveformFollowSnippet + " },"
+          "      { type: 'waveform', height: 100, waveformSource: 0" + waveformFollowSnippet + alignedPlayheadSnippet + " },"
         );
         snippetLines.push(
-          "      { type: 'waveform', height: 100, waveformSource: 1" + waveformFollowSnippet + " },"
+          "      { type: 'waveform', height: 100, waveformSource: 1" + waveformFollowSnippet + alignedPlayheadSnippet + " },"
         );
       }
 
@@ -932,6 +940,11 @@
               model.waveformPlaybackFollowMode;
             alignmentWaveformTwo.playbackFollowMode =
               model.waveformPlaybackFollowMode;
+          }
+
+          if (model.alignedPlayhead) {
+            alignmentWaveformOne.alignedPlayhead = true;
+            alignmentWaveformTwo.alignedPlayhead = true;
           }
 
           uiConfig.push(alignmentWaveformOne);
