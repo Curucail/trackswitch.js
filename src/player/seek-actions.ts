@@ -629,6 +629,10 @@ export function getWaveformTimelineContext(ctx: any): any {
                 return duration;
             },
             getTrackCount: (): number => this.runtimes.length,
+            getTrackAlignmentPoints: (trackIndex: number): Array<{ referenceTime: number; trackTime: number }> => {
+                if (!this.alignmentContext) return [];
+                return this.alignmentContext.warpingSeriesByTrack.get(trackIndex)?.points ?? [];
+            },
         };
     }).call(ctx);
 }

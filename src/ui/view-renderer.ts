@@ -26,6 +26,7 @@ export interface WaveformTimelineContext {
     referenceToTrackTime(trackIndex: number, referenceTime: number): number;
     getTrackDuration(trackIndex: number): number;
     getTrackCount(): number;
+    getTrackAlignmentPoints(trackIndex: number): Array<{ referenceTime: number; trackTime: number }>;
 }
 
 export interface SheetMusicHostConfig {

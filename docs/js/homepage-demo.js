@@ -65,6 +65,7 @@
     'waveform',
     'waveformPlaybackFollowMode',
     'alignedPlayhead',
+    'showAlignmentPoints',
     'sheetNotePreview',
     'warpingMatrix',
     'customImage',
@@ -89,6 +90,7 @@
     'waveform',
     'waveformPlaybackFollowMode',
     'alignedPlayhead',
+    'showAlignmentPoints',
     'sheetNotePreview',
     'warpingMatrix',
     'customImage',
@@ -101,7 +103,7 @@
   ];
 
   var MODE_DISABLED_CONTROLS = {
-    default: ['sheetNotePreview', 'warpingMatrix', 'alignedPlayhead'],
+    default: ['sheetNotePreview', 'warpingMatrix', 'alignedPlayhead', 'showAlignmentPoints'],
     alignment: ['customImage', 'seekableImage', 'presets', 'exclusiveSolo', 'trackImageBySolo'],
   };
 
@@ -117,6 +119,7 @@
     waveform: true,
     waveformPlaybackFollowMode: 'off',
     alignedPlayhead: false,
+    showAlignmentPoints: false,
     sheetNotePreview: false,
     warpingMatrix: false,
     customImage: false,
@@ -221,6 +224,10 @@
       }
 
       if (name === 'alignedPlayhead' && !model.waveform) {
+        return true;
+      }
+
+      if (name === 'showAlignmentPoints' && !model.waveform) {
         return true;
       }
 
@@ -707,11 +714,12 @@
 
       if (model.waveform) {
         var alignedPlayheadSnippet = model.alignedPlayhead ? ', alignedPlayhead: true' : '';
+        var showAlignmentPointsSnippet = model.showAlignmentPoints ? ', showAlignmentPoints: true' : '';
         snippetLines.push(
-          "      { type: 'waveform', height: 100, waveformSource: 0" + waveformFollowSnippet + alignedPlayheadSnippet + " },"
+          "      { type: 'waveform', height: 100, waveformSource: 0" + waveformFollowSnippet + alignedPlayheadSnippet + showAlignmentPointsSnippet + " },"
         );
         snippetLines.push(
-          "      { type: 'waveform', height: 100, waveformSource: 1" + waveformFollowSnippet + alignedPlayheadSnippet + " },"
+          "      { type: 'waveform', height: 100, waveformSource: 1" + waveformFollowSnippet + alignedPlayheadSnippet + showAlignmentPointsSnippet + " },"
         );
       }
 
@@ -945,6 +953,11 @@
           if (model.alignedPlayhead) {
             alignmentWaveformOne.alignedPlayhead = true;
             alignmentWaveformTwo.alignedPlayhead = true;
+          }
+
+          if (model.showAlignmentPoints) {
+            alignmentWaveformOne.showAlignmentPoints = true;
+            alignmentWaveformTwo.showAlignmentPoints = true;
           }
 
           uiConfig.push(alignmentWaveformOne);

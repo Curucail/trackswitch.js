@@ -75,6 +75,7 @@ export interface TrackSwitchWaveformConfig {
     playbackFollowMode?: WaveformPlaybackFollowMode;
     timer?: boolean;
     alignedPlayhead?: boolean;
+    showAlignmentPoints?: boolean;
     style?: string;
     seekMarginLeft?: number;
     seekMarginRight?: number;

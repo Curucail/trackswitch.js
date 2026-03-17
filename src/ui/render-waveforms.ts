@@ -45,6 +45,11 @@ interface WaveformSeekSurfaceMetadata {
     normalizationCacheKey: string | null;
     alignedPlayhead: boolean;
     refHooksPath: SVGPathElement | null;
+    showAlignmentPoints: boolean;
+    alignmentPointsGroup: SVGGElement | null;
+    alignmentPointsPaths: SVGPathElement[];
+    alignmentPointsLastW: number;
+    alignmentPointsLastH: number;
 }
 
 const MIN_WAVEFORM_ZOOM = 1;
@@ -56,7 +61,9 @@ function buildSeekWrap(leftPercent: number, rightPercent: number): string {
         + '<div class="loop-marker marker-a"></div>'
         + '<div class="loop-marker marker-b"></div>'
         + '<div class="seekhead"></div>'
-        + '<svg class="seekhead-ref-hooks" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"></svg>'
+        + '<svg class="seekhead-ref-hooks" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">'
+        + '<g class="alignment-points-group"></g>'
+        + '</svg>'
         + '</div>';
 }
 
@@ -144,6 +151,25 @@ function parseWaveformAlignedPlayheadEnabled(value: string | null): boolean {
     }
 
     return value.trim().toLowerCase() === 'true';
+}
+
+function parseWaveformShowAlignmentPointsEnabled(value: string | null): boolean {
+    if (value === null) {
+        return false;
+    }
+
+    return value.trim().toLowerCase() === 'true';
+}
+
+function ensureAlignmentPointPaths(group: SVGGElement, paths: SVGPathElement[], count: number): void {
+    while (paths.length < count) {
+        const p = document.createElementNS('http://www.w3.org/2000/svg', 'path') as SVGPathElement;
+        group.appendChild(p);
+        paths.push(p);
+    }
+    for (let i = 0; i < paths.length; i++) {
+        paths[i].style.display = i < count ? '' : 'none';
+    }
 }
 
 function parseWaveformMaxZoom(value: string | null): number {
@@ -390,6 +416,9 @@ export function wrapWaveformCanvases(ctx: any): any {
             const alignedPlayhead = parseWaveformAlignedPlayheadEnabled(
                 canvasElement.getAttribute('data-waveform-aligned-playhead')
             );
+            const showAlignmentPoints = parseWaveformShowAlignmentPointsEnabled(
+                canvasElement.getAttribute('data-waveform-show-alignment-points')
+            );
             const originalHeight = canvasElement.height;
 
             const wrapper = document.createElement('div');
@@ -440,7 +469,9 @@ export function wrapWaveformCanvases(ctx: any): any {
                     : null;
                 const refHooksSvgEl = seekWrap.querySelector('.seekhead-ref-hooks');
                 let refHooksPath: SVGPathElement | null = null;
+                let alignmentPointsGroup: SVGGElement | null = null;
                 if (refHooksSvgEl instanceof SVGSVGElement) {
+                    alignmentPointsGroup = refHooksSvgEl.querySelector('.alignment-points-group') as SVGGElement | null;
                     refHooksPath = document.createElementNS('http://www.w3.org/2000/svg', 'path') as SVGPathElement;
                     refHooksSvgEl.appendChild(refHooksPath);
                 }
@@ -485,6 +516,11 @@ export function wrapWaveformCanvases(ctx: any): any {
                     normalizationCacheKey: null,
                     alignedPlayhead: alignedPlayhead,
                     refHooksPath: refHooksPath,
+                    showAlignmentPoints: showAlignmentPoints,
+                    alignmentPointsGroup: alignmentPointsGroup,
+                    alignmentPointsPaths: [],
+                    alignmentPointsLastW: -1,
+                    alignmentPointsLastH: -1,
                 });
 
                 scrollContainer.addEventListener('scroll', () => {
@@ -1201,6 +1237,9 @@ export function applyFixedWaveformLocalSeekVisuals(ctx: any, state: any, wavefor
             this.waveformSeekSurfaces.forEach((surface: WaveformSeekSurfaceMetadata) => {
                 surface.seekWrap.classList.remove('aligned-playhead');
                 if (surface.refHooksPath) surface.refHooksPath.setAttribute('d', '');
+                if (surface.alignmentPointsGroup) {
+                    ensureAlignmentPointPaths(surface.alignmentPointsGroup, surface.alignmentPointsPaths, 0);
+                }
             });
             return;
         }
@@ -1252,11 +1291,14 @@ export function applyFixedWaveformLocalSeekVisuals(ctx: any, state: any, wavefor
                 enabled: state.loop.enabled,
             });
 
+            const needsDimensions = (surface.refHooksPath && surface.alignedPlayhead && seekDuration > 0)
+                || (surface.alignmentPointsGroup && surface.showAlignmentPoints && seekDuration > 0);
+            const w = needsDimensions ? surface.seekWrap.offsetWidth : 0;
+            const h = needsDimensions ? surface.seekWrap.offsetHeight : 0;
+
             if (surface.refHooksPath) {
                 if (surface.alignedPlayhead && seekDuration > 0) {
                     surface.seekWrap.classList.add('aligned-playhead');
-                    const w = surface.seekWrap.offsetWidth;
-                    const h = surface.seekWrap.offsetHeight;
                     const localPx = (localPosition / seekDuration) * w;
                     const refPx = (state.position / seekDuration) * w;
                     const vertExtentRaw = parseFloat(getComputedStyle(surface.seekWrap).getPropertyValue('--seekhead-vertical-extent').trim());
@@ -1270,6 +1312,39 @@ export function applyFixedWaveformLocalSeekVisuals(ctx: any, state: any, wavefor
                 } else {
                     surface.seekWrap.classList.remove('aligned-playhead');
                     surface.refHooksPath.setAttribute('d', '');
+                }
+            }
+
+            if (surface.alignmentPointsGroup) {
+                if (surface.showAlignmentPoints && seekDuration > 0) {
+                    const points = waveformTimelineContext.getTrackAlignmentPoints(trackIndex);
+                    if (w !== surface.alignmentPointsLastW || h !== surface.alignmentPointsLastH) {
+                        const vertExtentRaw = parseFloat(
+                            getComputedStyle(surface.seekWrap).getPropertyValue('--seekhead-vertical-extent').trim()
+                        );
+                        const vertExtent = Number.isFinite(vertExtentRaw) ? Math.max(0, Math.min(0.5, vertExtentRaw)) : 0.35;
+                        const segTop = h * (0.5 - vertExtent);
+                        const segBot = h * (0.5 + vertExtent);
+
+                        ensureAlignmentPointPaths(surface.alignmentPointsGroup, surface.alignmentPointsPaths, points.length);
+
+                        for (let pi = 0; pi < points.length; pi++) {
+                            const pt = points[pi];
+                            const trackPx = (pt.trackTime / seekDuration) * w;
+                            const refPx = (pt.referenceTime / seekDuration) * w;
+                            surface.alignmentPointsPaths[pi].setAttribute(
+                                'd',
+                                `M ${refPx} 0 L ${trackPx} ${segTop} L ${trackPx} ${segBot} L ${refPx} ${h}`
+                            );
+                        }
+
+                        surface.alignmentPointsLastW = w;
+                        surface.alignmentPointsLastH = h;
+                    }
+                } else {
+                    ensureAlignmentPointPaths(surface.alignmentPointsGroup, surface.alignmentPointsPaths, 0);
+                    surface.alignmentPointsLastW = -1;
+                    surface.alignmentPointsLastH = -1;
                 }
             }
         });

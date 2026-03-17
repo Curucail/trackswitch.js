@@ -75,6 +75,7 @@
     --seekhead-vertical-extent: 0.35;
     --seekhead-color: var(--ts-color-surface-panel-dark);
     --seekhead-ref-color: var(--ts-color-surface-panel-dark);
+    --alignment-points-color: rgba(128, 128, 128, 0.5);
 }
 
 .trackswitch .waveform-wrap .seekwrap .seekhead {
@@ -93,6 +94,13 @@
     fill: none;
     stroke: var(--seekhead-ref-color);
     stroke-width: 2px;
+}
+
+.trackswitch .waveform-wrap .seekwrap .alignment-points-group path {
+    fill: none;
+    stroke: var(--alignment-points-color);
+    stroke-width: 1px;
+    stroke-dasharray: 1 1;
 }
 
 .trackswitch .waveform-wrap .seekwrap.aligned-playhead .seekhead {
