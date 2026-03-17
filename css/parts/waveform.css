@@ -72,20 +72,26 @@
     z-index: 4; 
 }
 
-.trackswitch .waveform-wrap .seekwrap .seekhead-ref-hook {
+.trackswitch .waveform-wrap .seekwrap {
+    --seekhead-vertical-extent: 0.35;
+}
+
+.trackswitch .waveform-wrap .seekwrap .seekhead-ref-hooks {
     position: absolute;
-    height: 2px;
-    display: none;
-    background-color: var(--ts-color-surface-panel-dark);
+    inset: 0;
+    overflow: visible;
+    pointer-events: none;
     z-index: 4;
 }
 
-.trackswitch .waveform-wrap .seekwrap .seekhead-ref-hook-top {
-    top: 0;
+.trackswitch .waveform-wrap .seekwrap .seekhead-ref-hooks path {
+    fill: none;
+    stroke: var(--ts-color-surface-panel-dark);
+    stroke-width: 2px;
 }
 
-.trackswitch .waveform-wrap .seekwrap .seekhead-ref-hook-bottom {
-    bottom: 0;
+.trackswitch .waveform-wrap .seekwrap.aligned-playhead .seekhead {
+    display: none;
 }
 
 .trackswitch .waveform-wrap .seekwrap .loop-marker {

@@ -574,11 +574,20 @@ export function getSeekTimelineContext(ctx: any, seekingElement: any): any {
             return referenceContext;
         }
 
+        let longestTrackDuration = trackDuration;
+        for (let i = 0; i < this.runtimes.length; i++) {
+            const rt = this.runtimes[i];
+            if (rt) {
+                const d = (ctx.constructor as any).getRuntimeDuration(rt);
+                if (Number.isFinite(d) && d > longestTrackDuration) longestTrackDuration = d;
+            }
+        }
+
         return {
-            duration: trackDuration,
-            toReferenceTime: (timelineTime: number): number => {
-                const clampedTimelineTime = clamp(timelineTime, 0, trackDuration);
-                return clamp(this.trackToReferenceTime(trackIndex, clampedTimelineTime), 0, this.longestDuration);
+            duration: longestTrackDuration,
+            toReferenceTime: (sharedTime: number): number => {
+                const clampedTrackTime = clamp(sharedTime, 0, trackDuration);
+                return clamp(this.trackToReferenceTime(trackIndex, clampedTrackTime), 0, this.longestDuration);
             },
             fromReferenceTime: (referenceTime: number): number => {
                 const clampedReferenceTime = clamp(referenceTime, 0, this.longestDuration);

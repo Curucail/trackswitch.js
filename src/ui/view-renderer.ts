@@ -90,6 +90,7 @@ interface WaveformSeekSurfaceMetadata {
     normalizationPeak: number;
     normalizationCacheKey: string | null;
     alignedPlayhead: boolean;
+    refHooksPath: SVGPathElement | null;
 }
 
 interface LatestWaveformRenderInput {

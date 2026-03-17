@@ -44,6 +44,7 @@ interface WaveformSeekSurfaceMetadata {
     normalizationPeak: number;
     normalizationCacheKey: string | null;
     alignedPlayhead: boolean;
+    refHooksPath: SVGPathElement | null;
 }
 
 const MIN_WAVEFORM_ZOOM = 1;
@@ -55,8 +56,7 @@ function buildSeekWrap(leftPercent: number, rightPercent: number): string {
         + '<div class="loop-marker marker-a"></div>'
         + '<div class="loop-marker marker-b"></div>'
         + '<div class="seekhead"></div>'
-        + '<div class="seekhead-ref-hook seekhead-ref-hook-top"></div>'
-        + '<div class="seekhead-ref-hook seekhead-ref-hook-bottom"></div>'
+        + '<svg class="seekhead-ref-hooks" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"></svg>'
         + '</div>';
 }
 
@@ -438,6 +438,12 @@ export function wrapWaveformCanvases(ctx: any): any {
                 const timingNode = timerEnabled
                     ? this.createWaveformTimingNode(overlay)
                     : null;
+                const refHooksSvgEl = seekWrap.querySelector('.seekhead-ref-hooks');
+                let refHooksPath: SVGPathElement | null = null;
+                if (refHooksSvgEl instanceof SVGSVGElement) {
+                    refHooksPath = document.createElementNS('http://www.w3.org/2000/svg', 'path') as SVGPathElement;
+                    refHooksSvgEl.appendChild(refHooksPath);
+                }
                 const zoomNode = this.createWaveformZoomNode(overlay);
                 const zoomMinimapNode = zoomNode.querySelector('.waveform-zoom-minimap');
                 const zoomCanvas = zoomNode.querySelector('.waveform-zoom-canvas');
@@ -478,6 +484,7 @@ export function wrapWaveformCanvases(ctx: any): any {
                     normalizationPeak: 1,
                     normalizationCacheKey: null,
                     alignedPlayhead: alignedPlayhead,
+                    refHooksPath: refHooksPath,
                 });
 
                 scrollContainer.addEventListener('scroll', () => {
@@ -1192,10 +1199,8 @@ export function applyFixedWaveformLocalSeekVisuals(ctx: any, state: any, wavefor
     return (function(this: any, state: any, waveformTimelineContext: any) {
         if (!waveformTimelineContext || !waveformTimelineContext.enabled) {
             this.waveformSeekSurfaces.forEach((surface: WaveformSeekSurfaceMetadata) => {
-                const topHook = surface.seekWrap.querySelector('.seekhead-ref-hook-top') as HTMLElement | null;
-                const bottomHook = surface.seekWrap.querySelector('.seekhead-ref-hook-bottom') as HTMLElement | null;
-                if (topHook) setDisplay(topHook, 'none');
-                if (bottomHook) setDisplay(bottomHook, 'none');
+                surface.seekWrap.classList.remove('aligned-playhead');
+                if (surface.refHooksPath) surface.refHooksPath.setAttribute('d', '');
             });
             return;
         }
@@ -1247,28 +1252,24 @@ export function applyFixedWaveformLocalSeekVisuals(ctx: any, state: any, wavefor
                 enabled: state.loop.enabled,
             });
 
-            const topHook = surface.seekWrap.querySelector('.seekhead-ref-hook-top') as HTMLElement | null;
-            const bottomHook = surface.seekWrap.querySelector('.seekhead-ref-hook-bottom') as HTMLElement | null;
-            if (topHook && bottomHook) {
+            if (surface.refHooksPath) {
                 if (surface.alignedPlayhead && seekDuration > 0) {
-                    const localPct = clampPercent((localPosition / seekDuration) * 100);
-                    const refPct = clampPercent((state.position / seekDuration) * 100);
-                    const leftPct = Math.min(localPct, refPct);
-                    const widthPct = Math.abs(refPct - localPct);
-                    if (widthPct > 0) {
-                        setLeftPercent(topHook, leftPct);
-                        setWidthPercent(topHook, widthPct);
-                        setDisplay(topHook, 'block');
-                        setLeftPercent(bottomHook, leftPct);
-                        setWidthPercent(bottomHook, widthPct);
-                        setDisplay(bottomHook, 'block');
-                    } else {
-                        setDisplay(topHook, 'none');
-                        setDisplay(bottomHook, 'none');
-                    }
+                    surface.seekWrap.classList.add('aligned-playhead');
+                    const w = surface.seekWrap.offsetWidth;
+                    const h = surface.seekWrap.offsetHeight;
+                    const localPx = clampPercent((localPosition / seekDuration) * 100) / 100 * w;
+                    const refPx = clampPercent((state.position / seekDuration) * 100) / 100 * w;
+                    const vertExtentRaw = parseFloat(getComputedStyle(surface.seekWrap).getPropertyValue('--seekhead-vertical-extent').trim());
+                    const vertExtent = Number.isFinite(vertExtentRaw) ? Math.max(0, Math.min(0.5, vertExtentRaw)) : 0.35;
+                    const segTop = h * (0.5 - vertExtent);
+                    const segBot = h * (0.5 + vertExtent);
+                    surface.refHooksPath.setAttribute(
+                        'd',
+                        `M ${refPx} 0 L ${localPx} ${segTop} L ${localPx} ${segBot} L ${refPx} ${h}`
+                    );
                 } else {
-                    setDisplay(topHook, 'none');
-                    setDisplay(bottomHook, 'none');
+                    surface.seekWrap.classList.remove('aligned-playhead');
+                    surface.refHooksPath.setAttribute('d', '');
                 }
             }
         });
