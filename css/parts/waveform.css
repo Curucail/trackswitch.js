@@ -68,12 +68,17 @@
     inset-block: 0;
     width: 2px;
     transform: translateX(-50%);
-    background-color: var(--ts-color-surface-panel-dark);
-    z-index: 4; 
+    z-index: 4;
 }
 
 .trackswitch .waveform-wrap .seekwrap {
     --seekhead-vertical-extent: 0.35;
+    --seekhead-color: var(--ts-color-surface-panel-dark);
+    --seekhead-ref-color: var(--ts-color-surface-panel-dark);
+}
+
+.trackswitch .waveform-wrap .seekwrap .seekhead {
+    background-color: var(--seekhead-color);
 }
 
 .trackswitch .waveform-wrap .seekwrap .seekhead-ref-hooks {
@@ -86,7 +91,7 @@
 
 .trackswitch .waveform-wrap .seekwrap .seekhead-ref-hooks path {
     fill: none;
-    stroke: var(--ts-color-surface-panel-dark);
+    stroke: var(--seekhead-ref-color);
     stroke-width: 2px;
 }
 
