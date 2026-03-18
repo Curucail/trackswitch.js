@@ -68,7 +68,6 @@ export function buildComputeBarHtml(
 ): string {
     let html = '<div class="ts-compute-bar">'
         + '<div class="ts-compute-bar-row">'
-        + '<div class="ts-compute-options">'
         + '<label class="ts-method-select-wrap">'
         + '<span class="ts-method-select-label">Alignment method</span>'
         + '<select class="ts-method-select">'
@@ -78,15 +77,13 @@ export function buildComputeBarHtml(
         + '</label>'
         + '<label class="ts-sync-toggle-row">'
         + '<span class="ts-sync-toggle-copy">'
-        + '<span class="ts-sync-toggle-title">Generate synced audio</span>'
-        + '<span class="ts-sync-toggle-hint">Create time- and pitch-synchronized playback sources.</span>'
+        + '<span class="ts-sync-toggle-title">Also generate time-/pitch-synchronized audios</span>'
         + '</span>'
         + '<span class="ts-sync-toggle-switch">'
         + '<input class="ts-sync-toggle-input" type="checkbox"' + (syncGenerationEnabled ? ' checked' : '') + '>'
         + '<span class="ts-sync-toggle-knob" aria-hidden="true"></span>'
         + '</span>'
         + '</label>'
-        + '</div>'
         + '<div class="ts-compute-actions">';
 
     if (showCancel) {

@@ -378,7 +378,7 @@ def extract_audio_features(audio_data, sample_rate, feature_rate, progress_fn=No
     return f_chroma_quantized, f_onset
 
 def pitch_shift_cents_from_chroma_shift(chroma_shift):
-    cents = (-int(chroma_shift)) % 12
+    cents = int(chroma_shift) % 12
     if cents > 6:
         cents -= 12
     return int(cents * 100)

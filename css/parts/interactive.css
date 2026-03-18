@@ -310,15 +310,10 @@
 
 .trackswitch .ts-compute-bar-row {
     display: grid;
-    grid-template-columns: minmax(220px, 260px) auto;
+    grid-template-columns: minmax(220px, 260px) minmax(320px, 1fr) auto;
     align-items: end;
     gap: 12px;
     justify-content: space-between;
-}
-
-.trackswitch .ts-compute-options {
-    display: grid;
-    gap: 10px;
 }
 
 .trackswitch .ts-compute-actions {
@@ -361,6 +356,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 14px;
+    min-height: 44px;
     padding: 10px 12px;
     border: 1px solid rgba(153, 153, 153, 0.26);
     background: rgba(255, 255, 255, 0.72);
@@ -947,7 +943,6 @@
     .trackswitch .ts-compute-bar-row,
     .trackswitch .ts-settings-add-files {
         grid-template-columns: 1fr;
-        flex-direction: column;
         align-items: stretch;
     }
 
