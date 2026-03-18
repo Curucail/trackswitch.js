@@ -452,7 +452,7 @@ def render_synchronized_audio(fid, warping_path, chroma_shift, progress_fn=None)
             if progress_fn is not None:
                 progress_fn(
                     channel_start + 0.18 * channel_span,
-                    f'Creating synchronized audio: pitch-shifting channel {channel_index + 1}/{total_channels}'
+                    f'Synchronizing audio: pitch-shifting channel {channel_index + 1}/{total_channels}'
                 )
             shifted_audio = libtsm.pitch_shift(
                 channel_audio,
@@ -464,7 +464,7 @@ def render_synchronized_audio(fid, warping_path, chroma_shift, progress_fn=None)
         if progress_fn is not None:
             progress_fn(
                 channel_start + 0.62 * channel_span,
-                f'Creating synchronized audio: time-stretching channel {channel_index + 1}/{total_channels}'
+                f'Synchronizing audio: time-stretching channel {channel_index + 1}/{total_channels}'
             )
         synced_audio = libtsm.hps_tsm(shifted_audio, time_map, Fs=sample_rate)
         rendered_channels.append(np.asarray(synced_audio, dtype=np.float64).reshape(-1))
