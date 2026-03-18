@@ -94,14 +94,16 @@ export function normalizeInit(root: HTMLElement, init: TrackSwitchInit): Normali
         ? init.ui.map(normalizeUiElement)
         : undefined;
     const normalizedFeatures = normalizeFeatures(init.features);
-    const usesExclusiveSoloMode = normalizedFeatures.exclusiveSolo || normalizedFeatures.mode === 'alignment';
+    const usesExclusiveSoloMode = normalizedFeatures.exclusiveSolo
+        || normalizedFeatures.mode === 'alignment'
+        || normalizedFeatures.mode === 'alignment_interactive';
     if (hasPerTrackImageUi(resolvedUi) && !usesExclusiveSoloMode) {
         throw new Error('Invalid init configuration: perTrackImage requires features.exclusiveSolo to be true.');
     }
 
     const resolvedTrackData = resolveTracksFromUi(resolvedUi);
 
-    if (resolvedTrackData.tracks.length === 0) {
+    if (resolvedTrackData.tracks.length === 0 && normalizedFeatures.mode !== 'alignment_interactive') {
         throw new Error(TRACKS_REQUIRED_ERROR);
     }
 

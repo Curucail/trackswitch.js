@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Trackswitch.js - Interactive Alignment</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="../../dist/css/trackswitch.min.css">
+    <style media="screen">
+        body {
+            font-family: sans-serif;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        h1 {
+            font-size: 1.4em;
+            margin-bottom: 0.3em;
+        }
+        p {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Interactive Alignment Mode</h1>
+    <p>
+        Drag and drop audio files (.wav, .mp3, .ogg, .flac) and/or MusicXML scores (.xml, .musicxml)
+        into the player below. Select one file as the reference timeline, then click
+        <strong>Compute Alignment</strong> to synchronize all files using DTW.
+        Alignment is computed entirely in your browser using
+        <a href="https://github.com/meinardmueller/synctoolbox">synctoolbox</a> via
+        <a href="https://pyodide.org">Pyodide</a>.
+    </p>
+
+    <div id="player" style="width: 100%;"></div>
+
+    <script src="../../dist/js/trackswitch.min.js"></script>
+    <script src="../../dist/js/trackswitch-interactive.js"></script>
+    <script type="text/javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            var player = TrackSwitchInteractive.createInteractiveTrackSwitch(
+                document.getElementById('player'),
+                {
+                    workerUrl: '../../dist/js/trackswitch-alignment-worker.js',
+                    alignmentMethod: 'mrmsdtw',
+                }
+            );
+            player.initialize();
+        });
+    </script>
+</body>
+
+</html>

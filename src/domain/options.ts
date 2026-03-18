@@ -46,8 +46,14 @@ export function normalizeFeatures(features: Partial<TrackSwitchFeatures> | undef
     if (
         normalized.mode !== 'default'
         && normalized.mode !== 'alignment'
+        && normalized.mode !== 'alignment_interactive'
     ) {
         normalized.mode = 'default';
+    }
+
+    if (normalized.mode === 'alignment_interactive') {
+        normalized.exclusiveSolo = true;
+        normalized.presets = false;
     }
 
     if (normalized.exclusiveSolo) {

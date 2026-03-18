@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build, context } from "esbuild";
@@ -99,6 +99,25 @@ const browserCommonOptions = {
   banner: { js: banner },
 };
 
+const interactiveBrowserCommonOptions = {
+  entryPoints: [resolve(rootDir, "src/interactive.ts")],
+  bundle: true,
+  platform: "browser",
+  format: "iife",
+  globalName: "TrackSwitchInteractive",
+  target: "es2017",
+  banner: { js: banner },
+};
+
+const workerBuildOptions = {
+  entryPoints: [resolve(rootDir, "src/interactive/worker/alignment-worker.ts")],
+  bundle: true,
+  platform: "browser",
+  format: "iife",
+  target: "es2017",
+  banner: { js: banner },
+};
+
 const esmCommonOptions = {
   entryPoints: sourceEntryPoints,
   bundle: false,
@@ -120,6 +139,16 @@ const buildConfigs = minifyOnly
         minify: true,
         outfile: resolve(rootDir, "dist/js/trackswitch.min.js"),
       },
+      {
+        ...interactiveBrowserCommonOptions,
+        minify: true,
+        outfile: resolve(rootDir, "dist/js/trackswitch-interactive.min.js"),
+      },
+      {
+        ...workerBuildOptions,
+        minify: true,
+        outfile: resolve(rootDir, "dist/js/trackswitch-alignment-worker.min.js"),
+      },
     ]
   : [
       {
@@ -133,6 +162,19 @@ const buildConfigs = minifyOnly
         ...browserCommonOptions,
         minify: true,
         outfile: resolve(rootDir, "dist/js/trackswitch.min.js"),
+      },
+      {
+        ...interactiveBrowserCommonOptions,
+        outfile: resolve(rootDir, "dist/js/trackswitch-interactive.js"),
+      },
+      {
+        ...interactiveBrowserCommonOptions,
+        minify: true,
+        outfile: resolve(rootDir, "dist/js/trackswitch-interactive.min.js"),
+      },
+      {
+        ...workerBuildOptions,
+        outfile: resolve(rootDir, "dist/js/trackswitch-alignment-worker.js"),
       },
     ];
 
@@ -153,4 +195,10 @@ if (watch) {
 } else {
   await Promise.all(buildConfigs.map((options) => build(options)));
   rewriteEsmImportSpecifiers(resolve(rootDir, "dist/esm"));
+
+  // Copy synctoolbox wheel to dist/js/ so the worker can install it locally
+  copyFileSync(
+    resolve(rootDir, "synctoolbox-dist/synctoolbox-1.4.2-py3-none-any.whl"),
+    resolve(rootDir, "dist/js/synctoolbox-1.4.2-py3-none-any.whl"),
+  );
 }

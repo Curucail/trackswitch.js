@@ -55,6 +55,10 @@
       "types": "./dist/types/react.d.ts",
       "import": "./dist/esm/react.js"
     },
+    "./interactive": {
+      "types": "./dist/types/interactive.d.ts",
+      "import": "./dist/esm/interactive.js"
+    },
     "./style.css": "./dist/css/trackswitch.min.css",
     "./package.json": "./package.json"
   },

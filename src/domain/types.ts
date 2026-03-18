@@ -1,5 +1,5 @@
 export type LoopMarker = 'A' | 'B';
-export type TrackSwitchMode = 'default' | 'alignment';
+export type TrackSwitchMode = 'default' | 'alignment' | 'alignment_interactive';
 export type AlignmentOutOfRangeMode = 'clamp' | 'linear';
 export type WaveformSource = 'audible' | number | number[];
 export type WaveformPlaybackFollowMode = 'off' | 'center' | 'jump';

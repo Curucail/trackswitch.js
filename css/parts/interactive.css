@@ -1,0 +1,339 @@
+/* ─── Drop Zone ───────────────────────────────────────────────────── */
+
+.ts-dropzone {
+    position: relative;
+    border: 2px dashed var(--ts-color-border-mid);
+    border-radius: 6px;
+    padding: 24px;
+    text-align: center;
+    background: var(--ts-color-surface-base);
+    transition: border-color 0.15s, background 0.15s;
+    cursor: pointer;
+    font-family: var(--ts-font-ui);
+}
+
+.ts-dropzone.ts-dropzone-dragover {
+    border-color: var(--ts-color-accent);
+    background: var(--ts-color-accent-soft-15);
+}
+
+.ts-dropzone-prompt {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: var(--ts-color-text-secondary);
+    font-size: 14px;
+}
+
+.ts-dropzone-prompt .ts-icon-slot {
+    font-size: 28px;
+    color: var(--ts-color-border-mid);
+}
+
+.ts-dropzone-input {
+    display: none;
+}
+
+/* ─── File List ───────────────────────────────────────────────────── */
+
+.ts-interactive-file-list {
+    margin-top: 16px;
+    font-family: var(--ts-font-ui);
+    font-size: 13px;
+}
+
+.ts-interactive-file-list table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.ts-interactive-file-list th {
+    text-align: left;
+    padding: 4px 8px;
+    font-weight: 600;
+    color: var(--ts-color-text-secondary);
+    border-bottom: 1px solid var(--ts-color-border-mid);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.ts-interactive-file-list td {
+    padding: 6px 8px;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--ts-color-surface-base);
+}
+
+.ts-interactive-file-list tr:last-child td {
+    border-bottom: none;
+}
+
+.ts-file-type-icon {
+    display: inline-flex;
+    align-items: center;
+    color: var(--ts-color-text-secondary);
+}
+
+.ts-file-type-icon .ts-icon-slot {
+    width: 16px;
+    height: 16px;
+}
+
+.ts-file-remove-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--ts-color-text-secondary);
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: color 0.15s;
+}
+
+.ts-file-remove-btn:hover {
+    color: var(--ts-color-text-error);
+}
+
+.ts-file-remove-btn .ts-icon-slot {
+    width: 14px;
+    height: 14px;
+}
+
+/* ─── Compute Button ──────────────────────────────────────────────── */
+
+.ts-compute-bar {
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.ts-compute-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ts-method-select {
+    padding: 7px 10px;
+    border: 1px solid var(--ts-color-border, #ccc);
+    border-radius: 4px;
+    background: var(--ts-color-surface-panel, #fff);
+    color: var(--ts-color-text-primary, #333);
+    font-family: var(--ts-font-ui);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.ts-compute-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 20px;
+    border: none;
+    border-radius: 4px;
+    background: var(--ts-color-accent);
+    color: var(--ts-color-text-inverse);
+    font-family: var(--ts-font-ui);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+
+.ts-compute-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.ts-compute-btn:not(:disabled):hover {
+    opacity: 0.85;
+}
+
+.ts-compute-status {
+    font-family: var(--ts-font-ui);
+    font-size: 13px;
+    color: var(--ts-color-text-secondary);
+}
+
+.ts-compute-status-error {
+    color: var(--ts-color-text-error);
+}
+
+/* ─── Computing Overlay ───────────────────────────────────────────── */
+
+.ts-computing-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: var(--ts-color-overlay-dim);
+    color: var(--ts-color-text-inverse);
+    font-family: var(--ts-font-ui);
+    font-size: 14px;
+    border-radius: 6px;
+    z-index: 10;
+}
+
+.ts-computing-overlay .ts-icon-slot {
+    animation: ts-spin 1s linear infinite;
+}
+
+.ts-progress-bar {
+    width: 60%;
+    max-width: 300px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.ts-progress-fill {
+    height: 100%;
+    background: var(--ts-color-accent, #4a9eff);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+@keyframes ts-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* ─── Controls Disabled State ─────────────────────────────────────── */
+
+.ts-controls-disabled .main-control .control {
+    pointer-events: none;
+    opacity: 0.35;
+}
+
+.ts-controls-disabled .main-control .settings-button {
+    pointer-events: auto;
+    opacity: 1;
+}
+
+/* ─── Settings Button ─────────────────────────────────────────────── */
+
+.trackswitch .settings-button {
+    margin-left: auto;
+}
+
+.trackswitch .settings-button .ts-icon-slot {
+    transition: transform 0.3s;
+}
+
+.trackswitch .settings-button:hover .ts-icon-slot {
+    transform: rotate(45deg);
+}
+
+/* ─── Settings Panel ──────────────────────────────────────────────── */
+
+.ts-settings-panel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--ts-color-surface-base);
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    font-family: var(--ts-font-ui);
+    font-size: 13px;
+    overflow-y: auto;
+}
+
+.ts-settings-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--ts-color-border-mid);
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.ts-settings-panel-body {
+    padding: 16px;
+    flex: 1;
+}
+
+.ts-settings-section {
+    margin-bottom: 16px;
+}
+
+.ts-settings-section-title {
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--ts-color-text-secondary);
+}
+
+.ts-settings-panel-footer {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    padding: 12px 16px;
+    border-top: 1px solid var(--ts-color-border-mid);
+}
+
+.ts-settings-btn {
+    padding: 6px 16px;
+    border: 1px solid var(--ts-color-border-mid);
+    border-radius: 4px;
+    background: var(--ts-color-surface-base);
+    font-family: var(--ts-font-ui);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.ts-settings-btn-primary {
+    background: var(--ts-color-accent);
+    color: var(--ts-color-text-inverse);
+    border-color: var(--ts-color-accent);
+    font-weight: 600;
+}
+
+/* ─── Method Selector ─────────────────────────────────────────────── */
+
+.ts-method-select {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--ts-color-border-mid);
+    border-radius: 4px;
+    font-family: var(--ts-font-ui);
+    font-size: 13px;
+    background: #fff;
+}
+
+/* ─── Add Files in Settings ───────────────────────────────────────── */
+
+.ts-settings-add-files {
+    margin-top: 12px;
+}
+
+.ts-settings-add-files-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    border: 1px dashed var(--ts-color-border-mid);
+    border-radius: 4px;
+    background: none;
+    font-family: var(--ts-font-ui);
+    font-size: 13px;
+    color: var(--ts-color-text-secondary);
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+}
+
+.ts-settings-add-files-btn:hover {
+    border-color: var(--ts-color-accent);
+    color: var(--ts-color-accent);
+}
