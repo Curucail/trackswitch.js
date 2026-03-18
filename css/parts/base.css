@@ -11,6 +11,9 @@
     --ts-slider-hit-size: 16px;
 
     background: var(--ts-color-surface-base);
+    border-left: 1px solid var(--ts-color-border-mid);
+    border-right: 1px solid var(--ts-color-border-mid);
+    border-bottom: 1px solid var(--ts-color-border-mid);
     position: relative;
     margin: 10px;
     overflow: hidden;

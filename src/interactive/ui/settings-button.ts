@@ -1,7 +1,7 @@
 import { renderIconSlotHtml } from '../../ui/icons';
 
 /**
- * Inject the settings gear button into an existing player's main control bar.
+ * Inject the settings button into an existing player's main control bar.
  * Returns the button element for event binding.
  */
 export function injectSettingsButton(rootElement: HTMLElement): HTMLElement | null {
@@ -18,6 +18,7 @@ export function injectSettingsButton(rootElement: HTMLElement): HTMLElement | nu
     const li = document.createElement('li');
     li.className = 'settings-button button';
     li.title = 'Settings';
+    li.setAttribute('aria-label', 'Settings');
     li.innerHTML = renderIconSlotHtml('gear');
     controlList.appendChild(li);
     return li;

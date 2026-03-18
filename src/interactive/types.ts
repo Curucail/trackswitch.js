@@ -21,9 +21,13 @@ export interface InteractiveState {
     files: InteractiveFile[];
     referenceFileId: string | null;
     alignmentMethod: AlignmentMethodId;
+    waveformAlignedPlayhead: boolean;
+    waveformShowAlignmentPoints: boolean;
     computationStatus: 'idle' | 'initializing' | 'computing' | 'done' | 'error';
     computationError: string | null;
     alignmentCsv: string | null;
+    alignmentCacheKey: string | null;
+    canCancelBackToPlayer: boolean;
     workerReady: boolean;
 }
 

@@ -115,6 +115,11 @@ export function stripExtension(filename: string): string {
     return dot > 0 ? filename.substring(0, dot) : filename;
 }
 
+/** Keep the original filename for visible UI labels. */
+export function fileNameToDisplayTitle(filename: string): string {
+    return stripExtension(filename);
+}
+
 /** Sanitize a filename into a valid CSV column name. */
 export function fileNameToColumnName(filename: string): string {
     return 'time_' + stripExtension(filename).replace(/[^a-zA-Z0-9_-]/g, '_');

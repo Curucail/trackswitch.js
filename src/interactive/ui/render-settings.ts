@@ -15,12 +15,18 @@ export interface SettingsPanelEvents {
 }
 
 export function buildSettingsPanelHtml(state: SettingsPanelState): string {
-    let html = '<div class="ts-settings-panel">';
+    let html = '<div class="ts-settings-panel" role="presentation">';
+    html += '<div class="ts-settings-backdrop"></div>';
+    html += '<div class="ts-settings-dialog" role="dialog" aria-modal="true" aria-label="Interactive settings">';
 
     // Header
     html += '<div class="ts-settings-panel-header">'
-        + '<span>Settings</span>'
-        + '<button class="ts-settings-cancel-btn" title="Close">'
+        + '<div class="ts-settings-panel-heading">'
+        + '<span class="ts-section-kicker">Interactive mode</span>'
+        + '<strong class="ts-settings-title">Alignment settings</strong>'
+        + '<p class="ts-settings-copy">Adjust your file set, choose the reference timeline, and decide how aggressively the alignment should behave.</p>'
+        + '</div>'
+        + '<button class="ts-settings-cancel-btn" type="button" title="Close">'
         + renderIconSlotHtml('xmark') + '</button>'
         + '</div>';
 
@@ -30,12 +36,14 @@ export function buildSettingsPanelHtml(state: SettingsPanelState): string {
     // Files section
     html += '<div class="ts-settings-section">'
         + '<div class="ts-settings-section-title">Files &amp; Reference</div>'
-        + '<table class="ts-settings-file-table" style="width:100%; border-collapse:collapse;">';
+        + '<div class="ts-settings-section-copy">Choose the anchor file the rest of the material should align to.</div>'
+        + '<div class="ts-settings-file-table-wrap">'
+        + '<table class="ts-settings-file-table">';
 
     html += '<thead><tr>'
-        + '<th style="text-align:left; padding:4px 8px; font-size:11px;">Ref</th>'
-        + '<th style="text-align:left; padding:4px 8px; font-size:11px;">File</th>'
-        + '<th style="text-align:left; padding:4px 8px; font-size:11px;">Type</th>'
+        + '<th>Ref</th>'
+        + '<th>File</th>'
+        + '<th>Type</th>'
         + '<th></th>'
         + '</tr></thead><tbody>';
 
@@ -45,25 +53,25 @@ export function buildSettingsPanelHtml(state: SettingsPanelState): string {
         const iconName = file.type === 'audio' ? 'file-audio' : 'file-code';
         const typeLabel = file.type === 'audio' ? 'Audio' : 'Score';
 
-        html += '<tr data-file-id="' + file.id + '">'
-            + '<td style="padding:4px 8px;"><input type="radio" name="ts-settings-reference" value="'
-            + file.id + '"' + (isReference ? ' checked' : '') + '></td>'
-            + '<td style="padding:4px 8px;">' + escapeHtml(file.name) + '</td>'
-            + '<td style="padding:4px 8px;"><span class="ts-file-type-icon">'
+        html += '<tr data-file-id="' + file.id + '"' + (isReference ? ' class="is-reference"' : '') + '>'
+            + '<td>' + buildReferenceToggleHtml(file.id, file.name, isReference) + '</td>'
+            + '<td><span class="ts-file-name">' + escapeHtml(file.name) + '</span></td>'
+            + '<td><span class="ts-file-type-icon">'
             + renderIconSlotHtml(iconName) + ' ' + typeLabel + '</span></td>'
-            + '<td style="padding:4px 8px;"><button class="ts-file-remove-btn ts-settings-remove-btn" '
+            + '<td><button class="ts-file-remove-btn ts-settings-remove-btn" type="button" '
             + 'data-file-id="' + file.id + '" title="Remove">'
             + renderIconSlotHtml('trash') + '</button></td>'
             + '</tr>';
     }
 
-    html += '</tbody></table>';
+    html += '</tbody></table></div>';
 
     // Add files button
     html += '<div class="ts-settings-add-files">'
-        + '<button class="ts-settings-add-files-btn">'
+        + '<button class="ts-settings-add-files-btn" type="button">'
         + renderIconSlotHtml('upload') + ' Add Files'
         + '</button>'
+        + '<span class="ts-settings-add-files-copy">Add more audio or MusicXML without leaving this flow.</span>'
         + '<input type="file" class="ts-settings-add-files-input" style="display:none;" '
         + 'multiple accept=".wav,.mp3,.ogg,.flac,.m4a,.aac,.webm,.xml,.musicxml,.mxl">'
         + '</div>';
@@ -73,21 +81,25 @@ export function buildSettingsPanelHtml(state: SettingsPanelState): string {
     // Method section
     html += '<div class="ts-settings-section">'
         + '<div class="ts-settings-section-title">Alignment Method</div>'
+        + '<div class="ts-settings-section-copy">Use the same method picker from the initial screen when you want to swap between the recommended pass and the quicker preview mode.</div>'
+        + '<label class="ts-method-select-wrap">'
+        + '<span class="ts-method-select-label">Alignment method</span>'
         + '<select class="ts-method-select">'
-        + '<option value="mrmsdtw"' + (state.alignmentMethod === 'mrmsdtw' ? ' selected' : '') + '>MrMsDTW (recommended)</option>'
-        + '<option value="dtw"' + (state.alignmentMethod === 'dtw' ? ' selected' : '') + '>DTW (faster)</option>'
+        + '<option value="mrmsdtw"' + (state.alignmentMethod === 'mrmsdtw' ? ' selected' : '') + '>MrMsDTW</option>'
+        + '<option value="dtw"' + (state.alignmentMethod === 'dtw' ? ' selected' : '') + '>DTW</option>'
         + '</select>'
+        + '</label>'
         + '</div>';
 
     html += '</div>';
 
     // Footer
     html += '<div class="ts-settings-panel-footer">'
-        + '<button class="ts-settings-btn ts-settings-cancel-action">Cancel</button>'
-        + '<button class="ts-settings-btn ts-settings-btn-primary ts-settings-apply-action">Apply</button>'
+        + '<button class="ts-settings-btn ts-settings-cancel-action" type="button">Cancel</button>'
+        + '<button class="ts-settings-btn ts-settings-btn-primary ts-settings-apply-action" type="button">Apply Changes</button>'
         + '</div>';
 
-    html += '</div>';
+    html += '</div></div>';
     return html;
 }
 
@@ -100,10 +112,14 @@ export function bindSettingsPanelEvents(container: HTMLElement, initialState: Se
     };
 
     // Reference change
-    container.addEventListener('change', function(e) {
-        const target = e.target as HTMLInputElement;
-        if (target.name === 'ts-settings-reference' && target.checked) {
-            workingState.referenceFileId = target.value;
+    container.addEventListener('click', function(e) {
+        const referenceToggle = (e.target as HTMLElement).closest('.ts-settings-reference-toggle') as HTMLElement | null;
+        if (referenceToggle) {
+            const fileId = referenceToggle.getAttribute('data-file-id');
+            if (fileId) {
+                workingState.referenceFileId = fileId;
+                syncReferenceSelection(container, fileId);
+            }
         }
     });
 
@@ -128,10 +144,7 @@ export function bindSettingsPanelEvents(container: HTMLElement, initialState: Se
                 }
                 if (workingState.referenceFileId === fileId && workingState.files.length > 0) {
                     workingState.referenceFileId = workingState.files[0].id;
-                    const firstRadio = container.querySelector('input[name="ts-settings-reference"]') as HTMLInputElement | null;
-                    if (firstRadio) {
-                        firstRadio.checked = true;
-                    }
+                    syncReferenceSelection(container, workingState.referenceFileId);
                 }
             }
         }
@@ -168,6 +181,13 @@ export function bindSettingsPanelEvents(container: HTMLElement, initialState: Se
         });
     });
 
+    const backdrop = container.querySelector('.ts-settings-backdrop');
+    if (backdrop) {
+        backdrop.addEventListener('click', function() {
+            events.onCancel();
+        });
+    }
+
     // Apply
     const applyBtn = container.querySelector('.ts-settings-apply-action');
     if (applyBtn) {
@@ -175,6 +195,34 @@ export function bindSettingsPanelEvents(container: HTMLElement, initialState: Se
             events.onApply(workingState);
         });
     }
+}
+
+function buildReferenceToggleHtml(fileId: string, fileName: string, isReference: boolean): string {
+    return '<button class="ts-settings-reference-toggle' + (isReference ? ' is-selected' : '') + '"'
+        + ' type="button" data-file-id="' + fileId + '"'
+        + ' aria-label="Use ' + escapeHtml(fileName) + ' as reference"'
+        + ' aria-pressed="' + String(isReference) + '">'
+        + renderIconSlotHtml(isReference ? 'circle-dot' : 'circle')
+        + '</button>';
+}
+
+function syncReferenceSelection(container: HTMLElement, selectedFileId: string | null): void {
+    const toggles = container.querySelectorAll('.ts-settings-reference-toggle');
+    toggles.forEach(function(toggle) {
+        if (!(toggle instanceof HTMLElement)) {
+            return;
+        }
+
+        const isSelected = toggle.getAttribute('data-file-id') === selectedFileId;
+        toggle.classList.toggle('is-selected', isSelected);
+        toggle.setAttribute('aria-pressed', String(isSelected));
+        toggle.innerHTML = renderIconSlotHtml(isSelected ? 'circle-dot' : 'circle');
+
+        const row = toggle.closest('tr');
+        if (row) {
+            row.classList.toggle('is-reference', isSelected);
+        }
+    });
 }
 
 function escapeHtml(text: string): string {

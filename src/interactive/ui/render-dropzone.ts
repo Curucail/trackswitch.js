@@ -5,8 +5,11 @@ import { classifyFileType } from '../file-handler';
 export function buildDropZoneHtml(): string {
     return '<div class="ts-dropzone" tabindex="0">'
         + '<div class="ts-dropzone-prompt">'
-        + renderIconSlotHtml('upload')
-        + '<span>Drop audio or MusicXML files here, or click to browse</span>'
+        + '<span class="ts-dropzone-eyebrow">Interactive alignment</span>'
+        + '<span class="ts-dropzone-icon">' + renderIconSlotHtml('upload') + '</span>'
+        + '<strong class="ts-dropzone-title">Drop audio and scores here</strong>'
+        + '<span class="ts-dropzone-hint">Supported Audio Formats: WAV, MP3, OGG, FLAC, M4A, AAC, WebM</span>'
+        + '<span class="ts-dropzone-hint">Supported Score Formats: XML, MusicXML, MXL</span>'
         + '</div>'
         + '<input type="file" class="ts-dropzone-input" multiple '
         + 'accept=".wav,.mp3,.ogg,.flac,.m4a,.aac,.webm,.xml,.musicxml,.mxl">'
@@ -19,9 +22,16 @@ export function buildFileListHtml(files: InteractiveFile[], referenceFileId: str
     }
 
     let html = '<div class="ts-interactive-file-list">'
+        + '<div class="ts-interactive-list-header">'
+        + '<div>'
+        + '<span class="ts-section-kicker">Selected files</span>'
+        + '<strong class="ts-section-title">Pick a reference to align other sources to</strong>'
+        + '</div>'
+        + '<span class="ts-file-count">' + files.length + (files.length === 1 ? ' file' : ' files') + '</span>'
+        + '</div>'
         + '<table>'
         + '<thead><tr>'
-        + '<th>Ref</th>'
+        + '<th>Reference</th>'
         + '<th>File</th>'
         + '<th>Type</th>'
         + '<th></th>'
@@ -34,10 +44,9 @@ export function buildFileListHtml(files: InteractiveFile[], referenceFileId: str
         const iconName = file.type === 'audio' ? 'file-audio' : 'file-code';
         const typeLabel = file.type === 'audio' ? 'Audio' : 'Score';
 
-        html += '<tr data-file-id="' + file.id + '">'
-            + '<td><input type="radio" name="ts-reference" value="' + file.id + '"'
-            + (isReference ? ' checked' : '') + '></td>'
-            + '<td>' + escapeHtml(file.name) + '</td>'
+        html += '<tr data-file-id="' + file.id + '"' + (isReference ? ' class="is-reference"' : '') + '>'
+            + '<td>' + buildReferenceToggleHtml(file.id, file.name, isReference, 'ts-reference-toggle') + '</td>'
+            + '<td><span class="ts-file-name">' + escapeHtml(file.name) + '</span></td>'
             + '<td><span class="ts-file-type-icon">' + renderIconSlotHtml(iconName)
             + ' ' + typeLabel + '</span></td>'
             + '<td><button class="ts-file-remove-btn" data-file-id="' + file.id
@@ -52,19 +61,32 @@ export function buildFileListHtml(files: InteractiveFile[], referenceFileId: str
 export function buildComputeBarHtml(
     canCompute: boolean,
     status: string,
-    alignmentMethod: AlignmentMethodId
+    alignmentMethod: AlignmentMethodId,
+    isComputing: boolean,
+    showCancel: boolean
 ): string {
     let html = '<div class="ts-compute-bar">'
         + '<div class="ts-compute-bar-row">'
-        + '<button class="ts-compute-btn"' + (canCompute ? '' : ' disabled') + '>'
-        + 'Compute Alignment</button>'
+        + '<label class="ts-method-select-wrap">'
+        + '<span class="ts-method-select-label">Alignment method</span>'
         + '<select class="ts-method-select">'
         + '<option value="mrmsdtw"' + (alignmentMethod === 'mrmsdtw' ? ' selected' : '') + '>MrMsDTW</option>'
         + '<option value="dtw"' + (alignmentMethod === 'dtw' ? ' selected' : '') + '>DTW</option>'
         + '</select>'
+        + '</label>'
+        + '<div class="ts-compute-actions">';
+
+    if (showCancel) {
+        html += '<button class="ts-cancel-btn" type="button">'
+            + '<span>Cancel</span></button>';
+    }
+
+    html += '<button class="ts-compute-btn"' + (canCompute ? '' : ' disabled') + '>'
+        + '<span>Compute Alignment</span></button>'
+        + '</div>'
         + '</div>';
 
-    if (status) {
+    if (status && !isComputing) {
         const isError = status.toLowerCase().includes('error');
         html += '<span class="ts-compute-status' + (isError ? ' ts-compute-status-error' : '') + '">'
             + escapeHtml(status) + '</span>';
@@ -76,9 +98,10 @@ export function buildComputeBarHtml(
 
 export function buildComputingOverlayHtml(message: string): string {
     return '<div class="ts-computing-overlay">'
-        + renderIconSlotHtml('spinner')
+        + '<div class="ts-computing-card">'
         + '<div class="ts-progress-bar"><div class="ts-progress-fill" style="width: 0%;"></div></div>'
-        + '<span>' + escapeHtml(message) + '</span>'
+        + '<span class="ts-computing-message">' + escapeHtml(message) + '</span>'
+        + '</div>'
         + '</div>';
 }
 
@@ -89,13 +112,14 @@ export function buildFullDropZonePanel(
     statusMessage: string,
     isComputing: boolean,
     computingMessage: string,
-    alignmentMethod: AlignmentMethodId
+    alignmentMethod: AlignmentMethodId,
+    showCancel: boolean
 ): string {
-    let html = '<div class="ts-interactive-panel ts-stack-section" style="position: relative;">';
+    let html = '<div class="ts-interactive-panel ts-stack-section">';
 
     html += buildDropZoneHtml();
     html += buildFileListHtml(files, referenceFileId);
-    html += buildComputeBarHtml(canCompute, statusMessage, alignmentMethod);
+    html += buildComputeBarHtml(canCompute, statusMessage, alignmentMethod, isComputing, showCancel);
 
     if (isComputing) {
         html += buildComputingOverlayHtml(computingMessage);
@@ -120,12 +144,21 @@ export interface DropZoneEvents {
     onReferenceChanged(fileId: string): void;
     onFileRemoved(fileId: string): void;
     onMethodChanged(method: AlignmentMethodId): void;
+    onCancelClicked(): void;
     onComputeClicked(): void;
 }
 
 export function bindDropZoneEvents(container: HTMLElement, events: DropZoneEvents): void {
     const dropZone = container.querySelector('.ts-dropzone') as HTMLElement | null;
     const fileInput = container.querySelector('.ts-dropzone-input') as HTMLInputElement | null;
+    let dragDepth = 0;
+
+    function setDragOverState(active: boolean): void {
+        container.classList.toggle('ts-interactive-panel-dragover', active);
+        if (dropZone) {
+            dropZone.classList.toggle('ts-dropzone-dragover', active);
+        }
+    }
 
     if (dropZone && fileInput) {
         dropZone.addEventListener('click', function(e) {
@@ -135,22 +168,33 @@ export function bindDropZoneEvents(container: HTMLElement, events: DropZoneEvent
             fileInput.click();
         });
 
-        dropZone.addEventListener('dragover', function(e) {
+        container.addEventListener('dragenter', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            dropZone.classList.add('ts-dropzone-dragover');
+            dragDepth += 1;
+            setDragOverState(true);
         });
 
-        dropZone.addEventListener('dragleave', function(e) {
+        container.addEventListener('dragover', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            dropZone.classList.remove('ts-dropzone-dragover');
+            setDragOverState(true);
         });
 
-        dropZone.addEventListener('drop', function(e) {
+        container.addEventListener('dragleave', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            dropZone.classList.remove('ts-dropzone-dragover');
+            dragDepth = Math.max(0, dragDepth - 1);
+            if (dragDepth === 0) {
+                setDragOverState(false);
+            }
+        });
+
+        container.addEventListener('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dragDepth = 0;
+            setDragOverState(false);
             if (e.dataTransfer && e.dataTransfer.files.length > 0) {
                 const validFiles = filterValidFiles(e.dataTransfer.files);
                 if (validFiles.length > 0) {
@@ -170,11 +214,14 @@ export function bindDropZoneEvents(container: HTMLElement, events: DropZoneEvent
         });
     }
 
-    // Reference radio buttons
-    container.addEventListener('change', function(e) {
-        const target = e.target as HTMLInputElement;
-        if (target.name === 'ts-reference' && target.checked) {
-            events.onReferenceChanged(target.value);
+    // Reference buttons
+    container.addEventListener('click', function(e) {
+        const referenceToggle = (e.target as HTMLElement).closest('.ts-reference-toggle') as HTMLElement | null;
+        if (referenceToggle) {
+            const fileId = referenceToggle.getAttribute('data-file-id');
+            if (fileId) {
+                events.onReferenceChanged(fileId);
+            }
         }
     });
 
@@ -205,6 +252,27 @@ export function bindDropZoneEvents(container: HTMLElement, events: DropZoneEvent
             events.onComputeClicked();
         }
     });
+
+    container.addEventListener('click', function(e) {
+        const btn = (e.target as HTMLElement).closest('.ts-cancel-btn') as HTMLButtonElement | null;
+        if (btn) {
+            events.onCancelClicked();
+        }
+    });
+}
+
+function buildReferenceToggleHtml(
+    fileId: string,
+    fileName: string,
+    isReference: boolean,
+    className: string
+): string {
+    return '<button class="' + className + (isReference ? ' is-selected' : '') + '"'
+        + ' type="button" data-file-id="' + fileId + '"'
+        + ' aria-label="Use ' + escapeHtml(fileName) + ' as reference"'
+        + ' aria-pressed="' + String(isReference) + '">'
+        + renderIconSlotHtml(isReference ? 'circle-dot' : 'circle')
+        + '</button>';
 }
 
 function filterValidFiles(fileList: FileList): File[] {

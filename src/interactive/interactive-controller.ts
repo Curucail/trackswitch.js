@@ -7,18 +7,19 @@ import type {
 } from './types';
 import type { TrackSwitchController } from '../domain/types';
 import { FEATURE_RATE } from './constants';
-import { processFile, fileNameToColumnName, fileNameToMeasureColumnName } from './file-handler';
+import {
+    processFile,
+    fileNameToColumnName,
+    fileNameToDisplayTitle,
+    fileNameToMeasureColumnName,
+} from './file-handler';
 import { AlignmentWorkerBridge } from './worker/alignment-worker-bridge';
 import {
     buildFullDropZonePanel,
     bindDropZoneEvents,
     type DropZoneEvents,
 } from './ui/render-dropzone';
-import {
-    buildSettingsPanelHtml,
-    bindSettingsPanelEvents,
-    type SettingsPanelState,
-} from './ui/render-settings';
+import { buildPlayerSettingsMenuHtml } from './ui/render-player-settings';
 import { injectSettingsButton } from './ui/settings-button';
 import { renderIconSlotHtml } from '../ui/icons';
 import { createTrackSwitch } from '../player/factory';
@@ -31,7 +32,17 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
     private innerController: TrackSwitchController | null = null;
     private destroyed = false;
     private dropZoneContainer: HTMLElement | null = null;
-    private settingsPanelContainer: HTMLElement | null = null;
+    private settingsMenuContainer: HTMLElement | null = null;
+    private settingsMenuDismissHandler: ((event: MouseEvent) => void) | null = null;
+    private playerSetupSnapshot: {
+        files: InteractiveFile[];
+        referenceFileId: string | null;
+        alignmentMethod: AlignmentMethodId;
+        alignmentCsv: string | null;
+        alignmentCacheKey: string | null;
+        playbackPosition: number;
+        wasPlaying: boolean;
+    } | null = null;
 
     constructor(rootElement: HTMLElement, init: InteractiveTrackSwitchInit) {
         this.rootElement = rootElement;
@@ -40,9 +51,13 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             files: [],
             referenceFileId: null,
             alignmentMethod: init.alignmentMethod || 'mrmsdtw',
+            waveformAlignedPlayhead: true,
+            waveformShowAlignmentPoints: false,
             computationStatus: 'idle',
             computationError: null,
             alignmentCsv: null,
+            alignmentCacheKey: null,
+            canCancelBackToPlayer: false,
             workerReady: false,
         };
         this.workerBridge = new AlignmentWorkerBridge(init.workerUrl, init.pyodideCdnUrl);
@@ -61,12 +76,13 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
     destroy(): void {
         this.destroyed = true;
         this.workerBridge.destroy();
+        this.closePlayerSettingsMenu();
         if (this.innerController) {
             this.innerController.destroy();
             this.innerController = null;
         }
         this.rootElement.innerHTML = '';
-        this.rootElement.classList.remove('trackswitch', 'ts-controls-disabled');
+        this.rootElement.classList.remove('trackswitch', 'ts-controls-disabled', 'ts-interactive-player');
     }
 
     getInnerController(): TrackSwitchController | null {
@@ -82,6 +98,7 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
         const statusMessage = this.getStatusMessage();
         const computingMessage = this.state.computationError || statusMessage || 'Computing alignment...';
 
+        this.rootElement.classList.remove('ts-interactive-player');
         let html = this.buildDisabledNavBarHtml();
         html += buildFullDropZonePanel(
             this.state.files,
@@ -90,7 +107,8 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             statusMessage,
             isComputing,
             computingMessage,
-            this.state.alignmentMethod
+            this.state.alignmentMethod,
+            this.state.canCancelBackToPlayer
         );
 
         this.rootElement.innerHTML = html;
@@ -103,15 +121,10 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             bindDropZoneEvents(panel, this.createDropZoneEvents());
         }
 
-        // Bind settings button
-        const settingsBtn = this.rootElement.querySelector('.settings-button');
-        if (settingsBtn) {
-            settingsBtn.addEventListener('click', this.openSettingsPanel.bind(this));
-        }
     }
 
     private buildDisabledNavBarHtml(): string {
-        return '<div class="main-control ts-stack-section">'
+        let html = '<div class="main-control ts-stack-section">'
             + '<ul class="control">'
             + '<li class="playback-group">'
             + '<ul class="playback-controls">'
@@ -121,9 +134,6 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             + '<li class="stop button" title="Stop">Stop'
             + renderIconSlotHtml('stop')
             + '</li>'
-            + '<li class="repeat button" title="Repeat">Repeat'
-            + renderIconSlotHtml('rotate-right')
-            + '</li>'
             + '</ul>'
             + '</li>'
             + '<li class="timing"><span class="time">--:--:--:---</span> / <span class="length">--:--:--:---</span></li>'
@@ -131,12 +141,12 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             + '<div class="seekbar">'
             + '<div class="seekhead"></div>'
             + '</div>'
-            + '</li>'
-            + '<li class="settings-button button" title="Settings">'
-            + renderIconSlotHtml('gear')
-            + '</li>'
-            + '</ul>'
+            + '</li>';
+
+        html += '</ul>'
             + '</div>';
+
+        return html;
     }
 
     private createDropZoneEvents(): DropZoneEvents {
@@ -145,6 +155,7 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             onReferenceChanged: this.handleReferenceChanged.bind(this),
             onFileRemoved: this.handleFileRemoved.bind(this),
             onMethodChanged: this.handleMethodChanged.bind(this),
+            onCancelClicked: this.handleSetupCancelClicked.bind(this),
             onComputeClicked: this.handleComputeClicked.bind(this),
         };
     }
@@ -207,6 +218,7 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
 
     private handleReferenceChanged(fileId: string): void {
         this.state.referenceFileId = fileId;
+        this.rerenderDropZone();
     }
 
     private handleMethodChanged(method: AlignmentMethodId): void {
@@ -233,6 +245,14 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             return;
         }
 
+        const alignmentCacheKey = this.buildAlignmentCacheKey();
+        if (this.state.alignmentCsv && this.state.alignmentCacheKey === alignmentCacheKey) {
+            this.state.computationStatus = 'done';
+            this.state.computationError = null;
+            this.buildAndMountPlayer();
+            return;
+        }
+
         this.state.computationStatus = 'initializing';
         this.state.computationError = null;
         this.rerenderDropZone();
@@ -252,6 +272,8 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             );
 
             this.state.alignmentCsv = csv;
+            this.state.alignmentCacheKey = alignmentCacheKey;
+            this.state.canCancelBackToPlayer = false;
             this.state.computationStatus = 'done';
 
             // Transition to player phase
@@ -275,12 +297,13 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
 
     // ── Player Phase ──
 
-    private buildAndMountPlayer(): void {
+    private buildAndMountPlayer(restorePlayback?: { position: number; playing: boolean }): void {
         if (this.destroyed || !this.state.alignmentCsv || !this.state.referenceFileId) {
             return;
         }
 
         this.rootElement.classList.remove('ts-controls-disabled');
+        this.closePlayerSettingsMenu();
 
         // Build TrackSwitchInit config from the computed alignment
         const referenceFile = this.state.files.find(
@@ -325,14 +348,14 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
                 uiElements.push({
                     type: 'waveform',
                     waveformSource: audioTrackCount,
-                    alignedPlayhead: true,
-                    showAlignmentPoints: false,
+                    alignedPlayhead: this.state.waveformAlignedPlayhead,
+                    showAlignmentPoints: this.state.waveformShowAlignmentPoints,
                 });
 
                 uiElements.push({
                     type: 'trackGroup',
                     trackGroup: [{
-                        title: file.name,
+                        title: fileNameToDisplayTitle(file.name),
                         sources: [{ src: audioUrl, type: file.file.type }],
                         alignment: {
                             column: columnName,
@@ -362,6 +385,8 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
                 seekBar: true,
                 timer: true,
                 keyboard: true,
+                globalVolume: true,
+                trackMixControls: true,
             },
             alignment: {
                 csv: csvDataUrl,
@@ -373,6 +398,7 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
 
         // Clear and mount
         this.rootElement.innerHTML = '';
+        this.rootElement.classList.add('ts-interactive-player');
 
         try {
             this.innerController = createTrackSwitch(this.rootElement, playerInit);
@@ -380,10 +406,19 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             // Load the player
             this.innerController.load().then(() => {
                 if (!this.destroyed) {
-                    // Inject settings button into the player's nav bar
+                    // Inject the settings button into the player's nav bar
                     const settingsBtn = injectSettingsButton(this.rootElement);
                     if (settingsBtn) {
-                        settingsBtn.addEventListener('click', this.openSettingsPanel.bind(this));
+                        settingsBtn.addEventListener('click', this.togglePlayerSettingsMenu.bind(this));
+                    }
+
+                    if (restorePlayback) {
+                        if (restorePlayback.position > 0) {
+                            this.innerController?.seekTo(restorePlayback.position);
+                        }
+                        if (restorePlayback.playing) {
+                            this.innerController?.play();
+                        }
                     }
                 }
             }).catch((error) => {
@@ -398,118 +433,189 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
         }
     }
 
-    // ── Settings Panel ──
+    // ── Return To Setup ──
 
-    private openSettingsPanel(): void {
+    private returnToSetupPhase(): void {
         if (this.destroyed) {
             return;
         }
 
-        const settingsState: SettingsPanelState = {
+        const playerSnapshot = this.innerController ? this.innerController.getState() : null;
+
+        this.playerSetupSnapshot = {
             files: [...this.state.files],
             referenceFileId: this.state.referenceFileId,
             alignmentMethod: this.state.alignmentMethod,
+            alignmentCsv: this.state.alignmentCsv,
+            alignmentCacheKey: this.state.alignmentCacheKey,
+            playbackPosition: playerSnapshot ? playerSnapshot.state.position : 0,
+            wasPlaying: playerSnapshot ? playerSnapshot.state.playing : false,
         };
 
-        const panel = document.createElement('div');
-        panel.innerHTML = buildSettingsPanelHtml(settingsState);
-        this.settingsPanelContainer = panel.firstElementChild as HTMLElement;
-
-        if (this.settingsPanelContainer) {
-            this.rootElement.style.position = 'relative';
-            this.rootElement.appendChild(this.settingsPanelContainer);
-
-            bindSettingsPanelEvents(this.settingsPanelContainer, settingsState, {
-                onApply: this.handleSettingsApply.bind(this),
-                onCancel: this.closeSettingsPanel.bind(this),
-                onAddFiles: this.handleSettingsAddFiles.bind(this),
-            });
-        }
-    }
-
-    private closeSettingsPanel(): void {
-        if (this.settingsPanelContainer && this.settingsPanelContainer.parentNode) {
-            this.settingsPanelContainer.parentNode.removeChild(this.settingsPanelContainer);
-            this.settingsPanelContainer = null;
-        }
-    }
-
-    private async handleSettingsApply(newState: SettingsPanelState): Promise<void> {
-        this.closeSettingsPanel();
-
-        const referenceChanged = newState.referenceFileId !== this.state.referenceFileId;
-        const methodChanged = newState.alignmentMethod !== this.state.alignmentMethod;
-        const filesChanged = newState.files.length !== this.state.files.length
-            || newState.files.some(function(f, i) { return f.id !== newState.files[i]?.id; });
-
-        this.state.files = newState.files;
-        this.state.referenceFileId = newState.referenceFileId;
-        this.state.alignmentMethod = newState.alignmentMethod;
-
-        if (referenceChanged || methodChanged || filesChanged) {
-            // Need to recompute alignment
-            if (this.state.files.length >= 2 && this.state.referenceFileId) {
-                // If player is running, save state
-                const savedPosition = this.innerController
-                    ? this.innerController.getState().state.position
-                    : 0;
-
-                this.state.computationStatus = 'computing';
-                this.state.computationError = null;
-
-                try {
-                    const csv = await this.workerBridge.computeAlignment(
-                        this.state.files,
-                        this.state.referenceFileId,
-                        this.state.alignmentMethod
-                    );
-
-                    this.state.alignmentCsv = csv;
-                    this.state.computationStatus = 'done';
-
-                    // Destroy and rebuild player
-                    if (this.innerController) {
-                        this.innerController.destroy();
-                        this.innerController = null;
-                    }
-
-                    this.buildAndMountPlayer();
-
-                    // Try to restore position
-                    if (savedPosition > 0) {
-                        this.restorePosition(savedPosition);
-                    }
-                } catch (error) {
-                    this.state.computationStatus = 'error';
-                    this.state.computationError = error instanceof Error ? error.message : String(error);
-                }
-            }
-        }
-    }
-
-    private async handleSettingsAddFiles(files: File[]): Promise<void> {
-        for (const file of files) {
-            try {
-                const interactiveFile = await processFile(file);
-                this.state.files.push(interactiveFile);
-            } catch (error) {
-                console.warn('Failed to process file:', file.name, error);
-            }
-        }
-
-        // Re-open settings panel with updated files
-        this.closeSettingsPanel();
-        this.openSettingsPanel();
-    }
-
-    private restorePosition(position: number): void {
         if (this.innerController) {
-            this.innerController.on('loaded', () => {
-                if (this.innerController) {
-                    this.innerController.seekTo(position);
-                }
+            this.innerController.destroy();
+            this.innerController = null;
+        }
+
+        this.state.computationStatus = 'idle';
+        this.state.computationError = null;
+        this.state.canCancelBackToPlayer = true;
+        this.rootElement.classList.remove('ts-interactive-player');
+        this.renderDropZonePhase();
+    }
+
+    private handleSetupCancelClicked(): void {
+        if (this.destroyed || !this.playerSetupSnapshot) {
+            return;
+        }
+
+        this.state.files = [...this.playerSetupSnapshot.files];
+        this.state.referenceFileId = this.playerSetupSnapshot.referenceFileId;
+        this.state.alignmentMethod = this.playerSetupSnapshot.alignmentMethod;
+        this.state.alignmentCsv = this.playerSetupSnapshot.alignmentCsv;
+        this.state.alignmentCacheKey = this.playerSetupSnapshot.alignmentCacheKey;
+        this.state.canCancelBackToPlayer = false;
+        this.state.computationStatus = 'done';
+        this.state.computationError = null;
+        this.buildAndMountPlayer({
+            position: this.playerSetupSnapshot.playbackPosition,
+            playing: this.playerSetupSnapshot.wasPlaying,
+        });
+    }
+
+    private togglePlayerSettingsMenu(): void {
+        if (this.destroyed) {
+            return;
+        }
+
+        if (this.settingsMenuContainer) {
+            this.closePlayerSettingsMenu();
+            return;
+        }
+
+        const settingsBtn = this.rootElement.querySelector('.settings-button');
+        if (!(settingsBtn instanceof HTMLElement)) {
+            return;
+        }
+
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = buildPlayerSettingsMenuHtml({
+            waveformAlignedPlayhead: this.state.waveformAlignedPlayhead,
+            waveformShowAlignmentPoints: this.state.waveformShowAlignmentPoints,
+        });
+
+        const menu = wrapper.firstElementChild as HTMLElement | null;
+        if (!menu) {
+            return;
+        }
+
+        this.rootElement.style.position = 'relative';
+        this.rootElement.appendChild(menu);
+        this.settingsMenuContainer = menu;
+
+        const buttonRect = settingsBtn.getBoundingClientRect();
+        const rootRect = this.rootElement.getBoundingClientRect();
+        menu.style.top = String(Math.round(buttonRect.bottom - rootRect.top + 8)) + 'px';
+        menu.style.right = String(Math.max(12, Math.round(rootRect.right - buttonRect.right))) + 'px';
+
+        const alignedPlayheadInput = menu.querySelector('[data-setting-id="aligned-playhead"]') as HTMLInputElement | null;
+        if (alignedPlayheadInput) {
+            alignedPlayheadInput.addEventListener('change', () => {
+                this.applyWaveformDisplaySettings(
+                    alignedPlayheadInput.checked,
+                    this.state.waveformShowAlignmentPoints
+                );
             });
         }
+
+        const alignmentPointsInput = menu.querySelector('[data-setting-id="show-alignment-points"]') as HTMLInputElement | null;
+        if (alignmentPointsInput) {
+            alignmentPointsInput.addEventListener('change', () => {
+                this.applyWaveformDisplaySettings(
+                    this.state.waveformAlignedPlayhead,
+                    alignmentPointsInput.checked
+                );
+            });
+        }
+
+        const alignmentSetupBtn = menu.querySelector('[data-settings-action="alignment-setup"]') as HTMLButtonElement | null;
+        if (alignmentSetupBtn) {
+            alignmentSetupBtn.addEventListener('click', () => {
+                this.closePlayerSettingsMenu();
+                this.returnToSetupPhase();
+            });
+        }
+
+        this.settingsMenuDismissHandler = (event: MouseEvent) => {
+            if (!this.settingsMenuContainer) {
+                return;
+            }
+
+            const target = event.target as Node | null;
+            if (!target) {
+                return;
+            }
+
+            if (
+                this.settingsMenuContainer.contains(target)
+                || settingsBtn.contains(target)
+            ) {
+                return;
+            }
+
+            this.closePlayerSettingsMenu();
+        };
+
+        requestAnimationFrame(() => {
+            if (this.settingsMenuDismissHandler) {
+                document.addEventListener('mousedown', this.settingsMenuDismissHandler, true);
+            }
+        });
+    }
+
+    private closePlayerSettingsMenu(): void {
+        if (this.settingsMenuDismissHandler) {
+            document.removeEventListener('mousedown', this.settingsMenuDismissHandler, true);
+            this.settingsMenuDismissHandler = null;
+        }
+
+        if (this.settingsMenuContainer && this.settingsMenuContainer.parentNode) {
+            this.settingsMenuContainer.parentNode.removeChild(this.settingsMenuContainer);
+        }
+
+        this.settingsMenuContainer = null;
+    }
+
+    private applyWaveformDisplaySettings(
+        waveformAlignedPlayhead: boolean,
+        waveformShowAlignmentPoints: boolean
+    ): void {
+        if (!this.innerController || !this.state.alignmentCsv || this.destroyed) {
+            return;
+        }
+
+        const snapshot = this.innerController.getState();
+        this.state.waveformAlignedPlayhead = waveformAlignedPlayhead;
+        this.state.waveformShowAlignmentPoints = waveformShowAlignmentPoints;
+
+        this.innerController.destroy();
+        this.innerController = null;
+        this.buildAndMountPlayer({
+            position: snapshot.state.position,
+            playing: snapshot.state.playing,
+        });
+    }
+
+    private buildAlignmentCacheKey(): string {
+        const fileIds = this.state.files.map(function(file) {
+            return file.id;
+        }).join('|');
+
+        return [
+            fileIds,
+            this.state.referenceFileId || '',
+            this.state.alignmentMethod,
+        ].join('::');
     }
 
     // ── Worker Progress ──
@@ -526,12 +632,17 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             if (statusEl) {
                 statusEl.textContent = displayText;
             }
-            const overlayText = this.rootElement.querySelector('.ts-computing-overlay span:last-child');
+            const overlayText = this.rootElement.querySelector('.ts-computing-message');
             if (overlayText) {
                 overlayText.textContent = displayText;
             }
 
             // Update progress bar
+            const progressPercent = this.rootElement.querySelector('.ts-progress-percent');
+            if (progressPercent) {
+                progressPercent.textContent = percentage >= 0 ? percentage + '%' : '--%';
+            }
+
             if (percentage >= 0) {
                 const progressFill = this.rootElement.querySelector('.ts-progress-fill') as HTMLElement;
                 if (progressFill) {

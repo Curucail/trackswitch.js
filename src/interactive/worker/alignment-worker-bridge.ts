@@ -109,11 +109,12 @@ export class AlignmentWorkerBridge {
 
         const workerFiles: WorkerFile[] = files.map(function(file): WorkerFile {
             if (file.type === 'audio') {
+                const pcmCopy = new Float32Array(file.pcmData!);
                 return {
                     id: file.id,
                     name: file.name,
                     type: 'audio',
-                    pcmData: file.pcmData!,
+                    pcmData: pcmCopy,
                 } as WorkerFileAudio;
             }
             return {

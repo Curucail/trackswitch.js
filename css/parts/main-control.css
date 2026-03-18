@@ -44,6 +44,10 @@
     margin-left: auto;
 }
 
+.trackswitch .main-control .settings-button {
+    order: 70;
+}
+
 .trackswitch .main-control .seekwrap {
     order: 50;
     flex: 1 1 240px;
