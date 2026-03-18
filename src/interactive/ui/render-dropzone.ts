@@ -100,6 +100,7 @@ export function buildComputingOverlayHtml(message: string): string {
     return '<div class="ts-computing-overlay">'
         + '<div class="ts-computing-card">'
         + '<div class="ts-progress-bar"><div class="ts-progress-fill" style="width: 0%;"></div></div>'
+        + '<span class="ts-progress-percent">--%</span>'
         + '<span class="ts-computing-message">' + escapeHtml(message) + '</span>'
         + '</div>'
         + '</div>';
