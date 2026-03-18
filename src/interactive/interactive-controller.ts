@@ -411,6 +411,7 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
                 keyboard: true,
                 globalVolume: true,
                 trackMixControls: true,
+                looping: true,
             },
             alignment: {
                 csv: csvDataUrl,

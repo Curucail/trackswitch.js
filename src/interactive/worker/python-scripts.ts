@@ -430,15 +430,30 @@ def encode_wav_bytes(audio_data, sample_rate):
 
     return buffer.getvalue()
 
-def render_synchronized_audio(fid, warping_path, chroma_shift):
+def render_synchronized_audio(fid, warping_path, chroma_shift, progress_fn=None):
     sample_rate = int(audio_sample_rates[str(fid)])
+    if progress_fn is not None:
+        progress_fn(0.02, 'preparing time map')
     time_map = build_valid_time_map(warping_path, sample_rate, FEATURE_RATE)
     pitch_shift_cents = pitch_shift_cents_from_chroma_shift(chroma_shift)
     rendered_channels = []
+    total_channels = len(full_resolution_audio[fid])
 
-    for channel_audio in full_resolution_audio[fid]:
+    for channel_index, channel_audio in enumerate(full_resolution_audio[fid]):
+        channel_start = channel_index / max(total_channels, 1)
+        channel_span = 1.0 / max(total_channels, 1)
+        if progress_fn is not None:
+            progress_fn(
+                channel_start + 0.05 * channel_span,
+                f'rendering channel {channel_index + 1}/{total_channels}'
+            )
         shifted_audio = channel_audio
         if pitch_shift_cents != 0:
+            if progress_fn is not None:
+                progress_fn(
+                    channel_start + 0.18 * channel_span,
+                    f'Creating synchronized audio: pitch-shifting channel {channel_index + 1}/{total_channels}'
+                )
             shifted_audio = libtsm.pitch_shift(
                 channel_audio,
                 pitch_shift_cents,
@@ -446,6 +461,11 @@ def render_synchronized_audio(fid, warping_path, chroma_shift):
                 order='tsm-res'
             )
         shifted_audio = np.asarray(shifted_audio, dtype=np.float64).reshape(-1)
+        if progress_fn is not None:
+            progress_fn(
+                channel_start + 0.62 * channel_span,
+                f'Creating synchronized audio: time-stretching channel {channel_index + 1}/{total_channels}'
+            )
         synced_audio = libtsm.hps_tsm(shifted_audio, time_map, Fs=sample_rate)
         rendered_channels.append(np.asarray(synced_audio, dtype=np.float64).reshape(-1))
 
@@ -454,6 +474,8 @@ def render_synchronized_audio(fid, warping_path, chroma_shift):
 
     min_length = min(len(channel) for channel in rendered_channels)
     stacked = np.stack([channel[:min_length] for channel in rendered_channels], axis=1)
+    if progress_fn is not None:
+        progress_fn(0.98, 'encoding wav')
     return encode_wav_bytes(stacked, sample_rate)
 
 def extract_score_features(xml_text, feature_rate):
@@ -565,20 +587,41 @@ report_progress('[18%] Importing synctoolbox modules...')
 all_file_ids = list(audio_files.keys()) + list(score_files.keys())
 total_files = len(all_file_ids)
 non_ref_count = total_files - 1
+sync_audio_file_ids = [
+    fid for fid in all_file_ids
+    if generate_synced_audio and fid in audio_files and fid != reference_file_id
+]
+sync_audio_count = len(sync_audio_file_ids)
 _file_names_dict = dict(file_names)
 
-# Progress budget (0-15% used by Python environment setup):
-#   18-20% = imports / setup
-#   20-55% = feature extraction (sub-steps per file)
-#   55-70% = optimal chroma shift
-#   70-90% = alignment
-#   90-100% = CSV output
-FEAT_START = 20
-FEAT_END = 55
-SHIFT_START = 55
-SHIFT_END = 70
-ALIGN_START = 70
-ALIGN_END = 90
+def _progress_percent(value):
+    return int(np.clip(np.round(value), 0, 100))
+
+def _phase_end(start, weight, total_weight, progress_span):
+    return start + (weight / total_weight) * progress_span
+
+PIPELINE_IMPORT_PCT = 18.0
+PIPELINE_START_PCT = 20.0
+PIPELINE_END_PCT = 99.0
+PIPELINE_SPAN = PIPELINE_END_PCT - PIPELINE_START_PCT
+
+feature_weight = max(float(total_files), 1.0)
+shift_weight = max(float(non_ref_count) * 0.65, 0.75)
+align_weight = max(float(non_ref_count) * 1.0, 1.0)
+csv_weight = 0.8
+sync_weight = float(sync_audio_count) * 2.4 if generate_synced_audio else 0.0
+total_weight = feature_weight + shift_weight + align_weight + csv_weight + sync_weight
+
+FEAT_START = PIPELINE_START_PCT
+FEAT_END = _phase_end(FEAT_START, feature_weight, total_weight, PIPELINE_SPAN)
+SHIFT_START = FEAT_END
+SHIFT_END = _phase_end(SHIFT_START, shift_weight, total_weight, PIPELINE_SPAN)
+ALIGN_START = SHIFT_END
+ALIGN_END = _phase_end(ALIGN_START, align_weight, total_weight, PIPELINE_SPAN)
+CSV_START = ALIGN_END
+CSV_END = _phase_end(CSV_START, csv_weight, total_weight, PIPELINE_SPAN)
+SYNC_START = CSV_END
+SYNC_END = PIPELINE_END_PCT
 
 # Sub-steps within feature extraction per audio file:
 # tuning=10%, pitch=35%, chroma=10%, onset=25%, dlnco=20%
@@ -590,7 +633,7 @@ _audio_substeps = [
     ('Computing DLNCO features', 0.80),
 ]
 
-report_progress(f'[{FEAT_START}%] Starting feature extraction...')
+report_progress(f'[{_progress_percent(FEAT_START)}%] Starting feature extraction...')
 
 # Extract features for all files
 features = {}
@@ -609,20 +652,20 @@ for file_idx, fid in enumerate(all_file_ids):
                     if sname == step_name:
                         frac = sfrac
                         break
-                pct = int(base + frac * span)
+                pct = _progress_percent(base + frac * span)
                 report_progress(f'[{pct}%] {name}: {step_name.lower()}')
             return fn
         prog_fn = _make_progress_fn(file_start_pct, file_end_pct - file_start_pct, fname)
-        report_progress(f'[{int(file_start_pct)}%] Extracting features: {fname}')
+        report_progress(f'[{_progress_percent(file_start_pct)}%] Extracting features: {fname}')
         chroma, onset = extract_audio_features(audio_files[fid], SAMPLE_RATE, FEATURE_RATE, progress_fn=prog_fn)
     else:
-        report_progress(f'[{int(file_start_pct)}%] Parsing score: {fname}')
+        report_progress(f'[{_progress_percent(file_start_pct)}%] Parsing score: {fname}')
         chroma, onset, measure_map = extract_score_features(score_files[fid], FEATURE_RATE)
         if measure_map:
             score_measure_maps[fid] = measure_map
     features[fid] = (chroma, onset)
 
-report_progress(f'[{SHIFT_START}%] Feature extraction complete')
+report_progress(f'[{_progress_percent(SHIFT_START)}%] Feature extraction complete')
 
 ref_chroma, ref_onset = features[reference_file_id]
 
@@ -630,7 +673,7 @@ ref_chroma, ref_onset = features[reference_file_id]
 # Compute CENS features (smoothed + downsampled to ~1Hz) for efficient shift search,
 # then apply the found shift to the full-resolution chroma and DLNCO features.
 # This compensates for pitch transpositions between recordings.
-report_progress(f'[{SHIFT_START}%] Computing optimal chroma shifts...')
+report_progress(f'[{_progress_percent(SHIFT_START)}%] Computing optimal chroma shifts...')
 
 ref_cens = quantized_chroma_to_CENS(ref_chroma, 201, 50, FEATURE_RATE)[0]
 chroma_shifts = {reference_file_id: 0}
@@ -639,7 +682,7 @@ shift_idx = 0
 for fid in all_file_ids:
     if fid == reference_file_id:
         continue
-    pct = int(SHIFT_START + (shift_idx / max(non_ref_count, 1)) * (SHIFT_END - SHIFT_START))
+    pct = _progress_percent(SHIFT_START + (shift_idx / max(non_ref_count, 1)) * (SHIFT_END - SHIFT_START))
     fname = str(_file_names_dict[fid])
     report_progress(f'[{pct}%] Finding chroma shift: {fname}')
 
@@ -657,7 +700,7 @@ for fid in all_file_ids:
 
     shift_idx += 1
 
-report_progress(f'[{ALIGN_START}%] Chroma shift complete')
+report_progress(f'[{_progress_percent(ALIGN_START)}%] Chroma shift complete')
 
 # Re-read reference features (unchanged, but keeps code symmetric)
 ref_chroma, ref_onset = features[reference_file_id]
@@ -668,7 +711,7 @@ align_idx = 0
 for fid in all_file_ids:
     if fid == reference_file_id:
         continue
-    pct = int(ALIGN_START + (align_idx / max(non_ref_count, 1)) * (ALIGN_END - ALIGN_START))
+    pct = _progress_percent(ALIGN_START + (align_idx / max(non_ref_count, 1)) * (ALIGN_END - ALIGN_START))
     fname = str(_file_names_dict[fid])
     report_progress(f'[{pct}%] Computing warping path: {fname}')
     other_chroma, other_onset = features[fid]
@@ -679,7 +722,7 @@ for fid in all_file_ids:
     warping_paths[fid] = wp
     align_idx += 1
 
-report_progress(f'[{ALIGN_END}%] Building CSV output...')
+report_progress(f'[{_progress_percent(CSV_START)}%] Building CSV output...')
 
 import pandas as pd
 
@@ -724,23 +767,31 @@ if generate_synced_audio:
     sync_reference_time_column = 'time_sync_reference'
     columns[sync_reference_time_column] = ref_times
 
-report_progress('[95%] Writing CSV...')
+report_progress(f'[{_progress_percent(CSV_END)}%] Writing CSV...')
 
 df = pd.DataFrame(columns)
 csv_output = df.to_csv(index=False, float_format='%.6f')
 
 if generate_synced_audio:
-    audio_file_ids = [fid for fid in all_file_ids if fid in audio_files and fid != reference_file_id]
-    total_sync_files = max(len(audio_file_ids), 1)
-    for sync_index, fid in enumerate(audio_file_ids):
-        progress_pct = int(96 + (sync_index / total_sync_files) * 3)
+    total_sync_files = max(len(sync_audio_file_ids), 1)
+
+    def _make_sync_progress_fn(base, span, name):
+        def fn(frac, stage):
+            pct = _progress_percent(base + np.clip(frac, 0.0, 1.0) * span)
+            report_progress(f'[{pct}%] {name}: {stage}')
+        return fn
+
+    for sync_index, fid in enumerate(sync_audio_file_ids):
+        file_start_pct = SYNC_START + (sync_index / total_sync_files) * (SYNC_END - SYNC_START)
+        file_end_pct = SYNC_START + ((sync_index + 1) / total_sync_files) * (SYNC_END - SYNC_START)
         fname = str(_file_names_dict[fid])
-        report_progress(f'[{progress_pct}%] Rendering synced audio: {fname}')
+        report_progress(f'[{_progress_percent(file_start_pct)}%] Rendering synced audio: {fname}')
         sync_audio_outputs[fid] = np.frombuffer(
             render_synchronized_audio(
                 fid,
                 warping_paths[fid],
-                chroma_shifts.get(fid, 0)
+                chroma_shifts.get(fid, 0),
+                progress_fn=_make_sync_progress_fn(file_start_pct, file_end_pct - file_start_pct, fname)
             ),
             dtype=np.uint8
         )
