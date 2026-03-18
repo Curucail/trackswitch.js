@@ -2,6 +2,7 @@ import type {
     AlignmentMethodId,
     InteractiveFile,
     WorkerComputeMessage,
+    WorkerComputeResult,
     WorkerFile,
     WorkerFileAudio,
     WorkerFileScore,
@@ -98,8 +99,9 @@ export class AlignmentWorkerBridge {
     async computeAlignment(
         files: InteractiveFile[],
         referenceFileId: string,
-        method: AlignmentMethodId
-    ): Promise<string> {
+        method: AlignmentMethodId,
+        generateSyncedAudio: boolean
+    ): Promise<WorkerComputeResult> {
         await this.ensureReady();
 
         const hasMusicXml = files.some(function(f) { return f.type === 'musicxml'; });
@@ -110,11 +112,16 @@ export class AlignmentWorkerBridge {
         const workerFiles: WorkerFile[] = files.map(function(file): WorkerFile {
             if (file.type === 'audio') {
                 const pcmCopy = new Float32Array(file.pcmData!);
+                const fullPcmChannels = (file.fullPcmChannels || []).map(function(channelData) {
+                    return new Float32Array(channelData);
+                });
                 return {
                     id: file.id,
                     name: file.name,
                     type: 'audio',
                     pcmData: pcmCopy,
+                    fullPcmChannels: fullPcmChannels,
+                    sampleRate: file.sampleRate!,
                 } as WorkerFileAudio;
             }
             return {
@@ -129,6 +136,9 @@ export class AlignmentWorkerBridge {
         workerFiles.forEach(function(wf) {
             if (wf.type === 'audio') {
                 transferables.push(wf.pcmData.buffer);
+                wf.fullPcmChannels.forEach(function(channelData) {
+                    transferables.push(channelData.buffer);
+                });
             }
         });
 
@@ -137,7 +147,7 @@ export class AlignmentWorkerBridge {
                 const response = event.data;
                 if (response.type === 'result') {
                     this.worker!.removeEventListener('message', onMessage);
-                    resolve(response.csv);
+                    resolve(response.result);
                 } else if (response.type === 'error') {
                     this.worker!.removeEventListener('message', onMessage);
                     reject(new Error(response.message));
@@ -154,6 +164,7 @@ export class AlignmentWorkerBridge {
                 referenceFileId: referenceFileId,
                 method: method,
                 featureRate: FEATURE_RATE,
+                generateSyncedAudio: generateSyncedAudio,
             };
 
             this.worker!.postMessage(message, transferables);

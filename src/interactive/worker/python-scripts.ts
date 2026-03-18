@@ -305,20 +305,25 @@ sys.modules['librosa.sequence'] = librosa_sequence
  * Executed after all shims are installed and synctoolbox is available.
  * Expects global variables set by the worker:
  *   - audio_files: dict of {file_id: numpy_array} (mono PCM at SAMPLE_RATE)
+ *   - full_resolution_audio: dict of {file_id: [numpy_array, ...]} (per-channel PCM at original sample rate)
+ *   - audio_sample_rates: dict of {file_id: sample_rate}
  *   - score_files: dict of {file_id: xml_text_string}
  *   - file_names: dict of {file_id: filename}
  *   - reference_file_id: str
  *   - alignment_method_script: str (defines align_pair function)
  *   - FEATURE_RATE: int
  *   - SAMPLE_RATE: int
+ *   - generate_synced_audio: bool
  */
 export const ALIGNMENT_PIPELINE = `
 import numpy as np
 import io
+import wave
 
 # Execute the alignment method script (defines align_pair)
 exec(alignment_method_script)
 
+import libtsm
 from synctoolbox.feature.pitch import audio_to_pitch_features
 from synctoolbox.feature.chroma import pitch_to_chroma, quantize_chroma, quantized_chroma_to_CENS
 from synctoolbox.feature.utils import estimate_tuning, shift_chroma_vectors
@@ -371,6 +376,85 @@ def extract_audio_features(audio_data, sample_rate, feature_rate, progress_fn=No
             f_onset = None
 
     return f_chroma_quantized, f_onset
+
+def pitch_shift_cents_from_chroma_shift(chroma_shift):
+    cents = (-int(chroma_shift)) % 12
+    if cents > 6:
+        cents -= 12
+    return int(cents * 100)
+
+def build_valid_time_map(warping_path, sample_rate, feature_rate):
+    source_samples = np.round(warping_path[1] / feature_rate * sample_rate).astype(int)
+    target_samples = np.round(warping_path[0] / feature_rate * sample_rate).astype(int)
+    time_map = np.column_stack((source_samples, target_samples))
+
+    if time_map.shape[0] == 0:
+        raise ValueError('time_map is empty.')
+
+    max_source = max(0, int(source_samples.max()))
+    max_target = max(0, int(target_samples.max()))
+    time_map[:, 0] = np.clip(time_map[:, 0], 0, max_source)
+    time_map[:, 1] = np.clip(time_map[:, 1], 0, max_target)
+
+    keep = np.ones(time_map.shape[0], dtype=bool)
+    if time_map.shape[0] > 1:
+        keep[1:] = (np.diff(time_map[:, 0]) > 0) & (np.diff(time_map[:, 1]) > 0)
+    time_map = time_map[keep]
+    time_map = libtsm.ensure_validity(time_map)
+
+    if time_map.shape[0] == 0:
+        raise ValueError('time_map is empty after validity filtering.')
+
+    if time_map[0, 1] != 0:
+        time_map = np.vstack(([time_map[0, 0], 0], time_map))
+
+    if time_map.shape[0] < 2:
+        raise ValueError('time_map has too few anchor points after filtering.')
+
+    return time_map.astype(int)
+
+def encode_wav_bytes(audio_data, sample_rate):
+    audio_array = np.asarray(audio_data, dtype=np.float64)
+    if audio_array.ndim == 1:
+        audio_array = audio_array[:, np.newaxis]
+
+    audio_array = np.clip(audio_array, -1.0, 1.0)
+    pcm = np.round(audio_array * 32767.0).astype(np.int16)
+
+    buffer = io.BytesIO()
+    with wave.open(buffer, 'wb') as wav_file:
+        wav_file.setnchannels(int(pcm.shape[1]))
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(int(sample_rate))
+        wav_file.writeframes(pcm.reshape(-1).tobytes())
+
+    return buffer.getvalue()
+
+def render_synchronized_audio(fid, warping_path, chroma_shift):
+    sample_rate = int(audio_sample_rates[str(fid)])
+    time_map = build_valid_time_map(warping_path, sample_rate, FEATURE_RATE)
+    pitch_shift_cents = pitch_shift_cents_from_chroma_shift(chroma_shift)
+    rendered_channels = []
+
+    for channel_audio in full_resolution_audio[fid]:
+        shifted_audio = channel_audio
+        if pitch_shift_cents != 0:
+            shifted_audio = libtsm.pitch_shift(
+                channel_audio,
+                pitch_shift_cents,
+                Fs=sample_rate,
+                order='tsm-res'
+            )
+        shifted_audio = np.asarray(shifted_audio, dtype=np.float64).reshape(-1)
+        synced_audio = libtsm.hps_tsm(shifted_audio, time_map, Fs=sample_rate)
+        rendered_channels.append(np.asarray(synced_audio, dtype=np.float64).reshape(-1))
+
+    if len(rendered_channels) == 0:
+        raise ValueError('No audio channels available for synchronized rendering.')
+
+    min_length = min(len(channel) for channel in rendered_channels)
+    stacked = np.stack([channel[:min_length] for channel in rendered_channels], axis=1)
+    return encode_wav_bytes(stacked, sample_rate)
 
 def extract_score_features(xml_text, feature_rate):
     """Extract chroma, onset features, and measure map from MusicXML via music21 + synctoolbox.
@@ -549,6 +633,7 @@ ref_chroma, ref_onset = features[reference_file_id]
 report_progress(f'[{SHIFT_START}%] Computing optimal chroma shifts...')
 
 ref_cens = quantized_chroma_to_CENS(ref_chroma, 201, 50, FEATURE_RATE)[0]
+chroma_shifts = {reference_file_id: 0}
 
 shift_idx = 0
 for fid in all_file_ids:
@@ -561,6 +646,7 @@ for fid in all_file_ids:
     other_chroma, other_onset = features[fid]
     other_cens = quantized_chroma_to_CENS(other_chroma, 201, 50, FEATURE_RATE)[0]
     opt_shift = compute_optimal_chroma_shift(ref_cens, other_cens)
+    chroma_shifts[fid] = int(opt_shift)
 
     if opt_shift != 0:
         report_progress(f'[{pct}%] Applying chroma shift ({opt_shift} bins): {fname}')
@@ -631,9 +717,33 @@ for fid, mmap in score_measure_maps.items():
         score_times = np.interp(ref_times, wp[0] / FEATURE_RATE, wp[1] / FEATURE_RATE)
         columns[col_name] = np.interp(score_times, m_times, m_nums)
 
+sync_audio_outputs = {}
+sync_reference_time_column = None
+
+if generate_synced_audio:
+    sync_reference_time_column = 'time_sync_reference'
+    columns[sync_reference_time_column] = ref_times
+
 report_progress('[95%] Writing CSV...')
 
 df = pd.DataFrame(columns)
 csv_output = df.to_csv(index=False, float_format='%.6f')
+
+if generate_synced_audio:
+    audio_file_ids = [fid for fid in all_file_ids if fid in audio_files and fid != reference_file_id]
+    total_sync_files = max(len(audio_file_ids), 1)
+    for sync_index, fid in enumerate(audio_file_ids):
+        progress_pct = int(96 + (sync_index / total_sync_files) * 3)
+        fname = str(_file_names_dict[fid])
+        report_progress(f'[{progress_pct}%] Rendering synced audio: {fname}')
+        sync_audio_outputs[fid] = np.frombuffer(
+            render_synchronized_audio(
+                fid,
+                warping_paths[fid],
+                chroma_shifts.get(fid, 0)
+            ),
+            dtype=np.uint8
+        )
+
 report_progress('[100%] Alignment complete')
 `;

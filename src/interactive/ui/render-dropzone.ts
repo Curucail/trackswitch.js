@@ -63,10 +63,12 @@ export function buildComputeBarHtml(
     status: string,
     alignmentMethod: AlignmentMethodId,
     isComputing: boolean,
-    showCancel: boolean
+    showCancel: boolean,
+    syncGenerationEnabled: boolean
 ): string {
     let html = '<div class="ts-compute-bar">'
         + '<div class="ts-compute-bar-row">'
+        + '<div class="ts-compute-options">'
         + '<label class="ts-method-select-wrap">'
         + '<span class="ts-method-select-label">Alignment method</span>'
         + '<select class="ts-method-select">'
@@ -74,6 +76,17 @@ export function buildComputeBarHtml(
         + '<option value="dtw"' + (alignmentMethod === 'dtw' ? ' selected' : '') + '>DTW</option>'
         + '</select>'
         + '</label>'
+        + '<label class="ts-sync-toggle-row">'
+        + '<span class="ts-sync-toggle-copy">'
+        + '<span class="ts-sync-toggle-title">Generate synced audio</span>'
+        + '<span class="ts-sync-toggle-hint">Create time- and pitch-synchronized playback sources.</span>'
+        + '</span>'
+        + '<span class="ts-sync-toggle-switch">'
+        + '<input class="ts-sync-toggle-input" type="checkbox"' + (syncGenerationEnabled ? ' checked' : '') + '>'
+        + '<span class="ts-sync-toggle-knob" aria-hidden="true"></span>'
+        + '</span>'
+        + '</label>'
+        + '</div>'
         + '<div class="ts-compute-actions">';
 
     if (showCancel) {
@@ -114,13 +127,21 @@ export function buildFullDropZonePanel(
     isComputing: boolean,
     computingMessage: string,
     alignmentMethod: AlignmentMethodId,
-    showCancel: boolean
+    showCancel: boolean,
+    syncGenerationEnabled: boolean
 ): string {
     let html = '<div class="ts-interactive-panel ts-stack-section">';
 
     html += buildDropZoneHtml();
     html += buildFileListHtml(files, referenceFileId);
-    html += buildComputeBarHtml(canCompute, statusMessage, alignmentMethod, isComputing, showCancel);
+    html += buildComputeBarHtml(
+        canCompute,
+        statusMessage,
+        alignmentMethod,
+        isComputing,
+        showCancel,
+        syncGenerationEnabled
+    );
 
     if (isComputing) {
         html += buildComputingOverlayHtml(computingMessage);
@@ -145,6 +166,7 @@ export interface DropZoneEvents {
     onReferenceChanged(fileId: string): void;
     onFileRemoved(fileId: string): void;
     onMethodChanged(method: AlignmentMethodId): void;
+    onSyncGenerationChanged(enabled: boolean): void;
     onCancelClicked(): void;
     onComputeClicked(): void;
 }
@@ -243,6 +265,13 @@ export function bindDropZoneEvents(container: HTMLElement, events: DropZoneEvent
     if (methodSelect) {
         methodSelect.addEventListener('change', function() {
             events.onMethodChanged(methodSelect.value as AlignmentMethodId);
+        });
+    }
+
+    const syncToggleInput = container.querySelector('.ts-sync-toggle-input') as HTMLInputElement | null;
+    if (syncToggleInput) {
+        syncToggleInput.addEventListener('change', function() {
+            events.onSyncGenerationChanged(syncToggleInput.checked);
         });
     }
 

@@ -77,6 +77,11 @@ export async function resampleToMono(audioBuffer: AudioBuffer, targetSampleRate:
 export async function processAudioFile(file: File): Promise<InteractiveFile> {
     const audioBuffer = await decodeAudioFile(file);
     const pcmData = await resampleToMono(audioBuffer, SAMPLE_RATE);
+    const fullPcmChannels: Float32Array[] = [];
+
+    for (let channelIndex = 0; channelIndex < audioBuffer.numberOfChannels; channelIndex += 1) {
+        fullPcmChannels.push(new Float32Array(audioBuffer.getChannelData(channelIndex)));
+    }
 
     return {
         id: generateFileId(),
@@ -84,6 +89,8 @@ export async function processAudioFile(file: File): Promise<InteractiveFile> {
         type: 'audio',
         file: file,
         pcmData: pcmData,
+        fullPcmChannels: fullPcmChannels,
+        sampleRate: audioBuffer.sampleRate,
         duration: audioBuffer.duration,
     };
 }

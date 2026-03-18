@@ -201,4 +201,8 @@ if (watch) {
     resolve(rootDir, "synctoolbox-dist/synctoolbox-1.4.2-py3-none-any.whl"),
     resolve(rootDir, "dist/js/synctoolbox-1.4.2-py3-none-any.whl"),
   );
+  copyFileSync(
+    resolve(rootDir, "libtsm-dist/libtsm-1.1.2-py3-none-any.whl"),
+    resolve(rootDir, "dist/js/libtsm-1.1.2-py3-none-any.whl"),
+  );
 }

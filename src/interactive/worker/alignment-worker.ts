@@ -4,7 +4,7 @@
  * Loads Pyodide, installs shims for unavailable packages (numba, libfmp, etc.),
  * installs synctoolbox, and runs the alignment pipeline on demand.
  */
-import type { WorkerMessage, WorkerResponse } from '../types';
+import type { WorkerComputeResult, WorkerMessage, WorkerResponse } from '../types';
 import {
     NUMBA_SHIM,
     LIBFMP_SHIM,
@@ -36,6 +36,13 @@ let music21Installed = false;
 
 function postResponse(response: WorkerResponse): void {
     self.postMessage(response);
+}
+
+function postResult(result: WorkerComputeResult): void {
+    const transferables = result.synchronizedAudio.map(function(entry) {
+        return entry.wavData;
+    });
+    self.postMessage({ type: 'result', result: result }, transferables);
 }
 
 function postProgress(message: string): void {
@@ -83,6 +90,20 @@ zf.extractall('/lib/python3.12/site-packages/')
 
     synctoolboxInstalled = true;
 
+    postProgress('[14%] Installing libtsm...');
+    const libtsmWheelUrl = workerBaseUrl + 'libtsm-1.1.2-py3-none-any.whl';
+    pyodide.globals.set('_libtsm_wheel_url', libtsmWheelUrl);
+
+    await pyodide.runPythonAsync(`
+import zipfile, io
+from pyodide.http import pyfetch
+
+response = await pyfetch(_libtsm_wheel_url)
+data = await response.bytes()
+zf = zipfile.ZipFile(io.BytesIO(data))
+zf.extractall('/lib/python3.12/site-packages/')
+`);
+
     postProgress('[14%] Applying DTW speedup...');
     await pyodide.runPythonAsync(DTW_SPEEDUP);
 
@@ -106,15 +127,17 @@ await micropip.install('music21')
     postProgress('MusicXML support installed.');
 }
 
-async function computeAlignment(message: Extract<WorkerMessage, { type: 'compute' }>): Promise<string> {
+async function computeAlignment(message: Extract<WorkerMessage, { type: 'compute' }>): Promise<WorkerComputeResult> {
     if (!pyodide || !synctoolboxInstalled) {
         throw new Error('Pyodide is not initialized.');
     }
 
-    const { files, referenceFileId, method, featureRate } = message;
+    const { files, referenceFileId, method, featureRate, generateSyncedAudio } = message;
 
     // Prepare data dictionaries for Python
     const audioFiles: Record<string, Float32Array> = {};
+    const fullResolutionAudioFiles: Record<string, number[][]> = {};
+    const audioSampleRates: Record<string, number> = {};
     const scoreFiles: Record<string, string> = {};
     const fileNames: Record<string, string> = {};
 
@@ -122,6 +145,10 @@ async function computeAlignment(message: Extract<WorkerMessage, { type: 'compute
         fileNames[file.id] = file.name;
         if (file.type === 'audio') {
             audioFiles[file.id] = file.pcmData;
+            fullResolutionAudioFiles[file.id] = file.fullPcmChannels.map(function(channelData) {
+                return Array.from(channelData);
+            });
+            audioSampleRates[file.id] = file.sampleRate;
         } else {
             scoreFiles[file.id] = file.xmlText;
         }
@@ -143,12 +170,15 @@ async function computeAlignment(message: Extract<WorkerMessage, { type: 'compute
 
     // Set ALL globals BEFORE running any Python that references them
     pyodide.globals.set('audio_files_js', pyAudioFiles);
+    pyodide.globals.set('full_resolution_audio_files', pyodide.toPy(fullResolutionAudioFiles));
+    pyodide.globals.set('audio_sample_rates', pyodide.toPy(audioSampleRates));
     pyodide.globals.set('score_files', pyodide.toPy(scoreFiles));
     pyodide.globals.set('file_names', pyodide.toPy(fileNames));
     pyodide.globals.set('reference_file_id', referenceFileId);
     pyodide.globals.set('alignment_method_script', methodScript);
     pyodide.globals.set('FEATURE_RATE', featureRate);
     pyodide.globals.set('SAMPLE_RATE', SAMPLE_RATE);
+    pyodide.globals.set('generate_synced_audio', generateSyncedAudio);
 
     // Convert audio arrays from JS lists to numpy arrays
     await pyodide.runPythonAsync(`
@@ -161,6 +191,15 @@ for fid, arr in _audio_files_raw.items():
 del _audio_files_raw
 `);
 
+    await pyodide.runPythonAsync(`
+_full_resolution_audio_files_raw = dict(full_resolution_audio_files)
+full_resolution_audio = {}
+for fid, channels in _full_resolution_audio_files_raw.items():
+    full_resolution_audio[fid] = [np.array(channel, dtype=np.float64) for channel in channels]
+del _full_resolution_audio_files_raw
+audio_sample_rates = {str(fid): int(rate) for fid, rate in dict(audio_sample_rates).items()}
+`);
+
     // Expose a progress reporting function to Python
     pyodide.globals.set('report_progress', (msg: string) => {
         postProgress(msg);
@@ -169,11 +208,52 @@ del _audio_files_raw
     // Run the pipeline
     await pyodide.runPythonAsync(ALIGNMENT_PIPELINE);
 
-    // Get the CSV output
+    // Get the CSV output and synchronized audio payloads
     const csvOutput = pyodide.globals.get('csv_output') as string;
+    const syncReferenceTimeColumn = pyodide.globals.get('sync_reference_time_column') as string | null;
+    const synchronizedAudioProxy = pyodide.globals.get('sync_audio_outputs');
+    const synchronizedAudioRecord = synchronizedAudioProxy && typeof (synchronizedAudioProxy as any).toJs === 'function'
+        ? (synchronizedAudioProxy as any).toJs()
+        : synchronizedAudioProxy;
+    const synchronizedAudio: WorkerComputeResult['synchronizedAudio'] = [];
+
+    if (synchronizedAudioRecord) {
+        const synchronizedEntries = synchronizedAudioRecord instanceof Map
+            ? Array.from(synchronizedAudioRecord.entries())
+            : Object.entries(synchronizedAudioRecord as Record<string, Uint8Array | ArrayBuffer>);
+
+        synchronizedEntries.forEach(function(entry) {
+            const fileId = String(entry[0]);
+            const rawData = entry[1] as Uint8Array | ArrayBuffer | ArrayLike<number>;
+            let wavData: ArrayBuffer;
+
+            if (rawData instanceof ArrayBuffer) {
+                wavData = rawData;
+            } else if (ArrayBuffer.isView(rawData)) {
+                wavData = new Uint8Array(
+                    rawData.buffer,
+                    rawData.byteOffset,
+                    rawData.byteLength
+                ).slice().buffer;
+            } else {
+                const fallbackBytes = new Uint8Array(rawData as ArrayLike<number>);
+                wavData = fallbackBytes.buffer;
+            }
+
+            synchronizedAudio.push({
+                fileId: fileId,
+                wavData: wavData,
+                mimeType: 'audio/wav',
+            });
+        });
+    }
 
     postProgress('Alignment complete.');
-    return csvOutput;
+    return {
+        csv: csvOutput,
+        syncReferenceTimeColumn: syncReferenceTimeColumn || null,
+        synchronizedAudio: synchronizedAudio,
+    };
 }
 
 // ── Message handler ──
@@ -196,8 +276,8 @@ self.addEventListener('message', async function(event: MessageEvent<WorkerMessag
             }
 
             case 'compute': {
-                const csv = await computeAlignment(message);
-                postResponse({ type: 'result', csv: csv });
+                const result = await computeAlignment(message);
+                postResult(result);
                 break;
             }
 

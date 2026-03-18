@@ -11,21 +11,38 @@ export interface InteractiveFile {
     file: File;
     /** Decoded and resampled mono PCM at SAMPLE_RATE (audio files only). */
     pcmData?: Float32Array;
+    /** Decoded full-fidelity PCM per channel at the original sample rate (audio files only). */
+    fullPcmChannels?: Float32Array[];
+    /** Original sample rate of the decoded audio file (audio files only). */
+    sampleRate?: number;
     /** Raw MusicXML text (musicxml files only). */
     xmlText?: string;
     /** Duration in seconds (audio files only, set after decoding). */
     duration?: number;
 }
 
+export interface InteractiveSynchronizedAudio {
+    fileId: string;
+    objectUrl: string;
+    mimeType: string;
+}
+
+export interface InteractiveAlignmentResult {
+    csv: string;
+    syncReferenceTimeColumn: string | null;
+    synchronizedAudio: InteractiveSynchronizedAudio[];
+}
+
 export interface InteractiveState {
     files: InteractiveFile[];
     referenceFileId: string | null;
     alignmentMethod: AlignmentMethodId;
+    syncGenerationEnabled: boolean;
     waveformAlignedPlayhead: boolean;
     waveformShowAlignmentPoints: boolean;
     computationStatus: 'idle' | 'initializing' | 'computing' | 'done' | 'error';
     computationError: string | null;
-    alignmentCsv: string | null;
+    alignmentResult: InteractiveAlignmentResult | null;
     alignmentCacheKey: string | null;
     canCancelBackToPlayer: boolean;
     workerReady: boolean;
@@ -56,6 +73,8 @@ export interface WorkerFileAudio {
     name: string;
     type: 'audio';
     pcmData: Float32Array;
+    fullPcmChannels: Float32Array[];
+    sampleRate: number;
 }
 
 export interface WorkerFileScore {
@@ -78,6 +97,7 @@ export interface WorkerComputeMessage {
     referenceFileId: string;
     method: AlignmentMethodId;
     featureRate: number;
+    generateSyncedAudio: boolean;
 }
 
 export interface WorkerInstallMusic21Message {
@@ -96,7 +116,7 @@ export interface WorkerMusic21InstalledResponse {
 
 export interface WorkerResultResponse {
     type: 'result';
-    csv: string;
+    result: WorkerComputeResult;
 }
 
 export interface WorkerErrorResponse {
@@ -115,3 +135,15 @@ export type WorkerResponse =
     | WorkerResultResponse
     | WorkerErrorResponse
     | WorkerProgressResponse;
+
+export interface WorkerSynchronizedAudioResult {
+    fileId: string;
+    wavData: ArrayBuffer;
+    mimeType: string;
+}
+
+export interface WorkerComputeResult {
+    csv: string;
+    syncReferenceTimeColumn: string | null;
+    synchronizedAudio: WorkerSynchronizedAudioResult[];
+}
