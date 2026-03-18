@@ -80,7 +80,7 @@ export interface SheetMusicEntryModel {
 export type SheetMusicCursor = NonNullable<SheetMusicEntryModel['measureCursor']>;
 
 export const DEFAULT_CURSOR_COLOR = '#999999';
-export const DEFAULT_CURSOR_ALPHA = 0.1;
+export const DEFAULT_CURSOR_ALPHA = 0.4;
 export const DEFAULT_GRAPHICAL_MEASURE_CLASS_NAME = 'GraphicalMeasure';
 export const MIN_OSMD_ZOOM = 0.05;
 export const MAX_OSMD_ZOOM = 8;

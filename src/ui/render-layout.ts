@@ -285,12 +285,12 @@ function parseSheetMusicCursorColor(value: string | null): string {
 
 function parseSheetMusicCursorAlpha(value: string | null): number {
     if (value === null) {
-        return 0.1;
+        return 0.4;
     }
 
     const parsed = Number(value);
     if (!Number.isFinite(parsed)) {
-        return 0.1;
+        return 0.4;
     }
 
     if (parsed < 0) {
@@ -305,11 +305,11 @@ function parseSheetMusicCursorAlpha(value: string | null): number {
 }
 
 function parseSheetMusicMaxHeight(value: string | null): number | null {
-    return parseRoundedPositiveIntegerAttribute(value);
+    return parseRoundedPositiveIntegerAttribute(value) ?? 380;
 }
 
 function parseSheetMusicMaxWidth(value: string | null): number | null {
-    return parseRoundedPositiveIntegerAttribute(value);
+    return parseRoundedPositiveIntegerAttribute(value) ?? 1000;
 }
 
 function parseRoundedPositiveIntegerAttribute(value: string | null): number | null {
@@ -327,12 +327,12 @@ function parseRoundedPositiveIntegerAttribute(value: string | null): number | nu
 
 function parseSheetMusicRenderScale(value: string | null): number | null {
     if (value === null) {
-        return null;
+        return 0.7;
     }
 
     const parsed = Number(value);
     if (!Number.isFinite(parsed) || parsed <= 0) {
-        return null;
+        return 0.7;
     }
 
     return parsed;

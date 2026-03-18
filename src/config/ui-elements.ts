@@ -178,7 +178,7 @@ function normalizeWaveformConfig<T extends TrackSwitchWaveformConfig>(waveform: 
 
 function normalizeCursorAlpha(value: number | undefined): number {
     if (typeof value !== 'number' || !Number.isFinite(value)) {
-        return 0.1;
+        return 0.4;
     }
 
     if (value < 0) {
@@ -217,9 +217,9 @@ function normalizeSheetMusicConfig<T extends TrackSwitchSheetMusicConfig>(sheetm
     return {
         ...sheetmusic,
         measureColumn: measureColumn && measureColumn.length > 0 ? measureColumn : undefined,
-        maxWidth: normalizedMaxWidth,
-        maxHeight: normalizePositiveInteger(sheetmusic.maxHeight),
-        renderScale: normalizePositiveFiniteNumber(sheetmusic.renderScale),
+        maxWidth: normalizedMaxWidth ?? 1000,
+        maxHeight: normalizePositiveInteger(sheetmusic.maxHeight) ?? 380,
+        renderScale: normalizePositiveFiniteNumber(sheetmusic.renderScale) ?? 0.7,
         followPlayback: normalizeSheetMusicFollowPlayback(sheetmusic.followPlayback),
         cursorAlpha: normalizeCursorAlpha(sheetmusic.cursorAlpha),
     };
