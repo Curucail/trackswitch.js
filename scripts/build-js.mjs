@@ -87,6 +87,13 @@ function rewriteEsmImportSpecifiers(directory) {
   }
 }
 
+function copyDocsAsset(relativeSourcePath, relativeTargetPath = relativeSourcePath) {
+  copyFileSync(
+    resolve(rootDir, relativeSourcePath),
+    resolve(rootDir, "docs", relativeTargetPath),
+  );
+}
+
 const sourceEntryPoints = collectTypeScriptEntryPoints(resolve(rootDir, "src"));
 
 const browserCommonOptions = {
@@ -205,4 +212,10 @@ if (watch) {
     resolve(rootDir, "libtsm-dist/libtsm-1.1.2-py3-none-any.whl"),
     resolve(rootDir, "dist/js/libtsm-1.1.2-py3-none-any.whl"),
   );
+
+  copyDocsAsset("dist/js/trackswitch.min.js", "js/trackswitch.min.js");
+  copyDocsAsset("dist/js/trackswitch-interactive.js", "js/trackswitch-interactive.js");
+  copyDocsAsset("dist/js/trackswitch-alignment-worker.js", "js/trackswitch-alignment-worker.js");
+  copyDocsAsset("dist/js/synctoolbox-1.4.2-py3-none-any.whl", "js/synctoolbox-1.4.2-py3-none-any.whl");
+  copyDocsAsset("dist/js/libtsm-1.1.2-py3-none-any.whl", "js/libtsm-1.1.2-py3-none-any.whl");
 }

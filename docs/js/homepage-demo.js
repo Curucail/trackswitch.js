@@ -3,6 +3,7 @@
 
   var MODE_DEFAULT = 'default';
   var MODE_ALIGNMENT = 'alignment';
+  var MODE_INTERACTIVE = 'interactive';
   function createBaseTracks(basePath) {
     return [
       {
@@ -105,6 +106,7 @@
   var MODE_DISABLED_CONTROLS = {
     default: ['sheetNotePreview', 'warpingMatrix', 'alignedPlayhead', 'showAlignmentPoints'],
     alignment: ['customImage', 'seekableImage', 'presets', 'exclusiveSolo', 'trackImageBySolo'],
+    interactive: CONTROL_NAMES.slice(),
   };
 
   var DEFAULT_MODEL = {
@@ -141,6 +143,14 @@
     warpingMatrix: false,
     exclusiveSolo: true,
   });
+  var INTERACTIVE_DEFAULT_MODEL = Object.assign({}, ALIGNMENT_DEFAULT_MODEL, {
+    looping: true,
+    globalVolume: true,
+    trackMixControls: true,
+    seekBar: true,
+    timer: true,
+    keyboard: true,
+  });
 
   document.addEventListener('DOMContentLoaded', function () {
     var SVG_NS = 'http://www.w3.org/2000/svg';
@@ -156,6 +166,7 @@
     var modeButtons = [];
     var defaultBasePath;
     var alignmentBasePath;
+    var interactiveWorkerPath;
     var currentMode = MODE_DEFAULT;
     var modelByMode;
     var controller = null;
@@ -171,7 +182,9 @@
       !playerRoot ||
       !controlsRoot ||
       typeof window.TrackSwitch === 'undefined' ||
-      typeof window.TrackSwitch.createTrackSwitch !== 'function'
+      typeof window.TrackSwitch.createTrackSwitch !== 'function' ||
+      typeof window.TrackSwitchInteractive === 'undefined' ||
+      typeof window.TrackSwitchInteractive.createInteractiveTrackSwitch !== 'function'
     ) {
       return;
     }
@@ -182,6 +195,8 @@
       'assets/multitracks';
     alignmentBasePath =
       playerRoot.getAttribute('data-ts-alignment-base') || 'assets/alignment';
+    interactiveWorkerPath =
+      playerRoot.getAttribute('data-ts-interactive-worker') || 'js/trackswitch-alignment-worker.js';
 
     modeButtons = Array.prototype.slice.call(
       controlsRoot.querySelectorAll('[data-ts-mode-button]')
@@ -190,10 +205,15 @@
     modelByMode = {
       default: Object.assign({}, DEFAULT_MODEL),
       alignment: Object.assign({}, ALIGNMENT_DEFAULT_MODEL),
+      interactive: Object.assign({}, INTERACTIVE_DEFAULT_MODEL),
     };
 
     function isAlignmentMode(mode) {
       return mode === MODE_ALIGNMENT;
+    }
+
+    function isInteractiveMode(mode) {
+      return mode === MODE_INTERACTIVE;
     }
 
     function getBasePathForMode(mode) {
@@ -527,6 +547,14 @@
         normalized.waveformPlaybackFollowMode = 'off';
       }
 
+      if (isInteractiveMode(mode)) {
+        notes.push('Interactive mode uses a guided setup flow instead of the feature toggles shown for the other demos.');
+        return {
+          model: normalized,
+          notes: notes,
+        };
+      }
+
       if (isAlignmentMode(mode)) {
         if (normalized.customImage) {
           normalized.customImage = false;
@@ -580,11 +608,43 @@
     }
 
     function renderQuickstartSnippet(model, mode) {
-      if (isAlignmentMode(mode)) {
+      if (isInteractiveMode(mode)) {
+        renderInteractiveQuickstartSnippet();
+      } else if (isAlignmentMode(mode)) {
         renderAlignmentQuickstartSnippet(model);
       } else {
         renderDefaultQuickstartSnippet(model);
       }
+    }
+
+    function renderInteractiveQuickstartSnippet() {
+      var snippetLines = [
+        '<link rel="stylesheet" href="dist/css/trackswitch.min.css" />',
+        '<script src="dist/js/trackswitch.min.js"></script>',
+        '<script src="dist/js/trackswitch-interactive.js"></script>',
+        '',
+        '<div id="player"></div>',
+        '',
+        '<script>',
+        "document.addEventListener('DOMContentLoaded', function () {",
+        "  var player = TrackSwitchInteractive.createInteractiveTrackSwitch(",
+        "    document.getElementById('player'),",
+        '    {',
+        "      workerUrl: 'dist/js/trackswitch-alignment-worker.js',",
+        "      alignmentMethod: 'mrmsdtw',",
+        '    }',
+        '  );',
+        '  player.initialize();',
+        '});',
+        '</script>',
+      ];
+      var snippetText = snippetLines.join('\n');
+      quickstartText = snippetText;
+      if (!quickstartElement) {
+        return;
+      }
+      quickstartElement.innerHTML = highlightSnippet(snippetText);
+      quickstartElement.className = 'language-html';
     }
 
     function renderDefaultQuickstartSnippet(model) {
@@ -902,6 +962,13 @@
       var uiConfig = [];
       var init;
 
+      if (isInteractiveMode(currentMode)) {
+        return {
+          workerUrl: interactiveWorkerPath,
+          alignmentMethod: 'mrmsdtw',
+        };
+      }
+
       if (model.customImage && !isAlignmentMode(currentMode)) {
         uiConfig.push({
           type: 'image',
@@ -1086,6 +1153,16 @@
       }
 
       playerRoot.innerHTML = '';
+      if (isInteractiveMode(currentMode)) {
+        controller = window.TrackSwitchInteractive.createInteractiveTrackSwitch(
+          playerRoot,
+          buildInitFromModel(model)
+        );
+        controller.initialize();
+        scheduleGuideArrowUpdate();
+        return;
+      }
+
       controller = window.TrackSwitch.createTrackSwitch(
         playerRoot,
         buildInitFromModel(model)
@@ -1132,7 +1209,11 @@
       modeButtons.forEach(function (button) {
         button.addEventListener('click', function () {
           var nextMode = button.getAttribute('data-ts-mode') || MODE_DEFAULT;
-          if (nextMode !== MODE_DEFAULT && nextMode !== MODE_ALIGNMENT) {
+          if (
+            nextMode !== MODE_DEFAULT &&
+            nextMode !== MODE_ALIGNMENT &&
+            nextMode !== MODE_INTERACTIVE
+          ) {
             return;
           }
           if (nextMode === currentMode) {

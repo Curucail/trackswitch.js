@@ -47,6 +47,7 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
           id="ts-showcase-player"
           data-ts-default-base="{{ '/assets/multitracks' | relative_url }}"
           data-ts-alignment-base="{{ '/assets/alignment' | relative_url }}"
+          data-ts-interactive-worker="{{ '/js/trackswitch-alignment-worker.js' | relative_url }}"
         ></div>
       </div>
     </div>
@@ -73,6 +74,16 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
           aria-selected="false"
         >
           Alignment
+        </button>
+        <button
+          type="button"
+          class="ts-mode-tab"
+          data-ts-mode-button
+          data-ts-mode="interactive"
+          role="tab"
+          aria-selected="false"
+        >
+          Interactive Alignment
         </button>
       </div>
 
