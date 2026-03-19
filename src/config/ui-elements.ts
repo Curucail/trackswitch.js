@@ -250,7 +250,7 @@ function normalizeWarpingMatrixBpm(
         return null;
     }
 
-    if (value === 'from_score' || value === 'infer_score') {
+    if (value === 'infer_score') {
         return 'infer_score';
     }
 
