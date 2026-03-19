@@ -51,6 +51,7 @@ jobs:
           npm run build:docs-assets
       
       - name: Setup Pages
+        id: pages
         uses: actions/configure-pages@v5
 
       - name: Setup Ruby
@@ -61,7 +62,7 @@ jobs:
           bundler-cache: true
 
       - name: Build with Jekyll
-        run: bundle exec jekyll build --source ./docs --destination ./_site
+        run: bundle exec jekyll build --source ./docs --destination ./_site --baseurl "${{ steps.pages.outputs.base_path }}"
       
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
