@@ -198,7 +198,7 @@
     stroke-dasharray: 5 5;
 }
 
-.trackswitch .warping-matrix-sync-overlay {
+.trackswitch.trackswitch .warping-matrix-sync-overlay {
     position: absolute;
     inset: 0;
     display: none;
