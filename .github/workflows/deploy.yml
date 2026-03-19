@@ -19,6 +19,8 @@ jobs:
   # Build job
   build:
     runs-on: ubuntu-latest
+    env:
+      BUNDLE_GEMFILE: docs/Gemfile
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -50,12 +52,16 @@ jobs:
       
       - name: Setup Pages
         uses: actions/configure-pages@v5
-      
-      - name: Build with Jekyll
-        uses: actions/jekyll-build-pages@v1
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
         with:
-          source: ./docs
-          destination: ./_site
+          ruby-version: '3.2'
+          bundler: '4.0.7'
+          bundler-cache: true
+
+      - name: Build with Jekyll
+        run: bundle exec jekyll build --source ./docs --destination ./_site
       
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
