@@ -124,9 +124,9 @@ interface WarpingMatrixHostMetadata {
     tempoControls: HTMLElement;
     tempoMessage: HTMLElement;
     tempoWindowSlider: HTMLInputElement;
-    tempoWindowValueNode: SVGTextElement;
+    tempoWindowValueNode: HTMLSpanElement;
     tempoSmoothingSlider: HTMLInputElement;
-    tempoSmoothingValueNode: SVGTextElement;
+    tempoSmoothingValueNode: HTMLSpanElement;
     matrixSeriesSignature: string | null;
     matrixDataCache: WarpingMatrixMatrixData | null;
     matrixDataCacheKey: string | null;
@@ -166,10 +166,6 @@ const WARPING_MATRIX_TEMPO_LOG_MIN_PERCENT = 20;
 const WARPING_MATRIX_TEMPO_LOG_MAX_PERCENT = 500;
 const WARPING_MATRIX_MONOTONICITY_WARNING = 'Warping path cannot be made strictly monotonous';
 const WARPING_MATRIX_TEMPO_AXIS_TICKS = [20, 50, 100, 200, 500];
-const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
-const WARPING_TEMPO_LABEL_WIDTH = 118;
-const WARPING_TEMPO_VALUE_WIDTH = 56;
-const WARPING_TEMPO_TEXT_HEIGHT = 18;
 
 function clampTime(value: number, minimum: number, maximum: number): number {
     if (!Number.isFinite(value)) {
@@ -187,27 +183,11 @@ function clampTime(value: number, minimum: number, maximum: number): number {
     return value;
 }
 
-function createWarpingTempoInlineText(
-    className: string,
-    width: number,
-    textAnchor: 'start' | 'end'
-): { svg: SVGSVGElement; text: SVGTextElement } {
-    const svg = document.createElementNS(SVG_NAMESPACE, 'svg');
-    svg.setAttribute('class', className);
-    svg.setAttribute('viewBox', '0 0 ' + width + ' ' + WARPING_TEMPO_TEXT_HEIGHT);
-    svg.setAttribute('width', String(width));
-    svg.setAttribute('height', String(WARPING_TEMPO_TEXT_HEIGHT));
-    svg.setAttribute('aria-hidden', 'true');
-
-    const text = document.createElementNS(SVG_NAMESPACE, 'text');
-    text.setAttribute('class', 'warping-tempo-text-node');
-    text.setAttribute('x', textAnchor === 'end' ? String(width) : '0');
-    text.setAttribute('y', '14');
-    text.setAttribute('text-anchor', textAnchor);
-    text.textContent = '';
-    svg.appendChild(text);
-
-    return { svg, text };
+function createWarpingTempoInlineText(className: string): HTMLSpanElement {
+    const span = document.createElement('span');
+    span.className = className + ' warping-tempo-text-node';
+    span.setAttribute('aria-hidden', 'true');
+    return span;
 }
 
 function sanitizeDuration(value: number): number {
@@ -455,35 +435,33 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
 
             const windowControl = document.createElement('label');
             windowControl.className = 'warping-tempo-control';
-            const windowLabel = createWarpingTempoInlineText('warping-tempo-control-label', WARPING_TEMPO_LABEL_WIDTH, 'start');
-            windowLabel.text.textContent = 'Window (s)';
+            const windowLabel = createWarpingTempoInlineText('warping-tempo-control-label');
+            windowLabel.textContent = 'Window (s)';
+            const tempoWindowValueNode = createWarpingTempoInlineText('warping-tempo-value');
             const tempoWindowSlider = document.createElement('input');
             tempoWindowSlider.className = 'warping-tempo-slider';
             tempoWindowSlider.type = 'range';
             tempoWindowSlider.min = String(WARPING_MATRIX_TEMPO_WINDOW_MIN_SECONDS);
             tempoWindowSlider.max = String(WARPING_MATRIX_TEMPO_WINDOW_MAX_SECONDS);
             tempoWindowSlider.step = String(WARPING_MATRIX_TEMPO_WINDOW_STEP_SECONDS);
-            const tempoWindowValue = createWarpingTempoInlineText('warping-tempo-value', WARPING_TEMPO_VALUE_WIDTH, 'end');
-            const tempoWindowValueNode = tempoWindowValue.text;
-            windowControl.appendChild(windowLabel.svg);
+            windowControl.appendChild(windowLabel);
             windowControl.appendChild(tempoWindowSlider);
-            windowControl.appendChild(tempoWindowValue.svg);
+            windowControl.appendChild(tempoWindowValueNode);
 
             const smoothingControl = document.createElement('label');
             smoothingControl.className = 'warping-tempo-control';
-            const smoothingLabel = createWarpingTempoInlineText('warping-tempo-control-label', WARPING_TEMPO_LABEL_WIDTH, 'start');
-            smoothingLabel.text.textContent = 'Smoothing (s)';
+            const smoothingLabel = createWarpingTempoInlineText('warping-tempo-control-label');
+            smoothingLabel.textContent = 'Smoothing (s)';
+            const tempoSmoothingValueNode = createWarpingTempoInlineText('warping-tempo-value');
             const tempoSmoothingSlider = document.createElement('input');
             tempoSmoothingSlider.className = 'warping-tempo-slider';
             tempoSmoothingSlider.type = 'range';
             tempoSmoothingSlider.min = String(WARPING_MATRIX_TEMPO_SMOOTHING_MIN_SECONDS);
             tempoSmoothingSlider.max = String(WARPING_MATRIX_TEMPO_SMOOTHING_MAX_SECONDS);
             tempoSmoothingSlider.step = String(WARPING_MATRIX_TEMPO_SMOOTHING_STEP_SECONDS);
-            const tempoSmoothingValue = createWarpingTempoInlineText('warping-tempo-value', WARPING_TEMPO_VALUE_WIDTH, 'end');
-            const tempoSmoothingValueNode = tempoSmoothingValue.text;
-            smoothingControl.appendChild(smoothingLabel.svg);
+            smoothingControl.appendChild(smoothingLabel);
             smoothingControl.appendChild(tempoSmoothingSlider);
-            smoothingControl.appendChild(tempoSmoothingValue.svg);
+            smoothingControl.appendChild(tempoSmoothingValueNode);
 
             tempoControls.appendChild(windowControl);
             tempoControls.appendChild(smoothingControl);

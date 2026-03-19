@@ -565,7 +565,6 @@
       }
 
       if (isInteractiveMode(mode)) {
-        notes.push('Interactive mode uses a guided setup flow instead of the feature toggles shown for the other demos.');
         return {
           model: normalized,
           notes: notes,

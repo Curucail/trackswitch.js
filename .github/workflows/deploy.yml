@@ -39,17 +39,6 @@ jobs:
       - name: Build project
         run: npm run build
       
-      - name: Prepare Jekyll site
-        run: |
-          mkdir -p docs/css docs/js
-          cp dist/css/trackswitch.min.css docs/css/
-          cp dist/js/trackswitch.min.js docs/js/
-          cp dist/js/trackswitch-interactive.js docs/js/
-          cp dist/js/trackswitch-alignment-worker.js docs/js/
-          cp dist/js/synctoolbox-1.4.2-py3-none-any.whl docs/js/
-          cp dist/js/libtsm-1.1.2-py3-none-any.whl docs/js/
-          npm run build:docs-assets
-      
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v5

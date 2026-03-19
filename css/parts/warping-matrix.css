@@ -49,10 +49,10 @@
 
 .trackswitch .warping-tempo-controls {
     order: 0;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 12px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 10px 16px;
     padding: 6px 10px 4px 10px;
     border-bottom: 1px solid var(--ts-color-text-muted);
     background-color: var(--ts-color-surface-base);
@@ -72,24 +72,24 @@
 }
 
 .trackswitch .warping-tempo-control {
-    display: inline-flex;
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr) 4.25em;
     align-items: center;
-    gap: 8px;
-    min-width: fit-content;
-    flex: 0 0 auto;
+    gap: 10px;
+    min-width: 0;
+    width: 100%;
 }
 
 .trackswitch .warping-tempo-control-label {
-    flex: 0 0 auto;
-    width: 118px;
-    height: 18px;
-    overflow: visible;
+    min-width: 0;
+    white-space: nowrap;
 }
 
 .trackswitch .warping-tempo-slider {
     --ts-slider-track-color: var(--ts-color-surface-control);
-    min-width: 80px;
-    max-width: 80px;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
     margin: 0;
 }
 
@@ -100,17 +100,18 @@
 
 .trackswitch .warping-tempo-value {
     flex: 0 0 auto;
-    width: 56px;
-    height: 18px;
-    overflow: visible;
+    width: 4.25em;
+    text-align: right;
+    white-space: nowrap;
 }
 
 .trackswitch .warping-tempo-text-node {
-    fill: var(--ts-color-text-secondary);
+    display: block;
+    color: var(--ts-color-text-secondary);
     font-family: var(--ts-font-ui);
     font-size: 15px;
     font-weight: 400;
-    dominant-baseline: alphabetic;
+    line-height: 18px;
 }
 
 .trackswitch .warping-plot-host .warping-plot-svg {
@@ -223,8 +224,8 @@
     }
 
     .trackswitch .warping-tempo-controls {
-        flex-wrap: wrap;
-        gap: 8px 12px;
+        grid-template-columns: 1fr;
+        gap: 8px;
     }
 
     .trackswitch .warping-tempo-message {
@@ -232,6 +233,7 @@
     }
 
     .trackswitch .warping-tempo-control {
-        flex: 0 0 auto;
+        width: 100%;
+        grid-template-columns: max-content minmax(0, 1fr) 4.25em;
     }
 }
