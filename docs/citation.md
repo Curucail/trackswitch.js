@@ -1,4 +1,5 @@
 ---
+layout: default
 title: Cite
 description: Citation information for trackswitch.js
 ---

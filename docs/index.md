@@ -1,4 +1,5 @@
 ---
+layout: default
 title: trackswitch.js
 description: Web-Based Multitrack Audio Player for Presenting Scientific Results
 ---
