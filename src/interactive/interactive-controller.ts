@@ -9,6 +9,7 @@ import type {
 } from './types';
 import type { TrackSwitchController } from '../domain/types';
 import { FEATURE_RATE } from './constants';
+import { ensureBasicPitchFeatures, resolveBasicPitchModelUrl } from './basic-pitch';
 import {
     processFile,
     fileNameToColumnName,
@@ -271,6 +272,10 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
         this.rerenderDropZone();
 
         try {
+            if (this.state.alignmentMethod === 'basic_pitch') {
+                await this.ensureBasicPitchFeaturesForAlignment();
+            }
+
             // Ensure worker is ready
             await this.workerBridge.initialize();
             this.state.workerReady = true;
@@ -296,6 +301,36 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             this.state.computationStatus = 'error';
             this.state.computationError = error instanceof Error ? error.message : String(error);
             this.rerenderDropZone();
+        }
+    }
+
+    private async ensureBasicPitchFeaturesForAlignment(): Promise<void> {
+        const audioFiles = this.state.files.filter(function(file) {
+            return file.type === 'audio';
+        });
+
+        if (audioFiles.length === 0) {
+            return;
+        }
+
+        const modelUrl = resolveBasicPitchModelUrl(this.init.workerUrl);
+        const total = audioFiles.length;
+
+        for (let index = 0; index < total; index += 1) {
+            const file = audioFiles[index];
+            const fileLabel = 'Basic Pitch ' + (index + 1) + '/' + total + ': ' + file.name;
+
+            await ensureBasicPitchFeatures(
+                file,
+                modelUrl,
+                (progress) => {
+                    const percentage = Number.isFinite(progress.progress)
+                        ? Math.max(0, Math.min(100, Math.round(progress.progress * 100)))
+                        : null;
+                    const prefix = percentage === null ? fileLabel : fileLabel + ' (' + percentage + '%)';
+                    this.onWorkerProgress(prefix + ' - ' + progress.message);
+                }
+            );
         }
     }
 

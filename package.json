@@ -91,6 +91,7 @@
     "typecheck:unused": "tsc --project tsconfig.json --noUnusedLocals --noUnusedParameters --pretty false"
   },
   "dependencies": {
+    "@spotify/basic-pitch": "^1.0.1",
     "d3": "^7.9.0",
     "opensheetmusicdisplay": "^1.9.7",
     "papaparse": "^5.5.3"

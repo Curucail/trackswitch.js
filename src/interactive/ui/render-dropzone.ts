@@ -73,6 +73,7 @@ export function buildComputeBarHtml(
         + '<select class="ts-method-select">'
         + '<option value="mrmsdtw"' + (alignmentMethod === 'mrmsdtw' ? ' selected' : '') + '>MrMsDTW</option>'
         + '<option value="dtw"' + (alignmentMethod === 'dtw' ? ' selected' : '') + '>DTW</option>'
+        + '<option value="basic_pitch"' + (alignmentMethod === 'basic_pitch' ? ' selected' : '') + '>Basic Pitch</option>'
         + '</select>'
         + '</label>'
         + '<label class="ts-sync-toggle-row">'

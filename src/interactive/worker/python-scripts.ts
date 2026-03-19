@@ -337,6 +337,9 @@ try:
 except Exception:
     HAS_ONSET_FEATURES = False
 
+BASIC_PITCH_MIDI_OFFSET = 21
+BASIC_PITCH_N_SEMITONES = 88
+
 def extract_audio_features(audio_data, sample_rate, feature_rate, progress_fn=None):
     """Extract chroma and optional onset features from audio PCM data."""
     if progress_fn: progress_fn('Estimating tuning')
@@ -376,6 +379,32 @@ def extract_audio_features(audio_data, sample_rate, feature_rate, progress_fn=No
             f_onset = None
 
     return f_chroma_quantized, f_onset
+
+def decode_basic_pitch_feature_matrix(payload):
+    frame_count = int(payload['frameCount'])
+    bin_count = int(payload['binCount'])
+    data = np.asarray(payload['data'], dtype=np.float64)
+
+    if frame_count == 0 or bin_count == 0:
+        return np.zeros((0, 0), dtype=np.float64)
+
+    if data.size != frame_count * bin_count:
+        raise ValueError('Invalid Basic Pitch feature payload dimensions.')
+
+    # JS caches matrices as time x bins. DTW expects feature_dim x time.
+    return data.reshape((frame_count, bin_count)).T
+
+def build_basic_pitch_score_matrix(f_pitch):
+    target_end = BASIC_PITCH_MIDI_OFFSET + BASIC_PITCH_N_SEMITONES
+    if f_pitch.shape[0] < target_end:
+        padded = np.zeros((target_end, f_pitch.shape[1]), dtype=np.float64)
+        padded[:f_pitch.shape[0], :] = f_pitch
+        f_pitch = padded
+
+    return np.asarray(
+        f_pitch[BASIC_PITCH_MIDI_OFFSET:target_end, :],
+        dtype=np.float64
+    )
 
 def pitch_shift_cents_from_chroma_shift(chroma_shift):
     cents = int(chroma_shift) % 12
@@ -478,17 +507,11 @@ def render_synchronized_audio(fid, warping_path, chroma_shift, progress_fn=None)
         progress_fn(0.98, 'encoding wav')
     return encode_wav_bytes(stacked, sample_rate)
 
-def extract_score_features(xml_text, feature_rate):
-    """Extract chroma, onset features, and measure map from MusicXML via music21 + synctoolbox.
-    Returns (f_chroma_quantized, f_onset, measure_times) where measure_times is a list of
-    (time_seconds, measure_number) tuples for each measure boundary."""
+def extract_score_note_events_and_measure_map(xml_text):
+    """Extract score note events and measure boundaries from MusicXML."""
     import music21
     import pandas as pd
-    import tempfile
-    import os
-    from synctoolbox.feature.csv_tools import df_to_pitch_features, df_to_pitch_onset_features
 
-    # Parse MusicXML
     score = music21.converter.parse(xml_text)
     score = score.stripTies()
     try:
@@ -526,34 +549,36 @@ def extract_score_features(xml_text, feature_rate):
     if not notes:
         raise ValueError("No notes found in MusicXML file")
 
-    # Actually use tempo from score if available
     tempos = score.flatten().getElementsByClass(music21.tempo.MetronomeMark)
     default_bpm = 120.0
     if tempos:
         default_bpm = tempos[0].number
 
-    # Recompute times with actual tempo
     for n in notes:
         n['start'] = n['start'] * 120.0 / default_bpm
         n['duration'] = n['duration'] * 120.0 / default_bpm
 
-    # Extract measure boundaries: (time_in_seconds, measure_number)
-    # Use the first part to get measure offsets (all parts share the same measure structure)
     measure_times = []
     try:
         ref_part = score.parts[0]
         for m in ref_part.getElementsByClass(music21.stream.Measure):
             measure_num = m.number
-            # offset is in quarter-note beats, convert to seconds
             time_sec = float(m.offset) * 60.0 / default_bpm
             measure_times.append((time_sec, measure_num))
         measure_times.sort(key=lambda x: x[0])
     except Exception:
         measure_times = []
 
-    df = pd.DataFrame(notes)
+    return pd.DataFrame(notes), measure_times
+
+def extract_score_features(xml_text, feature_rate):
+    """Extract score chroma/onset features, Basic Pitch-like frame features, and measure map."""
+    from synctoolbox.feature.csv_tools import df_to_pitch_features, df_to_pitch_onset_features
+
+    df, measure_times = extract_score_note_events_and_measure_map(xml_text)
 
     f_pitch = df_to_pitch_features(df, feature_rate=feature_rate)
+    f_basic_pitch_score = build_basic_pitch_score_matrix(f_pitch)
     f_chroma = pitch_to_chroma(f_pitch=f_pitch)
     f_chroma_quantized = quantize_chroma(f_chroma=f_chroma)
 
@@ -569,7 +594,7 @@ def extract_score_features(xml_text, feature_rate):
     except Exception:
         f_onset = None
 
-    return f_chroma_quantized, f_onset, measure_times
+    return f_chroma_quantized, f_onset, measure_times, f_basic_pitch_score
 
 
 # ── Main pipeline ──
@@ -593,6 +618,14 @@ sync_audio_file_ids = [
 ]
 sync_audio_count = len(sync_audio_file_ids)
 _file_names_dict = dict(file_names)
+_basic_pitch_audio_features_raw = dict(basic_pitch_audio_features) if 'basic_pitch_audio_features' in globals() else {}
+audio_basic_pitch_features = {}
+
+for fid, payload in _basic_pitch_audio_features_raw.items():
+    audio_basic_pitch_features[str(fid)] = {
+        'frames': decode_basic_pitch_feature_matrix(payload['frames']),
+        'contours': decode_basic_pitch_feature_matrix(payload['contours']),
+    }
 
 def _progress_percent(value):
     return int(np.clip(np.round(value), 0, 100))
@@ -658,16 +691,31 @@ for file_idx, fid in enumerate(all_file_ids):
         prog_fn = _make_progress_fn(file_start_pct, file_end_pct - file_start_pct, fname)
         report_progress(f'[{_progress_percent(file_start_pct)}%] Extracting features: {fname}')
         chroma, onset = extract_audio_features(audio_files[fid], SAMPLE_RATE, FEATURE_RATE, progress_fn=prog_fn)
+        file_features = {
+            'chroma': chroma,
+            'onset': onset,
+        }
+        if alignment_method_id == 'basic_pitch':
+            audio_basic_pitch = audio_basic_pitch_features.get(str(fid))
+            if not audio_basic_pitch:
+                raise ValueError(f'Missing Basic Pitch features for audio file: {fname}')
+            file_features['basic_pitch_frames'] = audio_basic_pitch['frames']
+            file_features['basic_pitch_contours'] = audio_basic_pitch['contours']
     else:
         report_progress(f'[{_progress_percent(file_start_pct)}%] Parsing score: {fname}')
-        chroma, onset, measure_map = extract_score_features(score_files[fid], FEATURE_RATE)
+        chroma, onset, measure_map, score_basic_pitch = extract_score_features(score_files[fid], FEATURE_RATE)
         if measure_map:
             score_measure_maps[fid] = measure_map
-    features[fid] = (chroma, onset)
+        file_features = {
+            'chroma': chroma,
+            'onset': onset,
+            'score_basic_pitch': score_basic_pitch,
+        }
+    features[fid] = file_features
 
 report_progress(f'[{_progress_percent(SHIFT_START)}%] Feature extraction complete')
 
-ref_chroma, ref_onset = features[reference_file_id]
+ref_chroma = features[reference_file_id]['chroma']
 
 # ── Optimal chroma shift ──
 # Compute CENS features (smoothed + downsampled to ~1Hz) for efficient shift search,
@@ -686,7 +734,8 @@ for fid in all_file_ids:
     fname = str(_file_names_dict[fid])
     report_progress(f'[{pct}%] Finding chroma shift: {fname}')
 
-    other_chroma, other_onset = features[fid]
+    other_chroma = features[fid]['chroma']
+    other_onset = features[fid]['onset']
     other_cens = quantized_chroma_to_CENS(other_chroma, 201, 50, FEATURE_RATE)[0]
     opt_shift = compute_optimal_chroma_shift(ref_cens, other_cens)
     chroma_shifts[fid] = int(opt_shift)
@@ -696,14 +745,71 @@ for fid in all_file_ids:
         other_chroma = shift_chroma_vectors(other_chroma, opt_shift)
         if other_onset is not None:
             other_onset = shift_chroma_vectors(other_onset, opt_shift)
-        features[fid] = (other_chroma, other_onset)
+        features[fid]['chroma'] = other_chroma
+        features[fid]['onset'] = other_onset
 
     shift_idx += 1
 
 report_progress(f'[{_progress_percent(ALIGN_START)}%] Chroma shift complete')
 
-# Re-read reference features (unchanged, but keeps code symmetric)
-ref_chroma, ref_onset = features[reference_file_id]
+def get_alignment_pair_features(reference_id, other_id):
+    ref_features = features[reference_id]
+    other_features = features[other_id]
+
+    if alignment_method_id != 'basic_pitch':
+        return (
+            ref_features['chroma'],
+            other_features['chroma'],
+            ref_features.get('onset'),
+            other_features.get('onset'),
+        )
+
+    reference_is_audio = reference_id in audio_files
+    other_is_audio = other_id in audio_files
+
+    if reference_is_audio and other_is_audio:
+        return (
+            ref_features['basic_pitch_contours'],
+            other_features['basic_pitch_contours'],
+            None,
+            None,
+        )
+
+    if reference_is_audio and not other_is_audio:
+        return (
+            ref_features['basic_pitch_frames'],
+            other_features['score_basic_pitch'],
+            None,
+            None,
+        )
+
+    if not reference_is_audio and other_is_audio:
+        return (
+            ref_features['score_basic_pitch'],
+            other_features['basic_pitch_frames'],
+            None,
+            None,
+        )
+
+    return (
+        ref_features['score_basic_pitch'],
+        other_features['score_basic_pitch'],
+        None,
+        None,
+    )
+
+def get_reference_feature_length(reference_id):
+    reference_features = features[reference_id]
+
+    if alignment_method_id != 'basic_pitch':
+        return int(reference_features['chroma'].shape[1])
+
+    if reference_id in audio_files:
+        if 'basic_pitch_frames' in reference_features:
+            return int(reference_features['basic_pitch_frames'].shape[1])
+        return int(reference_features['basic_pitch_contours'].shape[1])
+
+    return int(reference_features['score_basic_pitch'].shape[1])
 
 # Align each non-reference file to the reference
 warping_paths = {}
@@ -714,11 +820,11 @@ for fid in all_file_ids:
     pct = _progress_percent(ALIGN_START + (align_idx / max(non_ref_count, 1)) * (ALIGN_END - ALIGN_START))
     fname = str(_file_names_dict[fid])
     report_progress(f'[{pct}%] Computing warping path: {fname}')
-    other_chroma, other_onset = features[fid]
+    ref_feature_matrix, other_feature_matrix, ref_onset, other_onset = get_alignment_pair_features(reference_file_id, fid)
     try:
-        wp = align_pair(ref_chroma, other_chroma, ref_onset, other_onset)
+        wp = align_pair(ref_feature_matrix, other_feature_matrix, ref_onset, other_onset)
     except TypeError:
-        wp = align_pair(ref_chroma, other_chroma)
+        wp = align_pair(ref_feature_matrix, other_feature_matrix)
     warping_paths[fid] = wp
     align_idx += 1
 
@@ -726,7 +832,7 @@ report_progress(f'[{_progress_percent(CSV_START)}%] Building CSV output...')
 
 import pandas as pd
 
-ref_length = ref_chroma.shape[1]
+ref_length = get_reference_feature_length(reference_file_id)
 ref_times = np.arange(ref_length, dtype=np.float64) / FEATURE_RATE
 
 other_file_ids_ordered = [fid for fid in all_file_ids if fid != reference_file_id]

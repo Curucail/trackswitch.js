@@ -1,5 +1,7 @@
 import type {
     AlignmentMethodId,
+    BasicPitchFeatureMatrix,
+    BasicPitchFeatureSet,
     InteractiveFile,
     WorkerComputeMessage,
     WorkerComputeResult,
@@ -9,6 +11,7 @@ import type {
     WorkerResponse,
 } from '../types';
 import { FEATURE_RATE, PYODIDE_CDN_URL, DEFAULT_WORKER_URL } from '../constants';
+import { cloneBasicPitchFeatureSet } from '../basic-pitch';
 
 type ProgressCallback = (message: string) => void;
 
@@ -122,6 +125,9 @@ export class AlignmentWorkerBridge {
                     pcmData: pcmCopy,
                     fullPcmChannels: fullPcmChannels,
                     sampleRate: file.sampleRate!,
+                    basicPitchFeatures: method === 'basic_pitch' && file.basicPitchFeatures
+                        ? cloneBasicPitchFeatureSet(file.basicPitchFeatures)
+                        : undefined,
                 } as WorkerFileAudio;
             }
             return {
@@ -139,6 +145,10 @@ export class AlignmentWorkerBridge {
                 wf.fullPcmChannels.forEach(function(channelData) {
                     transferables.push(channelData.buffer);
                 });
+                if (wf.basicPitchFeatures) {
+                    transferables.push(wf.basicPitchFeatures.frames.data.buffer);
+                    transferables.push(wf.basicPitchFeatures.contours.data.buffer);
+                }
             }
         });
 

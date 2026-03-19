@@ -87,6 +87,7 @@ export function buildSettingsPanelHtml(state: SettingsPanelState): string {
         + '<select class="ts-method-select">'
         + '<option value="mrmsdtw"' + (state.alignmentMethod === 'mrmsdtw' ? ' selected' : '') + '>MrMsDTW</option>'
         + '<option value="dtw"' + (state.alignmentMethod === 'dtw' ? ' selected' : '') + '>DTW</option>'
+        + '<option value="basic_pitch"' + (state.alignmentMethod === 'basic_pitch' ? ' selected' : '') + '>Basic Pitch</option>'
         + '</select>'
         + '</label>'
         + '</div>';

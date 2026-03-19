@@ -30,6 +30,10 @@ const syncPairs = [
     target: resolve(rootDir, "docs/js/libtsm-1.1.2-py3-none-any.whl"),
   },
   {
+    source: resolve(rootDir, "dist/js/basic-pitch"),
+    target: resolve(rootDir, "docs/js/basic-pitch"),
+  },
+  {
     source: resolve(rootDir, "examples/default/data"),
     target: resolve(rootDir, "docs/assets/multitracks"),
   },

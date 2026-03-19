@@ -1,4 +1,4 @@
-import { copyFileSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, cpSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build, context } from "esbuild";
@@ -211,6 +211,12 @@ if (watch) {
   copyFileSync(
     resolve(rootDir, "libtsm-dist/libtsm-1.1.2-py3-none-any.whl"),
     resolve(rootDir, "dist/js/libtsm-1.1.2-py3-none-any.whl"),
+  );
+  mkdirSync(resolve(rootDir, "dist/js/basic-pitch"), { recursive: true });
+  cpSync(
+    resolve(rootDir, "node_modules/@spotify/basic-pitch/model"),
+    resolve(rootDir, "dist/js/basic-pitch"),
+    { recursive: true },
   );
 
   copyDocsAsset("dist/js/trackswitch.min.js", "js/trackswitch.min.js");

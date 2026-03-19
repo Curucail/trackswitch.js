@@ -138,6 +138,10 @@ async function computeAlignment(message: Extract<WorkerMessage, { type: 'compute
     const audioFiles: Record<string, Float32Array> = {};
     const fullResolutionAudioFiles: Record<string, number[][]> = {};
     const audioSampleRates: Record<string, number> = {};
+    const basicPitchAudioFeatures: Record<string, {
+        frames: { data: number[]; frameCount: number; binCount: number };
+        contours: { data: number[]; frameCount: number; binCount: number };
+    }> = {};
     const scoreFiles: Record<string, string> = {};
     const fileNames: Record<string, string> = {};
 
@@ -149,6 +153,20 @@ async function computeAlignment(message: Extract<WorkerMessage, { type: 'compute
                 return Array.from(channelData);
             });
             audioSampleRates[file.id] = file.sampleRate;
+            if (file.basicPitchFeatures) {
+                basicPitchAudioFeatures[file.id] = {
+                    frames: {
+                        data: Array.from(file.basicPitchFeatures.frames.data),
+                        frameCount: file.basicPitchFeatures.frames.frameCount,
+                        binCount: file.basicPitchFeatures.frames.binCount,
+                    },
+                    contours: {
+                        data: Array.from(file.basicPitchFeatures.contours.data),
+                        frameCount: file.basicPitchFeatures.contours.frameCount,
+                        binCount: file.basicPitchFeatures.contours.binCount,
+                    },
+                };
+            }
         } else {
             scoreFiles[file.id] = file.xmlText;
         }
@@ -172,9 +190,11 @@ async function computeAlignment(message: Extract<WorkerMessage, { type: 'compute
     pyodide.globals.set('audio_files_js', pyAudioFiles);
     pyodide.globals.set('full_resolution_audio_files', pyodide.toPy(fullResolutionAudioFiles));
     pyodide.globals.set('audio_sample_rates', pyodide.toPy(audioSampleRates));
+    pyodide.globals.set('basic_pitch_audio_features', pyodide.toPy(basicPitchAudioFeatures));
     pyodide.globals.set('score_files', pyodide.toPy(scoreFiles));
     pyodide.globals.set('file_names', pyodide.toPy(fileNames));
     pyodide.globals.set('reference_file_id', referenceFileId);
+    pyodide.globals.set('alignment_method_id', method);
     pyodide.globals.set('alignment_method_script', methodScript);
     pyodide.globals.set('FEATURE_RATE', featureRate);
     pyodide.globals.set('SAMPLE_RATE', SAMPLE_RATE);

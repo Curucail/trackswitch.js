@@ -2,7 +2,18 @@ import type { TrackSwitchController } from '../domain/types';
 
 export type InteractiveFileType = 'audio' | 'musicxml';
 
-export type AlignmentMethodId = 'dtw' | 'mrmsdtw';
+export type AlignmentMethodId = 'dtw' | 'mrmsdtw' | 'basic_pitch';
+
+export interface BasicPitchFeatureMatrix {
+    data: Float32Array;
+    frameCount: number;
+    binCount: number;
+}
+
+export interface BasicPitchFeatureSet {
+    frames: BasicPitchFeatureMatrix;
+    contours: BasicPitchFeatureMatrix;
+}
 
 export interface InteractiveFile {
     id: string;
@@ -19,6 +30,8 @@ export interface InteractiveFile {
     xmlText?: string;
     /** Duration in seconds (audio files only, set after decoding). */
     duration?: number;
+    /** Cached Basic Pitch features (audio files only). */
+    basicPitchFeatures?: BasicPitchFeatureSet;
 }
 
 export interface InteractiveSynchronizedAudio {
@@ -75,6 +88,7 @@ export interface WorkerFileAudio {
     pcmData: Float32Array;
     fullPcmChannels: Float32Array[];
     sampleRate: number;
+    basicPitchFeatures?: BasicPitchFeatureSet;
 }
 
 export interface WorkerFileScore {
