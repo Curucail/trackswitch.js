@@ -137,7 +137,7 @@ interface WarpingMatrixHostMetadata {
     trackSeries: WarpingMatrixTrackSeries[];
     matrixTrackDuration: number;
     configuredHeight: number | null;
-    configuredGlobalScoreBpm: number | null;
+    configuredBpm: number | 'infer_score' | null;
     tempoWindowSeconds: number;
     tempoSmoothingSeconds: number;
     colorByColumn: Map<string, string>;
@@ -239,7 +239,15 @@ function parseWarpingMatrixTempoSmoothingSeconds(value: string | null): number |
     return parsePositiveNumberAttribute(value);
 }
 
-function parseWarpingMatrixGlobalScoreBpm(value: string | null): number | null {
+function parseWarpingMatrixBpm(value: string | null): number | 'infer_score' | null {
+    if (value === null) {
+        return null;
+    }
+
+    if (value === 'from_score' || value === 'infer_score') {
+        return 'infer_score';
+    }
+
     return parsePositiveNumberAttribute(value);
 }
 
@@ -397,8 +405,8 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
             const configuredTempoSmoothingSeconds = parseWarpingMatrixTempoSmoothingSeconds(
                 hostElement.getAttribute('data-warping-matrix-tempo-smoothing-seconds')
             );
-            const configuredGlobalScoreBpm = parseWarpingMatrixGlobalScoreBpm(
-                hostElement.getAttribute('data-warping-matrix-global-score-bpm')
+            const configuredBpm = parseWarpingMatrixBpm(
+                hostElement.getAttribute('data-warping-matrix-bpm')
             );
             hostElement.style.removeProperty('height');
 
@@ -506,7 +514,7 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
                 trackSeries: [],
                 matrixTrackDuration: 1,
                 configuredHeight: configuredHeight,
-                configuredGlobalScoreBpm: configuredGlobalScoreBpm,
+                configuredBpm: configuredBpm,
                 tempoWindowSeconds: initialTempoWindowSeconds,
                 tempoSmoothingSeconds: initialTempoSmoothingSeconds,
                 colorByColumn: new Map<string, string>(),
@@ -514,7 +522,7 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
                 referenceDuration: 0,
                 currentReferenceTime: 0,
                 currentTrackTime: 0,
-                currentScoreBpm: configuredGlobalScoreBpm,
+                currentScoreBpm: typeof configuredBpm === 'number' ? configuredBpm : null,
                 matrixActivePointerId: null,
                 lastSizeKey: null,
                 layoutDirty: true,
@@ -1140,7 +1148,7 @@ export function applyWarpingMatrixContext(ctx: any, host: any, context: any): an
 
         host.referenceDuration = referenceDuration;
         host.currentReferenceTime = clampTime(context.currentReferenceTime, 0, referenceDuration);
-        host.currentScoreBpm = host.configuredGlobalScoreBpm ?? (
+        host.currentScoreBpm = (
             Number.isFinite(context.currentScoreBpm) && context.currentScoreBpm > 0
                 ? context.currentScoreBpm
                 : null
@@ -1419,8 +1427,12 @@ function resolveDisplayedWarpingMatrixScoreBpm(
     primarySeriesData: WarpingMatrixPathSeriesData | null,
     xDomain: [number, number]
 ): number | null {
-    if (Number.isFinite(host.configuredGlobalScoreBpm) && (host.configuredGlobalScoreBpm as number) > 0) {
-        return host.configuredGlobalScoreBpm;
+    if (typeof host.configuredBpm === 'number' && Number.isFinite(host.configuredBpm) && host.configuredBpm > 0) {
+        return host.configuredBpm;
+    }
+
+    if (host.configuredBpm !== 'infer_score') {
+        return null;
     }
 
     if (

@@ -49,7 +49,7 @@ const uiWarpingMatrixAllowedKeys = [
     'style',
     'height',
     'tempoSmoothingSeconds',
-    'globalScoreBPM',
+    'bpm',
 ] as const;
 
 const trackAllowedKeys = [
@@ -229,13 +229,36 @@ function normalizeWarpingMatrixConfig<T extends TrackSwitchWarpingMatrixConfig>(
     const normalizedTempoSmoothingSeconds = normalizePositiveFiniteNumber(
         warpingMatrix.tempoSmoothingSeconds
     );
+    const normalizedBpm = normalizeWarpingMatrixBpm(warpingMatrix.bpm);
 
     return {
         ...warpingMatrix,
         height: normalizePositiveInteger(warpingMatrix.height),
         tempoSmoothingSeconds: normalizedTempoSmoothingSeconds,
-        globalScoreBPM: normalizePositiveFiniteNumber(warpingMatrix.globalScoreBPM),
+        bpm: normalizedBpm,
     };
+}
+
+function normalizeWarpingMatrixBpm(
+    value: TrackSwitchWarpingMatrixConfig['bpm']
+): TrackSwitchWarpingMatrixConfig['bpm'] {
+    if (value === undefined) {
+        return null;
+    }
+
+    if (value === null) {
+        return null;
+    }
+
+    if (value === 'from_score' || value === 'infer_score') {
+        return 'infer_score';
+    }
+
+    if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+        return value;
+    }
+
+    return null;
 }
 
 function normalizeSourceConfig(source: TrackSourceDefinition): TrackSourceDefinition {
@@ -364,9 +387,9 @@ function injectWarpingMatrix(root: HTMLElement, warpingMatrix: TrackSwitchWarpin
         );
     }
 
-    const normalizedGlobalScoreBpm = normalizePositiveFiniteNumber(warpingMatrix.globalScoreBPM);
-    if (normalizedGlobalScoreBpm !== undefined) {
-        container.setAttribute('data-warping-matrix-global-score-bpm', String(normalizedGlobalScoreBpm));
+    const normalizedBpm = normalizeWarpingMatrixBpm(warpingMatrix.bpm);
+    if (normalizedBpm !== null && normalizedBpm !== undefined) {
+        container.setAttribute('data-warping-matrix-bpm', String(normalizedBpm));
     }
 
     root.appendChild(container);

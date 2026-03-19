@@ -87,6 +87,26 @@ function hasPerTrackImageUi(resolvedUi: TrackSwitchUiElement[] | undefined): boo
     });
 }
 
+function hasSheetMusicUi(resolvedUi: TrackSwitchUiElement[] | undefined): boolean {
+    if (!resolvedUi) {
+        return false;
+    }
+
+    return resolvedUi.some(function(entry) {
+        return entry.type === 'sheetMusic';
+    });
+}
+
+function hasWarpingMatrixInferScoreBpm(resolvedUi: TrackSwitchUiElement[] | undefined): boolean {
+    if (!resolvedUi) {
+        return false;
+    }
+
+    return resolvedUi.some(function(entry) {
+        return entry.type === 'warpingMatrix' && entry.bpm === 'infer_score';
+    });
+}
+
 export function normalizeInit(root: HTMLElement, init: TrackSwitchInit): NormalizedTrackSwitchConfig {
     validateInitKeys(init);
 
@@ -99,6 +119,9 @@ export function normalizeInit(root: HTMLElement, init: TrackSwitchInit): Normali
         || normalizedFeatures.mode === 'alignment_interactive';
     if (hasPerTrackImageUi(resolvedUi) && !usesExclusiveSoloMode) {
         throw new Error('Invalid init configuration: perTrackImage requires features.exclusiveSolo to be true.');
+    }
+    if (hasWarpingMatrixInferScoreBpm(resolvedUi) && !hasSheetMusicUi(resolvedUi)) {
+        throw new Error('Invalid init configuration: ui.warpingMatrix bpm "infer_score" requires a sheetMusic ui element.');
     }
 
     const resolvedTrackData = resolveTracksFromUi(resolvedUi);

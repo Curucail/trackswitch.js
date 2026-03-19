@@ -801,7 +801,7 @@
 
       if (model.warpingMatrix) {
         snippetLines.push(
-          "      { type: 'warpingMatrix', height: 200 },"
+          "      { type: 'warpingMatrix', height: 200, bpm: " + (model.sheetMusic ? "'infer_score'" : "null") + " },"
         );
       }
 
@@ -1064,6 +1064,7 @@
         uiConfig.push({
           type: 'warpingMatrix',
           height: 200,
+          bpm: model.sheetMusic ? 'infer_score' : null,
         });
       }
 

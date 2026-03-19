@@ -328,6 +328,7 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
         }
 
         const referenceColumnName = fileNameToColumnName(referenceFile.name);
+        const warpingMatrixBpm = referenceFile.type === 'musicxml' ? 'infer_score' : null;
 
         // Encode CSV as data URL for the existing alignment system
         const csvDataUrl = 'data:text/csv;base64,' + btoa(this.state.alignmentResult.csv);
@@ -401,6 +402,7 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
         // Add warping matrix
         uiElements.push({
             type: 'warpingMatrix',
+            bpm: warpingMatrixBpm,
         });
 
         const playerInit = {

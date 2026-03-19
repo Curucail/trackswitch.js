@@ -97,7 +97,7 @@ export interface TrackSwitchWarpingMatrixConfig {
     style?: string;
     height?: number;
     tempoSmoothingSeconds?: number;
-    globalScoreBPM?: number;
+    bpm?: number | 'infer_score' | 'from_score' | null;
 }
 
 export interface TrackSwitchImageUiElement extends TrackSwitchImageConfig {

@@ -291,7 +291,7 @@ TrackSwitch.createTrackSwitch(rootElement, {
       type: 'warpingMatrix',
       height: 240,
       tempoSmoothingSeconds: 5,
-      globalScoreBPM: 60,
+      bpm: 'infer_score',
       style: 'margin: 0;',
     },
   ],
@@ -625,7 +625,7 @@ Example:
   type: 'warpingMatrix',
   height: 240,
   tempoSmoothingSeconds: 5,
-  globalScoreBPM: 60,
+  bpm: 'infer_score',
   style: 'margin: 12px 0;',
 }
 ```
@@ -636,7 +636,7 @@ Section options:
 | --- | --- | --- | --- |
 | `height?` | `number` | auto | Height of the chart area. |
 | `tempoSmoothingSeconds?` | `number` | `5` | How much the local tempo deviation graph should be smoothed. Tempo Deviation is computed as a central differences variant of the warping path. Larger values give a smoother curve. |
-| `globalScoreBPM?` | `number` | none | Adds a global BPM to the tempo chart using this score tempo. If at least one score sheet is added somewhere in the player, the BPM is determined automatically from the MusicXML score (also dynamically changing BPM in the score is considered). |
+| `bpm?` | `number \| 'infer_score' \| null` | `null` | Controls whether the left tempo axis is shown as BPM. Use a positive number for a fixed global BPM, `'infer_score'` to infer it from the score dynamically (changing BPM also supported), or `null` to hide the BPM axis and show only tempo percent. |
 | `style?` | `string` | none | Lets you fine-tune the look or spacing of the section with CSS. |
 
 Notes:
@@ -644,6 +644,7 @@ Notes:
 - This section is only useful in alignment mode.
 - It shows two views: the timing relationship between the active track and the reference timeline, and the local tempo deviation of the active track over time.
 - This section is only enabled in unsynced alignment mode.
+- `bpm: 'infer_score'` requires at least one `sheetMusic` ui element in the player.
 
 ## Keyboard and Loop Controls {#keyboard-and-loop-controls}
 

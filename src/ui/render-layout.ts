@@ -128,7 +128,7 @@ interface WarpingMatrixHostMetadata {
     tempoCurveValid: boolean;
     matrixTrackDuration: number;
     configuredHeight: number | null;
-    configuredGlobalScoreBpm: number | null;
+    configuredBpm: number | 'infer_score' | null;
     tempoWindowSeconds: number;
     tempoSmoothingSeconds: number;
     colorByColumn: Map<string, string>;
