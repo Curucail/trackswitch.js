@@ -10,8 +10,13 @@
     min-height: 180px;
     display: flex;
     align-items: stretch;
-    gap: 12px;
+    gap: 8px;
     position: relative;
+}
+
+.trackswitch .warping-matrix-host.warping-matrix-host-stacked {
+    flex-direction: column;
+    gap: 10px;
 }
 
 .trackswitch .warping-matrix-panel {
@@ -52,10 +57,10 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     align-items: start;
-    gap: 10px 16px;
+    gap: 8px 12px;
     width: 100%;
     min-width: 0;
-    padding: 6px 10px 4px 10px;
+    padding: 6px 8px 4px 8px;
     border-bottom: 1px solid var(--ts-color-text-muted);
     background-color: var(--ts-color-surface-base);
     position: relative;
@@ -74,26 +79,32 @@
 }
 
 .trackswitch .warping-tempo-control {
-    display: grid;
-    grid-template-columns: 7.5em minmax(0, 1fr) 4.25em;
+    display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: flex-start;
+    gap: 0;
     min-width: 0;
     width: 100%;
 }
 
-.trackswitch .warping-tempo-control-label {
-    min-width: 0;
+.trackswitch.trackswitch .warping-tempo-control-label {
+    flex: 0 0 auto;
+    min-width: fit-content;
+    margin-right: 8px;
     white-space: nowrap;
-    overflow: hidden;
 }
 
-.trackswitch .warping-tempo-slider {
+.trackswitch.trackswitch .warping-tempo-slider {
     --ts-slider-track-color: var(--ts-color-surface-control);
-    width: 100%;
-    min-width: 0;
-    max-width: none;
+    --ts-slider-width: 6rem;
+    flex: 0 0 6rem;
+    width: 6rem;
+    min-width: 6rem;
+    min-inline-size: 0;
+    max-inline-size: 6rem;
+    max-width: 6rem;
     margin: 0;
+    display: block;
 }
 
 .trackswitch .warping-tempo-slider:disabled {
@@ -101,14 +112,15 @@
     opacity: 0.45;
 }
 
-.trackswitch .warping-tempo-value {
-    flex: 0 0 auto;
-    width: 4.25em;
+.trackswitch.trackswitch .warping-tempo-value {
+    flex: 0 0 3.75em;
+    width: 3.75em;
+    margin-left: 0;
     text-align: right;
     white-space: nowrap;
 }
 
-.trackswitch .warping-tempo-text-node {
+.trackswitch.trackswitch .warping-tempo-text-node {
     display: block;
     color: var(--ts-color-text-secondary);
     font-family: var(--ts-font-ui);
@@ -214,7 +226,7 @@
     display: flex;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 500px) {
     .trackswitch .warping-matrix-host {
         flex-direction: column;
         gap: 10px;
@@ -237,6 +249,5 @@
 
     .trackswitch .warping-tempo-control {
         width: 100%;
-        grid-template-columns: 7.5em minmax(0, 1fr) 4.25em;
     }
 }

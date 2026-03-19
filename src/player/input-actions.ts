@@ -565,6 +565,7 @@ export function onResize(ctx: any): any {
                 this.getWaveformTimelineContext()
             );
             this.sheetMusicEngine.resize();
+            this.updateMainControls();
         }, 300);
     }).call(ctx);
 }

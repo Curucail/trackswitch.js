@@ -154,6 +154,7 @@ interface WarpingMatrixHostMetadata {
 
 const WARPING_MATRIX_PRIMARY_COLOR = '#ED8C01';
 const DEFAULT_WARPING_MATRIX_PATH_STROKE_WIDTH = 3;
+const WARPING_MATRIX_STACKED_LAYOUT_MAX_WIDTH = 500;
 const DEFAULT_WARPING_MATRIX_LOCAL_TEMPO_WINDOW_SECONDS = 60;
 const DEFAULT_WARPING_MATRIX_LOCAL_TEMPO_SMOOTHING_SECONDS = 5;
 const WARPING_MATRIX_TEMPO_SMOOTHING_MIN_SECONDS = 1;
@@ -602,7 +603,7 @@ export function createWarpingMatrixPlotState(ctx: any, plotHost: any, width: any
 
         const margins: WarpingPlotMargins = {
             top: 32,
-            right: 52,
+            right: 10,
             bottom: 40,
             left: 52,
         };
@@ -1059,7 +1060,8 @@ export function ensureWarpingLayout(ctx: any, host: any): any {
         const computedHostStyle = window.getComputedStyle(host.host);
         const resolvedGap = Number.parseFloat(computedHostStyle.columnGap || computedHostStyle.gap || '12');
         const panelGap = Number.isFinite(resolvedGap) ? Math.max(0, resolvedGap) : 12;
-        const isStackedLayout = window.matchMedia('(max-width: 900px)').matches;
+        const isStackedLayout = fallbackHostWidth <= WARPING_MATRIX_STACKED_LAYOUT_MAX_WIDTH;
+        host.host.classList.toggle('warping-matrix-host-stacked', isStackedLayout);
 
         let matrixRenderedWidth = 0;
         let tempoRenderedWidth = 0;
@@ -1071,18 +1073,18 @@ export function ensureWarpingLayout(ctx: any, host: any): any {
             matrixRenderedWidth = Math.max(220, Math.round(host.matrixPanel.clientWidth || fallbackHostWidth));
             tempoRenderedWidth = Math.max(220, Math.round(host.tempoPanel.clientWidth || fallbackHostWidth));
         } else {
-            const desiredMatrixWidth = Math.max(220, Math.round(renderedHeight - 4));
-            const maxMatrixWidth = Math.max(220, Math.round((fallbackHostWidth - panelGap) * 0.6));
+            const minMatrixWidth = 190;
+            const desiredMatrixWidth = Math.max(minMatrixWidth, Math.round(renderedHeight - 4));
+            const maxMatrixWidth = Math.max(minMatrixWidth, Math.round((fallbackHostWidth - panelGap) * 0.6));
             const minTempoWidth = 220;
-            const matrixWidthByRemainingSpace = Math.max(220, Math.round(fallbackHostWidth - panelGap - minTempoWidth));
+            const matrixWidthByRemainingSpace = Math.max(minMatrixWidth, Math.round(fallbackHostWidth - panelGap - minTempoWidth));
             matrixRenderedWidth = Math.min(desiredMatrixWidth, maxMatrixWidth, matrixWidthByRemainingSpace);
 
             host.matrixPanel.style.flex = '0 0 ' + matrixRenderedWidth + 'px';
             host.matrixPanel.style.width = matrixRenderedWidth + 'px';
-            host.tempoPanel.style.flex = '1 1 auto';
-            host.tempoPanel.style.width = 'auto';
-
             const fallbackTempoWidth = Math.max(220, Math.round(fallbackHostWidth - panelGap - matrixRenderedWidth));
+            host.tempoPanel.style.flex = '1 1 ' + fallbackTempoWidth + 'px';
+            host.tempoPanel.style.width = fallbackTempoWidth + 'px';
             tempoRenderedWidth = Math.max(220, Math.round(host.tempoPanel.clientWidth || fallbackTempoWidth));
         }
         host.matrixPanel.style.height = renderedHeight + 'px';
