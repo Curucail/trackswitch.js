@@ -418,7 +418,7 @@ function buildShortcutHelpHtml(features: {
         + '</div>'
         + '</div>'
         + '<ul class="shortcut-help-list">' + itemsHtml + '</ul>'
-        + '<p class="shortcut-help-footer">Press <strong>F1</strong> or <strong>Escape</strong> to close.</p>'
+        + '<p class="shortcut-help-footer">Press F1 or Escape to close.</p>'
         + '</div>'
         + '</div>';
 }

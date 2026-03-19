@@ -175,7 +175,7 @@
     animation: trackswitch-shortcut-overlay-fade 180ms ease-out;
 }
 
-.trackswitch .shortcut-help-panel {
+.trackswitch.trackswitch .shortcut-help-panel {
     width: min(560px, 100%);
     max-height: min(82vh, 560px);
     overflow: auto;
@@ -183,10 +183,15 @@
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 10px;
     background: rgba(72, 72, 72, 0.96);
-    color: #fff;
+    color: var(--ts-color-text-inverse);
     font-size: 13px;
     animation: trackswitch-shortcut-content-fade 220ms ease-out;
     outline: none;
+}
+
+.trackswitch.trackswitch .shortcut-help-panel :is(div, p, ul, li, span, strong) {
+    color: inherit;
+    font-family: inherit;
 }
 
 .trackswitch .shortcut-help-header {
@@ -197,12 +202,12 @@
     margin-bottom: 8px;
 }
 
-.trackswitch .shortcut-help-heading {
-    color: #fff;
+.trackswitch.trackswitch .shortcut-help-heading {
+    color: var(--ts-color-text-inverse);
     font-family: inherit;
 }
 
-.trackswitch .shortcut-help-title {
+.trackswitch.trackswitch .shortcut-help-title {
     display: block;
     margin: 0 0 4px;
     font-size: 17px;
@@ -213,8 +218,8 @@
     color: inherit;
 }
 
-.trackswitch .shortcut-help-heading p,
-.trackswitch .shortcut-help-footer {
+.trackswitch.trackswitch .shortcut-help-heading p,
+.trackswitch.trackswitch .shortcut-help-footer {
     margin: 0;
     font-size: 12px;
     line-height: 1.2;
@@ -240,18 +245,18 @@
     animation-delay: var(--ts-shortcut-delay, 40ms);
 }
 
-.trackswitch .shortcut-help-keys {
+.trackswitch.trackswitch .shortcut-help-keys {
     display: inline-flex;
     align-items: center;
     min-height: 18px;
     padding: 0;
-    color: #fff;
+    color: var(--ts-color-text-inverse);
     font-weight: 600;
     line-height: 1.1;
 }
 
-.trackswitch .shortcut-help-action {
-    color: #fff;
+.trackswitch.trackswitch .shortcut-help-action {
+    color: var(--ts-color-text-inverse);
     line-height: 1.2;
 }
 
