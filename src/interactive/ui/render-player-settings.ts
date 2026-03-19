@@ -19,6 +19,9 @@ export function buildPlayerSettingsMenuHtml(state: PlayerSettingsMenuState): str
         )
         + '</div>'
         + '<div class="ts-player-settings-footer">'
+        + '<button class="ts-player-settings-action" type="button" data-settings-action="export-csv">'
+        + 'Export CSV'
+        + '</button>'
         + '<button class="ts-player-settings-action" type="button" data-settings-action="alignment-setup">'
         + 'Back to alignment setup'
         + '</button>'

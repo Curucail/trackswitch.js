@@ -611,6 +611,13 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             });
         }
 
+        const exportCsvBtn = menu.querySelector('[data-settings-action="export-csv"]') as HTMLButtonElement | null;
+        if (exportCsvBtn) {
+            exportCsvBtn.addEventListener('click', () => {
+                this.exportAlignmentCsv();
+            });
+        }
+
         this.settingsMenuDismissHandler = (event: MouseEvent) => {
             if (!this.settingsMenuContainer) {
                 return;
@@ -669,6 +676,25 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             position: snapshot.state.position,
             playing: snapshot.state.playing,
         });
+    }
+
+    private exportAlignmentCsv(): void {
+        if (!this.state.alignmentResult || this.destroyed) {
+            return;
+        }
+
+        const csvBlob = new Blob([this.state.alignmentResult.csv], {
+            type: 'text/csv;charset=utf-8',
+        });
+        const downloadUrl = URL.createObjectURL(csvBlob);
+        const downloadLink = document.createElement('a');
+        downloadLink.href = downloadUrl;
+        downloadLink.download = 'alignment.csv';
+        downloadLink.style.display = 'none';
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+        URL.revokeObjectURL(downloadUrl);
     }
 
     private buildAlignmentCacheKey(): string {
