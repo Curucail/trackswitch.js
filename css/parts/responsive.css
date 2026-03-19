@@ -235,20 +235,20 @@
 
     .trackswitch .shortcut-help-panel {
         padding: 10px 12px;
-        font-size: 12px;
+        font-size: 13px;
     }
 
     .trackswitch .shortcut-help-header {
         flex-direction: column;
         align-items: stretch;
         gap: 6px;
-        margin-bottom: 6px;
+        margin-bottom: 8px;
     }
 
     .trackswitch .shortcut-help-item {
         grid-template-columns: 1fr;
-        gap: 2px;
-        padding: 5px 0;
+        gap: 4px;
+        padding: 7px 0;
     }
 
     .trackswitch .shortcut-help-keys {
@@ -257,13 +257,13 @@
     }
 
     .trackswitch .shortcut-help-title {
-        font-size: 15px;
+        font-size: 16px;
     }
 
     .trackswitch .shortcut-help-heading p,
     .trackswitch .shortcut-help-footer {
-        font-size: 11px;
-        line-height: 1.15;
+        font-size: 12px;
+        line-height: 1.2;
     }
 
     .trackswitch li.track {
