@@ -29,7 +29,7 @@
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
-    min-width: 220px;
+    min-width: 0;
 }
 
 .trackswitch .warping-plot-host {
@@ -53,6 +53,8 @@
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     align-items: start;
     gap: 10px 16px;
+    width: 100%;
+    min-width: 0;
     padding: 6px 10px 4px 10px;
     border-bottom: 1px solid var(--ts-color-text-muted);
     background-color: var(--ts-color-surface-base);
@@ -73,7 +75,7 @@
 
 .trackswitch .warping-tempo-control {
     display: grid;
-    grid-template-columns: max-content minmax(0, 1fr) 4.25em;
+    grid-template-columns: 7.5em minmax(0, 1fr) 4.25em;
     align-items: center;
     gap: 10px;
     min-width: 0;
@@ -83,6 +85,7 @@
 .trackswitch .warping-tempo-control-label {
     min-width: 0;
     white-space: nowrap;
+    overflow: hidden;
 }
 
 .trackswitch .warping-tempo-slider {
@@ -234,6 +237,6 @@
 
     .trackswitch .warping-tempo-control {
         width: 100%;
-        grid-template-columns: max-content minmax(0, 1fr) 4.25em;
+        grid-template-columns: 7.5em minmax(0, 1fr) 4.25em;
     }
 }

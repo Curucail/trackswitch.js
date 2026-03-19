@@ -143,7 +143,7 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
           <input type="checkbox" name="alignedPlayhead" />
         </label>
         <label class="ts-control-row">
-          <span>Show Alignment Points</span>
+          <span>Show all alignment points</span>
           <input type="checkbox" name="showAlignmentPoints" />
         </label>
         <label class="ts-control-row">

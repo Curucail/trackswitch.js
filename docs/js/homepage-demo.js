@@ -1207,7 +1207,6 @@
           if (currentToken !== rebuildToken) {
             return;
           }
-          setNote(['Unable to load one or more demo audio sources.']);
         });
     }
 

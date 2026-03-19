@@ -14,7 +14,7 @@ export function buildPlayerSettingsMenuHtml(state: PlayerSettingsMenuState): str
         )
         + buildToggleRowHtml(
             'show-alignment-points',
-            'Show alignment points',
+            'Show all alignment points',
             state.waveformShowAlignmentPoints
         )
         + '</div>'
