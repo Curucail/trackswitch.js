@@ -108,6 +108,11 @@
     alignment: ['customImage', 'seekableImage', 'presets', 'exclusiveSolo', 'trackImageBySolo'],
     interactive: CONTROL_NAMES.slice(),
   };
+  var MODE_HIDDEN_GROUPS = {
+    default: [],
+    alignment: [],
+    interactive: ['playback', 'visualizations', 'utils'],
+  };
 
   var DEFAULT_MODEL = {
     looping: true,
@@ -228,6 +233,10 @@
 
     function getModeDisabledControlNames(mode) {
       return MODE_DISABLED_CONTROLS[mode] || [];
+    }
+
+    function getModeHiddenGroupNames(mode) {
+      return MODE_HIDDEN_GROUPS[mode] || [];
     }
 
     function isControlUnavailableInMode(name, mode) {
@@ -493,6 +502,14 @@
     }
 
     function syncControlUi(model) {
+      Array.prototype.slice
+        .call(controlsRoot.querySelectorAll('[data-ts-control-group]'))
+        .forEach(function (group) {
+          var groupName = group.getAttribute('data-ts-control-group') || '';
+          var isHidden = getModeHiddenGroupNames(currentMode).indexOf(groupName) !== -1;
+          group.classList.toggle('is-hidden', isHidden);
+        });
+
       CONTROL_NAMES.forEach(function (name) {
         var control = getControl(name);
         var row;

@@ -875,6 +875,10 @@ kbd {
     transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
+.ts-mode-tab[data-ts-mode="interactive"] {
+    grid-column: 1 / -1;
+}
+
 .ts-mode-tab:hover {
     background: rgba(255, 255, 255, 0.96);
     color: var(--ts-doc-color-text-primary);
@@ -896,6 +900,10 @@ kbd {
 
 .ts-control-group:last-of-type {
     margin-bottom: 0;
+}
+
+.ts-control-group.is-hidden {
+    display: none;
 }
 
 .ts-control-group h5 {

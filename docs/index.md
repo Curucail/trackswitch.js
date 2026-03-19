@@ -87,7 +87,7 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
         </button>
       </div>
 
-      <div class="ts-control-group">
+      <div class="ts-control-group" data-ts-control-group="playback">
         <h5>Playback</h5>
         <label class="ts-control-row">
           <span>Looping Controls</span>
@@ -115,7 +115,7 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
         </label>
       </div>
 
-      <div class="ts-control-group">
+      <div class="ts-control-group" data-ts-control-group="visualizations">
         <h5>Visualizations</h5>
         <label class="ts-control-row">
           <span>Seekbar</span>
@@ -167,7 +167,7 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
         </label>
       </div>
 
-      <div class="ts-control-group">
+      <div class="ts-control-group" data-ts-control-group="utils">
         <h5>Utils</h5>
         <label class="ts-control-row">
           <span>Customizable Panel Order</span>

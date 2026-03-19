@@ -6,6 +6,10 @@ const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 const syncPairs = [
   {
+    source: resolve(rootDir, "dist/css/trackswitch.min.css"),
+    target: resolve(rootDir, "docs/css/trackswitch.min.css"),
+  },
+  {
     source: resolve(rootDir, "examples/default/data"),
     target: resolve(rootDir, "docs/assets/multitracks"),
   },
@@ -21,6 +25,6 @@ for (const { source, target } of syncPairs) {
   }
 
   rmSync(target, { recursive: true, force: true });
-  mkdirSync(target, { recursive: true });
+  mkdirSync(dirname(target), { recursive: true });
   cpSync(source, target, { recursive: true });
 }
