@@ -2,30 +2,75 @@ import {
     createElement,
     forwardRef,
     useEffect,
-    useImperativeHandle,
     useRef,
     type CSSProperties,
     type MutableRefObject,
     type Ref,
 } from 'react';
 import { createTrackSwitch } from './player/factory';
-import type { TrackSwitchController, TrackSwitchInit } from './domain/types';
+import type { TrackSwitchController, TrackSwitchEventMap, TrackSwitchInit } from './domain/types';
+
+export interface TrackSwitchEventProps {
+    onLoaded?: (payload: TrackSwitchEventMap['loaded']) => void;
+    onError?: (payload: TrackSwitchEventMap['error']) => void;
+    onPosition?: (payload: TrackSwitchEventMap['position']) => void;
+    onTrackState?: (payload: TrackSwitchEventMap['trackState']) => void;
+}
+
+export interface UseTrackSwitchOptions extends TrackSwitchEventProps {
+    initKey?: string | number;
+    autoLoad?: boolean;
+}
 
 export interface UseTrackSwitchResult {
     rootRef: MutableRefObject<HTMLDivElement | null>;
     controllerRef: MutableRefObject<TrackSwitchController | null>;
 }
 
-export interface TrackSwitchPlayerProps {
+export interface TrackSwitchPlayerProps extends TrackSwitchEventProps {
     init: TrackSwitchInit;
+    initKey?: string | number;
+    autoLoad?: boolean;
     id?: string;
     className?: string;
     style?: CSSProperties;
 }
 
-export function useTrackSwitch(init: TrackSwitchInit): UseTrackSwitchResult {
+function setRefValue<T>(ref: Ref<T> | undefined, value: T): void {
+    if (!ref) {
+        return;
+    }
+
+    if (typeof ref === 'function') {
+        ref(value);
+        return;
+    }
+
+    ref.current = value;
+}
+
+export function useTrackSwitch(
+    init: TrackSwitchInit,
+    {
+        initKey,
+        autoLoad = true,
+        onLoaded,
+        onError,
+        onPosition,
+        onTrackState,
+    }: UseTrackSwitchOptions = {}
+): UseTrackSwitchResult {
     const rootRef = useRef<HTMLDivElement | null>(null);
     const controllerRef = useRef<TrackSwitchController | null>(null);
+    const eventHandlersRef = useRef<TrackSwitchEventProps>({});
+
+    // Keep callbacks live without recreating the controller on every parent render.
+    eventHandlersRef.current = {
+        onLoaded,
+        onError,
+        onPosition,
+        onTrackState,
+    };
 
     useEffect(() => {
         const rootElement = rootRef.current;
@@ -36,11 +81,34 @@ export function useTrackSwitch(init: TrackSwitchInit): UseTrackSwitchResult {
         const controller = createTrackSwitch(rootElement, init);
         controllerRef.current = controller;
 
+        const unsubscribeLoaded = controller.on('loaded', (payload) => {
+            eventHandlersRef.current.onLoaded?.(payload);
+        });
+        const unsubscribeError = controller.on('error', (payload) => {
+            eventHandlersRef.current.onError?.(payload);
+        });
+        const unsubscribePosition = controller.on('position', (payload) => {
+            eventHandlersRef.current.onPosition?.(payload);
+        });
+        const unsubscribeTrackState = controller.on('trackState', (payload) => {
+            eventHandlersRef.current.onTrackState?.(payload);
+        });
+
+        if (autoLoad) {
+            void controller.load().catch(() => {
+                // `load()` is expected to report failures through controller error events.
+            });
+        }
+
         return () => {
-            controller.destroy();
+            unsubscribeLoaded();
+            unsubscribeError();
+            unsubscribePosition();
+            unsubscribeTrackState();
             controllerRef.current = null;
+            controller.destroy();
         };
-    }, [init]);
+    }, [initKey]);
 
     return {
         rootRef,
@@ -49,12 +117,36 @@ export function useTrackSwitch(init: TrackSwitchInit): UseTrackSwitchResult {
 }
 
 export const TrackSwitchPlayer = forwardRef(function TrackSwitchPlayer(
-    { init, id, className, style }: TrackSwitchPlayerProps,
+    {
+        init,
+        initKey,
+        autoLoad = true,
+        id,
+        className,
+        style,
+        onLoaded,
+        onError,
+        onPosition,
+        onTrackState,
+    }: TrackSwitchPlayerProps,
     ref: Ref<TrackSwitchController | null>
 ) {
-    const { rootRef, controllerRef } = useTrackSwitch(init);
+    const { rootRef, controllerRef } = useTrackSwitch(init, {
+        initKey,
+        autoLoad,
+        onLoaded,
+        onError,
+        onPosition,
+        onTrackState,
+    });
 
-    useImperativeHandle(ref, () => controllerRef.current, [controllerRef]);
+    useEffect(() => {
+        setRefValue(ref, controllerRef.current);
+
+        return () => {
+            setRefValue(ref, null);
+        };
+    }, [ref, controllerRef, initKey]);
 
     return createElement('div', {
         ref: rootRef,

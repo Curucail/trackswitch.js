@@ -5,6 +5,18 @@ import { clamp } from '../shared/math';
 import { getSeekMetrics } from '../shared/seek';
 import { pauseOtherControllers, unregisterController } from './player-registry';
 
+function getLoadErrorMessage(error: unknown): string {
+    if (error instanceof Error && error.message.trim().length > 0) {
+        return error.message;
+    }
+
+    const fallback = String(error ?? '').trim();
+    if (fallback.length > 0 && fallback !== '[object Object]') {
+        return fallback;
+    }
+
+    return 'Unexpected error while loading TrackSwitch.';
+}
 
 export function load(ctx: any): any {
     return (async function(this: any) {
@@ -14,95 +26,104 @@ export function load(ctx: any): any {
 
         this.isLoading = true;
         this.renderer.setOverlayLoading(true);
-
-        const prepared = await this.audioEngine.prepareForPlaybackStart();
-        if (!prepared) {
-            this.isLoading = false;
-            this.renderer.setOverlayLoading(false);
-            this.handleError('Web Audio API is not supported in your browser. Please consider upgrading.');
-            return;
-        }
-
-        if (!this.iOSPlaybackUnlocked) {
-            this.iOSPlaybackUnlocked = true;
-            await this.audioEngine.unlockIOSPlayback();
-        }
-
-        this.globalSyncEnabled = false;
-        this.syncLockedTrackIndexes.clear();
-        this.preSyncSoloTrackIndex = null;
-        this.effectiveSingleSoloMode = this.isAlignmentMode()
-            ? true
-            : this.features.exclusiveSolo;
-
-        this.runtimes.forEach(function(runtime: TrackRuntime) {
-            runtime.successful = false;
-            runtime.errored = false;
-            runtime.buffer = null;
-            runtime.gainNode = null;
-            runtime.pannerNode = null;
-            runtime.timing = null;
-            runtime.activeSource = null;
-            runtime.sourceIndex = -1;
-            runtime.activeVariant = 'base';
-            runtime.baseSource = {
-                buffer: null,
-                timing: null,
-                sourceIndex: -1,
-            };
-            runtime.syncedSource = null;
-            runtime.waveformCache.clear();
-        });
-
-        await this.audioEngine.loadTracks(this.runtimes);
-
-        if (this.isDestroyed) {
-            return;
-        }
-
-        this.isLoading = false;
-        this.renderer.setOverlayLoading(false);
-
-        const erroredTracks = this.runtimes.filter(function(runtime: TrackRuntime) {
-            return runtime.errored;
-        });
-
-        if (erroredTracks.length > 0) {
-            this.handleError('One or more audio files failed to load.');
-            return;
-        }
-
-        this.longestDuration = this.findLongestDuration();
-        this.alignmentContext = null;
-        this.alignmentPlaybackTrackIndex = null;
-
-        if (this.features.mode === 'alignment') {
-            const alignmentError = await this.initializeAlignmentMode();
-            if (alignmentError) {
-                this.handleError(alignmentError);
+        try {
+            const prepared = await this.audioEngine.prepareForPlaybackStart();
+            if (!prepared) {
+                this.isLoading = false;
+                this.renderer.setOverlayLoading(false);
+                this.handleError('Web Audio API is not supported in your browser. Please consider upgrading.');
                 return;
             }
+
+            if (!this.iOSPlaybackUnlocked) {
+                this.iOSPlaybackUnlocked = true;
+                await this.audioEngine.unlockIOSPlayback();
+            }
+
+            this.globalSyncEnabled = false;
+            this.syncLockedTrackIndexes.clear();
+            this.preSyncSoloTrackIndex = null;
+            this.effectiveSingleSoloMode = this.isAlignmentMode()
+                ? true
+                : this.features.exclusiveSolo;
+
+            this.runtimes.forEach(function(runtime: TrackRuntime) {
+                runtime.successful = false;
+                runtime.errored = false;
+                runtime.buffer = null;
+                runtime.gainNode = null;
+                runtime.pannerNode = null;
+                runtime.timing = null;
+                runtime.activeSource = null;
+                runtime.sourceIndex = -1;
+                runtime.activeVariant = 'base';
+                runtime.baseSource = {
+                    buffer: null,
+                    timing: null,
+                    sourceIndex: -1,
+                };
+                runtime.syncedSource = null;
+                runtime.waveformCache.clear();
+            });
+
+            await this.audioEngine.loadTracks(this.runtimes);
+
+            if (this.isDestroyed) {
+                return;
+            }
+
+            this.isLoading = false;
+            this.renderer.setOverlayLoading(false);
+
+            const erroredTracks = this.runtimes.filter(function(runtime: TrackRuntime) {
+                return runtime.errored;
+            });
+
+            if (erroredTracks.length > 0) {
+                this.handleError('One or more audio files failed to load.');
+                return;
+            }
+
+            this.longestDuration = this.findLongestDuration();
+            this.alignmentContext = null;
+            this.alignmentPlaybackTrackIndex = null;
+
+            if (this.features.mode === 'alignment') {
+                const alignmentError = await this.initializeAlignmentMode();
+                if (alignmentError) {
+                    this.handleError(alignmentError);
+                    return;
+                }
+            }
+
+            if (this.isDestroyed) {
+                return;
+            }
+
+            await this.initializeSheetMusic();
+
+            if (this.isDestroyed) {
+                return;
+            }
+
+            this.isLoaded = true;
+            this.renderer.hideOverlayOnLoaded();
+
+            this.updateMainControls();
+            this.applyTrackProperties();
+
+            this.emit('loaded', {
+                longestDuration: this.longestDuration,
+            });
+        } catch (error) {
+            if (this.isDestroyed) {
+                return;
+            }
+
+            this.isLoading = false;
+            this.renderer.setOverlayLoading(false);
+            this.handleError(getLoadErrorMessage(error));
         }
-
-        if (this.isDestroyed) {
-            return;
-        }
-
-        await this.initializeSheetMusic();
-
-        if (this.isDestroyed) {
-            return;
-        }
-
-        this.isLoaded = true;
-        this.renderer.hideOverlayOnLoaded();
-
-        this.updateMainControls();
-        this.applyTrackProperties();
-
-        this.emit('loaded', {
-            longestDuration: this.longestDuration,
-        });
     }).call(ctx);
 }
 
@@ -125,6 +146,12 @@ export function destroy(ctx: any): any {
             cancelAnimationFrame(this.waveformRenderFrameId);
             this.waveformRenderFrameId = null;
         }
+        this.seekingElement = null;
+        this.rightClickDragging = false;
+        this.loopDragStart = null;
+        this.draggingMarker = null;
+        this.pinchZoomState = null;
+        this.pendingWaveformTouchSeek = null;
         this.waveformMinimapDragState = null;
 
         if (this.state.playing) {

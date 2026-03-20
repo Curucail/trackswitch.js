@@ -13,6 +13,26 @@ type LineSelection = Selection<SVGLineElement, unknown, null, undefined>;
 type CircleSelection = Selection<SVGCircleElement, unknown, null, undefined>;
 type TextSelection = Selection<SVGTextElement, unknown, null, undefined>;
 
+const TRACKSWITCH_ROOT_CLASSES = [
+    'trackswitch',
+    'error',
+    'sync-enabled',
+    'ts-panel-reorder-active',
+] as const;
+
+function resetManagedRoot(root: HTMLElement): void {
+    TRACKSWITCH_ROOT_CLASSES.forEach((className) => {
+        root.classList.remove(className);
+    });
+
+    const activeElement = document.activeElement;
+    if (activeElement instanceof HTMLElement && root.contains(activeElement)) {
+        activeElement.blur();
+    }
+
+    root.replaceChildren();
+}
+
 interface SheetMusicHostConfig {
     host: HTMLElement;
     scrollContainer: HTMLElement;
@@ -1479,16 +1499,17 @@ export function destroy(ctx: any): any {
             this.endPanelReorder();
         }
 
-        this.queryAll('.main-control').forEach(function(mainControl: HTMLElement) {
-            mainControl.remove();
-        });
+        if (this.waveformTileRefreshFrameId !== null) {
+            cancelAnimationFrame(this.waveformTileRefreshFrameId);
+            this.waveformTileRefreshFrameId = null;
+        }
 
-        this.queryAll('.track_list').forEach(function(trackList: HTMLElement) {
-            trackList.remove();
-        });
-
+        this.latestWaveformRenderInput = null;
+        this.waveformSeekSurfaces.length = 0;
         this.sheetMusicHosts.length = 0;
         this.warpingMatrixHosts.length = 0;
+        this.panelDragState = null;
+        resetManagedRoot(this.root);
     
     }).call(ctx);
 }
