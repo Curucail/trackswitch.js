@@ -28,7 +28,7 @@ export interface AlignmentHelpLabelHtmlOptions {
 
 const ALIGNMENT_HELP_TOOLTIP_CONTENT: Record<AlignmentHelpTooltipId, AlignmentHelpTooltipContent> = {
     features: {
-        heading: 'Features computed from audio files for synchronization.',
+        heading: 'Features computed from audio files for synchronization. For scores, individual note events are extracted as features.',
         items: [
             {
                 title: 'Chroma + DLNCO (synctoolbox) (recommended)',

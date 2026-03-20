@@ -63,6 +63,7 @@ export interface InteractiveState {
     featureSet: AlignmentFeatureSetId;
     algorithm: AlignmentAlgorithmId;
     syncGenerationEnabled: boolean;
+    advancedOptionsExpanded: boolean;
     waveformAlignedPlayhead: boolean;
     waveformShowAlignmentPoints: boolean;
     computationStatus: 'idle' | 'initializing' | 'computing' | 'done' | 'error';

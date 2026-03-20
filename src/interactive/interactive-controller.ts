@@ -48,6 +48,7 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
         featureSet: AlignmentFeatureSetId;
         algorithm: AlignmentAlgorithmId;
         syncGenerationEnabled: boolean;
+        advancedOptionsExpanded: boolean;
         alignmentResult: InteractiveAlignmentResult | null;
         alignmentCacheKey: string | null;
         playbackPosition: number;
@@ -64,6 +65,7 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             featureSet: initialAlignmentSelection.featureSet,
             algorithm: initialAlignmentSelection.algorithm,
             syncGenerationEnabled: false,
+            advancedOptionsExpanded: false,
             waveformAlignedPlayhead: true,
             waveformShowAlignmentPoints: false,
             computationStatus: 'idle',
@@ -124,7 +126,8 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             this.state.featureSet,
             this.state.algorithm,
             this.state.canCancelBackToPlayer,
-            this.state.syncGenerationEnabled
+            this.state.syncGenerationEnabled,
+            this.state.advancedOptionsExpanded
         );
 
         this.rootElement.innerHTML = html;
@@ -173,6 +176,7 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             onFeatureSetChanged: this.handleFeatureSetChanged.bind(this),
             onAlgorithmChanged: this.handleAlgorithmChanged.bind(this),
             onSyncGenerationChanged: this.handleSyncGenerationChanged.bind(this),
+            onAdvancedOptionsChanged: this.handleAdvancedOptionsChanged.bind(this),
             onCancelClicked: this.handleSetupCancelClicked.bind(this),
             onComputeClicked: this.handleComputeClicked.bind(this),
         };
@@ -256,6 +260,10 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
     private handleSyncGenerationChanged(enabled: boolean): void {
         this.state.syncGenerationEnabled = enabled;
         this.rerenderDropZone();
+    }
+
+    private handleAdvancedOptionsChanged(expanded: boolean): void {
+        this.state.advancedOptionsExpanded = expanded;
     }
 
     private handleFileRemoved(fileId: string): void {
@@ -531,6 +539,7 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             featureSet: this.state.featureSet,
             algorithm: this.state.algorithm,
             syncGenerationEnabled: this.state.syncGenerationEnabled,
+            advancedOptionsExpanded: this.state.advancedOptionsExpanded,
             alignmentResult: this.state.alignmentResult,
             alignmentCacheKey: this.state.alignmentCacheKey,
             playbackPosition: playerSnapshot ? playerSnapshot.state.position : 0,
@@ -559,6 +568,7 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
         this.state.featureSet = this.playerSetupSnapshot.featureSet;
         this.state.algorithm = this.playerSetupSnapshot.algorithm;
         this.state.syncGenerationEnabled = this.playerSetupSnapshot.syncGenerationEnabled;
+        this.state.advancedOptionsExpanded = this.playerSetupSnapshot.advancedOptionsExpanded;
         this.state.alignmentResult = this.playerSetupSnapshot.alignmentResult;
         this.state.alignmentCacheKey = this.playerSetupSnapshot.alignmentCacheKey;
         this.state.canCancelBackToPlayer = false;

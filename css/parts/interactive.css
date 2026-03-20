@@ -317,12 +317,88 @@
 
 .trackswitch .ts-compute-bar-row {
     display: grid;
-    grid-template-columns: minmax(180px, 230px) minmax(160px, 190px) minmax(220px, 1fr) auto;
-    grid-template-areas: "features algorithm sync actions";
-    align-items: end;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "advanced actions";
+    align-items: start;
     gap: 12px;
     width: 100%;
     min-width: 0;
+}
+
+.trackswitch .ts-advanced-options {
+    grid-area: advanced;
+    min-width: 0;
+}
+
+.trackswitch .ts-advanced-options-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 2px 0 10px;
+    cursor: pointer;
+    list-style: none;
+    color: var(--ts-color-text-secondary);
+    user-select: none;
+    transition: color 0.18s ease, transform 0.18s ease;
+}
+
+.trackswitch .ts-advanced-options-summary::-webkit-details-marker {
+    display: none;
+}
+
+.trackswitch .ts-advanced-options-summary:hover {
+    color: var(--ts-color-accent);
+}
+
+.trackswitch .ts-advanced-options-title {
+    font-family: var(--ts-font-ui);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    color: inherit;
+    line-height: 1;
+}
+
+.trackswitch .ts-advanced-options-chevron {
+    position: relative;
+    flex: 0 0 auto;
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg) translateY(-1px);
+    transition: transform 0.18s ease, color 0.18s ease;
+}
+
+.trackswitch .ts-advanced-options[open] .ts-advanced-options-chevron {
+    transform: rotate(225deg) translate(-1px, -1px);
+}
+
+.trackswitch .ts-advanced-options-panel {
+    padding: 2px 0 0;
+    transform-origin: top left;
+}
+
+.trackswitch .ts-advanced-options.is-opening .ts-advanced-options-panel {
+    animation: trackswitch-advanced-options-reveal 0.2s ease-out;
+}
+
+.trackswitch .ts-advanced-options-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding-top: 10px;
+}
+
+@keyframes trackswitch-advanced-options-reveal {
+    0% {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .trackswitch .ts-compute-actions {
@@ -341,14 +417,6 @@
     align-content: end;
     min-width: 0;
     position: relative;
-}
-
-.trackswitch .ts-feature-set-select-wrap {
-    grid-area: features;
-}
-
-.trackswitch .ts-algorithm-select-wrap {
-    grid-area: algorithm;
 }
 
 .trackswitch .ts-alignment-select-header {
@@ -497,8 +565,13 @@
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.42);
 }
 
+.trackswitch.trackswitch .ts-alignment-select.ts-alignment-select-compact {
+    min-height: 40px;
+    padding: 7px 10px;
+    font-size: 13px;
+}
+
 .trackswitch .ts-sync-toggle-row {
-    grid-area: sync;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -510,6 +583,13 @@
     background: rgba(255, 255, 255, 0.72);
     box-sizing: border-box;
     cursor: pointer;
+}
+
+.trackswitch .ts-sync-toggle-row.ts-sync-toggle-row-compact {
+    grid-column: 1 / -1;
+    min-height: 40px;
+    padding: 7px 10px;
+    gap: 12px;
 }
 
 .trackswitch .ts-sync-toggle-copy {
@@ -542,6 +622,11 @@
     height: 24px;
 }
 
+.trackswitch .ts-sync-toggle-switch.ts-sync-toggle-switch-compact {
+    width: 38px;
+    height: 20px;
+}
+
 .trackswitch .ts-sync-toggle-input {
     position: absolute;
     inset: 0;
@@ -572,6 +657,13 @@
     transition: transform 0.15s ease;
 }
 
+.trackswitch .ts-sync-toggle-switch.ts-sync-toggle-switch-compact .ts-sync-toggle-knob::after {
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+}
+
 .trackswitch .ts-sync-toggle-input:checked + .ts-sync-toggle-knob {
     background: var(--ts-color-accent);
     box-shadow: inset 0 0 0 1px rgba(237, 140, 1, 0.2);
@@ -579,6 +671,10 @@
 
 .trackswitch .ts-sync-toggle-input:checked + .ts-sync-toggle-knob::after {
     transform: translateX(20px);
+}
+
+.trackswitch .ts-sync-toggle-switch.ts-sync-toggle-switch-compact .ts-sync-toggle-input:checked + .ts-sync-toggle-knob::after {
+    transform: translateX(18px);
 }
 
 .trackswitch .ts-sync-toggle-input:focus-visible + .ts-sync-toggle-knob {
@@ -1095,11 +1191,13 @@
     .trackswitch .ts-settings-add-files {
         grid-template-columns: 1fr;
         grid-template-areas:
-            "features"
-            "algorithm"
-            "sync"
+            "advanced"
             "actions";
         align-items: stretch;
+    }
+
+    .trackswitch .ts-advanced-options-grid {
+        grid-template-columns: 1fr;
     }
 
     .trackswitch .ts-sync-toggle-row {

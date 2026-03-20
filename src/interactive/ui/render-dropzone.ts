@@ -78,57 +78,22 @@ export function buildComputeBarHtml(
     algorithm: AlignmentAlgorithmId,
     isComputing: boolean,
     showCancel: boolean,
-    syncGenerationEnabled: boolean
+    syncGenerationEnabled: boolean,
+    advancedOptionsExpanded: boolean
 ): string {
     const featureSelectId = 'ts-dropzone-feature-set-select';
     const algorithmSelectId = 'ts-dropzone-algorithm-select';
-    const featureOptions = ALIGNMENT_FEATURE_SET_OPTIONS.map(function(option) {
-        return '<option value="' + option.id + '"'
-            + (featureSet === option.id ? ' selected' : '')
-            + '>' + option.label + '</option>';
-    }).join('');
-    const algorithmOptions = ALIGNMENT_ALGORITHM_OPTIONS.filter(function(option) {
-        return isCompatibleAlignmentSelection(featureSet, option.id);
-    }).map(function(option) {
-        return '<option value="' + option.id + '"'
-            + (algorithm === option.id ? ' selected' : '')
-            + '>' + option.label + '</option>';
-    }).join('');
     let html = '<div class="ts-compute-bar">'
         + '<div class="ts-compute-bar-row">'
-        + '<div class="ts-alignment-select-wrap ts-feature-set-select-wrap">'
-        + buildAlignmentHelpLabelHtml({
-            label: 'Features',
-            selectId: featureSelectId,
-            tooltipId: 'features',
-            idPrefix: 'dropzone',
-            align: 'start',
-        })
-        + '<select id="' + featureSelectId + '" class="ts-alignment-select ts-feature-set-select">'
-        + featureOptions
-        + '</select>'
-        + '</div>'
-        + '<div class="ts-alignment-select-wrap ts-algorithm-select-wrap">'
-        + buildAlignmentHelpLabelHtml({
-            label: 'Algorithm',
-            selectId: algorithmSelectId,
-            tooltipId: 'algorithm',
-            idPrefix: 'dropzone',
-            align: 'end',
-        })
-        + '<select id="' + algorithmSelectId + '" class="ts-alignment-select ts-algorithm-select">'
-        + algorithmOptions
-        + '</select>'
-        + '</div>'
-        + '<label class="ts-sync-toggle-row">'
-        + '<span class="ts-sync-toggle-copy">'
-        + '<span class="ts-sync-toggle-title">Also generate time-/pitch-synchronized audios</span>'
-        + '</span>'
-        + '<span class="ts-sync-toggle-switch">'
-        + '<input class="ts-sync-toggle-input" type="checkbox"' + (syncGenerationEnabled ? ' checked' : '') + '>'
-        + '<span class="ts-sync-toggle-knob" aria-hidden="true"></span>'
-        + '</span>'
-        + '</label>'
+        + buildAdvancedOptionsHtml(
+            featureSet,
+            algorithm,
+            syncGenerationEnabled,
+            featureSelectId,
+            algorithmSelectId,
+            'dropzone',
+            advancedOptionsExpanded
+        )
         + '<div class="ts-compute-actions">';
 
     if (showCancel) {
@@ -171,7 +136,8 @@ export function buildFullDropZonePanel(
     featureSet: AlignmentFeatureSetId,
     algorithm: AlignmentAlgorithmId,
     showCancel: boolean,
-    syncGenerationEnabled: boolean
+    syncGenerationEnabled: boolean,
+    advancedOptionsExpanded: boolean
 ): string {
     let html = '<div class="ts-interactive-panel ts-stack-section">';
 
@@ -184,7 +150,8 @@ export function buildFullDropZonePanel(
         algorithm,
         isComputing,
         showCancel,
-        syncGenerationEnabled
+        syncGenerationEnabled,
+        advancedOptionsExpanded
     );
 
     if (isComputing) {
@@ -212,6 +179,7 @@ export interface DropZoneEvents {
     onFeatureSetChanged(featureSet: AlignmentFeatureSetId): void;
     onAlgorithmChanged(algorithm: AlignmentAlgorithmId): void;
     onSyncGenerationChanged(enabled: boolean): void;
+    onAdvancedOptionsChanged(expanded: boolean): void;
     onCancelClicked(): void;
     onComputeClicked(): void;
 }
@@ -321,6 +289,14 @@ export function bindDropZoneEvents(container: HTMLElement, events: DropZoneEvent
         });
     }
 
+    const advancedOptions = container.querySelector('.ts-advanced-options') as HTMLDetailsElement | null;
+    if (advancedOptions) {
+        bindAdvancedOptionsAnimation(advancedOptions);
+        advancedOptions.addEventListener('toggle', function() {
+            events.onAdvancedOptionsChanged(advancedOptions.open);
+        });
+    }
+
     const syncToggleInput = container.querySelector('.ts-sync-toggle-input') as HTMLInputElement | null;
     if (syncToggleInput) {
         syncToggleInput.addEventListener('change', function() {
@@ -366,4 +342,103 @@ function filterValidFiles(fileList: FileList): File[] {
         }
     }
     return result;
+}
+
+function buildAdvancedOptionsHtml(
+    featureSet: AlignmentFeatureSetId,
+    algorithm: AlignmentAlgorithmId,
+    syncGenerationEnabled: boolean,
+    featureSelectId: string,
+    algorithmSelectId: string,
+    idPrefix: string,
+    expanded: boolean
+): string {
+    const featureOptions = ALIGNMENT_FEATURE_SET_OPTIONS.map(function(option) {
+        return '<option value="' + option.id + '"'
+            + (featureSet === option.id ? ' selected' : '')
+            + '>' + option.label + '</option>';
+    }).join('');
+    const algorithmOptions = ALIGNMENT_ALGORITHM_OPTIONS.filter(function(option) {
+        return isCompatibleAlignmentSelection(featureSet, option.id);
+    }).map(function(option) {
+        return '<option value="' + option.id + '"'
+            + (algorithm === option.id ? ' selected' : '')
+            + '>' + option.label + '</option>';
+    }).join('');
+
+    return '<details class="ts-advanced-options"' + (expanded ? ' open' : '') + '>'
+        + '<summary class="ts-advanced-options-summary">'
+        + '<span class="ts-advanced-options-title">Advanced</span>'
+        + '<span class="ts-advanced-options-chevron" aria-hidden="true"></span>'
+        + '</summary>'
+        + '<div class="ts-advanced-options-panel">'
+        + '<div class="ts-advanced-options-grid">'
+        + '<div class="ts-alignment-select-wrap ts-feature-set-select-wrap">'
+        + buildAlignmentHelpLabelHtml({
+            label: 'Features',
+            selectId: featureSelectId,
+            tooltipId: 'features',
+            idPrefix: idPrefix,
+            align: 'start',
+        })
+        + '<select id="' + featureSelectId + '" class="ts-alignment-select ts-alignment-select-compact ts-feature-set-select">'
+        + featureOptions
+        + '</select>'
+        + '</div>'
+        + '<div class="ts-alignment-select-wrap ts-algorithm-select-wrap">'
+        + buildAlignmentHelpLabelHtml({
+            label: 'Algorithm',
+            selectId: algorithmSelectId,
+            tooltipId: 'algorithm',
+            idPrefix: idPrefix,
+            align: 'end',
+        })
+        + '<select id="' + algorithmSelectId + '" class="ts-alignment-select ts-alignment-select-compact ts-algorithm-select">'
+        + algorithmOptions
+        + '</select>'
+        + '</div>'
+        + '<label class="ts-sync-toggle-row ts-sync-toggle-row-compact">'
+        + '<span class="ts-sync-toggle-copy">'
+        + '<span class="ts-sync-toggle-title">Generate time-/pitch-synchronized versions of audio for multitrack playback</span>'
+        + '</span>'
+        + '<span class="ts-sync-toggle-switch ts-sync-toggle-switch-compact">'
+        + '<input class="ts-sync-toggle-input" type="checkbox"' + (syncGenerationEnabled ? ' checked' : '') + '>'
+        + '<span class="ts-sync-toggle-knob" aria-hidden="true"></span>'
+        + '</span>'
+        + '</label>'
+        + '</div>'
+        + '</div>'
+        + '</details>';
+}
+
+function bindAdvancedOptionsAnimation(advancedOptions: HTMLDetailsElement): void {
+    const animatedClassName = 'is-opening';
+    let skipNextInitialOpenAnimation = advancedOptions.open;
+
+    advancedOptions.addEventListener('toggle', function() {
+        advancedOptions.classList.remove(animatedClassName);
+
+        if (!advancedOptions.open) {
+            skipNextInitialOpenAnimation = false;
+            return;
+        }
+
+        if (skipNextInitialOpenAnimation) {
+            skipNextInitialOpenAnimation = false;
+            return;
+        }
+
+        void advancedOptions.offsetWidth;
+        advancedOptions.classList.add(animatedClassName);
+    });
+
+    advancedOptions.addEventListener('animationend', function(event) {
+        if (!(event.target instanceof HTMLElement)) {
+            return;
+        }
+        if (!event.target.classList.contains('ts-advanced-options-panel')) {
+            return;
+        }
+        advancedOptions.classList.remove(animatedClassName);
+    });
 }
