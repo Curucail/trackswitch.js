@@ -2,7 +2,18 @@ import type { TrackSwitchController } from '../domain/types';
 
 export type InteractiveFileType = 'audio' | 'musicxml';
 
+export type AlignmentAlgorithmId = 'dtw' | 'mrmsdtw';
+export type AlignmentFeatureSetId =
+    | 'chroma'
+    | 'chroma_dlnco'
+    | 'chroma_dlnco_synctoolbox'
+    | 'basic_pitch';
 export type AlignmentMethodId = 'dtw' | 'mrmsdtw' | 'basic_pitch';
+
+export interface AlignmentSelection {
+    featureSet: AlignmentFeatureSetId;
+    algorithm: AlignmentAlgorithmId;
+}
 
 export interface BasicPitchFeatureMatrix {
     data: Float32Array;
@@ -49,7 +60,8 @@ export interface InteractiveAlignmentResult {
 export interface InteractiveState {
     files: InteractiveFile[];
     referenceFileId: string | null;
-    alignmentMethod: AlignmentMethodId;
+    featureSet: AlignmentFeatureSetId;
+    algorithm: AlignmentAlgorithmId;
     syncGenerationEnabled: boolean;
     waveformAlignedPlayhead: boolean;
     waveformShowAlignmentPoints: boolean;
@@ -66,7 +78,11 @@ export interface InteractiveTrackSwitchInit {
     workerUrl?: string;
     /** Pyodide CDN index URL override. */
     pyodideCdnUrl?: string;
-    /** Default alignment method. */
+    /** Default warping-path feature set. */
+    featureSet?: AlignmentFeatureSetId;
+    /** Default alignment algorithm. */
+    algorithm?: AlignmentAlgorithmId;
+    /** Legacy compatibility for the old combined alignment method control. */
     alignmentMethod?: AlignmentMethodId;
 }
 
@@ -109,7 +125,8 @@ export interface WorkerComputeMessage {
     type: 'compute';
     files: WorkerFile[];
     referenceFileId: string;
-    method: AlignmentMethodId;
+    featureSet: AlignmentFeatureSetId;
+    algorithm: AlignmentAlgorithmId;
     featureRate: number;
     generateSyncedAudio: boolean;
 }

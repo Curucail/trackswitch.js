@@ -1,6 +1,19 @@
-import type { AlignmentMethodId, InteractiveFile } from '../types';
+import type {
+    AlignmentAlgorithmId,
+    AlignmentFeatureSetId,
+    InteractiveFile,
+} from '../types';
+import {
+    ALIGNMENT_ALGORITHM_OPTIONS,
+    ALIGNMENT_FEATURE_SET_OPTIONS,
+    isCompatibleAlignmentSelection,
+} from '../alignment-options';
 import { renderIconSlotHtml } from '../../ui/icons';
 import { classifyFileType } from '../file-handler';
+import {
+    bindAlignmentHelpTooltips,
+    buildAlignmentHelpLabelHtml,
+} from './alignment-help';
 
 export function buildDropZoneHtml(): string {
     return '<div class="ts-dropzone" tabindex="0">'
@@ -61,21 +74,52 @@ export function buildFileListHtml(files: InteractiveFile[], referenceFileId: str
 export function buildComputeBarHtml(
     canCompute: boolean,
     status: string,
-    alignmentMethod: AlignmentMethodId,
+    featureSet: AlignmentFeatureSetId,
+    algorithm: AlignmentAlgorithmId,
     isComputing: boolean,
     showCancel: boolean,
     syncGenerationEnabled: boolean
 ): string {
+    const featureSelectId = 'ts-dropzone-feature-set-select';
+    const algorithmSelectId = 'ts-dropzone-algorithm-select';
+    const featureOptions = ALIGNMENT_FEATURE_SET_OPTIONS.map(function(option) {
+        return '<option value="' + option.id + '"'
+            + (featureSet === option.id ? ' selected' : '')
+            + '>' + option.label + '</option>';
+    }).join('');
+    const algorithmOptions = ALIGNMENT_ALGORITHM_OPTIONS.filter(function(option) {
+        return isCompatibleAlignmentSelection(featureSet, option.id);
+    }).map(function(option) {
+        return '<option value="' + option.id + '"'
+            + (algorithm === option.id ? ' selected' : '')
+            + '>' + option.label + '</option>';
+    }).join('');
     let html = '<div class="ts-compute-bar">'
         + '<div class="ts-compute-bar-row">'
-        + '<label class="ts-method-select-wrap">'
-        + '<span class="ts-method-select-label">Alignment method</span>'
-        + '<select class="ts-method-select">'
-        + '<option value="mrmsdtw"' + (alignmentMethod === 'mrmsdtw' ? ' selected' : '') + '>MrMsDTW</option>'
-        + '<option value="dtw"' + (alignmentMethod === 'dtw' ? ' selected' : '') + '>DTW</option>'
-        + '<option value="basic_pitch"' + (alignmentMethod === 'basic_pitch' ? ' selected' : '') + '>Basic Pitch</option>'
+        + '<div class="ts-alignment-select-wrap ts-feature-set-select-wrap">'
+        + buildAlignmentHelpLabelHtml({
+            label: 'Features',
+            selectId: featureSelectId,
+            tooltipId: 'features',
+            idPrefix: 'dropzone',
+            align: 'start',
+        })
+        + '<select id="' + featureSelectId + '" class="ts-alignment-select ts-feature-set-select">'
+        + featureOptions
         + '</select>'
-        + '</label>'
+        + '</div>'
+        + '<div class="ts-alignment-select-wrap ts-algorithm-select-wrap">'
+        + buildAlignmentHelpLabelHtml({
+            label: 'Algorithm',
+            selectId: algorithmSelectId,
+            tooltipId: 'algorithm',
+            idPrefix: 'dropzone',
+            align: 'end',
+        })
+        + '<select id="' + algorithmSelectId + '" class="ts-alignment-select ts-algorithm-select">'
+        + algorithmOptions
+        + '</select>'
+        + '</div>'
         + '<label class="ts-sync-toggle-row">'
         + '<span class="ts-sync-toggle-copy">'
         + '<span class="ts-sync-toggle-title">Also generate time-/pitch-synchronized audios</span>'
@@ -124,7 +168,8 @@ export function buildFullDropZonePanel(
     statusMessage: string,
     isComputing: boolean,
     computingMessage: string,
-    alignmentMethod: AlignmentMethodId,
+    featureSet: AlignmentFeatureSetId,
+    algorithm: AlignmentAlgorithmId,
     showCancel: boolean,
     syncGenerationEnabled: boolean
 ): string {
@@ -135,7 +180,8 @@ export function buildFullDropZonePanel(
     html += buildComputeBarHtml(
         canCompute,
         statusMessage,
-        alignmentMethod,
+        featureSet,
+        algorithm,
         isComputing,
         showCancel,
         syncGenerationEnabled
@@ -163,13 +209,16 @@ export interface DropZoneEvents {
     onFilesAdded(files: File[]): void;
     onReferenceChanged(fileId: string): void;
     onFileRemoved(fileId: string): void;
-    onMethodChanged(method: AlignmentMethodId): void;
+    onFeatureSetChanged(featureSet: AlignmentFeatureSetId): void;
+    onAlgorithmChanged(algorithm: AlignmentAlgorithmId): void;
     onSyncGenerationChanged(enabled: boolean): void;
     onCancelClicked(): void;
     onComputeClicked(): void;
 }
 
 export function bindDropZoneEvents(container: HTMLElement, events: DropZoneEvents): void {
+    bindAlignmentHelpTooltips(container);
+
     const dropZone = container.querySelector('.ts-dropzone') as HTMLElement | null;
     const fileInput = container.querySelector('.ts-dropzone-input') as HTMLInputElement | null;
     let dragDepth = 0;
@@ -258,11 +307,17 @@ export function bindDropZoneEvents(container: HTMLElement, events: DropZoneEvent
         }
     });
 
-    // Method selector
-    const methodSelect = container.querySelector('.ts-method-select') as HTMLSelectElement | null;
-    if (methodSelect) {
-        methodSelect.addEventListener('change', function() {
-            events.onMethodChanged(methodSelect.value as AlignmentMethodId);
+    const featureSetSelect = container.querySelector('.ts-feature-set-select') as HTMLSelectElement | null;
+    if (featureSetSelect) {
+        featureSetSelect.addEventListener('change', function() {
+            events.onFeatureSetChanged(featureSetSelect.value as AlignmentFeatureSetId);
+        });
+    }
+
+    const algorithmSelect = container.querySelector('.ts-algorithm-select') as HTMLSelectElement | null;
+    if (algorithmSelect) {
+        algorithmSelect.addEventListener('change', function() {
+            events.onAlgorithmChanged(algorithmSelect.value as AlignmentAlgorithmId);
         });
     }
 

@@ -4,12 +4,17 @@ import type {
     InteractiveState,
     InteractiveTrackSwitchController,
     InteractiveTrackSwitchInit,
-    AlignmentMethodId,
+    AlignmentAlgorithmId,
+    AlignmentFeatureSetId,
     WorkerComputeResult,
 } from './types';
 import type { TrackSwitchController } from '../domain/types';
-import { FEATURE_RATE } from './constants';
 import { ensureBasicPitchFeatures, resolveBasicPitchModelUrl } from './basic-pitch';
+import {
+    coerceAlignmentSelectionForAlgorithm,
+    coerceAlignmentSelectionForFeatureSet,
+    normalizeAlignmentSelection,
+} from './alignment-options';
 import {
     processFile,
     fileNameToColumnName,
@@ -40,7 +45,8 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
     private playerSetupSnapshot: {
         files: InteractiveFile[];
         referenceFileId: string | null;
-        alignmentMethod: AlignmentMethodId;
+        featureSet: AlignmentFeatureSetId;
+        algorithm: AlignmentAlgorithmId;
         syncGenerationEnabled: boolean;
         alignmentResult: InteractiveAlignmentResult | null;
         alignmentCacheKey: string | null;
@@ -51,10 +57,12 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
     constructor(rootElement: HTMLElement, init: InteractiveTrackSwitchInit) {
         this.rootElement = rootElement;
         this.init = init;
+        const initialAlignmentSelection = normalizeAlignmentSelection(init);
         this.state = {
             files: [],
             referenceFileId: null,
-            alignmentMethod: init.alignmentMethod || 'mrmsdtw',
+            featureSet: initialAlignmentSelection.featureSet,
+            algorithm: initialAlignmentSelection.algorithm,
             syncGenerationEnabled: false,
             waveformAlignedPlayhead: true,
             waveformShowAlignmentPoints: false,
@@ -113,7 +121,8 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             statusMessage,
             isComputing,
             computingMessage,
-            this.state.alignmentMethod,
+            this.state.featureSet,
+            this.state.algorithm,
             this.state.canCancelBackToPlayer,
             this.state.syncGenerationEnabled
         );
@@ -161,7 +170,8 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             onFilesAdded: this.handleFilesAdded.bind(this),
             onReferenceChanged: this.handleReferenceChanged.bind(this),
             onFileRemoved: this.handleFileRemoved.bind(this),
-            onMethodChanged: this.handleMethodChanged.bind(this),
+            onFeatureSetChanged: this.handleFeatureSetChanged.bind(this),
+            onAlgorithmChanged: this.handleAlgorithmChanged.bind(this),
             onSyncGenerationChanged: this.handleSyncGenerationChanged.bind(this),
             onCancelClicked: this.handleSetupCancelClicked.bind(this),
             onComputeClicked: this.handleComputeClicked.bind(this),
@@ -229,8 +239,17 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
         this.rerenderDropZone();
     }
 
-    private handleMethodChanged(method: AlignmentMethodId): void {
-        this.state.alignmentMethod = method;
+    private handleFeatureSetChanged(featureSet: AlignmentFeatureSetId): void {
+        const nextSelection = coerceAlignmentSelectionForFeatureSet(featureSet, this.state.algorithm);
+        this.state.featureSet = nextSelection.featureSet;
+        this.state.algorithm = nextSelection.algorithm;
+        this.rerenderDropZone();
+    }
+
+    private handleAlgorithmChanged(algorithm: AlignmentAlgorithmId): void {
+        const nextSelection = coerceAlignmentSelectionForAlgorithm(this.state.featureSet, algorithm);
+        this.state.featureSet = nextSelection.featureSet;
+        this.state.algorithm = nextSelection.algorithm;
         this.rerenderDropZone();
     }
 
@@ -272,7 +291,7 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
         this.rerenderDropZone();
 
         try {
-            if (this.state.alignmentMethod === 'basic_pitch') {
+            if (this.state.featureSet === 'basic_pitch') {
                 await this.ensureBasicPitchFeaturesForAlignment();
             }
 
@@ -286,7 +305,8 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             const result = await this.workerBridge.computeAlignment(
                 this.state.files,
                 this.state.referenceFileId,
-                this.state.alignmentMethod,
+                this.state.featureSet,
+                this.state.algorithm,
                 this.state.syncGenerationEnabled
             );
 
@@ -508,7 +528,8 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
         this.playerSetupSnapshot = {
             files: [...this.state.files],
             referenceFileId: this.state.referenceFileId,
-            alignmentMethod: this.state.alignmentMethod,
+            featureSet: this.state.featureSet,
+            algorithm: this.state.algorithm,
             syncGenerationEnabled: this.state.syncGenerationEnabled,
             alignmentResult: this.state.alignmentResult,
             alignmentCacheKey: this.state.alignmentCacheKey,
@@ -535,7 +556,8 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
 
         this.state.files = [...this.playerSetupSnapshot.files];
         this.state.referenceFileId = this.playerSetupSnapshot.referenceFileId;
-        this.state.alignmentMethod = this.playerSetupSnapshot.alignmentMethod;
+        this.state.featureSet = this.playerSetupSnapshot.featureSet;
+        this.state.algorithm = this.playerSetupSnapshot.algorithm;
         this.state.syncGenerationEnabled = this.playerSetupSnapshot.syncGenerationEnabled;
         this.state.alignmentResult = this.playerSetupSnapshot.alignmentResult;
         this.state.alignmentCacheKey = this.playerSetupSnapshot.alignmentCacheKey;
@@ -705,7 +727,8 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
         return [
             fileIds,
             this.state.referenceFileId || '',
-            this.state.alignmentMethod,
+            this.state.featureSet,
+            this.state.algorithm,
             this.state.syncGenerationEnabled ? 'sync' : 'base',
         ].join('::');
     }

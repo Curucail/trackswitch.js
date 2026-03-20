@@ -1,11 +1,26 @@
-import type { InteractiveFile, AlignmentMethodId } from '../types';
+import type {
+    AlignmentAlgorithmId,
+    AlignmentFeatureSetId,
+    InteractiveFile,
+} from '../types';
+import {
+    ALIGNMENT_ALGORITHM_OPTIONS,
+    ALIGNMENT_FEATURE_SET_OPTIONS,
+    coerceAlignmentSelectionForFeatureSet,
+    isCompatibleAlignmentSelection,
+} from '../alignment-options';
 import { renderIconSlotHtml } from '../../ui/icons';
 import { classifyFileType } from '../file-handler';
+import {
+    bindAlignmentHelpTooltips,
+    buildAlignmentHelpLabelHtml,
+} from './alignment-help';
 
 export interface SettingsPanelState {
     files: InteractiveFile[];
     referenceFileId: string | null;
-    alignmentMethod: AlignmentMethodId;
+    featureSet: AlignmentFeatureSetId;
+    algorithm: AlignmentAlgorithmId;
 }
 
 export interface SettingsPanelEvents {
@@ -15,6 +30,10 @@ export interface SettingsPanelEvents {
 }
 
 export function buildSettingsPanelHtml(state: SettingsPanelState): string {
+    const featureSelectId = 'ts-settings-feature-set-select';
+    const algorithmSelectId = 'ts-settings-algorithm-select';
+    const featureOptions = buildFeatureSetOptionsHtml(state.featureSet);
+    const algorithmOptions = buildAlgorithmOptionsHtml(state.featureSet, state.algorithm);
     let html = '<div class="ts-settings-panel" role="presentation">';
     html += '<div class="ts-settings-backdrop"></div>';
     html += '<div class="ts-settings-dialog" role="dialog" aria-modal="true" aria-label="Interactive settings">';
@@ -24,7 +43,7 @@ export function buildSettingsPanelHtml(state: SettingsPanelState): string {
         + '<div class="ts-settings-panel-heading">'
         + '<span class="ts-section-kicker">Interactive mode</span>'
         + '<strong class="ts-settings-title">Alignment settings</strong>'
-        + '<p class="ts-settings-copy">Adjust your file set, choose the reference timeline, and decide how aggressively the alignment should behave.</p>'
+        + '<p class="ts-settings-copy">Adjust your file set, choose the reference timeline, and pick the features and algorithm used to compute the warping path.</p>'
         + '</div>'
         + '<button class="ts-settings-cancel-btn" type="button" title="Close">'
         + renderIconSlotHtml('xmark') + '</button>'
@@ -80,16 +99,32 @@ export function buildSettingsPanelHtml(state: SettingsPanelState): string {
 
     // Method section
     html += '<div class="ts-settings-section">'
-        + '<div class="ts-settings-section-title">Alignment Method</div>'
-        + '<div class="ts-settings-section-copy">Use the same method picker from the initial screen when you want to swap between the recommended pass and the quicker preview mode.</div>'
-        + '<label class="ts-method-select-wrap">'
-        + '<span class="ts-method-select-label">Alignment method</span>'
-        + '<select class="ts-method-select">'
-        + '<option value="mrmsdtw"' + (state.alignmentMethod === 'mrmsdtw' ? ' selected' : '') + '>MrMsDTW</option>'
-        + '<option value="dtw"' + (state.alignmentMethod === 'dtw' ? ' selected' : '') + '>DTW</option>'
-        + '<option value="basic_pitch"' + (state.alignmentMethod === 'basic_pitch' ? ' selected' : '') + '>Basic Pitch</option>'
+        + '<div class="ts-settings-section-title">Warping Path</div>'
+        + '<div class="ts-settings-section-copy">Choose the feature family used to compare audio-to-audio and audio-to-score pairs, then select the DTW variant that should compute the warping path.</div>'
+        + '<div class="ts-alignment-select-wrap">'
+        + buildAlignmentHelpLabelHtml({
+            label: 'Features',
+            selectId: featureSelectId,
+            tooltipId: 'features',
+            idPrefix: 'settings',
+            align: 'start',
+        })
+        + '<select id="' + featureSelectId + '" class="ts-alignment-select ts-feature-set-select">'
+        + featureOptions
         + '</select>'
-        + '</label>'
+        + '</div>'
+        + '<div class="ts-alignment-select-wrap">'
+        + buildAlignmentHelpLabelHtml({
+            label: 'Algorithm',
+            selectId: algorithmSelectId,
+            tooltipId: 'algorithm',
+            idPrefix: 'settings',
+            align: 'end',
+        })
+        + '<select id="' + algorithmSelectId + '" class="ts-alignment-select ts-algorithm-select">'
+        + algorithmOptions
+        + '</select>'
+        + '</div>'
         + '</div>';
 
     html += '</div>';
@@ -104,12 +139,38 @@ export function buildSettingsPanelHtml(state: SettingsPanelState): string {
     return html;
 }
 
+function buildFeatureSetOptionsHtml(
+    selectedFeatureSet: AlignmentFeatureSetId
+): string {
+    return ALIGNMENT_FEATURE_SET_OPTIONS.map(function(option) {
+        return '<option value="' + option.id + '"'
+            + (selectedFeatureSet === option.id ? ' selected' : '')
+            + '>' + option.label + '</option>';
+    }).join('');
+}
+
+function buildAlgorithmOptionsHtml(
+    featureSet: AlignmentFeatureSetId,
+    selectedAlgorithm: AlignmentAlgorithmId
+): string {
+    return ALIGNMENT_ALGORITHM_OPTIONS.filter(function(option) {
+        return isCompatibleAlignmentSelection(featureSet, option.id);
+    }).map(function(option) {
+        return '<option value="' + option.id + '"'
+            + (selectedAlgorithm === option.id ? ' selected' : '')
+            + '>' + option.label + '</option>';
+    }).join('');
+}
+
 export function bindSettingsPanelEvents(container: HTMLElement, initialState: SettingsPanelState, events: SettingsPanelEvents): void {
+    bindAlignmentHelpTooltips(container);
+
     // Working copy of state
     const workingState: SettingsPanelState = {
         files: [...initialState.files],
         referenceFileId: initialState.referenceFileId,
-        alignmentMethod: initialState.alignmentMethod,
+        featureSet: initialState.featureSet,
+        algorithm: initialState.algorithm,
     };
 
     // Reference change
@@ -124,13 +185,44 @@ export function bindSettingsPanelEvents(container: HTMLElement, initialState: Se
         }
     });
 
-    // Method change
-    const methodSelect = container.querySelector('.ts-method-select') as HTMLSelectElement | null;
-    if (methodSelect) {
-        methodSelect.addEventListener('change', function() {
-            workingState.alignmentMethod = methodSelect.value as AlignmentMethodId;
+    const featureSetSelect = container.querySelector('.ts-feature-set-select') as HTMLSelectElement | null;
+    const algorithmSelect = container.querySelector('.ts-algorithm-select') as HTMLSelectElement | null;
+
+    function syncCompatibilityOptions(): void {
+        if (featureSetSelect) {
+            featureSetSelect.innerHTML = buildFeatureSetOptionsHtml(workingState.featureSet);
+            featureSetSelect.value = workingState.featureSet;
+        }
+
+        if (algorithmSelect) {
+            algorithmSelect.innerHTML = buildAlgorithmOptionsHtml(
+                workingState.featureSet,
+                workingState.algorithm
+            );
+            algorithmSelect.value = workingState.algorithm;
+        }
+    }
+
+    if (featureSetSelect) {
+        featureSetSelect.addEventListener('change', function() {
+            const nextSelection = coerceAlignmentSelectionForFeatureSet(
+                featureSetSelect.value as AlignmentFeatureSetId,
+                workingState.algorithm
+            );
+            workingState.featureSet = nextSelection.featureSet;
+            workingState.algorithm = nextSelection.algorithm;
+            syncCompatibilityOptions();
         });
     }
+
+    if (algorithmSelect) {
+        algorithmSelect.addEventListener('change', function() {
+            workingState.algorithm = algorithmSelect.value as AlignmentAlgorithmId;
+            syncCompatibilityOptions();
+        });
+    }
+
+    syncCompatibilityOptions();
 
     // Remove buttons
     container.addEventListener('click', function(e) {

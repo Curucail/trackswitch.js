@@ -30,7 +30,7 @@
     <p>
         Drag and drop audio files (.wav, .mp3, .ogg, .flac) and/or MusicXML scores (.xml, .musicxml)
         into the player below. Select one file as the reference timeline, then click
-        <strong>Compute Alignment</strong> to synchronize all files using DTW.
+        <strong>Compute Alignment</strong> to synchronize all files using your selected warping-path features and algorithm.
         Alignment is computed entirely in your browser using
         <a href="https://github.com/meinardmueller/synctoolbox">synctoolbox</a> via
         <a href="https://pyodide.org">Pyodide</a>.
@@ -46,7 +46,8 @@
                 document.getElementById('player'),
                 {
                     workerUrl: '../../dist/js/trackswitch-alignment-worker.js',
-                    alignmentMethod: 'mrmsdtw',
+                    featureSet: 'chroma_dlnco_synctoolbox',
+                    algorithm: 'mrmsdtw',
                 }
             );
             player.initialize();

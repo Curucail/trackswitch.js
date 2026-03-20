@@ -9,7 +9,7 @@ import { InteractiveTrackSwitchControllerImpl } from './interactive-controller';
  * then initializes a standard alignment-mode player with the computed time mappings.
  *
  * @param rootElement - The HTML element to mount the interactive player into.
- * @param init - Optional configuration for worker URL, Pyodide CDN, and default alignment method.
+ * @param init - Optional configuration for worker URL, Pyodide CDN, and default warping-path feature/alignment algorithm settings.
  * @returns An {@link InteractiveTrackSwitchController} to manage the interactive player.
  *
  * @example

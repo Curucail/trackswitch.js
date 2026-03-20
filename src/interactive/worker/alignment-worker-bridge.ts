@@ -1,5 +1,6 @@
 import type {
-    AlignmentMethodId,
+    AlignmentAlgorithmId,
+    AlignmentFeatureSetId,
     BasicPitchFeatureMatrix,
     BasicPitchFeatureSet,
     InteractiveFile,
@@ -102,7 +103,8 @@ export class AlignmentWorkerBridge {
     async computeAlignment(
         files: InteractiveFile[],
         referenceFileId: string,
-        method: AlignmentMethodId,
+        featureSet: AlignmentFeatureSetId,
+        algorithm: AlignmentAlgorithmId,
         generateSyncedAudio: boolean
     ): Promise<WorkerComputeResult> {
         await this.ensureReady();
@@ -125,7 +127,7 @@ export class AlignmentWorkerBridge {
                     pcmData: pcmCopy,
                     fullPcmChannels: fullPcmChannels,
                     sampleRate: file.sampleRate!,
-                    basicPitchFeatures: method === 'basic_pitch' && file.basicPitchFeatures
+                    basicPitchFeatures: featureSet === 'basic_pitch' && file.basicPitchFeatures
                         ? cloneBasicPitchFeatureSet(file.basicPitchFeatures)
                         : undefined,
                 } as WorkerFileAudio;
@@ -172,7 +174,8 @@ export class AlignmentWorkerBridge {
                 type: 'compute',
                 files: workerFiles,
                 referenceFileId: referenceFileId,
-                method: method,
+                featureSet: featureSet,
+                algorithm: algorithm,
                 featureRate: FEATURE_RATE,
                 generateSyncedAudio: generateSyncedAudio,
             };

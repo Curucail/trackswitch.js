@@ -13,7 +13,7 @@ import {
     ALIGNMENT_PIPELINE,
 } from './python-scripts';
 import { getAlignmentMethod } from '../methods/alignment-method';
-import { FEATURE_RATE, SAMPLE_RATE } from '../constants';
+import { SAMPLE_RATE } from '../constants';
 
 declare const self: Worker & { addEventListener: (type: string, listener: (event: MessageEvent) => void) => void; location: { href: string } };
 declare function importScripts(...urls: string[]): void;
@@ -132,7 +132,7 @@ async function computeAlignment(message: Extract<WorkerMessage, { type: 'compute
         throw new Error('Pyodide is not initialized.');
     }
 
-    const { files, referenceFileId, method, featureRate, generateSyncedAudio } = message;
+    const { files, referenceFileId, featureSet, algorithm, featureRate, generateSyncedAudio } = message;
 
     // Prepare data dictionaries for Python
     const audioFiles: Record<string, Float32Array> = {};
@@ -173,8 +173,11 @@ async function computeAlignment(message: Extract<WorkerMessage, { type: 'compute
     }
 
     // Get alignment method script
-    const alignmentMethod = getAlignmentMethod(method);
-    const methodScript = alignmentMethod.getPythonScript({ featureRate: featureRate });
+    const alignmentAlgorithm = getAlignmentMethod(algorithm);
+    const methodScript = alignmentAlgorithm.getPythonScript({
+        featureRate: featureRate,
+        featureSet: featureSet,
+    });
 
     postProgress('[15%] Preparing data...');
 
@@ -194,7 +197,8 @@ async function computeAlignment(message: Extract<WorkerMessage, { type: 'compute
     pyodide.globals.set('score_files', pyodide.toPy(scoreFiles));
     pyodide.globals.set('file_names', pyodide.toPy(fileNames));
     pyodide.globals.set('reference_file_id', referenceFileId);
-    pyodide.globals.set('alignment_method_id', method);
+    pyodide.globals.set('alignment_feature_set_id', featureSet);
+    pyodide.globals.set('alignment_algorithm_id', algorithm);
     pyodide.globals.set('alignment_method_script', methodScript);
     pyodide.globals.set('FEATURE_RATE', featureRate);
     pyodide.globals.set('SAMPLE_RATE', SAMPLE_RATE);

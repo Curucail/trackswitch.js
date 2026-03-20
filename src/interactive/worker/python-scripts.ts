@@ -310,6 +310,8 @@ sys.modules['librosa.sequence'] = librosa_sequence
  *   - score_files: dict of {file_id: xml_text_string}
  *   - file_names: dict of {file_id: filename}
  *   - reference_file_id: str
+ *   - alignment_feature_set_id: str
+ *   - alignment_algorithm_id: str
  *   - alignment_method_script: str (defines align_pair function)
  *   - FEATURE_RATE: int
  *   - SAMPLE_RATE: int
@@ -695,7 +697,7 @@ for file_idx, fid in enumerate(all_file_ids):
             'chroma': chroma,
             'onset': onset,
         }
-        if alignment_method_id == 'basic_pitch':
+        if alignment_feature_set_id == 'basic_pitch':
             audio_basic_pitch = audio_basic_pitch_features.get(str(fid))
             if not audio_basic_pitch:
                 raise ValueError(f'Missing Basic Pitch features for audio file: {fname}')
@@ -756,7 +758,15 @@ def get_alignment_pair_features(reference_id, other_id):
     ref_features = features[reference_id]
     other_features = features[other_id]
 
-    if alignment_method_id != 'basic_pitch':
+    if alignment_feature_set_id == 'chroma':
+        return (
+            ref_features['chroma'],
+            other_features['chroma'],
+            None,
+            None,
+        )
+
+    if alignment_feature_set_id in ('chroma_dlnco_synctoolbox', 'chroma_dlnco'):
         return (
             ref_features['chroma'],
             other_features['chroma'],
@@ -801,7 +811,7 @@ def get_alignment_pair_features(reference_id, other_id):
 def get_reference_feature_length(reference_id):
     reference_features = features[reference_id]
 
-    if alignment_method_id != 'basic_pitch':
+    if alignment_feature_set_id != 'basic_pitch':
         return int(reference_features['chroma'].shape[1])
 
     if reference_id in audio_files:
