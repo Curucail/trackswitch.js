@@ -521,9 +521,6 @@ export function buildMainControlHtml(ctx: any, runtimes: any): any {
             + '<li class="repeat button" title="Repeat (R)">Repeat'
             + renderIconSlotHtml('rotate-right')
             + '</li>'
-            + (this.shouldRenderGlobalSync(runtimes)
-                ? '<li class="sync-global button" title="Use synchronized version">SYNC</li>'
-                : '')
             + '</ul>'
             + '</li>'
             + (this.features.globalVolume
@@ -547,6 +544,9 @@ export function buildMainControlHtml(ctx: any, runtimes: any): any {
                     + renderIconSlotHtml('xmark')
                     + '</li>'
                     + '</ul></li>'
+                : '')
+            + (this.shouldRenderGlobalSync(runtimes)
+                ? '<li class="sync-global button sync-after-loop" title="Use synchronized version">SYNC</li>'
                 : '')
             + presetDropdownHtml
             + (this.features.timer

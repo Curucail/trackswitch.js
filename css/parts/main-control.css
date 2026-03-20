@@ -27,6 +27,10 @@
     order: 15;
 }
 
+.trackswitch .main-control .sync-global.sync-after-loop {
+    order: 35;
+}
+
 .trackswitch .main-control .volume {
     order: 20;
 }
@@ -81,15 +85,15 @@
     min-width: 38px;
     height: 22px;
     text-indent: 0;
-    line-height: 20px;
+    line-height: 18px;
     font-family: var(--ts-font-ui);
     font-size: 10px;
-    font-weight: bold;
+    font-weight: 900;
     letter-spacing: 0.4px;
     opacity: 0.7;
-    border: 1px solid currentColor;
+    border: 2px solid currentColor;
     border-radius: 3px;
-    padding: 0 6px;
+    padding: 0 8px;
     box-sizing: border-box;
     text-align: center;
 }

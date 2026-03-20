@@ -168,6 +168,10 @@
         padding: 0;
     }
 
+    .trackswitch .main-control .sync-global.sync-after-loop {
+        order: 55;
+    }
+
     .trackswitch .main-control .volume-control .volume-icon {
         font-size: 20px;
         margin-right: 12px;
