@@ -1,5 +1,5 @@
 import { TrackRuntime } from '../domain/types';
-import { closestInRoot } from '../shared/dom';
+import { closestInRoot, getOwnerWindow } from '../shared/dom';
 import { clamp } from '../shared/math';
 import { getSeekMetrics } from '../shared/seek';
 import { parseWaveformSource, resolveFixedWaveformTrackIndex } from '../shared/waveform-source';
@@ -212,8 +212,9 @@ export function updateWaveformMinimapDrag(ctx: any, event: any): any {
 
         const rect = this.waveformMinimapDragState.minimapNode.getBoundingClientRect();
         const minimapWidth = Math.max(1, rect.width || this.waveformMinimapDragState.minimapNode.clientWidth);
+        const ownerWindow = getOwnerWindow(this.waveformMinimapDragState.minimapNode);
         const pointerRatio = clamp(
-            (((event.pageX as number) - (rect.left + window.scrollX)) / minimapWidth),
+            (((event.pageX as number) - (rect.left + ownerWindow.scrollX)) / minimapWidth),
             0,
             1
         );

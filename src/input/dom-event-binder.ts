@@ -1,5 +1,5 @@
 import { TrackSwitchFeatures } from '../domain/types';
-import { eventTargetAsElement } from '../shared/dom';
+import { eventTargetAsElement, getDeepActiveElement, getOwnerWindow } from '../shared/dom';
 import { ControllerPointerEvent } from '../shared/seek';
 
 export interface InputController {
@@ -113,7 +113,7 @@ export class InputBinder {
     }
 
     private blurFocusedManagedControl(): void {
-        const activeElement = document.activeElement;
+        const activeElement = getDeepActiveElement(this.root);
         if (!(activeElement instanceof HTMLElement)) {
             return;
         }
@@ -219,19 +219,21 @@ export class InputBinder {
             return;
         }
 
+        const ownerWindow = getOwnerWindow(this.root);
+
         this.addDelegatedListener('pointerdown', '.ts-panel-handle', (event) => {
             this.controller.onPanelReorderStart(event);
         });
 
-        this.addListener(window, 'pointermove', (event) => {
+        this.addListener(ownerWindow, 'pointermove', (event) => {
             this.controller.onPanelReorderMove(eventToPointerEvent(event));
         });
 
-        this.addListener(window, 'pointerup', (event) => {
+        this.addListener(ownerWindow, 'pointerup', (event) => {
             this.controller.onPanelReorderEnd(eventToPointerEvent(event));
         });
 
-        this.addListener(window, 'pointercancel', (event) => {
+        this.addListener(ownerWindow, 'pointercancel', (event) => {
             this.controller.onPanelReorderEnd(eventToPointerEvent(event));
         });
     }
@@ -250,20 +252,22 @@ export class InputBinder {
     }
 
     private bindSeekLifecycle(): void {
-        this.addListener(window, 'touchmove', (event) => {
+        const ownerWindow = getOwnerWindow(this.root);
+
+        this.addListener(ownerWindow, 'touchmove', (event) => {
             this.controller.onSeekMove(eventToPointerEvent(event));
         }, { passive: false });
-        this.addListener(window, 'mousemove', (event) => {
+        this.addListener(ownerWindow, 'mousemove', (event) => {
             this.controller.onSeekMove(eventToPointerEvent(event));
         });
 
-        this.addListener(window, 'touchend', (event) => {
+        this.addListener(ownerWindow, 'touchend', (event) => {
             this.controller.onSeekEnd(eventToPointerEvent(event));
         }, { passive: false });
-        this.addListener(window, 'touchcancel', (event) => {
+        this.addListener(ownerWindow, 'touchcancel', (event) => {
             this.controller.onSeekEnd(eventToPointerEvent(event));
         }, { passive: false });
-        this.addListener(window, 'mouseup', (event) => {
+        this.addListener(ownerWindow, 'mouseup', (event) => {
             this.controller.onSeekEnd(eventToPointerEvent(event));
         });
     }
@@ -365,7 +369,7 @@ export class InputBinder {
     }
 
     private bindKeyboardShortcuts(): void {
-        this.addListener(window, 'keydown', (event) => {
+        this.addListener(getOwnerWindow(this.root), 'keydown', (event) => {
             this.controller.onKeyboard(eventToPointerEvent(event));
         });
     }
@@ -420,7 +424,7 @@ export class InputBinder {
         }
 
         if (hasWaveformUi || hasSheetMusicUi) {
-            this.addListener(window, 'resize', () => {
+            this.addListener(getOwnerWindow(this.root), 'resize', () => {
                 this.controller.onResize();
             });
         }

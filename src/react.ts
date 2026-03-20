@@ -8,7 +8,12 @@ import {
     type Ref,
 } from 'react';
 import { createTrackSwitch } from './player/factory';
-import type { TrackSwitchController, TrackSwitchEventMap, TrackSwitchInit } from './domain/types';
+import type {
+    TrackSwitchController,
+    TrackSwitchEventMap,
+    TrackSwitchInit,
+    TrackSwitchMountOptions,
+} from './domain/types';
 
 export interface TrackSwitchEventProps {
     onLoaded?: (payload: TrackSwitchEventMap['loaded']) => void;
@@ -20,6 +25,7 @@ export interface TrackSwitchEventProps {
 export interface UseTrackSwitchOptions extends TrackSwitchEventProps {
     initKey?: string | number;
     autoLoad?: boolean;
+    mount?: TrackSwitchMountOptions;
 }
 
 export interface UseTrackSwitchResult {
@@ -31,6 +37,7 @@ export interface TrackSwitchPlayerProps extends TrackSwitchEventProps {
     init: TrackSwitchInit;
     initKey?: string | number;
     autoLoad?: boolean;
+    mount?: TrackSwitchMountOptions;
     id?: string;
     className?: string;
     style?: CSSProperties;
@@ -54,6 +61,7 @@ export function useTrackSwitch(
     {
         initKey,
         autoLoad = true,
+        mount,
         onLoaded,
         onError,
         onPosition,
@@ -78,7 +86,7 @@ export function useTrackSwitch(
             return;
         }
 
-        const controller = createTrackSwitch(rootElement, init);
+        const controller = createTrackSwitch(rootElement, init, mount);
         controllerRef.current = controller;
 
         const unsubscribeLoaded = controller.on('loaded', (payload) => {
@@ -121,6 +129,7 @@ export const TrackSwitchPlayer = forwardRef(function TrackSwitchPlayer(
         init,
         initKey,
         autoLoad = true,
+        mount,
         id,
         className,
         style,
@@ -134,6 +143,7 @@ export const TrackSwitchPlayer = forwardRef(function TrackSwitchPlayer(
     const { rootRef, controllerRef } = useTrackSwitch(init, {
         initKey,
         autoLoad,
+        mount,
         onLoaded,
         onError,
         onPosition,

@@ -1,5 +1,43 @@
-import type { InteractiveTrackSwitchController, InteractiveTrackSwitchInit } from './types';
+import type { InteractiveTrackSwitchController, InteractiveTrackSwitchInit, TrackSwitchMountOptions } from './types';
 import { InteractiveTrackSwitchControllerImpl } from './interactive-controller';
+import { prepareTrackSwitchMount } from '../shared/mount';
+
+class ShadowMountedInteractiveTrackSwitchController implements InteractiveTrackSwitchController {
+    private innerController: InteractiveTrackSwitchController | null;
+    private readonly cleanupMount: () => void;
+
+    constructor(innerController: InteractiveTrackSwitchController, cleanupMount: () => void) {
+        this.innerController = innerController;
+        this.cleanupMount = cleanupMount;
+    }
+
+    initialize(): void {
+        this.requireInnerController().initialize();
+    }
+
+    destroy(): void {
+        const innerController = this.innerController;
+        if (!innerController) {
+            return;
+        }
+
+        this.innerController = null;
+        innerController.destroy();
+        this.cleanupMount();
+    }
+
+    getInnerController(): ReturnType<InteractiveTrackSwitchController['getInnerController']> {
+        return this.requireInnerController().getInnerController();
+    }
+
+    private requireInnerController(): InteractiveTrackSwitchController {
+        if (!this.innerController) {
+            throw new Error('Interactive TrackSwitch controller has already been destroyed.');
+        }
+
+        return this.innerController;
+    }
+}
 
 /**
  * Creates an interactive TrackSwitch alignment player.
@@ -26,7 +64,20 @@ import { InteractiveTrackSwitchControllerImpl } from './interactive-controller';
  */
 export function createInteractiveTrackSwitch(
     rootElement: HTMLElement,
-    init?: InteractiveTrackSwitchInit
+    init?: InteractiveTrackSwitchInit,
+    mountOptions?: TrackSwitchMountOptions
 ): InteractiveTrackSwitchController {
-    return new InteractiveTrackSwitchControllerImpl(rootElement, init || {});
+    const preparedMount = prepareTrackSwitchMount(rootElement, mountOptions);
+
+    try {
+        const innerController = new InteractiveTrackSwitchControllerImpl(preparedMount.mountRoot, init || {});
+        if (!mountOptions?.shadowDom) {
+            return innerController;
+        }
+
+        return new ShadowMountedInteractiveTrackSwitchController(innerController, preparedMount.cleanup);
+    } catch (error) {
+        preparedMount.cleanup();
+        throw error;
+    }
 }

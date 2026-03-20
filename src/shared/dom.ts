@@ -27,6 +27,49 @@ export function eventTargetAsElement(target: EventTarget | null | undefined): El
     return candidate.nodeType === 1 ? target as Element : null;
 }
 
+export function getOwnerDocument(node: Node | null | undefined): Document {
+    if (node?.ownerDocument) {
+        return node.ownerDocument;
+    }
+
+    return document;
+}
+
+export function getOwnerWindow(node: Node | null | undefined): Window {
+    return getOwnerDocument(node).defaultView || window;
+}
+
+export function getDeepActiveElement(root: Document | ShadowRoot | HTMLElement | null | undefined): Element | null {
+    let currentRoot: Document | ShadowRoot;
+
+    if (!root) {
+        currentRoot = document;
+    } else if (root instanceof HTMLElement) {
+        const rootNode = root.getRootNode();
+        currentRoot = rootNode instanceof ShadowRoot || rootNode instanceof Document
+            ? rootNode
+            : root.ownerDocument;
+    } else {
+        currentRoot = root;
+    }
+
+    let activeElement: Element | null = null;
+
+    while (true) {
+        const candidate = currentRoot.activeElement;
+        if (!(candidate instanceof Element)) {
+            return activeElement;
+        }
+
+        activeElement = candidate;
+        if (!candidate.shadowRoot) {
+            return activeElement;
+        }
+
+        currentRoot = candidate.shadowRoot;
+    }
+}
+
 export function closestInRoot(
     root: HTMLElement,
     target: EventTarget | null | undefined,

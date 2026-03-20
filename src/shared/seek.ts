@@ -1,3 +1,5 @@
+import { getOwnerWindow } from './dom';
+
 export interface ControllerPointerEvent {
     type: string;
     which?: number;
@@ -60,7 +62,7 @@ export function getSeekMetrics(
     }
 
     const rect = seekingElement.getBoundingClientRect();
-    const offsetLeft = rect.left + window.scrollX;
+    const offsetLeft = rect.left + getOwnerWindow(seekingElement).scrollX;
 
     const posXRel = pageX - offsetLeft;
     const seekWidth = ensurePositiveWidth(rect.width || seekingElement.clientWidth || 0);

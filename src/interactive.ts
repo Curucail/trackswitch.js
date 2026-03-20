@@ -5,6 +5,7 @@ export type {
     AlignmentFeatureSetId,
     InteractiveTrackSwitchController,
     InteractiveTrackSwitchInit,
+    TrackSwitchMountOptions,
     AlignmentMethodId,
     InteractiveFile,
     InteractiveFileType,

@@ -676,7 +676,12 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             return;
         }
 
-        const wrapper = document.createElement('div');
+        const ownerDocument = this.rootElement.ownerDocument;
+        const eventRoot = this.rootElement.getRootNode();
+        const eventTarget = eventRoot instanceof ShadowRoot || eventRoot instanceof Document
+            ? eventRoot
+            : ownerDocument;
+        const wrapper = ownerDocument.createElement('div');
         wrapper.innerHTML = buildPlayerSettingsMenuHtml({
             waveformAlignedPlayhead: this.state.waveformAlignedPlayhead,
             waveformShowAlignmentPoints: this.state.waveformShowAlignmentPoints,
@@ -741,9 +746,14 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
                 return;
             }
 
+            const composedPath = typeof event.composedPath === 'function'
+                ? event.composedPath()
+                : [];
             if (
                 this.settingsMenuContainer.contains(target)
                 || settingsBtn.contains(target)
+                || composedPath.includes(this.settingsMenuContainer)
+                || composedPath.includes(settingsBtn)
             ) {
                 return;
             }
@@ -753,14 +763,19 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
 
         requestAnimationFrame(() => {
             if (this.settingsMenuDismissHandler) {
-                document.addEventListener('mousedown', this.settingsMenuDismissHandler, true);
+                eventTarget.addEventListener('mousedown', this.settingsMenuDismissHandler as EventListener, true);
             }
         });
     }
 
     private closePlayerSettingsMenu(): void {
+        const ownerDocument = this.rootElement.ownerDocument;
+        const eventRoot = this.rootElement.getRootNode();
+        const eventTarget = eventRoot instanceof ShadowRoot || eventRoot instanceof Document
+            ? eventRoot
+            : ownerDocument;
         if (this.settingsMenuDismissHandler) {
-            document.removeEventListener('mousedown', this.settingsMenuDismissHandler, true);
+            eventTarget.removeEventListener('mousedown', this.settingsMenuDismissHandler as EventListener, true);
             this.settingsMenuDismissHandler = null;
         }
 
@@ -800,13 +815,14 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             type: 'text/csv;charset=utf-8',
         });
         const downloadUrl = URL.createObjectURL(csvBlob);
-        const downloadLink = document.createElement('a');
+        const ownerDocument = this.rootElement.ownerDocument;
+        const downloadLink = ownerDocument.createElement('a');
         downloadLink.href = downloadUrl;
         downloadLink.download = 'alignment.csv';
         downloadLink.style.display = 'none';
-        document.body.appendChild(downloadLink);
+        ownerDocument.body.appendChild(downloadLink);
         downloadLink.click();
-        document.body.removeChild(downloadLink);
+        ownerDocument.body.removeChild(downloadLink);
         URL.revokeObjectURL(downloadUrl);
     }
 

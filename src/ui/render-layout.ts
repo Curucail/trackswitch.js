@@ -1,5 +1,5 @@
 import { AudioDownloadSizeInfo, NormalizedTrackGroupLayout, TrackRuntime } from '../domain/types';
-import { escapeHtml, sanitizeInlineStyle } from '../shared/dom';
+import { escapeHtml, getDeepActiveElement, sanitizeInlineStyle } from '../shared/dom';
 import { formatBytesToHumanReadable, formatSecondsToHHMMSSmmm } from '../shared/format';
 import { clampPercent } from '../shared/math';
 import type { ScaleContinuousNumeric, ScaleLinear, Selection } from 'd3';
@@ -25,7 +25,7 @@ function resetManagedRoot(root: HTMLElement): void {
         root.classList.remove(className);
     });
 
-    const activeElement = document.activeElement;
+    const activeElement = getDeepActiveElement(root);
     if (activeElement instanceof HTMLElement && root.contains(activeElement)) {
         activeElement.blur();
     }
@@ -1415,7 +1415,7 @@ export function setShortcutHelpVisible(ctx: any, isVisible: any): any {
                 return;
             }
 
-            const activeElement = document.activeElement;
+            const activeElement = getDeepActiveElement(overlay);
             if (activeElement instanceof HTMLElement && overlay.contains(activeElement)) {
                 activeElement.blur();
             }

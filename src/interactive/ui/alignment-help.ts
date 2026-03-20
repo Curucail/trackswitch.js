@@ -370,16 +370,17 @@ export function bindAlignmentHelpTooltips(container: HTMLElement): void {
         updateTooltipLayout(openRoot);
     };
 
+    const ownerWindow = container.ownerDocument.defaultView || window;
     container.ownerDocument.addEventListener('pointerdown', handleDocumentPointerDown, true);
     container.ownerDocument.addEventListener('keydown', handleDocumentKeyDown, true);
-    window.addEventListener('resize', handleWindowLayoutChange);
-    window.addEventListener('scroll', handleWindowLayoutChange, true);
+    ownerWindow.addEventListener('resize', handleWindowLayoutChange);
+    ownerWindow.addEventListener('scroll', handleWindowLayoutChange, true);
 
     teardownCallbacks.push(function() {
         container.ownerDocument.removeEventListener('pointerdown', handleDocumentPointerDown, true);
         container.ownerDocument.removeEventListener('keydown', handleDocumentKeyDown, true);
-        window.removeEventListener('resize', handleWindowLayoutChange);
-        window.removeEventListener('scroll', handleWindowLayoutChange, true);
+        ownerWindow.removeEventListener('resize', handleWindowLayoutChange);
+        ownerWindow.removeEventListener('scroll', handleWindowLayoutChange, true);
     });
 
     function cleanup(): void {

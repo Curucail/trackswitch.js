@@ -1,6 +1,120 @@
-import { TrackSwitchController, TrackSwitchInit } from '../domain/types';
+import type {
+    LoopMarker,
+    TrackSwitchController,
+    TrackSwitchEventHandler,
+    TrackSwitchEventName,
+    TrackSwitchInit,
+    TrackSwitchMountOptions,
+    TrackSwitchSnapshot,
+} from '../domain/types';
 import { normalizeInit } from '../config/normalize-init';
 import { TrackSwitchControllerImpl } from './player-controller';
+import { prepareTrackSwitchMount } from '../shared/mount';
+
+class ShadowMountedTrackSwitchController implements TrackSwitchController {
+    private innerController: TrackSwitchController | null;
+    private readonly cleanupMount: () => void;
+
+    constructor(innerController: TrackSwitchController, cleanupMount: () => void) {
+        this.innerController = innerController;
+        this.cleanupMount = cleanupMount;
+    }
+
+    load(): Promise<void> {
+        return this.requireInnerController().load();
+    }
+
+    destroy(): void {
+        const innerController = this.innerController;
+        if (!innerController) {
+            return;
+        }
+
+        this.innerController = null;
+        innerController.destroy();
+        this.cleanupMount();
+    }
+
+    togglePlay(): void {
+        this.requireInnerController().togglePlay();
+    }
+
+    play(): void {
+        this.requireInnerController().play();
+    }
+
+    pause(): void {
+        this.requireInnerController().pause();
+    }
+
+    stop(): void {
+        this.requireInnerController().stop();
+    }
+
+    seekTo(seconds: number): void {
+        this.requireInnerController().seekTo(seconds);
+    }
+
+    seekRelative(seconds: number): void {
+        this.requireInnerController().seekRelative(seconds);
+    }
+
+    setRepeat(enabled: boolean): void {
+        this.requireInnerController().setRepeat(enabled);
+    }
+
+    setVolume(volumeZeroToOne: number): void {
+        this.requireInnerController().setVolume(volumeZeroToOne);
+    }
+
+    setTrackVolume(trackIndex: number, volumeZeroToOne: number): void {
+        this.requireInnerController().setTrackVolume(trackIndex, volumeZeroToOne);
+    }
+
+    setTrackPan(trackIndex: number, panMinusOneToOne: number): void {
+        this.requireInnerController().setTrackPan(trackIndex, panMinusOneToOne);
+    }
+
+    setLoopPoint(marker: LoopMarker): boolean {
+        return this.requireInnerController().setLoopPoint(marker);
+    }
+
+    toggleLoop(): boolean {
+        return this.requireInnerController().toggleLoop();
+    }
+
+    clearLoop(): void {
+        this.requireInnerController().clearLoop();
+    }
+
+    toggleSolo(trackIndex: number, exclusive?: boolean): void {
+        this.requireInnerController().toggleSolo(trackIndex, exclusive);
+    }
+
+    applyPreset(presetIndex: number): void {
+        this.requireInnerController().applyPreset(presetIndex);
+    }
+
+    getState(): TrackSwitchSnapshot {
+        return this.requireInnerController().getState();
+    }
+
+    on<K extends TrackSwitchEventName>(eventName: K, handler: TrackSwitchEventHandler<K>): () => void {
+        return this.requireInnerController().on(eventName, handler);
+    }
+
+    off<K extends TrackSwitchEventName>(eventName: K, handler: TrackSwitchEventHandler<K>): void {
+        this.requireInnerController().off(eventName, handler);
+    }
+
+    private requireInnerController(): TrackSwitchController {
+        if (!this.innerController) {
+            throw new Error('TrackSwitch controller has already been destroyed.');
+        }
+
+        return this.innerController;
+    }
+}
 
 /**
  * Creates a TrackSwitch multitrack audio player and mounts it into the given DOM element.
@@ -45,6 +159,26 @@ import { TrackSwitchControllerImpl } from './player-controller';
  * await player.load();
  * ```
  */
-export function createTrackSwitch(rootElement: HTMLElement, init: TrackSwitchInit): TrackSwitchController {
-    return new TrackSwitchControllerImpl(rootElement, normalizeInit(rootElement, init));
+export function createTrackSwitch(
+    rootElement: HTMLElement,
+    init: TrackSwitchInit,
+    mountOptions?: TrackSwitchMountOptions
+): TrackSwitchController {
+    const preparedMount = prepareTrackSwitchMount(rootElement, mountOptions);
+
+    try {
+        const innerController = new TrackSwitchControllerImpl(
+            preparedMount.mountRoot,
+            normalizeInit(preparedMount.mountRoot, init)
+        );
+
+        if (!mountOptions?.shadowDom) {
+            return innerController;
+        }
+
+        return new ShadowMountedTrackSwitchController(innerController, preparedMount.cleanup);
+    } catch (error) {
+        preparedMount.cleanup();
+        throw error;
+    }
 }

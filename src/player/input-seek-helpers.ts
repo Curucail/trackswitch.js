@@ -1,4 +1,4 @@
-import { closestInRoot } from '../shared/dom';
+import { closestInRoot, getOwnerWindow } from '../shared/dom';
 import { activateLoopRange } from './playback-actions';
 
 export function resolveWaveformMinimapStart(controller: any, event: any): {
@@ -29,9 +29,10 @@ export function resolveWaveformMinimapStart(controller: any, event: any): {
 
     const rect = minimapNode.getBoundingClientRect();
     const minimapWidth = Math.max(1, rect.width || minimapNode.clientWidth);
+    const ownerWindow = getOwnerWindow(minimapNode);
     const pointerRatio = Math.max(
         0,
-        Math.min(1, (((event.pageX as number) - (rect.left + window.scrollX)) / minimapWidth))
+        Math.min(1, (((event.pageX as number) - (rect.left + ownerWindow.scrollX)) / minimapWidth))
     );
     const isInsideViewport = pointerRatio >= viewport.startRatio
         && pointerRatio <= (viewport.startRatio + viewport.widthRatio);

@@ -15,7 +15,7 @@ export function injectSettingsButton(rootElement: HTMLElement): HTMLElement | nu
         return existing as HTMLElement;
     }
 
-    const li = document.createElement('li');
+    const li = rootElement.ownerDocument.createElement('li');
     li.className = 'settings-button button';
     li.title = 'Settings';
     li.setAttribute('aria-label', 'Settings');

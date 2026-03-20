@@ -161,6 +161,16 @@ export interface TrackSwitchInit {
     ui: TrackSwitchUiConfig;
 }
 
+export interface TrackSwitchShadowDomOptions {
+    mode?: 'open' | 'closed';
+    delegatesFocus?: boolean;
+    stylesheetHref?: string | string[];
+}
+
+export interface TrackSwitchMountOptions {
+    shadowDom?: boolean | TrackSwitchShadowDomOptions;
+}
+
 export interface TrackTiming {
     trimStart: number;
     padStart: number;

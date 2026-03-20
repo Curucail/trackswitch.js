@@ -1,4 +1,4 @@
-import type { TrackSwitchController } from '../domain/types';
+import type { TrackSwitchController, TrackSwitchMountOptions } from '../domain/types';
 
 export type InteractiveFileType = 'audio' | 'musicxml';
 
@@ -96,6 +96,8 @@ export interface InteractiveTrackSwitchController {
     /** Get the inner standard TrackSwitchController (available after alignment is computed). */
     getInnerController(): TrackSwitchController | null;
 }
+
+export type { TrackSwitchMountOptions };
 
 // ─── Worker protocol ────────────────────────────────────────────────
 

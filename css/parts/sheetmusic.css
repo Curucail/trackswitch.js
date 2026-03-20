@@ -29,6 +29,12 @@
     min-height: 120px;
 }
 
+.trackswitch .sheetmusic img[id^='cursorImg'] {
+    max-width: none !important;
+    margin: 0 !important;
+    display: inline !important;
+}
+
 .trackswitch .sheetmusic.sheetmusic-loading {
     position: relative;
 }
