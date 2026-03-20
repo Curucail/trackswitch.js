@@ -118,6 +118,9 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             : '';
         const computingMessage = this.state.computationError || statusMessage || 'Computing alignment...';
 
+        // The inner player teardown removes its managed root classes, so restore
+        // the interactive setup styling before rebuilding this phase.
+        this.rootElement.classList.add('trackswitch');
         this.rootElement.classList.remove('ts-interactive-player');
         let html = this.buildDisabledNavBarHtml();
         html += buildFullDropZonePanel(
