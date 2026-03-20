@@ -320,8 +320,11 @@ export function setLoopPoint(ctx: any, marker: any): any {
             return false;
         }
 
+        const position = this.state.playing
+            ? this.currentPlaybackReferencePosition()
+            : this.state.position;
         const currentPoint = marker === 'A' ? this.state.loop.pointA : this.state.loop.pointB;
-        if (currentPoint !== null && Math.abs(currentPoint - this.state.position) < this.loopMinDistance) {
+        if (currentPoint !== null && Math.abs(currentPoint - position) < this.loopMinDistance) {
             this.state = {
                 ...this.state,
                 loop: {
@@ -338,7 +341,7 @@ export function setLoopPoint(ctx: any, marker: any): any {
         this.dispatch({
             type: 'set-loop-point',
             marker: marker,
-            position: this.state.position,
+            position: position,
             minDistance: this.loopMinDistance,
         });
 
@@ -351,7 +354,7 @@ export function setLoopPoint(ctx: any, marker: any): any {
         if (this.state.loop.pointA !== null && this.state.loop.pointB !== null) {
             const loopA = this.state.loop.pointA;
             const loopB = this.state.loop.pointB;
-            this.activateLoopRange(loopA, loopB);
+            activateLoopRange(this, loopA, loopB);
         }
 
         this.updateMainControls();

@@ -99,28 +99,15 @@
     opacity: 1;
 }
 
-.trackswitch .control li.loop-a::after,
-.trackswitch .control li.loop-b::after {
-    font-family: var(--ts-font-ui);
-    font-weight: bold;
-    text-indent: 0;
+.trackswitch .control li.loop-a .ts-icon-slot,
+.trackswitch .control li.loop-b .ts-icon-slot {
     opacity: 0.5;
 }
 
-.trackswitch .control li.loop-a::after {
-    content: "A";
-    /* Letter A */
-}
-
-.trackswitch .control li.loop-b::after {
-    content: "B";
-    /* Letter B */
-}
-
-.trackswitch .control li.loop-a.checked::after,
-.trackswitch .control li.loop-a.active::after,
-.trackswitch .control li.loop-b.checked::after,
-.trackswitch .control li.loop-b.active::after {
+.trackswitch .control li.loop-a.checked .ts-icon-slot,
+.trackswitch .control li.loop-a.active .ts-icon-slot,
+.trackswitch .control li.loop-b.checked .ts-icon-slot,
+.trackswitch .control li.loop-b.active .ts-icon-slot {
     opacity: 1;
 }
 

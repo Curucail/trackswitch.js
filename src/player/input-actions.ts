@@ -445,6 +445,9 @@ export function onSetLoopA(ctx: any, event: any): any {
             return;
         }
         event.preventDefault();
+        if (this.state.currentlySeeking) {
+            this.dispatch({ type: 'set-seeking', seeking: false });
+        }
         this.setLoopPoint('A');
         event.stopPropagation();
     }).call(ctx, event);
@@ -456,6 +459,9 @@ export function onSetLoopB(ctx: any, event: any): any {
             return;
         }
         event.preventDefault();
+        if (this.state.currentlySeeking) {
+            this.dispatch({ type: 'set-seeking', seeking: false });
+        }
         this.setLoopPoint('B');
         event.stopPropagation();
     }).call(ctx, event);
