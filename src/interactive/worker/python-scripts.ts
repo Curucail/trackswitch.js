@@ -621,6 +621,10 @@ sync_audio_count = len(sync_audio_file_ids)
 _file_names_dict = dict(file_names)
 _basic_pitch_audio_features_raw = dict(basic_pitch_audio_features) if 'basic_pitch_audio_features' in globals() else {}
 audio_basic_pitch_features = {}
+_feature_cache = globals().get('_interactive_feature_cache')
+if _feature_cache is None:
+    _feature_cache = {}
+    globals()['_interactive_feature_cache'] = _feature_cache
 
 NEEDS_DLNCO_FEATURES = alignment_feature_set_id in ('chroma_dlnco_synctoolbox', 'chroma_dlnco')
 NEEDS_BASIC_PITCH_FEATURES = alignment_feature_set_id == 'basic_pitch'
@@ -637,6 +641,27 @@ def _progress_percent(value):
 
 def _phase_end(start, weight, total_weight, progress_span):
     return start + (weight / total_weight) * progress_span
+
+def _clone_feature_matrix(matrix):
+    if matrix is None:
+        return None
+    return np.array(matrix, copy=True)
+
+def _clone_measure_map(measure_map):
+    if not measure_map:
+        return []
+    return [(float(time_sec), int(measure_num)) for time_sec, measure_num in measure_map]
+
+def _clone_cached_file_features(cached_entry):
+    cloned = {
+        'chroma': _clone_feature_matrix(cached_entry['chroma']),
+        'onset': _clone_feature_matrix(cached_entry.get('onset')),
+    }
+    if 'score_basic_pitch' in cached_entry and cached_entry['score_basic_pitch'] is not None:
+        cloned['score_basic_pitch'] = _clone_feature_matrix(cached_entry['score_basic_pitch'])
+    if 'measure_map' in cached_entry:
+        cloned['measure_map'] = _clone_measure_map(cached_entry['measure_map'])
+    return cloned
 
 PIPELINE_IMPORT_PCT = 18.0
 PIPELINE_START_PCT = 20.0
@@ -687,6 +712,20 @@ for file_idx, fid in enumerate(all_file_ids):
     file_start_pct = FEAT_START + (file_idx / total_files) * (FEAT_END - FEAT_START)
     file_end_pct = FEAT_START + ((file_idx + 1) / total_files) * (FEAT_END - FEAT_START)
     fname = str(_file_names_dict[fid])
+    cached_entry = _feature_cache.get(fid)
+    cache_satisfies_request = (
+        cached_entry is not None
+        and (not NEEDS_DLNCO_FEATURES or cached_entry.get('onset') is not None)
+        and (not NEEDS_BASIC_PITCH_FEATURES or fid in audio_files or cached_entry.get('score_basic_pitch') is not None)
+    )
+
+    if cache_satisfies_request:
+        report_progress(f'[{_progress_percent(file_start_pct)}%] Reusing cached features: {fname}')
+        file_features = _clone_cached_file_features(cached_entry)
+        if fid in score_files and file_features.get('measure_map'):
+            score_measure_maps[fid] = file_features['measure_map']
+        features[fid] = file_features
+        continue
 
     if fid in audio_files:
         def _make_progress_fn(base, span, name):
@@ -719,6 +758,11 @@ for file_idx, fid in enumerate(all_file_ids):
                 raise ValueError(f'Missing Basic Pitch features for audio file: {fname}')
             file_features['basic_pitch_frames'] = audio_basic_pitch['frames']
             file_features['basic_pitch_contours'] = audio_basic_pitch['contours']
+        _feature_cache[fid] = {
+            'type': 'audio',
+            'chroma': _clone_feature_matrix(chroma),
+            'onset': _clone_feature_matrix(onset),
+        }
     else:
         report_progress(f'[{_progress_percent(file_start_pct)}%] Parsing score: {fname}')
         chroma, onset, measure_map, score_basic_pitch = extract_score_features(
@@ -735,6 +779,13 @@ for file_idx, fid in enumerate(all_file_ids):
         }
         if NEEDS_BASIC_PITCH_FEATURES:
             file_features['score_basic_pitch'] = score_basic_pitch
+        _feature_cache[fid] = {
+            'type': 'musicxml',
+            'chroma': _clone_feature_matrix(chroma),
+            'onset': _clone_feature_matrix(onset),
+            'score_basic_pitch': _clone_feature_matrix(score_basic_pitch),
+            'measure_map': _clone_measure_map(measure_map),
+        }
     features[fid] = file_features
 
 report_progress(f'[{_progress_percent(SHIFT_START)}%] Feature extraction complete')
