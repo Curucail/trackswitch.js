@@ -132,7 +132,16 @@ async function computeAlignment(message: Extract<WorkerMessage, { type: 'compute
         throw new Error('Pyodide is not initialized.');
     }
 
-    const { files, referenceFileId, featureSet, algorithm, featureRate, generateSyncedAudio } = message;
+    const {
+        files,
+        referenceFileId,
+        timeColumnByFileId,
+        measureColumnByFileId,
+        featureSet,
+        algorithm,
+        featureRate,
+        generateSyncedAudio,
+    } = message;
 
     // Prepare data dictionaries for Python
     const audioFiles: Record<string, Float32Array> = {};
@@ -196,6 +205,8 @@ async function computeAlignment(message: Extract<WorkerMessage, { type: 'compute
     pyodide.globals.set('basic_pitch_audio_features', pyodide.toPy(basicPitchAudioFeatures));
     pyodide.globals.set('score_files', pyodide.toPy(scoreFiles));
     pyodide.globals.set('file_names', pyodide.toPy(fileNames));
+    pyodide.globals.set('file_time_column_names', pyodide.toPy(timeColumnByFileId));
+    pyodide.globals.set('file_measure_column_names', pyodide.toPy(measureColumnByFileId));
     pyodide.globals.set('reference_file_id', referenceFileId);
     pyodide.globals.set('alignment_feature_set_id', featureSet);
     pyodide.globals.set('alignment_algorithm_id', algorithm);

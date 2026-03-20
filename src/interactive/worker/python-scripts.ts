@@ -600,13 +600,8 @@ def extract_score_features(xml_text, feature_rate, include_onset=False, include_
 
 # ── Main pipeline ──
 
-import re
-
-def _sanitize_col_name(filename):
-    """Strip extension, replace non-alphanumeric chars with underscore.
-    Must match the TypeScript fileNameToColumnName / fileNameToMeasureColumnName."""
-    base = filename.rsplit('.', 1)[0] if '.' in filename else filename
-    return re.sub(r'[^a-zA-Z0-9_-]', '_', base)
+file_time_column_names = dict(file_time_column_names)
+file_measure_column_names = dict(file_measure_column_names)
 
 report_progress('[18%] Importing synctoolbox modules...')
 
@@ -807,7 +802,7 @@ for fid in all_file_ids:
         continue
     pct = _progress_percent(SHIFT_START + (shift_idx / max(non_ref_count, 1)) * (SHIFT_END - SHIFT_START))
     fname = str(_file_names_dict[fid])
-    report_progress(f'[{pct}%] Finding chroma shift: {fname}')
+    report_progress(f'[{pct}%] Finding optimal chroma shift: {fname}')
 
     other_chroma = features[fid]['chroma']
     other_onset = features[fid]['onset']
@@ -920,12 +915,12 @@ ref_times = np.arange(ref_length, dtype=np.float64) / FEATURE_RATE
 
 other_file_ids_ordered = [fid for fid in all_file_ids if fid != reference_file_id]
 
-ref_col_name = 'time_' + _sanitize_col_name(_file_names_dict[reference_file_id])
+ref_col_name = str(file_time_column_names[reference_file_id])
 columns = {ref_col_name: ref_times}
 
 for fid in other_file_ids_ordered:
     wp = warping_paths[fid]
-    col_name = 'time_' + _sanitize_col_name(_file_names_dict[fid])
+    col_name = str(file_time_column_names[fid])
     # Vectorized interpolation: map ref frames to other file times
     columns[col_name] = np.interp(ref_times, wp[0] / FEATURE_RATE, wp[1] / FEATURE_RATE)
 
@@ -937,7 +932,7 @@ for fid, mmap in score_measure_maps.items():
         continue
     m_times = np.array([m[0] for m in mmap], dtype=np.float64)
     m_nums = np.array([m[1] for m in mmap], dtype=np.float64)
-    col_name = 'measure_' + _sanitize_col_name(_file_names_dict[fid])
+    col_name = str(file_measure_column_names[fid])
 
     if fid == reference_file_id:
         # Score is the reference: map ref_times directly to measure numbers

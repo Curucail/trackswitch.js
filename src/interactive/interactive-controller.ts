@@ -18,9 +18,8 @@ import {
 import {
     processFile,
     readFileAsText,
-    fileNameToColumnName,
+    buildUniqueAlignmentColumnMaps,
     fileNameToDisplayTitle,
-    fileNameToMeasureColumnName,
 } from './file-handler';
 import { AlignmentWorkerBridge } from './worker/alignment-worker-bridge';
 import {
@@ -412,14 +411,15 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             throw new Error('Select a reference file before importing alignment.csv.');
         }
 
-        const requiredReferenceColumn = fileNameToColumnName(referenceFile.name);
+        const columnMaps = this.buildAlignmentColumnMaps();
+        const requiredReferenceColumn = columnMaps.timeColumnByFileId[referenceFile.id];
         if (!availableColumns.has(requiredReferenceColumn)) {
             throw new Error('alignment.csv is missing the reference column: ' + requiredReferenceColumn);
         }
 
         const missingColumns = this.state.files
             .filter((file) => file.id !== this.state.referenceFileId)
-            .map((file) => fileNameToColumnName(file.name))
+            .map((file) => columnMaps.timeColumnByFileId[file.id])
             .filter((columnName) => !availableColumns.has(columnName));
 
         if (missingColumns.length > 0) {
@@ -468,7 +468,8 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             return;
         }
 
-        const referenceColumnName = fileNameToColumnName(referenceFile.name);
+        const columnMaps = this.buildAlignmentColumnMaps();
+        const referenceColumnName = columnMaps.timeColumnByFileId[referenceFile.id];
         const warpingMatrixBpm = referenceFile.type === 'musicxml' ? 'infer_score' : null;
 
         // Encode CSV as data URL for the existing alignment system
@@ -491,7 +492,7 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
                     type: 'sheetMusic',
                     src: xmlUrl,
                     renderScale: 0.65,
-                    measureColumn: fileNameToMeasureColumnName(file.name),
+                    measureColumn: columnMaps.measureColumnByFileId[file.id],
                     followPlayback: true,
                 });
             }
@@ -504,7 +505,7 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             if (file.type === 'audio') {
                 const audioBlob = new Blob([file.file], { type: file.file.type });
                 const audioUrl = URL.createObjectURL(audioBlob);
-                const columnName = fileNameToColumnName(file.name);
+                const columnName = columnMaps.timeColumnByFileId[file.id];
 
                 uiElements.push({
                     type: 'waveform',
@@ -819,6 +820,13 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             this.state.algorithm,
             this.state.syncGenerationEnabled ? 'sync' : 'base',
         ].join('::');
+    }
+
+    private buildAlignmentColumnMaps(): {
+        timeColumnByFileId: Record<string, string>;
+        measureColumnByFileId: Record<string, string>;
+    } {
+        return buildUniqueAlignmentColumnMaps(this.state.files);
     }
 
     private buildSynchronizedSourcesForFile(

@@ -28,7 +28,7 @@ export interface AlignmentHelpLabelHtmlOptions {
 
 const ALIGNMENT_HELP_TOOLTIP_CONTENT: Record<AlignmentHelpTooltipId, AlignmentHelpTooltipContent> = {
     features: {
-        heading: 'Features computed from audio files for synchronization. For scores, individual note events are extracted and further processed into chroma and/or onset features.',
+        heading: 'Features are computed from audio files for synchronization. For scores, individual note events are extracted and further processed into chroma and/or onset features.',
         items: [
             {
                 title: 'Chroma + DLNCO (synctoolbox) (recommended)',
@@ -49,7 +49,7 @@ const ALIGNMENT_HELP_TOOLTIP_CONTENT: Record<AlignmentHelpTooltipId, AlignmentHe
         ],
     },
     algorithm: {
-        heading: 'The algorithm matches the computed features of two sequences (source and reference).',
+        heading: 'The algorithm performs pair-wise comparisons of the computed features between all sources and the  reference to obtain a timing alignment.',
         items: [
             {
                 title: 'MrMsDTW (recommended)',
@@ -66,7 +66,7 @@ const ALIGNMENT_HELP_TOOLTIP_CONTENT: Record<AlignmentHelpTooltipId, AlignmentHe
         items: [
             {
                 title: 'Required columns',
-                description: 'The CSV must contain columns for every source that you selected. The names of the columns have to follow the pattern "time_<filename>". Score measure annotations are inferred from columns "measure_<filename>".'
+                description: 'The CSV must contain columns for every source that you uploaded to the player. Column names need to be based on the loaded filenames with the pattern "time_<filename>_<*number>". <*number> is only used when duplicate filenames are found. For score following, use "measure_<filename>_<*number>" columns to provide measure annotations.'
             },
             {
                 title: 'Restore previous session',

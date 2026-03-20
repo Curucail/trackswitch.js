@@ -13,6 +13,7 @@ import type {
 } from '../types';
 import { FEATURE_RATE, PYODIDE_CDN_URL, DEFAULT_WORKER_URL } from '../constants';
 import { cloneBasicPitchFeatureSet } from '../basic-pitch';
+import { buildUniqueAlignmentColumnMaps } from '../file-handler';
 
 type ProgressCallback = (message: string) => void;
 
@@ -114,6 +115,8 @@ export class AlignmentWorkerBridge {
             await this.installMusic21();
         }
 
+        const columnMaps = buildUniqueAlignmentColumnMaps(files);
+
         const workerFiles: WorkerFile[] = files.map(function(file): WorkerFile {
             if (file.type === 'audio') {
                 const pcmCopy = new Float32Array(file.pcmData!);
@@ -174,6 +177,8 @@ export class AlignmentWorkerBridge {
                 type: 'compute',
                 files: workerFiles,
                 referenceFileId: referenceFileId,
+                timeColumnByFileId: columnMaps.timeColumnByFileId,
+                measureColumnByFileId: columnMaps.measureColumnByFileId,
                 featureSet: featureSet,
                 algorithm: algorithm,
                 featureRate: FEATURE_RATE,

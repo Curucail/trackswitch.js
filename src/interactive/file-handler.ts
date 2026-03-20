@@ -136,3 +136,44 @@ export function fileNameToColumnName(filename: string): string {
 export function fileNameToMeasureColumnName(filename: string): string {
     return 'measure_' + stripExtension(filename).replace(/[^a-zA-Z0-9_-]/g, '_');
 }
+
+function uniquifyColumnName(baseName: string, seenNames: Set<string>): string {
+    let candidate = baseName;
+    let suffix = 2;
+
+    while (seenNames.has(candidate)) {
+        candidate = baseName + '_' + suffix;
+        suffix += 1;
+    }
+
+    seenNames.add(candidate);
+    return candidate;
+}
+
+export function buildUniqueAlignmentColumnMaps(
+    files: InteractiveFile[]
+): {
+    timeColumnByFileId: Record<string, string>;
+    measureColumnByFileId: Record<string, string>;
+} {
+    const timeColumnByFileId: Record<string, string> = {};
+    const measureColumnByFileId: Record<string, string> = {};
+    const seenTimeColumns = new Set<string>();
+    const seenMeasureColumns = new Set<string>();
+
+    files.forEach(function(file) {
+        timeColumnByFileId[file.id] = uniquifyColumnName(
+            fileNameToColumnName(file.name),
+            seenTimeColumns
+        );
+        measureColumnByFileId[file.id] = uniquifyColumnName(
+            fileNameToMeasureColumnName(file.name),
+            seenMeasureColumns
+        );
+    });
+
+    return {
+        timeColumnByFileId: timeColumnByFileId,
+        measureColumnByFileId: measureColumnByFileId,
+    };
+}

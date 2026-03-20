@@ -127,6 +127,8 @@ export interface WorkerComputeMessage {
     type: 'compute';
     files: WorkerFile[];
     referenceFileId: string;
+    timeColumnByFileId: Record<string, string>;
+    measureColumnByFileId: Record<string, string>;
     featureSet: AlignmentFeatureSetId;
     algorithm: AlignmentAlgorithmId;
     featureRate: number;
