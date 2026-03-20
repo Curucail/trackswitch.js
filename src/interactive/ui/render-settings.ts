@@ -191,24 +191,26 @@ function buildAdvancedOptionsHtml(
         + algorithmOptions
         + '</select>'
         + '</div>'
+        + '<div class="ts-sync-toggle-row-wrap">'
         + '<label class="ts-sync-toggle-row ts-sync-toggle-row-compact">'
         + '<span class="ts-sync-toggle-copy">'
         + '<span class="ts-sync-toggle-title">Generate synchronized audios</span>'
         + '<span class="ts-sync-toggle-hint">Also export time- and pitch-matched audio renders.</span>'
         + '</span>'
-        + '<span class="ts-sync-toggle-switch-group">'
+        + '<span class="ts-sync-toggle-switch ts-sync-toggle-switch-compact">'
+        + '<input class="ts-sync-toggle-input" type="checkbox"' + (syncGenerationEnabled ? ' checked' : '') + '>'
+        + '<span class="ts-sync-toggle-knob" aria-hidden="true"></span>'
+        + '</span>'
+        + '</label>'
+        + '<span class="ts-sync-toggle-help">'
         + buildAlignmentHelpTriggerHtml({
             label: 'synchronized audio generation',
             tooltipId: 'sync-generation',
             idPrefix: idPrefix,
             align: 'end',
         })
-        + '<span class="ts-sync-toggle-switch ts-sync-toggle-switch-compact">'
-        + '<input class="ts-sync-toggle-input" type="checkbox"' + (syncGenerationEnabled ? ' checked' : '') + '>'
-        + '<span class="ts-sync-toggle-knob" aria-hidden="true"></span>'
         + '</span>'
-        + '</span>'
-        + '</label>'
+        + '</div>'
         + '</div>'
         + '</div>'
         + '</details>';

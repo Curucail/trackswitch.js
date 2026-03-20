@@ -34,7 +34,11 @@ export function buildDropZoneHtml(): string {
         + '</div>';
 }
 
-export function buildFileListHtml(files: InteractiveFile[], referenceFileId: string | null): string {
+export function buildFileListHtml(
+    files: InteractiveFile[],
+    referenceFileId: string | null,
+    infoMessage?: string
+): string {
     if (files.length === 0) {
         return '';
     }
@@ -46,7 +50,13 @@ export function buildFileListHtml(files: InteractiveFile[], referenceFileId: str
         + '<strong class="ts-section-title">Pick a reference to align other sources to</strong>'
         + '</div>'
         + '<span class="ts-file-count">' + files.length + (files.length === 1 ? ' file' : ' files') + '</span>'
-        + '</div>'
+        + '</div>';
+
+    if (infoMessage) {
+        html += '<div class="ts-interactive-list-info">' + escapeHtml(infoMessage) + '</div>';
+    }
+
+    html += ''
         + '<table>'
         + '<thead><tr>'
         + '<th>Reference</th>'
@@ -143,7 +153,8 @@ export function buildFullDropZonePanel(
     algorithm: AlignmentAlgorithmId,
     showCancel: boolean,
     syncGenerationEnabled: boolean,
-    advancedOptionsExpanded: boolean
+    advancedOptionsExpanded: boolean,
+    fileListInfoMessage?: string
 ): string {
     let html = '<div class="ts-interactive-panel ts-stack-section">';
 
@@ -152,7 +163,7 @@ export function buildFullDropZonePanel(
     } else {
         html += buildDropZoneInputHtml();
     }
-    html += buildFileListHtml(files, referenceFileId);
+    html += buildFileListHtml(files, referenceFileId, fileListInfoMessage);
     html += buildComputeBarHtml(
         canCompute,
         statusMessage,
@@ -224,13 +235,13 @@ export function bindDropZoneEvents(container: HTMLElement, events: DropZoneEvent
             e.stopPropagation();
             dragDepth += 1;
             setDragOverState(true);
-        });
+        }, true);
 
         container.addEventListener('dragover', function(e) {
             e.preventDefault();
             e.stopPropagation();
             setDragOverState(true);
-        });
+        }, true);
 
         container.addEventListener('dragleave', function(e) {
             e.preventDefault();
@@ -239,7 +250,7 @@ export function bindDropZoneEvents(container: HTMLElement, events: DropZoneEvent
             if (dragDepth === 0) {
                 setDragOverState(false);
             }
-        });
+        }, true);
 
         container.addEventListener('drop', function(e) {
             e.preventDefault();
@@ -252,7 +263,7 @@ export function bindDropZoneEvents(container: HTMLElement, events: DropZoneEvent
                     events.onFilesAdded(validFiles);
                 }
             }
-        });
+        }, true);
 
         fileInput.addEventListener('change', function() {
             if (fileInput.files && fileInput.files.length > 0) {
@@ -431,23 +442,25 @@ function buildAdvancedOptionsHtml(
         + algorithmOptions
         + '</select>'
         + '</div>'
+        + '<div class="ts-sync-toggle-row-wrap">'
         + '<label class="ts-sync-toggle-row ts-sync-toggle-row-compact">'
         + '<span class="ts-sync-toggle-copy">'
         + '<span class="ts-sync-toggle-title">Generate time-/pitch-synchronized versions of audio for multitrack playback</span>'
         + '</span>'
-        + '<span class="ts-sync-toggle-switch-group">'
+        + '<span class="ts-sync-toggle-switch ts-sync-toggle-switch-compact">'
+        + '<input class="ts-sync-toggle-input" type="checkbox"' + (syncGenerationEnabled ? ' checked' : '') + '>'
+        + '<span class="ts-sync-toggle-knob" aria-hidden="true"></span>'
+        + '</span>'
+        + '</label>'
+        + '<span class="ts-sync-toggle-help">'
         + buildAlignmentHelpTriggerHtml({
             label: 'synchronized audio generation',
             tooltipId: 'sync-generation',
             idPrefix: idPrefix,
             align: 'end',
         })
-        + '<span class="ts-sync-toggle-switch ts-sync-toggle-switch-compact">'
-        + '<input class="ts-sync-toggle-input" type="checkbox"' + (syncGenerationEnabled ? ' checked' : '') + '>'
-        + '<span class="ts-sync-toggle-knob" aria-hidden="true"></span>'
         + '</span>'
-        + '</span>'
-        + '</label>'
+        + '</div>'
         + '<div class="ts-advanced-upload-row">'
         + '<input type="file" class="ts-alignment-csv-input" accept=".csv,text/csv" hidden>'
         + '<div class="ts-advanced-upload-actions">'

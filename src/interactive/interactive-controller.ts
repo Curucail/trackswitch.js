@@ -113,6 +113,9 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
         const isComputing = this.state.computationStatus === 'computing'
             || this.state.computationStatus === 'initializing';
         const statusMessage = this.getStatusMessage();
+        const fileListInfoMessage = this.state.files.length === 1 && !this.state.computationError && !isComputing
+            ? 'Add at least one more file to compute alignment.'
+            : '';
         const computingMessage = this.state.computationError || statusMessage || 'Computing alignment...';
 
         this.rootElement.classList.remove('ts-interactive-player');
@@ -128,7 +131,8 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             this.state.algorithm,
             this.state.canCancelBackToPlayer,
             this.state.syncGenerationEnabled,
-            this.state.advancedOptionsExpanded
+            this.state.advancedOptionsExpanded,
+            fileListInfoMessage
         );
 
         this.rootElement.innerHTML = html;
@@ -196,9 +200,6 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
         }
         if (this.state.files.length === 0) {
             return '';
-        }
-        if (this.state.files.length === 1) {
-            return 'Add at least one more file to compute alignment.';
         }
         if (!this.state.referenceFileId) {
             return 'Select a reference file.';
