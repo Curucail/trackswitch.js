@@ -551,10 +551,10 @@ export function buildMainControlHtml(ctx: any, runtimes: any): any {
                 : '')
             + (this.features.looping
                 ? '<li class="loop-group"><ul class="loop-controls">'
-                    + '<li class="loop-a button" title="Set Loop Point A (A)">Loop A'
+                    + '<li class="loop-a button" title="Set Loop Point A (A)" aria-label="Set Loop Point A">'
                     + renderIconSlotHtml('loop-a')
                     + '</li>'
-                    + '<li class="loop-b button" title="Set Loop Point B (B)">Loop B'
+                    + '<li class="loop-b button" title="Set Loop Point B (B)" aria-label="Set Loop Point B">'
                     + renderIconSlotHtml('loop-b')
                     + '</li>'
                     + '<li class="loop-toggle button" title="Toggle Loop On/Off (L)">Loop'
