@@ -584,17 +584,13 @@ def extract_score_features(xml_text, feature_rate):
     f_chroma = pitch_to_chroma(f_pitch=f_pitch)
     f_chroma_quantized = quantize_chroma(f_chroma=f_chroma)
 
-    f_onset = None
-    try:
-        f_pitch_onset = df_to_pitch_onset_features(df)
-        f_onset = pitch_onset_features_to_DLNCO(
-            f_peaks=f_pitch_onset,
-            feature_rate=feature_rate,
-            feature_sequence_length=f_chroma_quantized.shape[1],
-            visualize=False,
-        )
-    except Exception:
-        f_onset = None
+    f_pitch_onset = df_to_pitch_onset_features(df)
+    f_onset = pitch_onset_features_to_DLNCO(
+        f_peaks=f_pitch_onset,
+        feature_rate=feature_rate,
+        feature_sequence_length=f_chroma_quantized.shape[1],
+        visualize=False,
+    )
 
     return f_chroma_quantized, f_onset, measure_times, f_basic_pitch_score
 
