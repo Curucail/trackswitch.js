@@ -317,16 +317,17 @@
 
 .trackswitch .ts-compute-bar-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas: "advanced actions";
-    align-items: start;
-    gap: 12px;
+    position: relative;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 14px;
     width: 100%;
     min-width: 0;
 }
 
 .trackswitch .ts-advanced-options {
-    grid-area: advanced;
+    grid-column: 1;
+    justify-self: end;
     min-width: 0;
 }
 
@@ -334,7 +335,8 @@
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    padding: 2px 0 10px;
+    min-height: 52px;
+    padding: 0;
     cursor: pointer;
     list-style: none;
     color: var(--ts-color-text-secondary);
@@ -375,12 +377,18 @@
 }
 
 .trackswitch .ts-advanced-options-panel {
+    position: absolute;
+    top: calc(100% + 12px);
+    left: 50%;
+    z-index: 3;
+    width: min(760px, calc(100vw - 64px));
     padding: 2px 0 0;
-    transform-origin: top left;
+    transform: translateX(-50%);
+    transform-origin: top center;
 }
 
-.trackswitch .ts-advanced-options.is-opening .ts-advanced-options-panel {
-    animation: trackswitch-advanced-options-reveal 0.2s ease-out;
+.trackswitch .ts-compute-bar:has(.ts-advanced-options[open]) {
+    padding-bottom: 228px;
 }
 
 .trackswitch .ts-advanced-options-grid {
@@ -390,22 +398,28 @@
     padding-top: 10px;
 }
 
-@keyframes trackswitch-advanced-options-reveal {
-    0% {
-        opacity: 0;
-        transform: translateY(-4px);
-    }
-    100% {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.trackswitch .ts-advanced-upload-row {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    min-width: 0;
+}
+
+.trackswitch .ts-advanced-upload-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: auto;
+    min-width: 0;
 }
 
 .trackswitch .ts-compute-actions {
-    grid-area: actions;
+    grid-column: 2;
+    justify-self: center;
     display: inline-flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: center;
     gap: 10px;
     width: auto;
     min-width: max-content;
@@ -485,7 +499,7 @@
     z-index: 8;
     display: grid;
     gap: 10px;
-    width: min(320px, calc(100vw - 32px));
+    width: min(420px, calc(100vw - 32px));
     padding: 12px 14px;
     border: 1px solid rgba(153, 153, 153, 0.6);
     border-radius: 10px;
@@ -598,6 +612,13 @@
     min-width: 0;
 }
 
+.trackswitch .ts-sync-toggle-switch-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+}
+
 .trackswitch .ts-sync-toggle-title {
     font-family: var(--ts-font-ui);
     font-size: 13px;
@@ -683,7 +704,8 @@
         0 0 0 3px var(--ts-color-accent-soft-30);
 }
 
-.trackswitch.trackswitch button.ts-compute-btn {
+.trackswitch.trackswitch button.ts-compute-btn,
+.trackswitch.trackswitch button.ts-upload-alignment-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -702,6 +724,33 @@
     white-space: nowrap;
     cursor: pointer;
     transition: opacity 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.trackswitch.trackswitch button.ts-compute-btn {
+    min-height: 46px;
+    padding: 8px 18px;
+}
+
+.trackswitch.trackswitch button.ts-upload-alignment-btn {
+    border-color: var(--ts-color-border-dark);
+    background-color: rgba(255, 255, 255, 0.94);
+    color: var(--ts-color-text-primary);
+}
+
+.trackswitch.trackswitch button.ts-upload-alignment-btn.ts-upload-alignment-btn-subtle {
+    display: inline-flex;
+    flex: 0 0 auto;
+    justify-content: flex-start;
+    min-height: 40px;
+    width: auto;
+    padding: 8px 12px;
+    border-color: rgba(120, 120, 120, 0.6);
+    background-color: rgba(255, 255, 255, 0.9);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.42);
+    color: var(--ts-color-text-primary);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0;
 }
 
 .trackswitch.trackswitch button.ts-cancel-btn {
@@ -732,13 +781,24 @@
     font-size: 15px;
 }
 
-.trackswitch.trackswitch button.ts-compute-btn:disabled {
+.trackswitch.trackswitch button.ts-compute-btn:disabled,
+.trackswitch.trackswitch button.ts-upload-alignment-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
 
 .trackswitch.trackswitch button.ts-compute-btn:not(:disabled):hover {
     box-shadow: 0 0 0 3px var(--ts-color-accent-soft-30);
+}
+
+.trackswitch.trackswitch button.ts-upload-alignment-btn:not(:disabled):hover {
+    box-shadow: 0 0 0 3px rgba(153, 153, 153, 0.18);
+}
+
+.trackswitch.trackswitch button.ts-upload-alignment-btn.ts-upload-alignment-btn-subtle:not(:disabled):hover {
+    color: var(--ts-color-text-primary);
+    border-color: rgba(153, 153, 153, 0.56);
+    background-color: rgba(255, 255, 255, 0.86);
 }
 
 .trackswitch .ts-compute-status {
@@ -1189,15 +1249,25 @@
 
     .trackswitch .ts-compute-bar-row,
     .trackswitch .ts-settings-add-files {
-        grid-template-columns: 1fr;
-        grid-template-areas:
-            "advanced"
-            "actions";
+        display: flex;
+        flex-direction: column;
         align-items: stretch;
     }
 
     .trackswitch .ts-advanced-options-grid {
         grid-template-columns: 1fr;
+    }
+
+    .trackswitch .ts-advanced-options-panel {
+        position: static;
+        top: auto;
+        left: auto;
+        width: auto;
+        transform: none;
+    }
+
+    .trackswitch .ts-compute-bar:has(.ts-advanced-options[open]) {
+        padding-bottom: 0;
     }
 
     .trackswitch .ts-sync-toggle-row {
@@ -1210,7 +1280,8 @@
         align-items: stretch;
     }
 
-    .trackswitch.trackswitch button.ts-compute-btn {
+    .trackswitch.trackswitch button.ts-compute-btn,
+    .trackswitch.trackswitch button.ts-upload-alignment-btn {
         width: 100%;
     }
 

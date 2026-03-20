@@ -20,7 +20,7 @@ interface TooltipContainerElement extends HTMLElement {
 
 export interface AlignmentHelpLabelHtmlOptions {
     label: string;
-    selectId: string;
+    selectId?: string;
     tooltipId: AlignmentHelpTooltipId;
     idPrefix: string;
     align?: 'start' | 'end';
@@ -61,9 +61,49 @@ const ALIGNMENT_HELP_TOOLTIP_CONTENT: Record<AlignmentHelpTooltipId, AlignmentHe
             },
         ],
     },
+    'alignment-csv': {
+        heading: 'Import an existing alignment CSV instead of computing the alignment in the browser.',
+        items: [
+            {
+                title: 'Required columns',
+                description: 'The CSV must contain columns for every source that you selected. The names of the columns have to follow the pattern "time_<filename>". Score measure annotations are inferred from columns "measure_<filename>".'
+            },
+            {
+                title: 'Restore previous session',
+                description: 'You can use this feature to upload an alignment.csv that was exported from a previous session.'
+            },
+        ],
+    },
+    'sync-generation': {
+        heading: 'Render synchronized version of audio sources to enable simultaneous playback.',
+        items: [
+            {
+                title: 'Enables sync mode in the player',
+                description: 'You can use the "SYNC" button in the player interface to use synchronized audio sources and listen to multiple performances of the same piece at the same time.'
+            },
+            {
+                title: 'Uses time-scale modification',
+                description: 'The synchronized versions are rendered with a time-scale modification algorithm. Audio pitch shift is also applied if the algorithm detects a key mismatch between source and reference.'
+            },
+        ],
+    },
 };
 
 export function buildAlignmentHelpLabelHtml(options: AlignmentHelpLabelHtmlOptions): string {
+    const labelAttributes = options.selectId
+        ? ' for="' + escapeHtml(options.selectId) + '"'
+        : '';
+    const labelTag = options.selectId ? 'label' : 'span';
+
+    return '<div class="ts-alignment-select-header">'
+        + '<' + labelTag + ' class="ts-alignment-select-label"' + labelAttributes + '>'
+        + escapeHtml(options.label)
+        + '</' + labelTag + '>'
+        + buildAlignmentHelpTriggerHtml(options)
+        + '</div>';
+}
+
+export function buildAlignmentHelpTriggerHtml(options: AlignmentHelpLabelHtmlOptions): string {
     const tooltipDomId = 'ts-help-tooltip-' + options.idPrefix + '-' + options.tooltipId;
     const tooltipContent = ALIGNMENT_HELP_TOOLTIP_CONTENT[options.tooltipId];
     const triggerAlignClass = options.align === 'end'
@@ -76,19 +116,14 @@ export function buildAlignmentHelpLabelHtml(options: AlignmentHelpLabelHtmlOptio
             + '</li>';
     }).join('');
 
-    return '<div class="ts-alignment-select-header">'
-        + '<label class="ts-alignment-select-label" for="' + escapeHtml(options.selectId) + '">'
-        + escapeHtml(options.label)
-        + '</label>'
-        + '<span class="ts-help-trigger-wrap' + triggerAlignClass + '">'
+    return '<span class="ts-help-trigger-wrap' + triggerAlignClass + '">'
         + '<button class="ts-help-trigger" type="button" aria-label="Show help for '
         + escapeHtml(options.label) + '" aria-expanded="false" aria-controls="' + tooltipDomId + '">?</button>'
         + '<span class="ts-help-tooltip" id="' + tooltipDomId + '" role="tooltip">'
         + '<span class="ts-help-tooltip-title">' + escapeHtml(tooltipContent.heading) + '</span>'
         + '<ul class="ts-help-tooltip-list">' + itemsHtml + '</ul>'
         + '</span>'
-        + '</span>'
-        + '</div>';
+        + '</span>';
 }
 
 export function bindAlignmentHelpTooltips(container: HTMLElement): void {

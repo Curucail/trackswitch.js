@@ -1,1 +1,1 @@
-export type AlignmentHelpTooltipId = 'features' | 'algorithm';
+export type AlignmentHelpTooltipId = 'features' | 'algorithm' | 'alignment-csv' | 'sync-generation';

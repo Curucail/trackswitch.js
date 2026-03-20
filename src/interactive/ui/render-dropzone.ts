@@ -13,7 +13,13 @@ import { classifyFileType } from '../file-handler';
 import {
     bindAlignmentHelpTooltips,
     buildAlignmentHelpLabelHtml,
+    buildAlignmentHelpTriggerHtml,
 } from './alignment-help';
+
+export function buildDropZoneInputHtml(): string {
+    return '<input type="file" class="ts-dropzone-input" multiple '
+        + 'accept=".wav,.mp3,.ogg,.flac,.m4a,.aac,.webm,.xml,.musicxml,.mxl">';
+}
 
 export function buildDropZoneHtml(): string {
     return '<div class="ts-dropzone" tabindex="0">'
@@ -24,8 +30,7 @@ export function buildDropZoneHtml(): string {
         + '<span class="ts-dropzone-hint">Supported Audio Formats: WAV, MP3, OGG, FLAC, M4A, AAC, WebM</span>'
         + '<span class="ts-dropzone-hint">Supported Score Formats: XML, MusicXML, MXL</span>'
         + '</div>'
-        + '<input type="file" class="ts-dropzone-input" multiple '
-        + 'accept=".wav,.mp3,.ogg,.flac,.m4a,.aac,.webm,.xml,.musicxml,.mxl">'
+        + buildDropZoneInputHtml()
         + '</div>';
 }
 
@@ -92,6 +97,7 @@ export function buildComputeBarHtml(
             featureSelectId,
             algorithmSelectId,
             'dropzone',
+            canCompute,
             advancedOptionsExpanded
         )
         + '<div class="ts-compute-actions">';
@@ -141,7 +147,11 @@ export function buildFullDropZonePanel(
 ): string {
     let html = '<div class="ts-interactive-panel ts-stack-section">';
 
-    html += buildDropZoneHtml();
+    if (files.length === 0) {
+        html += buildDropZoneHtml();
+    } else {
+        html += buildDropZoneInputHtml();
+    }
     html += buildFileListHtml(files, referenceFileId);
     html += buildComputeBarHtml(
         canCompute,
@@ -180,6 +190,7 @@ export interface DropZoneEvents {
     onAlgorithmChanged(algorithm: AlignmentAlgorithmId): void;
     onSyncGenerationChanged(enabled: boolean): void;
     onAdvancedOptionsChanged(expanded: boolean): void;
+    onAlignmentCsvSelected(file: File): void;
     onCancelClicked(): void;
     onComputeClicked(): void;
 }
@@ -205,7 +216,9 @@ export function bindDropZoneEvents(container: HTMLElement, events: DropZoneEvent
             }
             fileInput.click();
         });
+    }
 
+    if (fileInput) {
         container.addEventListener('dragenter', function(e) {
             e.preventDefault();
             e.stopPropagation();
@@ -304,6 +317,26 @@ export function bindDropZoneEvents(container: HTMLElement, events: DropZoneEvent
         });
     }
 
+    const alignmentCsvInput = container.querySelector('.ts-alignment-csv-input') as HTMLInputElement | null;
+    if (alignmentCsvInput) {
+        alignmentCsvInput.addEventListener('change', function() {
+            const selectedFile = alignmentCsvInput.files && alignmentCsvInput.files.length > 0
+                ? alignmentCsvInput.files[0]
+                : null;
+            if (selectedFile) {
+                events.onAlignmentCsvSelected(selectedFile);
+            }
+            alignmentCsvInput.value = '';
+        });
+    }
+
+    container.addEventListener('click', function(e) {
+        const btn = (e.target as HTMLElement).closest('.ts-upload-alignment-btn') as HTMLButtonElement | null;
+        if (btn && !btn.disabled && alignmentCsvInput) {
+            alignmentCsvInput.click();
+        }
+    });
+
     // Compute button
     container.addEventListener('click', function(e) {
         const btn = (e.target as HTMLElement).closest('.ts-compute-btn') as HTMLButtonElement | null;
@@ -351,6 +384,7 @@ function buildAdvancedOptionsHtml(
     featureSelectId: string,
     algorithmSelectId: string,
     idPrefix: string,
+    canImportCsv: boolean,
     expanded: boolean
 ): string {
     const featureOptions = ALIGNMENT_FEATURE_SET_OPTIONS.map(function(option) {
@@ -401,44 +435,37 @@ function buildAdvancedOptionsHtml(
         + '<span class="ts-sync-toggle-copy">'
         + '<span class="ts-sync-toggle-title">Generate time-/pitch-synchronized versions of audio for multitrack playback</span>'
         + '</span>'
+        + '<span class="ts-sync-toggle-switch-group">'
+        + buildAlignmentHelpTriggerHtml({
+            label: 'synchronized audio generation',
+            tooltipId: 'sync-generation',
+            idPrefix: idPrefix,
+            align: 'end',
+        })
         + '<span class="ts-sync-toggle-switch ts-sync-toggle-switch-compact">'
         + '<input class="ts-sync-toggle-input" type="checkbox"' + (syncGenerationEnabled ? ' checked' : '') + '>'
         + '<span class="ts-sync-toggle-knob" aria-hidden="true"></span>'
         + '</span>'
+        + '</span>'
         + '</label>'
+        + '<div class="ts-advanced-upload-row">'
+        + '<input type="file" class="ts-alignment-csv-input" accept=".csv,text/csv" hidden>'
+        + '<div class="ts-advanced-upload-actions">'
+        + '<button class="ts-upload-alignment-btn ts-upload-alignment-btn-subtle"' + (canImportCsv ? '' : ' disabled') + '>'
+        + '<span>Upload custom alignment CSV</span></button>'
+        + buildAlignmentHelpTriggerHtml({
+            label: 'alignment.csv',
+            tooltipId: 'alignment-csv',
+            idPrefix: idPrefix,
+            align: 'start',
+        })
+        + '</div>'
+        + '</div>'
         + '</div>'
         + '</div>'
         + '</details>';
 }
 
 function bindAdvancedOptionsAnimation(advancedOptions: HTMLDetailsElement): void {
-    const animatedClassName = 'is-opening';
-    let skipNextInitialOpenAnimation = advancedOptions.open;
-
-    advancedOptions.addEventListener('toggle', function() {
-        advancedOptions.classList.remove(animatedClassName);
-
-        if (!advancedOptions.open) {
-            skipNextInitialOpenAnimation = false;
-            return;
-        }
-
-        if (skipNextInitialOpenAnimation) {
-            skipNextInitialOpenAnimation = false;
-            return;
-        }
-
-        void advancedOptions.offsetWidth;
-        advancedOptions.classList.add(animatedClassName);
-    });
-
-    advancedOptions.addEventListener('animationend', function(event) {
-        if (!(event.target instanceof HTMLElement)) {
-            return;
-        }
-        if (!event.target.classList.contains('ts-advanced-options-panel')) {
-            return;
-        }
-        advancedOptions.classList.remove(animatedClassName);
-    });
+    void advancedOptions;
 }

@@ -52,6 +52,7 @@ export interface InteractiveSynchronizedAudio {
 }
 
 export interface InteractiveAlignmentResult {
+    source: 'computed' | 'imported';
     csv: string;
     syncReferenceTimeColumn: string | null;
     synchronizedAudio: InteractiveSynchronizedAudio[];

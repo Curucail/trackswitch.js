@@ -17,6 +17,7 @@ import {
 } from './alignment-options';
 import {
     processFile,
+    readFileAsText,
     fileNameToColumnName,
     fileNameToDisplayTitle,
     fileNameToMeasureColumnName,
@@ -31,6 +32,7 @@ import { buildPlayerSettingsMenuHtml } from './ui/render-player-settings';
 import { injectSettingsButton } from './ui/settings-button';
 import { renderIconSlotHtml } from '../ui/icons';
 import { createTrackSwitch } from '../player/factory';
+import { parseNumericCsv } from '../shared/alignment';
 
 export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwitchController {
     private rootElement: HTMLElement;
@@ -64,7 +66,7 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             referenceFileId: null,
             featureSet: initialAlignmentSelection.featureSet,
             algorithm: initialAlignmentSelection.algorithm,
-            syncGenerationEnabled: false,
+            syncGenerationEnabled: true,
             advancedOptionsExpanded: false,
             waveformAlignedPlayhead: true,
             waveformShowAlignmentPoints: false,
@@ -177,6 +179,7 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             onAlgorithmChanged: this.handleAlgorithmChanged.bind(this),
             onSyncGenerationChanged: this.handleSyncGenerationChanged.bind(this),
             onAdvancedOptionsChanged: this.handleAdvancedOptionsChanged.bind(this),
+            onAlignmentCsvSelected: this.handleAlignmentCsvSelected.bind(this),
             onCancelClicked: this.handleSetupCancelClicked.bind(this),
             onComputeClicked: this.handleComputeClicked.bind(this),
         };
@@ -235,11 +238,13 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             });
         }
 
+        this.invalidateImportedAlignmentState();
         this.rerenderDropZone();
     }
 
     private handleReferenceChanged(fileId: string): void {
         this.state.referenceFileId = fileId;
+        this.invalidateImportedAlignmentState();
         this.rerenderDropZone();
     }
 
@@ -278,6 +283,7 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             }
         }
 
+        this.invalidateImportedAlignmentState();
         this.rerenderDropZone();
     }
 
@@ -287,7 +293,11 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
         }
 
         const alignmentCacheKey = this.buildAlignmentCacheKey();
-        if (this.state.alignmentResult && this.state.alignmentCacheKey === alignmentCacheKey) {
+        if (
+            this.state.alignmentResult
+            && this.state.alignmentResult.source === 'computed'
+            && this.state.alignmentCacheKey === alignmentCacheKey
+        ) {
             this.state.computationStatus = 'done';
             this.state.computationError = null;
             this.buildAndMountPlayer();
@@ -332,6 +342,37 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
         }
     }
 
+    private async handleAlignmentCsvSelected(file: File): Promise<void> {
+        if (this.state.files.length < 2 || !this.state.referenceFileId || this.destroyed) {
+            return;
+        }
+
+        this.state.computationStatus = 'initializing';
+        this.state.computationError = null;
+        this.rerenderDropZone();
+
+        try {
+            const csvText = await readFileAsText(file);
+            this.validateImportedAlignmentCsv(csvText);
+
+            this.replaceAlignmentResult({
+                source: 'imported',
+                csv: csvText,
+                syncReferenceTimeColumn: null,
+                synchronizedAudio: [],
+            });
+            this.state.alignmentCacheKey = null;
+            this.state.canCancelBackToPlayer = false;
+            this.state.computationStatus = 'done';
+            this.state.computationError = null;
+            this.buildAndMountPlayer();
+        } catch (error) {
+            this.state.computationStatus = 'error';
+            this.state.computationError = error instanceof Error ? error.message : String(error);
+            this.rerenderDropZone();
+        }
+    }
+
     private async ensureBasicPitchFeaturesForAlignment(): Promise<void> {
         const audioFiles = this.state.files.filter(function(file) {
             return file.type === 'audio';
@@ -359,6 +400,43 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
                     this.onWorkerProgress(prefix + ' - ' + progress.message);
                 }
             );
+        }
+    }
+
+    private validateImportedAlignmentCsv(csvText: string): void {
+        const parsedCsv = parseNumericCsv(csvText);
+        const availableColumns = new Set(parsedCsv.headers);
+        const referenceFile = this.state.files.find((file) => file.id === this.state.referenceFileId);
+
+        if (!referenceFile) {
+            throw new Error('Select a reference file before importing alignment.csv.');
+        }
+
+        const requiredReferenceColumn = fileNameToColumnName(referenceFile.name);
+        if (!availableColumns.has(requiredReferenceColumn)) {
+            throw new Error('alignment.csv is missing the reference column: ' + requiredReferenceColumn);
+        }
+
+        const missingColumns = this.state.files
+            .filter((file) => file.id !== this.state.referenceFileId)
+            .map((file) => fileNameToColumnName(file.name))
+            .filter((columnName) => !availableColumns.has(columnName));
+
+        if (missingColumns.length > 0) {
+            throw new Error('alignment.csv is missing required columns: ' + missingColumns.join(', '));
+        }
+    }
+
+    private invalidateImportedAlignmentState(): void {
+        if (this.state.alignmentResult?.source === 'imported') {
+            this.replaceAlignmentResult(null);
+            this.state.alignmentCacheKey = null;
+        }
+
+        if (this.playerSetupSnapshot?.alignmentResult?.source === 'imported') {
+            this.playerSetupSnapshot.alignmentResult = null;
+            this.playerSetupSnapshot.alignmentCacheKey = null;
+            this.state.canCancelBackToPlayer = false;
         }
     }
 
@@ -766,6 +844,7 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
 
     private createAlignmentResult(result: WorkerComputeResult): InteractiveAlignmentResult {
         return {
+            source: 'computed',
             csv: result.csv,
             syncReferenceTimeColumn: result.syncReferenceTimeColumn,
             synchronizedAudio: result.synchronizedAudio.map(function(entry) {

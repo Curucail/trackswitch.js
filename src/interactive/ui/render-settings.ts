@@ -14,6 +14,7 @@ import { classifyFileType } from '../file-handler';
 import {
     bindAlignmentHelpTooltips,
     buildAlignmentHelpLabelHtml,
+    buildAlignmentHelpTriggerHtml,
 } from './alignment-help';
 
 export interface SettingsPanelState {
@@ -195,9 +196,17 @@ function buildAdvancedOptionsHtml(
         + '<span class="ts-sync-toggle-title">Generate synchronized audios</span>'
         + '<span class="ts-sync-toggle-hint">Also export time- and pitch-matched audio renders.</span>'
         + '</span>'
+        + '<span class="ts-sync-toggle-switch-group">'
+        + buildAlignmentHelpTriggerHtml({
+            label: 'synchronized audio generation',
+            tooltipId: 'sync-generation',
+            idPrefix: idPrefix,
+            align: 'end',
+        })
         + '<span class="ts-sync-toggle-switch ts-sync-toggle-switch-compact">'
         + '<input class="ts-sync-toggle-input" type="checkbox"' + (syncGenerationEnabled ? ' checked' : '') + '>'
         + '<span class="ts-sync-toggle-knob" aria-hidden="true"></span>'
+        + '</span>'
         + '</span>'
         + '</label>'
         + '</div>'
