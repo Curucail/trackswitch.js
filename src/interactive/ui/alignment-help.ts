@@ -12,6 +12,8 @@ interface AlignmentHelpTooltipContent {
 
 interface TooltipRootElement extends HTMLElement {
     __tsHelpButton?: HTMLButtonElement | null;
+    __tsHelpTooltip?: HTMLElement | null;
+    __tsHelpTooltipPlaceholder?: Comment | null;
 }
 
 interface TooltipContainerElement extends HTMLElement {
@@ -143,10 +145,87 @@ export function bindAlignmentHelpTooltips(container: HTMLElement): void {
     let openRoot: TooltipRootElement | null = null;
     let manualRoot: TooltipRootElement | null = null;
 
+    function updateTooltipLayout(root: TooltipRootElement): void {
+        const tooltip = root.__tsHelpTooltip;
+        const button = root.__tsHelpButton;
+        const playerRoot = root.closest('.trackswitch') as HTMLElement | null;
+        if (!tooltip || !button || !playerRoot) {
+            return;
+        }
+
+        const playerRect = playerRoot.getBoundingClientRect();
+        const buttonRect = button.getBoundingClientRect();
+        const margin = 12;
+        const gap = 12;
+
+        if (tooltip.parentElement !== playerRoot) {
+            const placeholder = root.ownerDocument.createComment('ts-help-tooltip-anchor');
+            root.__tsHelpTooltipPlaceholder = placeholder;
+            if (tooltip.parentNode) {
+                tooltip.parentNode.insertBefore(placeholder, tooltip);
+            }
+            playerRoot.appendChild(tooltip);
+        }
+
+        tooltip.style.position = 'absolute';
+        tooltip.style.left = '';
+        tooltip.style.right = '';
+        tooltip.style.top = '';
+        tooltip.style.bottom = '';
+        tooltip.style.maxWidth = '';
+        tooltip.style.transform = '';
+        tooltip.style.opacity = '1';
+        tooltip.style.visibility = 'visible';
+        tooltip.style.pointerEvents = 'auto';
+
+        const availableWidth = Math.max(180, Math.floor(playerRect.width - (margin * 2)));
+        tooltip.style.maxWidth = availableWidth + 'px';
+        tooltip.style.left = margin + 'px';
+        tooltip.style.top = margin + 'px';
+        tooltip.style.transform = 'none';
+
+        const tooltipRect = tooltip.getBoundingClientRect();
+        const tooltipWidth = tooltipRect.width;
+        const tooltipHeight = tooltipRect.height;
+        const minLeft = margin;
+        const maxLeft = Math.max(minLeft, playerRect.width - margin - tooltipWidth);
+        const minTop = margin;
+        const maxTop = Math.max(minTop, playerRect.height - margin - tooltipHeight);
+        const spaceRight = playerRect.right - buttonRect.right - margin;
+        const spaceLeft = buttonRect.left - playerRect.left - margin;
+        const preferLeft = spaceRight < Math.min(tooltipWidth, 280) && spaceLeft > spaceRight;
+
+        const preferredLeft = preferLeft
+            ? (buttonRect.left - playerRect.left) - tooltipWidth - gap
+            : (buttonRect.right - playerRect.left) + gap;
+        const preferredTop = (buttonRect.top - playerRect.top) + (buttonRect.height / 2) - (tooltipHeight / 2);
+
+        tooltip.style.left = Math.min(Math.max(preferredLeft, minLeft), maxLeft) + 'px';
+        tooltip.style.top = Math.min(Math.max(preferredTop, minTop), maxTop) + 'px';
+    }
+
     function closeRoot(root: TooltipRootElement): void {
         root.classList.remove('is-open');
         if (root.__tsHelpButton) {
             root.__tsHelpButton.setAttribute('aria-expanded', 'false');
+        }
+        if (root.__tsHelpTooltip) {
+            const placeholder = root.__tsHelpTooltipPlaceholder;
+            if (placeholder && placeholder.parentNode) {
+                placeholder.parentNode.insertBefore(root.__tsHelpTooltip, placeholder);
+                placeholder.parentNode.removeChild(placeholder);
+            }
+            root.__tsHelpTooltipPlaceholder = null;
+            root.__tsHelpTooltip.style.position = '';
+            root.__tsHelpTooltip.style.left = '';
+            root.__tsHelpTooltip.style.right = '';
+            root.__tsHelpTooltip.style.top = '';
+            root.__tsHelpTooltip.style.bottom = '';
+            root.__tsHelpTooltip.style.maxWidth = '';
+            root.__tsHelpTooltip.style.transform = '';
+            root.__tsHelpTooltip.style.opacity = '';
+            root.__tsHelpTooltip.style.visibility = '';
+            root.__tsHelpTooltip.style.pointerEvents = '';
         }
         if (openRoot === root) {
             openRoot = null;
@@ -168,6 +247,7 @@ export function bindAlignmentHelpTooltips(container: HTMLElement): void {
         }
 
         root.classList.add('is-open');
+        updateTooltipLayout(root);
         if (root.__tsHelpButton) {
             root.__tsHelpButton.setAttribute('aria-expanded', 'true');
         }
@@ -187,7 +267,9 @@ export function bindAlignmentHelpTooltips(container: HTMLElement): void {
 
     roots.forEach(function(root) {
         const button = root.querySelector('.ts-help-trigger') as HTMLButtonElement | null;
+        const tooltip = root.querySelector('.ts-help-tooltip') as HTMLElement | null;
         root.__tsHelpButton = button;
+        root.__tsHelpTooltip = tooltip;
         if (!button) {
             return;
         }
@@ -281,12 +363,23 @@ export function bindAlignmentHelpTooltips(container: HTMLElement): void {
         }
     };
 
+    const handleWindowLayoutChange = function(): void {
+        if (!ensureConnected() || !openRoot) {
+            return;
+        }
+        updateTooltipLayout(openRoot);
+    };
+
     container.ownerDocument.addEventListener('pointerdown', handleDocumentPointerDown, true);
     container.ownerDocument.addEventListener('keydown', handleDocumentKeyDown, true);
+    window.addEventListener('resize', handleWindowLayoutChange);
+    window.addEventListener('scroll', handleWindowLayoutChange, true);
 
     teardownCallbacks.push(function() {
         container.ownerDocument.removeEventListener('pointerdown', handleDocumentPointerDown, true);
         container.ownerDocument.removeEventListener('keydown', handleDocumentKeyDown, true);
+        window.removeEventListener('resize', handleWindowLayoutChange);
+        window.removeEventListener('scroll', handleWindowLayoutChange, true);
     });
 
     function cleanup(): void {
