@@ -342,8 +342,8 @@ except Exception:
 BASIC_PITCH_MIDI_OFFSET = 21
 BASIC_PITCH_N_SEMITONES = 88
 
-def extract_audio_features(audio_data, sample_rate, feature_rate, progress_fn=None):
-    """Extract chroma and optional onset features from audio PCM data."""
+def extract_audio_features(audio_data, sample_rate, feature_rate, include_onset=False, progress_fn=None):
+    """Extract chroma features and, optionally, DLNCO onset features from audio PCM data."""
     if progress_fn: progress_fn('Estimating tuning')
     tuning_offset = estimate_tuning(audio_data, sample_rate)
 
@@ -361,24 +361,23 @@ def extract_audio_features(audio_data, sample_rate, feature_rate, progress_fn=No
     f_chroma_quantized = quantize_chroma(f_chroma=f_chroma)
 
     f_onset = None
-    if HAS_ONSET_FEATURES:
-        try:
-            if progress_fn: progress_fn('Computing onset features')
-            f_pitch_onset = audio_to_pitch_onset_features(
-                f_audio=audio_data,
-                Fs=sample_rate,
-                tuning_offset=tuning_offset,
-                verbose=False,
-            )
-            if progress_fn: progress_fn('Computing DLNCO features')
-            f_onset = pitch_onset_features_to_DLNCO(
-                f_peaks=f_pitch_onset,
-                feature_rate=feature_rate,
-                feature_sequence_length=f_chroma_quantized.shape[1],
-                visualize=False,
-            )
-        except Exception:
-            f_onset = None
+    if include_onset:
+        if not HAS_ONSET_FEATURES:
+            raise ValueError('DLNCO alignment requires synctoolbox onset feature support.')
+        if progress_fn: progress_fn('Computing onset features')
+        f_pitch_onset = audio_to_pitch_onset_features(
+            f_audio=audio_data,
+            Fs=sample_rate,
+            tuning_offset=tuning_offset,
+            verbose=False,
+        )
+        if progress_fn: progress_fn('Computing DLNCO features')
+        f_onset = pitch_onset_features_to_DLNCO(
+            f_peaks=f_pitch_onset,
+            feature_rate=feature_rate,
+            feature_sequence_length=f_chroma_quantized.shape[1],
+            visualize=False,
+        )
 
     return f_chroma_quantized, f_onset
 
@@ -573,24 +572,28 @@ def extract_score_note_events_and_measure_map(xml_text):
 
     return pd.DataFrame(notes), measure_times
 
-def extract_score_features(xml_text, feature_rate):
-    """Extract score chroma/onset features, Basic Pitch-like frame features, and measure map."""
+def extract_score_features(xml_text, feature_rate, include_onset=False, include_basic_pitch_score=False):
+    """Extract score chroma features, optional DLNCO / Basic Pitch-like features, and measure map."""
     from synctoolbox.feature.csv_tools import df_to_pitch_features, df_to_pitch_onset_features
 
     df, measure_times = extract_score_note_events_and_measure_map(xml_text)
 
     f_pitch = df_to_pitch_features(df, feature_rate=feature_rate)
-    f_basic_pitch_score = build_basic_pitch_score_matrix(f_pitch)
+    f_basic_pitch_score = build_basic_pitch_score_matrix(f_pitch) if include_basic_pitch_score else None
     f_chroma = pitch_to_chroma(f_pitch=f_pitch)
     f_chroma_quantized = quantize_chroma(f_chroma=f_chroma)
 
-    f_pitch_onset = df_to_pitch_onset_features(df)
-    f_onset = pitch_onset_features_to_DLNCO(
-        f_peaks=f_pitch_onset,
-        feature_rate=feature_rate,
-        feature_sequence_length=f_chroma_quantized.shape[1],
-        visualize=False,
-    )
+    f_onset = None
+    if include_onset:
+        if not HAS_ONSET_FEATURES:
+            raise ValueError('DLNCO alignment requires synctoolbox onset feature support.')
+        f_pitch_onset = df_to_pitch_onset_features(df)
+        f_onset = pitch_onset_features_to_DLNCO(
+            f_peaks=f_pitch_onset,
+            feature_rate=feature_rate,
+            feature_sequence_length=f_chroma_quantized.shape[1],
+            visualize=False,
+        )
 
     return f_chroma_quantized, f_onset, measure_times, f_basic_pitch_score
 
@@ -619,11 +622,15 @@ _file_names_dict = dict(file_names)
 _basic_pitch_audio_features_raw = dict(basic_pitch_audio_features) if 'basic_pitch_audio_features' in globals() else {}
 audio_basic_pitch_features = {}
 
-for fid, payload in _basic_pitch_audio_features_raw.items():
-    audio_basic_pitch_features[str(fid)] = {
-        'frames': decode_basic_pitch_feature_matrix(payload['frames']),
-        'contours': decode_basic_pitch_feature_matrix(payload['contours']),
-    }
+NEEDS_DLNCO_FEATURES = alignment_feature_set_id in ('chroma_dlnco_synctoolbox', 'chroma_dlnco')
+NEEDS_BASIC_PITCH_FEATURES = alignment_feature_set_id == 'basic_pitch'
+
+if NEEDS_BASIC_PITCH_FEATURES:
+    for fid, payload in _basic_pitch_audio_features_raw.items():
+        audio_basic_pitch_features[str(fid)] = {
+            'frames': decode_basic_pitch_feature_matrix(payload['frames']),
+            'contours': decode_basic_pitch_feature_matrix(payload['contours']),
+        }
 
 def _progress_percent(value):
     return int(np.clip(np.round(value), 0, 100))
@@ -654,15 +661,22 @@ CSV_END = _phase_end(CSV_START, csv_weight, total_weight, PIPELINE_SPAN)
 SYNC_START = CSV_END
 SYNC_END = PIPELINE_END_PCT
 
-# Sub-steps within feature extraction per audio file:
-# tuning=10%, pitch=35%, chroma=10%, onset=25%, dlnco=20%
-_audio_substeps = [
-    ('Estimating tuning', 0.0),
-    ('Computing pitch features', 0.10),
-    ('Computing chroma features', 0.45),
-    ('Computing onset features', 0.55),
-    ('Computing DLNCO features', 0.80),
-]
+if NEEDS_DLNCO_FEATURES:
+    # tuning=10%, pitch=35%, chroma=10%, onset=25%, dlnco=20%
+    _audio_substeps = [
+        ('Estimating tuning', 0.0),
+        ('Computing pitch features', 0.10),
+        ('Computing chroma features', 0.45),
+        ('Computing onset features', 0.55),
+        ('Computing DLNCO features', 0.80),
+    ]
+else:
+    # tuning=10%, pitch=55%, chroma=35%
+    _audio_substeps = [
+        ('Estimating tuning', 0.0),
+        ('Computing pitch features', 0.10),
+        ('Computing chroma features', 0.65),
+    ]
 
 report_progress(f'[{_progress_percent(FEAT_START)}%] Starting feature extraction...')
 
@@ -688,12 +702,18 @@ for file_idx, fid in enumerate(all_file_ids):
             return fn
         prog_fn = _make_progress_fn(file_start_pct, file_end_pct - file_start_pct, fname)
         report_progress(f'[{_progress_percent(file_start_pct)}%] Extracting features: {fname}')
-        chroma, onset = extract_audio_features(audio_files[fid], SAMPLE_RATE, FEATURE_RATE, progress_fn=prog_fn)
+        chroma, onset = extract_audio_features(
+            audio_files[fid],
+            SAMPLE_RATE,
+            FEATURE_RATE,
+            include_onset=NEEDS_DLNCO_FEATURES,
+            progress_fn=prog_fn,
+        )
         file_features = {
             'chroma': chroma,
             'onset': onset,
         }
-        if alignment_feature_set_id == 'basic_pitch':
+        if NEEDS_BASIC_PITCH_FEATURES:
             audio_basic_pitch = audio_basic_pitch_features.get(str(fid))
             if not audio_basic_pitch:
                 raise ValueError(f'Missing Basic Pitch features for audio file: {fname}')
@@ -701,14 +721,20 @@ for file_idx, fid in enumerate(all_file_ids):
             file_features['basic_pitch_contours'] = audio_basic_pitch['contours']
     else:
         report_progress(f'[{_progress_percent(file_start_pct)}%] Parsing score: {fname}')
-        chroma, onset, measure_map, score_basic_pitch = extract_score_features(score_files[fid], FEATURE_RATE)
+        chroma, onset, measure_map, score_basic_pitch = extract_score_features(
+            score_files[fid],
+            FEATURE_RATE,
+            include_onset=NEEDS_DLNCO_FEATURES,
+            include_basic_pitch_score=NEEDS_BASIC_PITCH_FEATURES,
+        )
         if measure_map:
             score_measure_maps[fid] = measure_map
         file_features = {
             'chroma': chroma,
             'onset': onset,
-            'score_basic_pitch': score_basic_pitch,
         }
+        if NEEDS_BASIC_PITCH_FEATURES:
+            file_features['score_basic_pitch'] = score_basic_pitch
     features[fid] = file_features
 
 report_progress(f'[{_progress_percent(SHIFT_START)}%] Feature extraction complete')
