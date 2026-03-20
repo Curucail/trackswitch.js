@@ -384,7 +384,7 @@
     top: calc(100% + 12px);
     left: 50%;
     z-index: 3;
-    width: min(760px, calc(100vw - 64px));
+    width: min(760px, calc(100% - 24px), calc(100vw - 64px));
     padding: 2px 0 0;
     transform: translateX(-50%);
     transform-origin: top center;

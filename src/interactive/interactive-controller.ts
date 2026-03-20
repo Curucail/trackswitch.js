@@ -510,6 +510,7 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
 
                 uiElements.push({
                     type: 'waveform',
+                    height: 100,
                     waveformSource: audioTrackCount,
                     alignedPlayhead: this.state.waveformAlignedPlayhead,
                     showAlignmentPoints: this.state.waveformShowAlignmentPoints,
