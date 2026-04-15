@@ -235,8 +235,8 @@ export class ViewRenderer {
 
     public readonly root: HTMLElement;
     public readonly features: TrackSwitchFeatures;
-    public readonly presetNames: string[];
-    public readonly trackGroups: NormalizedTrackGroupLayout[];
+    public presetNames: string[];
+    public trackGroups: NormalizedTrackGroupLayout[];
 
     public readonly waveformSeekSurfaces: WaveformSeekSurfaceMetadata[] = [];
     public readonly sheetMusicHosts: SheetMusicHostConfig[] = [];
@@ -266,6 +266,11 @@ export class ViewRenderer {
         this.trackGroups = trackGroups;
         this.onWarpingMatrixSeek = onWarpingMatrixSeek;
         this.resolveWarpingMatrixScoreBpm = resolveWarpingMatrixScoreBpm;
+    }
+
+public updateConfig(presetNames: string[], trackGroups: NormalizedTrackGroupLayout[]): void {
+        this.presetNames = presetNames;
+        this.trackGroups = trackGroups;
     }
 
 public query(selector: string): HTMLElement | null {

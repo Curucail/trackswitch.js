@@ -71,6 +71,7 @@ export function useTrackSwitch(
     const rootRef = useRef<HTMLDivElement | null>(null);
     const controllerRef = useRef<TrackSwitchController | null>(null);
     const eventHandlersRef = useRef<TrackSwitchEventProps>({});
+    const initRef = useRef<TrackSwitchInit | null>(null);
 
     // Keep callbacks live without recreating the controller on every parent render.
     eventHandlersRef.current = {
@@ -88,6 +89,7 @@ export function useTrackSwitch(
 
         const controller = createTrackSwitch(rootElement, init, mount);
         controllerRef.current = controller;
+        initRef.current = init;
 
         const unsubscribeLoaded = controller.on('loaded', (payload) => {
             eventHandlersRef.current.onLoaded?.(payload);
@@ -114,9 +116,22 @@ export function useTrackSwitch(
             unsubscribePosition();
             unsubscribeTrackState();
             controllerRef.current = null;
+            initRef.current = null;
             controller.destroy();
         };
     }, [initKey]);
+
+    useEffect(() => {
+        const controller = controllerRef.current;
+        if (!controller || initRef.current === init) {
+            return;
+        }
+
+        initRef.current = init;
+        void controller.updateInit(init).catch(() => {
+            // `updateInit()` reports failures through controller error events.
+        });
+    }, [init]);
 
     return {
         rootRef,

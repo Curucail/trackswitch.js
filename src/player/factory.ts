@@ -107,6 +107,10 @@ class ShadowMountedTrackSwitchController implements TrackSwitchController {
         this.requireInnerController().off(eventName, handler);
     }
 
+    updateInit(nextInit: TrackSwitchInit): Promise<void> {
+        return this.requireInnerController().updateInit(nextInit);
+    }
+
     private requireInnerController(): TrackSwitchController {
         if (!this.innerController) {
             throw new Error('TrackSwitch controller has already been destroyed.');

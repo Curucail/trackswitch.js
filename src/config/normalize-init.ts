@@ -108,6 +108,12 @@ function hasWarpingMatrixInferScoreBpm(resolvedUi: TrackSwitchUiElement[] | unde
 }
 
 export function normalizeInit(root: HTMLElement, init: TrackSwitchInit): NormalizedTrackSwitchConfig {
+    const normalized = normalizeTrackSwitchConfig(init);
+    injectConfiguredUiElements(root, normalized.ui);
+    return normalized;
+}
+
+export function normalizeTrackSwitchConfig(init: TrackSwitchInit): NormalizedTrackSwitchConfig {
     validateInitKeys(init);
 
     const resolvedUi = Array.isArray(init.ui)
@@ -129,8 +135,6 @@ export function normalizeInit(root: HTMLElement, init: TrackSwitchInit): Normali
     if (resolvedTrackData.tracks.length === 0 && normalizedFeatures.mode !== 'alignment_interactive') {
         throw new Error(TRACKS_REQUIRED_ERROR);
     }
-
-    injectConfiguredUiElements(root, resolvedUi);
 
     return {
         tracks: resolvedTrackData.tracks,

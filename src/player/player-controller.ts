@@ -12,6 +12,7 @@ import {
     TrackSwitchEventMap,
     TrackSwitchEventName,
     TrackSwitchFeatures,
+    TrackSwitchInit,
     TrackSwitchSnapshot,
 } from '../domain/types';
 import { normalizeFeatures } from '../domain/options';
@@ -42,6 +43,7 @@ import * as controllerSeek from './seek-actions';
 import * as controllerAlignment from './alignment-actions';
 import * as controllerUi from './ui-sync';
 import * as controllerEvents from './event-emitter';
+import * as controllerHotReload from './hot-reload-actions';
 
 interface TrackAlignmentConverter {
     referenceToTrack: TimeMappingSeries;
@@ -99,7 +101,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     public readonly sheetMusicEngine: SheetMusicEngine;
     public readonly renderer: ViewRenderer;
     public readonly inputBinder: InputBinder;
-    public readonly alignmentConfig: TrackAlignmentConfig | undefined;
+    public alignmentConfig: TrackAlignmentConfig | undefined;
     public alignmentCsvRequest: Promise<ParsedNumericCsv> | null = null;
 
     public state: PlayerState;
@@ -141,7 +143,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
     public readonly eventNamespace: string;
     public readonly instanceId: number;
-    public readonly presetCount: number;
+    public presetCount: number;
     public shortcutHelpOpen = false;
     public audioDownloadSizeInfo: AudioDownloadSizeInfo = {
         status: 'calculating',
@@ -238,6 +240,10 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
     async load(): Promise<void> {
         return controllerPlayback.load(this);
+    }
+
+    async updateInit(nextInit: TrackSwitchInit): Promise<void> {
+        return controllerHotReload.updateInit(this, nextInit);
     }
 
     destroy(): void {

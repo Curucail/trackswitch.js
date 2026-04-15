@@ -259,6 +259,7 @@ export interface TrackSwitchSnapshot {
 
 export interface TrackSwitchController {
     load(): Promise<void>;
+    updateInit(nextInit: TrackSwitchInit): Promise<void>;
     destroy(): void;
     togglePlay(): void;
     play(): void;

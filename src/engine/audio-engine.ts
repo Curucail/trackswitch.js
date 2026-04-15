@@ -725,6 +725,30 @@ export class AudioEngine {
         });
     }
 
+    disconnectRuntimes(runtimes: TrackRuntime[]): void {
+        runtimes.forEach(function(runtime) {
+            try {
+                runtime.activeSource?.disconnect();
+            } catch (_error) {
+                // ignore
+            }
+            try {
+                runtime.gainNode?.disconnect();
+            } catch (_error) {
+                // ignore
+            }
+            try {
+                runtime.pannerNode?.disconnect();
+            } catch (_error) {
+                // ignore
+            }
+
+            runtime.activeSource = null;
+            runtime.gainNode = null;
+            runtime.pannerNode = null;
+        });
+    }
+
     disconnect(): void {
         this.gainNodeMaster?.disconnect();
         this.gainNodeVolume?.disconnect();
