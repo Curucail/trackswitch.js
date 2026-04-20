@@ -14,6 +14,7 @@
     /* Top Right Bottom Left */
     display: flex;
     align-items: center;
+    cursor: default;
 }
 
 .trackswitch li.track.tabs {
@@ -176,6 +177,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    cursor: default;
 }
 
 .trackswitch li.track .track-mix-controls {

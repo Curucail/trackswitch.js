@@ -64,6 +64,7 @@
     'timer',
     'keyboard',
     'waveform',
+    'text',
     'waveformPlaybackFollowMode',
     'alignedPlayhead',
     'showAlignmentPoints',
@@ -89,6 +90,7 @@
     'timer',
     'keyboard',
     'waveform',
+    'text',
     'waveformPlaybackFollowMode',
     'alignedPlayhead',
     'showAlignmentPoints',
@@ -124,6 +126,7 @@
     timer: true,
     keyboard: true,
     waveform: true,
+    text: true,
     waveformPlaybackFollowMode: 'off',
     alignedPlayhead: false,
     showAlignmentPoints: false,
@@ -696,6 +699,12 @@
         );
       }
 
+      if (model.text) {
+        snippetLines.push(
+          "      { type: 'text', text: 'Choose which parts of the arrangement you want to hear.', bold: true, fontSize: 18 },"
+        );
+      }
+
       if (model.waveform) {
         snippetLines.push(
           "      { type: 'waveform', height: 150" + waveformFollowSnippet + " },"
@@ -785,6 +794,12 @@
           '        cursorAlpha: 0.4,',
           "        style: 'margin: 0px;',",
           '      },'
+        );
+      }
+
+      if (model.text) {
+        snippetLines.push(
+          "      { type: 'text', text: 'Compare aligned performances on the shared score timeline.', bold: true, fontSize: 18 },"
         );
       }
 
@@ -1010,6 +1025,17 @@
           followPlayback: true,
           cursorColor: '#999999',
           cursorAlpha: 0.4,
+        });
+      }
+
+      if (model.text) {
+        uiConfig.push({
+          type: 'text',
+          text: isAlignmentMode(currentMode)
+            ? 'Compare aligned performances on the shared score timeline.'
+            : 'Choose which parts of the arrangement you want to hear.',
+          bold: true,
+          fontSize: 18,
         });
       }
 

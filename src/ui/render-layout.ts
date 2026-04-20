@@ -766,7 +766,6 @@ export function prepareTextPanels(ctx: any): any {
             );
             hostElement.style.textAlign = parseTextAlign(hostElement.getAttribute('data-ts-text-align'));
             hostElement.style.cursor = 'default';
-            hostElement.style.userSelect = 'none';
             hostElement.style.fontWeight = hostElement.getAttribute('data-ts-text-bold') === 'true'
                 ? '700'
                 : '400';
