@@ -149,7 +149,7 @@
 .trackswitch .control li.solo .ts-icon-slot[data-icon="circle"] .ts-icon-svg,
 .trackswitch .control li.solo .ts-icon-slot[data-icon="circle-check"] .ts-icon-svg,
 .trackswitch .control li.solo .ts-icon-slot[data-icon="circle-dot"] .ts-icon-svg {
-    transform: translateY(-0.08em);
+    transform: translateY(0.0em) scale(0.96);
 }
 
 .trackswitch .control li.solo .ts-icon-slot[data-icon="circle"] .ts-icon-svg path,
