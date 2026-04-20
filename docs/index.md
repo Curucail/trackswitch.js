@@ -132,7 +132,7 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
         </label>
         <label class="ts-control-row">
           <span>Text</span>
-          <input type="checkbox" name="text" checked />
+          <input type="checkbox" name="text" />
         </label>
         <label class="ts-control-row">
           <span>Waveform Follow</span>

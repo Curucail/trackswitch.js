@@ -126,7 +126,7 @@
     timer: true,
     keyboard: true,
     waveform: true,
-    text: true,
+    text: false,
     waveformPlaybackFollowMode: 'off',
     alignedPlayhead: false,
     showAlignmentPoints: false,
