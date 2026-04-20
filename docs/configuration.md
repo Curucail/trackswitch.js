@@ -22,6 +22,7 @@ permalink: /documentation.html
   - [Audio Source Options](#audio-source-options)
   - [Track Alignment Options](#track-alignment-options)
 - [Visualizations](#visualizations)
+  - [`text`](#text)
   - [`image`](#image)
   - [`perTrackImage`](#pertrackimage)
   - [`waveform`](#waveform)
@@ -131,6 +132,15 @@ TrackSwitch.createTrackSwitch(rootElement, {
       style: 'margin: 0;',
     },
     {
+      type: 'text',
+      text: 'Choose which parts of the arrangement you want to hear.',
+      bold: true,
+      italic: false,
+      fontSize: 18,
+      align: 'center',
+      style: 'margin: 0;',
+    },
+    {
       type: 'waveform',
       height: 160,
       waveformBarWidth: 2,
@@ -225,6 +235,14 @@ TrackSwitch.createTrackSwitch(rootElement, {
       seekable: true,
       seekMarginLeft: 4,
       seekMarginRight: 4,
+      style: 'margin: 0;',
+    },
+    {
+      type: 'text',
+      text: 'Compare aligned performances on the shared score timeline.',
+      bold: true,
+      fontSize: 18,
+      align: 'center',
       style: 'margin: 0;',
     },
     {
@@ -331,6 +349,7 @@ Use it to add any of these section types:
 - `trackGroup`
 - `image`
 - `perTrackImage`
+- `text`
 - `waveform`
 - `sheetMusic`
 - `warpingMatrix`
@@ -478,6 +497,39 @@ Notes:
 - Sync is only available when the player also has a shared sync timeline through `referenceTimeColumnSync`.
 
 ## Visualizations {#visualizations}
+
+### `text` {#text}
+
+Use `type: 'text'` to add a plain text section to the player.
+
+Example:
+
+```javascript
+{
+  type: 'text',
+  text: 'Choose which parts of the arrangement you want to hear.',
+  bold: true,
+  italic: false,
+  fontSize: 18,
+  align: 'center',
+  style: 'margin: 12px 0;',
+}
+```
+
+Section options:
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `text` | `string` | `-` | The text to show. |
+| `bold?` | `boolean` | `false` | Makes the text bold. |
+| `italic?` | `boolean` | `false` | Makes the text italic. |
+| `fontSize?` | `number` | none | Sets the text size in pixels. |
+| `align?` | `'left' \| 'center' \| 'right'` | `'center'` | Sets horizontal text alignment. |
+| `style?` | `string` | none | Lets you fine-tune the look or spacing of the section with CSS. |
+
+Notes:
+
+- The text is plain text only. It is not interpreted as HTML.
 
 ### `image` {#image}
 

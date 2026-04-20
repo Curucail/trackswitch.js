@@ -337,6 +337,10 @@ public prepareCustomizablePanels(): void {
         return viewRendererCore.prepareCustomizablePanels(this);
     }
 
+public prepareTextPanels(): void {
+        return viewRendererCore.prepareTextPanels(this);
+    }
+
 public startPanelReorder(event: {
         target?: EventTarget | null;
         pageY?: number;

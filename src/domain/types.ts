@@ -3,6 +3,7 @@ export type TrackSwitchMode = 'default' | 'alignment' | 'alignment_interactive';
 export type AlignmentOutOfRangeMode = 'clamp' | 'linear';
 export type WaveformSource = 'audible' | number | number[];
 export type WaveformPlaybackFollowMode = 'off' | 'center' | 'jump';
+export type TrackSwitchTextAlign = 'left' | 'center' | 'right';
 
 export interface TrackAlignmentConfig {
     csv: string;
@@ -100,6 +101,15 @@ export interface TrackSwitchWarpingMatrixConfig {
     bpm?: number | 'infer_score' | null;
 }
 
+export interface TrackSwitchTextConfig {
+    text: string;
+    bold?: boolean;
+    italic?: boolean;
+    fontSize?: number;
+    align?: TrackSwitchTextAlign;
+    style?: string;
+}
+
 export interface TrackSwitchImageUiElement extends TrackSwitchImageConfig {
     type: 'image';
 }
@@ -118,6 +128,10 @@ export interface TrackSwitchSheetMusicUiElement extends TrackSwitchSheetMusicCon
 
 export interface TrackSwitchWarpingMatrixUiElement extends TrackSwitchWarpingMatrixConfig {
     type: 'warpingMatrix';
+}
+
+export interface TrackSwitchTextUiElement extends TrackSwitchTextConfig {
+    type: 'text';
 }
 
 export interface TrackSwitchTrackGroupUiElement {
@@ -139,6 +153,7 @@ export type TrackSwitchUiElement =
     | TrackSwitchWaveformUiElement
     | TrackSwitchSheetMusicUiElement
     | TrackSwitchWarpingMatrixUiElement
+    | TrackSwitchTextUiElement
     | TrackSwitchTrackGroupUiElement;
 export type TrackSwitchUiConfig = TrackSwitchUiElement[];
 

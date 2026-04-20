@@ -131,6 +131,10 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
           <input type="checkbox" name="waveform" checked />
         </label>
         <label class="ts-control-row">
+          <span>Text</span>
+          <input type="checkbox" name="text" checked />
+        </label>
+        <label class="ts-control-row">
           <span>Waveform Follow</span>
           <select name="waveformPlaybackFollowMode">
             <option value="off" selected>Off</option>

@@ -220,6 +220,10 @@ function resolvePanelHandleLabel(panel: HTMLElement): string {
         return 'Reorder warping matrix panel';
     }
 
+    if (panel.classList.contains('ts-text')) {
+        return 'Reorder text panel';
+    }
+
     const image = panel.querySelector('img');
     if (image instanceof HTMLImageElement) {
         if (image.getAttribute('data-per-track-image') === 'true') {
@@ -366,6 +370,18 @@ function parseSheetMusicFollowPlayback(value: string | null): boolean {
     return parseSheetMusicString(value).toLowerCase() !== 'false';
 }
 
+function parseTextAlign(value: string | null): 'left' | 'center' | 'right' {
+    if (value === 'left' || value === 'right') {
+        return value;
+    }
+
+    return 'center';
+}
+
+function parseTextFontSize(value: string | null): number | null {
+    return parseRoundedPositiveIntegerAttribute(value);
+}
+
 function buildTrackShortcutAction(trackCount: number, singleSoloMode: boolean): string {
     void trackCount;
 
@@ -484,6 +500,7 @@ export function initialize(ctx: any, runtimes: any): any {
 
         this.wrapSeekableImages();
         this.wrapWaveformCanvases();
+        this.prepareTextPanels();
         this.wrapSheetMusicContainers();
         this.wrapWarpingMatrixContainers();
         this.reflowWaveforms();
@@ -732,6 +749,39 @@ export function renderTrackList(ctx: any, runtimes: any): any {
         });
     
     }).call(ctx, runtimes);
+}
+
+export function prepareTextPanels(ctx: any): any {
+    return (function(this: any) {
+        const hosts = this.root.querySelectorAll('.ts-text');
+        hosts.forEach((hostElement: Element) => {
+            if (!(hostElement instanceof HTMLElement)) {
+                return;
+            }
+
+            hostElement.classList.add('ts-stack-section');
+            hostElement.setAttribute(
+                'style',
+                sanitizeInlineStyle(hostElement.getAttribute('data-ts-text-style')) + '; display: block;'
+            );
+            hostElement.style.textAlign = parseTextAlign(hostElement.getAttribute('data-ts-text-align'));
+            hostElement.style.cursor = 'default';
+            hostElement.style.userSelect = 'none';
+            hostElement.style.fontWeight = hostElement.getAttribute('data-ts-text-bold') === 'true'
+                ? '700'
+                : '400';
+            hostElement.style.fontStyle = hostElement.getAttribute('data-ts-text-italic') === 'true'
+                ? 'italic'
+                : 'normal';
+
+            const fontSize = parseTextFontSize(hostElement.getAttribute('data-ts-text-font-size'));
+            if (fontSize !== null) {
+                hostElement.style.fontSize = fontSize + 'px';
+            } else {
+                hostElement.style.removeProperty('font-size');
+            }
+        });
+    }).call(ctx);
 }
 
 export function prepareCustomizablePanels(ctx: any): any {

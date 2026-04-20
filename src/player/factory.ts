@@ -124,8 +124,8 @@ class ShadowMountedTrackSwitchController implements TrackSwitchController {
  * Creates a TrackSwitch multitrack audio player and mounts it into the given DOM element.
  *
  * Tracks and visual elements are declared together in the `ui` array. Each entry has a `type`
- * that determines what gets rendered: `'trackGroup'` defines audio tracks, while `'waveform'`,
- * `'image'`, `'sheetMusic'`, and `'warpingMatrix'` add visual elements around them.
+ * that determines what gets rendered: `'trackGroup'` defines audio tracks, while `'text'`,
+ * `'waveform'`, `'image'`, `'sheetMusic'`, and `'warpingMatrix'` add visual elements around them.
  * At least one `trackGroup` with at least one track (each with a valid `sources` array) is required.
  *
  * The player supports two modes (via `features.mode`):

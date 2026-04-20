@@ -4,6 +4,8 @@ import {
     TrackSwitchImageConfig,
     TrackSwitchPerTrackImageConfig,
     TrackSwitchSheetMusicConfig,
+    TrackSwitchTextAlign,
+    TrackSwitchTextConfig,
     TrackSwitchUiConfig,
     TrackSwitchUiElement,
     TrackSwitchWaveformConfig,
@@ -51,6 +53,15 @@ const uiWarpingMatrixAllowedKeys = [
     'tempoSmoothingSeconds',
     'bpm',
 ] as const;
+const uiTextAllowedKeys = [
+    'type',
+    'text',
+    'bold',
+    'italic',
+    'fontSize',
+    'align',
+    'style',
+] as const;
 
 const trackAllowedKeys = [
     'title',
@@ -74,6 +85,7 @@ const uiAllowedKeysByType: Record<string, readonly string[]> = {
     trackGroup: uiTrackGroupAllowedKeys,
     sheetMusic: uiSheetMusicAllowedKeys,
     warpingMatrix: uiWarpingMatrixAllowedKeys,
+    text: uiTextAllowedKeys,
 };
 
 function toMarginString(value: number | undefined): string {
@@ -239,6 +251,48 @@ function normalizeWarpingMatrixConfig<T extends TrackSwitchWarpingMatrixConfig>(
     };
 }
 
+function normalizeTextAlign(value: unknown): TrackSwitchTextAlign {
+    if (value === 'left' || value === 'right') {
+        return value;
+    }
+
+    return 'center';
+}
+
+function normalizeTextBoolean(value: unknown): boolean | undefined {
+    if (value === undefined) {
+        return undefined;
+    }
+
+    return typeof value === 'boolean' ? value : undefined;
+}
+
+function normalizeTextFontSize(value: unknown): number | undefined {
+    if (value === undefined) {
+        return undefined;
+    }
+
+    if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+        return undefined;
+    }
+
+    return Math.max(1, Math.round(value));
+}
+
+function normalizeTextConfig<T extends TrackSwitchTextConfig>(text: T): T {
+    if (typeof text.text !== 'string') {
+        throw new Error('Invalid ui.text configuration: text must be a string.');
+    }
+
+    return {
+        ...text,
+        bold: normalizeTextBoolean(text.bold),
+        italic: normalizeTextBoolean(text.italic),
+        fontSize: normalizeTextFontSize(text.fontSize),
+        align: normalizeTextAlign(text.align),
+    };
+}
+
 function normalizeWarpingMatrixBpm(
     value: TrackSwitchWarpingMatrixConfig['bpm']
 ): TrackSwitchWarpingMatrixConfig['bpm'] {
@@ -343,6 +397,10 @@ export function normalizeUiElement(element: TrackSwitchUiElement): TrackSwitchUi
         return normalizeWarpingMatrixConfig(element);
     }
 
+    if (element.type === 'text') {
+        return normalizeTextConfig(element);
+    }
+
     if (element.type === 'trackGroup') {
         return normalizeTrackGroupConfig(element);
     }
@@ -399,6 +457,32 @@ function injectTrackGroup(root: HTMLElement, trackGroupIndex: number): void {
     const container = document.createElement('div');
     container.className = 'track-group ts-stack-section';
     container.setAttribute('data-track-group-index', String(trackGroupIndex));
+    root.appendChild(container);
+}
+
+function injectText(root: HTMLElement, text: TrackSwitchTextConfig): void {
+    const container = document.createElement('div');
+    container.className = 'ts-text';
+    container.textContent = text.text;
+    container.setAttribute('data-ts-text-align', normalizeTextAlign(text.align));
+
+    if (text.bold === true) {
+        container.setAttribute('data-ts-text-bold', 'true');
+    }
+
+    if (text.italic === true) {
+        container.setAttribute('data-ts-text-italic', 'true');
+    }
+
+    const fontSize = normalizeTextFontSize(text.fontSize);
+    if (fontSize !== undefined) {
+        container.setAttribute('data-ts-text-font-size', String(fontSize));
+    }
+
+    if (typeof text.style === 'string') {
+        container.setAttribute('data-ts-text-style', text.style);
+    }
+
     root.appendChild(container);
 }
 
@@ -530,6 +614,11 @@ export function injectConfiguredUiElements(root: HTMLElement, uiElements: TrackS
 
         if (entry.type === 'image') {
             injectImage(root, entry);
+            return;
+        }
+
+        if (entry.type === 'text') {
+            injectText(root, entry);
             return;
         }
 
