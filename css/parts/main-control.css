@@ -129,8 +129,6 @@
     background-color: var(--ts-color-accent);
     height: var(--ts-seekbar-height);
     margin-block-start: calc((var(--ts-main-seek-hit-height) - var(--ts-seekbar-height)) / 2);
-    margin-inline-end: var(--ts-main-seek-inline-end-pad);
-    box-shadow: var(--ts-main-seek-inline-end-pad) 0 0 0 var(--ts-color-accent);
 }
 
 .trackswitch .main-control .seekwrap .seekbar .seekhead {
@@ -138,6 +136,12 @@
     width: var(--ts-main-seekhead-width);
     height: var(--ts-main-seekhead-height);
     top: calc((var(--ts-seekbar-height) - var(--ts-main-seekhead-height)) / 2);
+    left: clamp(
+        0px,
+        calc(var(--ts-playhead-position) - var(--ts-main-seekhead-half-width)),
+        calc(100% - var(--ts-main-seekhead-width))
+    );
+    transform: none;
 }
 
 .trackswitch .main-control .seekwrap .seekbar .loop-marker {

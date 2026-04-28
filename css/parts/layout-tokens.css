@@ -23,8 +23,8 @@
 
     --ts-seekbar-height: 6px;
     --ts-main-seek-hit-height: 28px;
-    --ts-main-seek-inline-end-pad: 4px;
     --ts-main-seekhead-width: 5px;
+    --ts-main-seekhead-half-width: 2.5px;
     --ts-main-seekhead-height: 22px;
     --ts-seek-marker-hit-width: 10px;
     --ts-seek-marker-line-width: 2px;
