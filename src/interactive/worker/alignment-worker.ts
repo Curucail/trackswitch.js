@@ -91,17 +91,9 @@ zf.extractall('/lib/python3.13/site-packages/')
     synctoolboxInstalled = true;
 
     postProgress('[14%] Installing libtsm...');
-    const libtsmWheelUrl = workerBaseUrl + 'libtsm-1.1.2-py3-none-any.whl';
-    pyodide.globals.set('_libtsm_wheel_url', libtsmWheelUrl);
-
     await pyodide.runPythonAsync(`
-import zipfile, io
-from pyodide.http import pyfetch
-
-response = await pyfetch(_libtsm_wheel_url)
-data = await response.bytes()
-zf = zipfile.ZipFile(io.BytesIO(data))
-zf.extractall('/lib/python3.13/site-packages/')
+import micropip
+await micropip.install('libtsm==1.1.2')
 `);
 
     postProgress('[14%] Applying DTW speedup...');

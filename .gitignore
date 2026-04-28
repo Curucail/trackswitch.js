@@ -4,6 +4,7 @@ _site/
 dist/
 example_ulli/
 synctoolbox-dist/
+libtsm-dist/
 AGENTS.md
 testings.ipynb
 docs/js/trackswitch.min.js

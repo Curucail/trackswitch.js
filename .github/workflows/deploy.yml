@@ -29,6 +29,28 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Checkout synctoolbox
+        uses: actions/checkout@v4
+        with:
+          repository: Curucail/synctoolbox
+          ref: numba-to-numpy-vectorization
+          path: .tmp/synctoolbox
+
+      - name: Build synctoolbox wheel
+        run: |
+          python -m pip install --upgrade build
+          python -m build --wheel --outdir "$GITHUB_WORKSPACE/synctoolbox-dist" "$GITHUB_WORKSPACE/.tmp/synctoolbox"
+          built_wheel="$(find "$GITHUB_WORKSPACE/synctoolbox-dist" -maxdepth 1 -name 'synctoolbox-*.whl' -print -quit)"
+          expected_wheel="$GITHUB_WORKSPACE/synctoolbox-dist/synctoolbox-1.4.2-py3-none-any.whl"
+          if [ "$built_wheel" != "$expected_wheel" ]; then
+            cp "$built_wheel" "$expected_wheel"
+          fi
       
       - name: Install dependencies
         run: npm ci

@@ -88,11 +88,12 @@
   },
   "scripts": {
     "clean": "rimraf dist",
-    "build": "npm run build:browser && npm run build:interactive && npm run build:worker && npm run build:css && npm run build:runtime-assets && npm run build:esm && npm run build:types",
+    "build": "npm run build:browser && npm run build:interactive && npm run build:worker && npm run build:css && npm run build:python-assets && npm run build:runtime-assets && npm run build:esm && npm run build:types",
     "build:browser": "vite build",
     "build:interactive": "TRACKSWITCH_BUILD_TARGET=interactive vite build",
     "build:worker": "TRACKSWITCH_BUILD_TARGET=worker vite build",
     "build:css": "TRACKSWITCH_BUILD_TARGET=css vite build && rimraf dist/css/trackswitch-style-entry.js",
+    "build:python-assets": "node scripts/sync-python-assets.mjs",
     "build:runtime-assets": "node scripts/sync-runtime-assets.mjs",
     "build:esm": "TRACKSWITCH_BUILD_TARGET=esm vite build",
     "docs:assets": "node scripts/sync-docs-assets.mjs",
