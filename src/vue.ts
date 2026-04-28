@@ -1,7 +1,7 @@
 import { defineComponent, h, onBeforeUnmount, onMounted, ref, watch, type PropType } from 'vue';
-import { defineTrackswitchElement } from './element';
+import { defineTrackswitchElement, TRACKSWITCH_DOM_EVENTS } from './element';
 import type { TrackSwitchController, TrackSwitchEventMap, TrackSwitchInit } from './domain/types';
-import type { TrackswitchPlayer } from './element';
+import type { TrackswitchDomEventName, TrackswitchPlayer } from './element';
 
 type TrackSwitchVueEventHandlers = {
     loaded: (payload: TrackSwitchEventMap['loaded']) => true;
@@ -80,7 +80,10 @@ export const TrackSwitchPlayer = defineComponent({
                 return;
             }
 
-            const bind = function(eventName: string, vueEventName: keyof TrackSwitchVueEventHandlers) {
+            const bind = function(
+                eventName: TrackswitchDomEventName,
+                vueEventName: keyof TrackSwitchVueEventHandlers
+            ) {
                 const listener = function(event: Event) {
                     emit(vueEventName, (event as CustomEvent).detail);
                 };
@@ -90,10 +93,10 @@ export const TrackSwitchPlayer = defineComponent({
                 });
             };
 
-            bind('trackswitch-loaded', 'loaded');
-            bind('trackswitch-error', 'error');
-            bind('trackswitch-position', 'position');
-            bind('trackswitch-track-state', 'trackState');
+            bind(TRACKSWITCH_DOM_EVENTS.loaded, 'loaded');
+            bind(TRACKSWITCH_DOM_EVENTS.error, 'error');
+            bind(TRACKSWITCH_DOM_EVENTS.position, 'position');
+            bind(TRACKSWITCH_DOM_EVENTS.trackState, 'trackState');
         });
 
         onBeforeUnmount(() => {

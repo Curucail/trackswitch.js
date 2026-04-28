@@ -1,22 +1,11 @@
-import { copyFileSync, cpSync, mkdirSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { cpSync, mkdirSync, rmSync } from 'node:fs';
+import { dirname } from 'node:path';
+import { fromRoot, runtimeAssets } from './build-assets.mjs';
 
-const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const distJsDir = resolve(rootDir, "dist/js");
+for (const { source, dist } of runtimeAssets) {
+  const target = fromRoot(dist);
 
-mkdirSync(distJsDir, { recursive: true });
-
-copyFileSync(
-  resolve(rootDir, "synctoolbox-dist/synctoolbox-1.4.2-py3-none-any.whl"),
-  resolve(distJsDir, "synctoolbox-1.4.2-py3-none-any.whl"),
-);
-copyFileSync(
-  resolve(rootDir, "libtsm-dist/libtsm-1.1.2-py3-none-any.whl"),
-  resolve(distJsDir, "libtsm-1.1.2-py3-none-any.whl"),
-);
-cpSync(
-  resolve(rootDir, "node_modules/@spotify/basic-pitch/model"),
-  resolve(distJsDir, "basic-pitch"),
-  { recursive: true },
-);
+  rmSync(target, { recursive: true, force: true });
+  mkdirSync(dirname(target), { recursive: true });
+  cpSync(fromRoot(source), target, { recursive: true });
+}

@@ -15,7 +15,13 @@ import {
 } from '../domain/types';
 import { clampPercent } from '../shared/math';
 import { normalizeWaveformSource, serializeWaveformSource } from '../shared/waveform-source';
-import { assertAllowedKeys, toConfigRecord } from './validation';
+import {
+    assertAllowedKeys,
+    normalizeOptionalBoolean,
+    normalizePositiveFiniteNumber,
+    normalizePositiveInteger,
+    toConfigRecord,
+} from './validation';
 
 const uiImageAllowedKeys = ['type', 'src', 'seekable', 'style', 'seekMarginLeft', 'seekMarginRight'] as const;
 const uiPerTrackImageAllowedKeys = ['type', 'seekable', 'style', 'seekMarginLeft', 'seekMarginRight'] as const;
@@ -124,30 +130,6 @@ function normalizeWaveformMaxZoom(value: unknown): number {
     return value;
 }
 
-function normalizeWaveformTimer(value: boolean | undefined): boolean | undefined {
-    if (value === undefined) {
-        return undefined;
-    }
-
-    return typeof value === 'boolean' ? value : undefined;
-}
-
-function normalizeWaveformAlignedPlayhead(value: boolean | undefined): boolean | undefined {
-    if (value === undefined) {
-        return undefined;
-    }
-
-    return typeof value === 'boolean' ? value : undefined;
-}
-
-function normalizeWaveformShowAlignmentPoints(value: boolean | undefined): boolean | undefined {
-    if (value === undefined) {
-        return undefined;
-    }
-
-    return typeof value === 'boolean' ? value : undefined;
-}
-
 function normalizeWaveformPlaybackFollowMode(value: unknown): WaveformPlaybackFollowMode {
     if (value === 'center' || value === 'jump') {
         return value;
@@ -179,9 +161,9 @@ function normalizeWaveformConfig<T extends TrackSwitchWaveformConfig>(waveform: 
         maxZoom: normalizeWaveformMaxZoom(waveform.maxZoom),
         waveformSource: normalizeWaveformSource(waveform.waveformSource),
         playbackFollowMode: normalizeWaveformPlaybackFollowMode(waveform.playbackFollowMode),
-        timer: normalizeWaveformTimer(waveform.timer),
-        alignedPlayhead: normalizeWaveformAlignedPlayhead(waveform.alignedPlayhead),
-        showAlignmentPoints: normalizeWaveformShowAlignmentPoints(waveform.showAlignmentPoints),
+        timer: normalizeOptionalBoolean(waveform.timer),
+        alignedPlayhead: normalizeOptionalBoolean(waveform.alignedPlayhead),
+        showAlignmentPoints: normalizeOptionalBoolean(waveform.showAlignmentPoints),
     };
 
     validateSeekMargins(normalized, 'ui.waveform');
@@ -199,14 +181,6 @@ function normalizeCursorAlpha(value: number | undefined): number {
 
     if (value > 1) {
         return 1;
-    }
-
-    return value;
-}
-
-function normalizePositiveFiniteNumber(value: number | undefined): number | undefined {
-    if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
-        return undefined;
     }
 
     return value;
@@ -260,11 +234,7 @@ function normalizeTextAlign(value: unknown): TrackSwitchTextAlign {
 }
 
 function normalizeTextBoolean(value: unknown): boolean | undefined {
-    if (value === undefined) {
-        return undefined;
-    }
-
-    return typeof value === 'boolean' ? value : undefined;
+    return normalizeOptionalBoolean(value as boolean | undefined);
 }
 
 function normalizeTextFontSize(value: unknown): number | undefined {
@@ -364,14 +334,6 @@ function normalizeTrackGroupConfig<T extends TrackSwitchTrackGroupUiElement>(gro
     };
 }
 
-function normalizePositiveInteger(value: number | undefined): number | undefined {
-    if (typeof value !== 'number' || !Number.isFinite(value) || value < 1) {
-        return undefined;
-    }
-
-    return Math.max(1, Math.round(value));
-}
-
 export function normalizeUiElement(element: TrackSwitchUiElement): TrackSwitchUiElement {
     const elementRecord = toConfigRecord(element, 'ui element');
     const elementType = elementRecord.type;
@@ -430,24 +392,19 @@ function injectWarpingMatrix(root: HTMLElement, warpingMatrix: TrackSwitchWarpin
         container.setAttribute('data-warping-matrix-style', warpingMatrix.style);
     }
 
-    const normalizedHeight = normalizePositiveInteger(warpingMatrix.height);
-    if (normalizedHeight !== undefined) {
-        container.setAttribute('data-warping-matrix-height', String(normalizedHeight));
+    if (warpingMatrix.height !== undefined) {
+        container.setAttribute('data-warping-matrix-height', String(warpingMatrix.height));
     }
 
-    const normalizedTempoSmoothingSeconds = normalizePositiveFiniteNumber(
-        warpingMatrix.tempoSmoothingSeconds
-    );
-    if (normalizedTempoSmoothingSeconds !== undefined) {
+    if (warpingMatrix.tempoSmoothingSeconds !== undefined) {
         container.setAttribute(
             'data-warping-matrix-tempo-smoothing-seconds',
-            String(normalizedTempoSmoothingSeconds)
+            String(warpingMatrix.tempoSmoothingSeconds)
         );
     }
 
-    const normalizedBpm = normalizeWarpingMatrixBpm(warpingMatrix.bpm);
-    if (normalizedBpm !== null && normalizedBpm !== undefined) {
-        container.setAttribute('data-warping-matrix-bpm', String(normalizedBpm));
+    if (warpingMatrix.bpm !== null && warpingMatrix.bpm !== undefined) {
+        container.setAttribute('data-warping-matrix-bpm', String(warpingMatrix.bpm));
     }
 
     root.appendChild(container);
@@ -464,7 +421,7 @@ function injectText(root: HTMLElement, text: TrackSwitchTextConfig): void {
     const container = document.createElement('div');
     container.className = 'ts-text';
     container.textContent = text.text;
-    container.setAttribute('data-ts-text-align', normalizeTextAlign(text.align));
+    container.setAttribute('data-ts-text-align', text.align || 'center');
 
     if (text.bold === true) {
         container.setAttribute('data-ts-text-bold', 'true');
@@ -474,9 +431,8 @@ function injectText(root: HTMLElement, text: TrackSwitchTextConfig): void {
         container.setAttribute('data-ts-text-italic', 'true');
     }
 
-    const fontSize = normalizeTextFontSize(text.fontSize);
-    if (fontSize !== undefined) {
-        container.setAttribute('data-ts-text-font-size', String(fontSize));
+    if (text.fontSize !== undefined) {
+        container.setAttribute('data-ts-text-font-size', String(text.fontSize));
     }
 
     if (typeof text.style === 'string') {
@@ -527,13 +483,10 @@ function injectWaveform(root: HTMLElement, waveform: TrackSwitchWaveformConfig):
     canvas.className = 'waveform';
     canvas.width = 1200;
     canvas.height = toCanvasSize(waveform.height, 150);
-    canvas.setAttribute('data-waveform-bar-width', String(normalizeWaveformBarWidth(waveform.waveformBarWidth)));
+    canvas.setAttribute('data-waveform-bar-width', String(waveform.waveformBarWidth));
     canvas.setAttribute('data-waveform-source', serializeWaveformSource(waveform.waveformSource));
-    canvas.setAttribute('data-waveform-max-zoom', String(normalizeWaveformMaxZoom(waveform.maxZoom)));
-    canvas.setAttribute(
-        'data-waveform-playback-follow-mode',
-        normalizeWaveformPlaybackFollowMode(waveform.playbackFollowMode)
-    );
+    canvas.setAttribute('data-waveform-max-zoom', String(waveform.maxZoom));
+    canvas.setAttribute('data-waveform-playback-follow-mode', waveform.playbackFollowMode || 'off');
 
     if (typeof waveform.timer === 'boolean') {
         canvas.setAttribute('data-waveform-timer', String(waveform.timer));
@@ -567,25 +520,19 @@ function injectSheetMusic(root: HTMLElement, sheetmusic: TrackSwitchSheetMusicCo
     container.className = 'sheetmusic';
     container.setAttribute('data-sheetmusic-src', String(sheetmusic.src || ''));
     container.setAttribute('data-sheetmusic-measure-column', String(sheetmusic.measureColumn || ''));
-    container.setAttribute(
-        'data-sheetmusic-follow-playback',
-        String(normalizeSheetMusicFollowPlayback(sheetmusic.followPlayback))
-    );
-    container.setAttribute('data-sheetmusic-cursor-alpha', String(normalizeCursorAlpha(sheetmusic.cursorAlpha)));
+    container.setAttribute('data-sheetmusic-follow-playback', String(sheetmusic.followPlayback));
+    container.setAttribute('data-sheetmusic-cursor-alpha', String(sheetmusic.cursorAlpha));
 
-    const maxWidth = normalizePositiveInteger(sheetmusic.maxWidth);
-    if (maxWidth !== undefined) {
-        container.setAttribute('data-sheetmusic-max-width', String(maxWidth));
+    if (sheetmusic.maxWidth !== undefined) {
+        container.setAttribute('data-sheetmusic-max-width', String(sheetmusic.maxWidth));
     }
 
-    const maxHeight = normalizePositiveInteger(sheetmusic.maxHeight);
-    if (maxHeight !== undefined) {
-        container.setAttribute('data-sheetmusic-max-height', String(maxHeight));
+    if (sheetmusic.maxHeight !== undefined) {
+        container.setAttribute('data-sheetmusic-max-height', String(sheetmusic.maxHeight));
     }
 
-    const renderScale = normalizePositiveFiniteNumber(sheetmusic.renderScale);
-    if (renderScale !== undefined) {
-        container.setAttribute('data-sheetmusic-render-scale', String(renderScale));
+    if (sheetmusic.renderScale !== undefined) {
+        container.setAttribute('data-sheetmusic-render-scale', String(sheetmusic.renderScale));
     }
 
     if (typeof sheetmusic.style === 'string') {

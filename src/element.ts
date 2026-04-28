@@ -21,7 +21,7 @@ export interface TrackswitchPlayerElement extends HTMLElement {
 
 export const TRACKSWITCH_ELEMENT_NAME = 'trackswitch-player';
 
-const domEventNames: Record<TrackSwitchEventName, TrackswitchDomEventName> = {
+export const TRACKSWITCH_DOM_EVENTS: Record<TrackSwitchEventName, TrackswitchDomEventName> = {
     loaded: 'trackswitch-loaded',
     error: 'trackswitch-error',
     position: 'trackswitch-position',
@@ -33,7 +33,7 @@ function dispatchTrackSwitchEvent<K extends TrackSwitchEventName>(
     eventName: K,
     detail: TrackSwitchEventMap[K]
 ): void {
-    element.dispatchEvent(new CustomEvent(domEventNames[eventName], {
+    element.dispatchEvent(new CustomEvent(TRACKSWITCH_DOM_EVENTS[eventName], {
         detail,
         bubbles: true,
         composed: true,

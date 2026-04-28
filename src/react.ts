@@ -8,9 +8,9 @@ import {
     type MutableRefObject,
     type Ref,
 } from 'react';
-import { defineTrackswitchElement } from './element';
+import { defineTrackswitchElement, TRACKSWITCH_DOM_EVENTS } from './element';
 import type { TrackSwitchController, TrackSwitchEventMap, TrackSwitchInit } from './domain/types';
-import type { TrackswitchPlayer } from './element';
+import type { TrackswitchDomEventName, TrackswitchPlayer } from './element';
 
 export interface TrackSwitchEventProps {
     onLoaded?: (payload: TrackSwitchEventMap['loaded']) => void;
@@ -38,7 +38,7 @@ export interface UseTrackSwitchElementResult {
 
 function addTrackswitchListener<K extends keyof TrackSwitchEventProps>(
     element: TrackswitchPlayer,
-    eventName: string,
+    eventName: TrackswitchDomEventName,
     handler: TrackSwitchEventProps[K]
 ): () => void {
     if (!handler) {
@@ -83,10 +83,14 @@ export function useTrackSwitchElement(
         element.init = init;
         controllerRef.current = element.controller;
 
-        const unsubscribeLoaded = addTrackswitchListener(element, 'trackswitch-loaded', onLoaded);
-        const unsubscribeError = addTrackswitchListener(element, 'trackswitch-error', onError);
-        const unsubscribePosition = addTrackswitchListener(element, 'trackswitch-position', onPosition);
-        const unsubscribeTrackState = addTrackswitchListener(element, 'trackswitch-track-state', onTrackState);
+        const unsubscribeLoaded = addTrackswitchListener(element, TRACKSWITCH_DOM_EVENTS.loaded, onLoaded);
+        const unsubscribeError = addTrackswitchListener(element, TRACKSWITCH_DOM_EVENTS.error, onError);
+        const unsubscribePosition = addTrackswitchListener(element, TRACKSWITCH_DOM_EVENTS.position, onPosition);
+        const unsubscribeTrackState = addTrackswitchListener(
+            element,
+            TRACKSWITCH_DOM_EVENTS.trackState,
+            onTrackState
+        );
 
         return () => {
             unsubscribeLoaded();

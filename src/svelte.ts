@@ -1,6 +1,6 @@
-import { defineTrackswitchElement } from './element';
+import { defineTrackswitchElement, TRACKSWITCH_DOM_EVENTS } from './element';
 import type { TrackSwitchController, TrackSwitchEventMap, TrackSwitchInit } from './domain/types';
-import type { TrackswitchPlayer } from './element';
+import type { TrackswitchDomEventName, TrackswitchPlayer } from './element';
 
 export interface TrackswitchSvelteOptions {
     init: TrackSwitchInit;
@@ -17,7 +17,7 @@ export interface TrackswitchSvelteAction {
 
 function bindEvent(
     element: TrackswitchPlayer,
-    eventName: string,
+    eventName: TrackswitchDomEventName,
     getHandler: () => ((payload: any) => void) | undefined
 ): () => void {
     const listener = function(event: Event) {
@@ -40,10 +40,10 @@ export function useTrackswitch(
     node.init = currentOptions.init;
 
     const unsubscribers = [
-        bindEvent(node, 'trackswitch-loaded', () => currentOptions.onLoaded),
-        bindEvent(node, 'trackswitch-error', () => currentOptions.onError),
-        bindEvent(node, 'trackswitch-position', () => currentOptions.onPosition),
-        bindEvent(node, 'trackswitch-track-state', () => currentOptions.onTrackState),
+        bindEvent(node, TRACKSWITCH_DOM_EVENTS.loaded, () => currentOptions.onLoaded),
+        bindEvent(node, TRACKSWITCH_DOM_EVENTS.error, () => currentOptions.onError),
+        bindEvent(node, TRACKSWITCH_DOM_EVENTS.position, () => currentOptions.onPosition),
+        bindEvent(node, TRACKSWITCH_DOM_EVENTS.trackState, () => currentOptions.onTrackState),
     ];
 
     return {

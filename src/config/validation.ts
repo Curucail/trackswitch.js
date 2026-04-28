@@ -25,3 +25,27 @@ export function assertAllowedKeys(
         }
     });
 }
+
+export function normalizePositiveInteger(value: number | undefined): number | undefined {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 1) {
+        return undefined;
+    }
+
+    return Math.max(1, Math.round(value));
+}
+
+export function normalizePositiveFiniteNumber(value: number | undefined): number | undefined {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+        return undefined;
+    }
+
+    return value;
+}
+
+export function normalizeOptionalBoolean(value: boolean | undefined): boolean | undefined {
+    if (value === undefined) {
+        return undefined;
+    }
+
+    return typeof value === 'boolean' ? value : undefined;
+}
