@@ -85,7 +85,7 @@ from pyodide.http import pyfetch
 response = await pyfetch(_wheel_url)
 data = await response.bytes()
 zf = zipfile.ZipFile(io.BytesIO(data))
-zf.extractall('/lib/python3.12/site-packages/')
+zf.extractall('/lib/python3.13/site-packages/')
 `);
 
     synctoolboxInstalled = true;
@@ -101,7 +101,7 @@ from pyodide.http import pyfetch
 response = await pyfetch(_libtsm_wheel_url)
 data = await response.bytes()
 zf = zipfile.ZipFile(io.BytesIO(data))
-zf.extractall('/lib/python3.12/site-packages/')
+zf.extractall('/lib/python3.13/site-packages/')
 `);
 
     postProgress('[14%] Applying DTW speedup...');

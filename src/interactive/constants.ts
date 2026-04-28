@@ -5,7 +5,7 @@ export const FEATURE_RATE = 50;
 export const SAMPLE_RATE = 22050;
 
 /** Default Pyodide CDN URL. */
-export const PYODIDE_CDN_URL = 'https://cdn.jsdelivr.net/pyodide/v0.27.5/full/';
+export const PYODIDE_CDN_URL = 'https://cdn.jsdelivr.net/pyodide/v0.29.3/full/';
 
 /** Default alignment worker script path (relative). */
 export const DEFAULT_WORKER_URL = 'trackswitch-alignment-worker.js';
