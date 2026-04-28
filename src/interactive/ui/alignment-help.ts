@@ -285,6 +285,22 @@ export function bindAlignmentHelpTooltips(container: HTMLElement): void {
                 return;
             }
             const relatedTarget = event.relatedTarget as Node | null;
+            if (
+                relatedTarget
+                && (
+                    root.contains(relatedTarget)
+                    || !!root.__tsHelpTooltip?.contains(relatedTarget)
+                )
+            ) {
+                return;
+            }
+            closeRoot(root);
+        };
+        const handleTooltipMouseLeave = function(event: MouseEvent): void {
+            if (manualRoot === root) {
+                return;
+            }
+            const relatedTarget = event.relatedTarget as Node | null;
             if (relatedTarget && root.contains(relatedTarget)) {
                 return;
             }
@@ -323,6 +339,7 @@ export function bindAlignmentHelpTooltips(container: HTMLElement): void {
         root.addEventListener('focusin', handleFocusIn);
         root.addEventListener('focusout', handleFocusOut);
         button.addEventListener('click', handleClick);
+        tooltip?.addEventListener('mouseleave', handleTooltipMouseLeave);
 
         teardownCallbacks.push(function() {
             root.removeEventListener('mouseenter', handleMouseEnter);
@@ -330,6 +347,7 @@ export function bindAlignmentHelpTooltips(container: HTMLElement): void {
             root.removeEventListener('focusin', handleFocusIn);
             root.removeEventListener('focusout', handleFocusOut);
             button.removeEventListener('click', handleClick);
+            tooltip?.removeEventListener('mouseleave', handleTooltipMouseLeave);
         });
     });
 
@@ -343,7 +361,7 @@ export function bindAlignmentHelpTooltips(container: HTMLElement): void {
             return;
         }
         const clickedInsideTooltip = roots.some(function(root) {
-            return root.contains(target);
+            return root.contains(target) || !!root.__tsHelpTooltip?.contains(target);
         });
         if (!clickedInsideTooltip) {
             closeAll();

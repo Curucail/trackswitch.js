@@ -47,7 +47,6 @@ const devConfig = {
     server: {
         host: '0.0.0.0',
         port: 8000,
-        strictPort: false,
         fs: {
             allow: [rootDir],
         },

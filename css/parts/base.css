@@ -7,6 +7,7 @@
 
 .trackswitch.trackswitch {
     background: var(--ts-color-surface-base);
+    border-top: 1px solid var(--ts-color-border-mid);
     border-left: 1px solid var(--ts-color-border-mid);
     border-right: 1px solid var(--ts-color-border-mid);
     border-bottom: 1px solid var(--ts-color-border-mid);
