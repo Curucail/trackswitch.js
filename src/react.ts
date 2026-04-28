@@ -137,7 +137,7 @@ export const TrackSwitchPlayer = forwardRef(function TrackSwitchPlayer(
 
     useImperativeHandle(ref, () => controllerRef.current, [controllerRef.current, initKey]);
 
-    return createElement('trackswitch', {
+    return createElement('trackswitch-player', {
         ref: rootRef,
         id,
         className,

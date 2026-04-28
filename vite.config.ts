@@ -2,7 +2,7 @@ import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 
 const rootDir = __dirname;
-const isEsmBuild = process.env.TRACKSWITCH_BUILD_FORMAT === 'esm';
+const buildTarget = process.env.TRACKSWITCH_BUILD_TARGET || 'browser';
 
 const banner = [
     '/*!',
@@ -13,7 +13,7 @@ const banner = [
 ].join('\n');
 
 export default defineConfig({
-    build: isEsmBuild
+    build: buildTarget === 'esm'
         ? {
             outDir: 'dist/esm',
             emptyOutDir: false,
@@ -40,6 +40,61 @@ export default defineConfig({
                 },
             },
         }
+        : buildTarget === 'interactive'
+            ? {
+                outDir: 'dist/js',
+                emptyOutDir: false,
+                target: 'es2017',
+                sourcemap: false,
+                lib: {
+                    entry: resolve(rootDir, 'src/interactive-browser.ts'),
+                    name: 'TrackSwitchInteractive',
+                    formats: ['iife'],
+                    fileName: () => 'trackswitch-interactive.js',
+                },
+                rollupOptions: {
+                    output: {
+                        banner,
+                        inlineDynamicImports: true,
+                    },
+                },
+            }
+            : buildTarget === 'worker'
+                ? {
+                    outDir: 'dist/js',
+                    emptyOutDir: false,
+                    target: 'es2017',
+                    sourcemap: false,
+                    lib: {
+                        entry: resolve(rootDir, 'src/interactive/worker/alignment-worker.ts'),
+                        name: 'TrackSwitchAlignmentWorker',
+                        formats: ['iife'],
+                        fileName: () => 'trackswitch-alignment-worker.js',
+                    },
+                    rollupOptions: {
+                        output: {
+                            banner,
+                            inlineDynamicImports: true,
+                        },
+                    },
+                }
+                : buildTarget === 'css'
+                    ? {
+                        outDir: 'dist/css',
+                        emptyOutDir: false,
+                        target: 'es2017',
+                        sourcemap: false,
+                        lib: {
+                            entry: resolve(rootDir, 'src/style-entry.ts'),
+                            formats: ['es'],
+                            fileName: () => 'trackswitch-style-entry.js',
+                        },
+                        rollupOptions: {
+                            output: {
+                                assetFileNames: () => 'trackswitch.min.css',
+                            },
+                        },
+                    }
         : {
             outDir: 'dist',
             emptyOutDir: false,

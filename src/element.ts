@@ -19,7 +19,7 @@ export interface TrackswitchPlayerElement extends HTMLElement {
     readonly controller: TrackSwitchController | null;
 }
 
-const TRACKSWITCH_ELEMENT_NAME = 'trackswitch';
+export const TRACKSWITCH_ELEMENT_NAME = 'trackswitch-player';
 
 const domEventNames: Record<TrackSwitchEventName, TrackswitchDomEventName> = {
     loaded: 'trackswitch-loaded',
@@ -181,7 +181,7 @@ export function defineTrackswitchElement(
 
 declare global {
     interface HTMLElementTagNameMap {
-        trackswitch: TrackswitchPlayer;
+        'trackswitch-player': TrackswitchPlayer;
     }
 
     interface HTMLElementEventMap {

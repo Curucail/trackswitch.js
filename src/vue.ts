@@ -102,7 +102,7 @@ export const TrackSwitchPlayer = defineComponent({
         });
 
         return function render() {
-            return h('trackswitch', {
+            return h('trackswitch-player', {
                 ...attrs,
                 ref: elementRef,
             });
