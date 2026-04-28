@@ -2,17 +2,22 @@
 
 .trackswitch ul.track_list {
     padding: 0;
+    container-type: inline-size;
+    container-name: ts-tracks;
 }
 
 .trackswitch li.track {
     --ts-track-row-bg: var(--ts-color-text-muted);
     background-color: var(--ts-track-row-bg);
     position: relative;
-    min-height: 32px;
-    padding: 8px 10px 8px 40px;
+    min-height: var(--ts-track-min-height);
+    padding: var(--ts-track-padding-block) var(--ts-track-padding-inline);
+    padding-inline-start: calc(var(--ts-track-control-column) + var(--ts-track-padding-inline));
     display: flex;
     align-items: center;
     cursor: default;
+    container-type: inline-size;
+    container-name: ts-track-row;
 }
 
 .trackswitch li.track.tabs {
@@ -58,18 +63,18 @@
 
 .trackswitch li.track ul.control {
     position: absolute;
-    top: 50%;
+    inset-block-start: 50%;
     transform: translateY(-50%);
-    left: 5px;
-    padding-left: 2px;
+    inset-inline-start: var(--ts-track-padding-inline);
+    padding-left: 0;
 }
 
 .trackswitch li.track ul.control li {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 24px;
+    width: var(--ts-track-control-size);
+    height: var(--ts-track-control-size);
 }
 
 .trackswitch .control li.button:not(.sync-global) {
@@ -181,8 +186,8 @@
     display: flex;
     align-items: center;
     flex: 0 0 auto;
-    gap: 14px;
-    padding-left: 14px;
+    gap: var(--ts-track-mix-gap);
+    padding-left: var(--ts-track-mix-padding);
 }
 
 .trackswitch li.track .track-volume-control,

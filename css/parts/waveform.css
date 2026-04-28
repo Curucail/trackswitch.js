@@ -5,6 +5,8 @@
     position: relative;
     width: 100%;
     margin: 0;
+    container-type: inline-size;
+    container-name: ts-waveform;
 }
 
 .trackswitch .waveform-wrap .waveform-scroll {
@@ -61,11 +63,8 @@
 }
 
 .trackswitch .waveform-wrap .seekwrap .seekhead {
-    position: absolute;
     inset-block: 0;
-    width: 2px;
-    transform: translateX(-50%);
-    z-index: 4;
+    width: var(--ts-waveform-seekhead-width);
 }
 
 .trackswitch .waveform-wrap .seekwrap {
@@ -102,43 +101,6 @@
 
 .trackswitch .waveform-wrap .seekwrap.aligned-playhead .seekhead {
     display: none;
-}
-
-.trackswitch .waveform-wrap .seekwrap .loop-marker {
-    position: absolute;
-    width: 10px;
-    inset-block: 0;
-    display: none;
-    z-index: 2;
-    cursor: ew-resize;
-    margin-left: -5px;
-    background: transparent;
-}
-
-.trackswitch .waveform-wrap .seekwrap .loop-marker::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    inset-block: 0;
-    width: 2px;
-    background: repeating-linear-gradient(
-        to bottom,
-        var(--ts-color-surface-panel-dark) 0 6px,
-        transparent 6px 8px
-    );
-    transform: translateX(-50%);
-}
-
-.trackswitch .waveform-wrap .seekwrap .loop-region {
-    position: absolute;
-    inset-block: 0;
-    display: none;
-    background-color: var(--ts-color-accent-soft-15);
-    z-index: 1;
-}
-
-.trackswitch .waveform-wrap .seekwrap .loop-region.active {
-    background-color: var(--ts-color-accent-soft-30);
 }
 
 .trackswitch .waveform-wrap .waveform-timing,
@@ -201,6 +163,8 @@
 
 .trackswitch .waveform-wrap .waveform-zoom .waveform-zoom-viewport {
     position: absolute;
+    left: var(--ts-zoom-viewport-left);
+    width: var(--ts-zoom-viewport-width);
     top: 1px;
     bottom: 1px;
     min-width: 0;

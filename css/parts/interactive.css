@@ -29,6 +29,8 @@
     border-radius: 0;
     background: var(--ts-color-surface-base);
     overflow: hidden;
+    container-type: inline-size;
+    container-name: ts-interactive;
 }
 
 .trackswitch .ts-interactive-panel.ts-interactive-panel-dragover {
@@ -151,6 +153,8 @@
 
 .trackswitch .ts-compute-bar {
     background: var(--ts-color-surface-raised-58);
+    container-type: inline-size;
+    container-name: ts-compute;
 }
 
 .trackswitch .ts-interactive-list-header {
@@ -1096,6 +1100,8 @@
     background: var(--ts-color-surface-base);
     box-shadow: 0 20px 48px var(--ts-color-shadow-modal);
     overflow: hidden;
+    container-type: inline-size;
+    container-name: ts-settings;
 }
 
 .trackswitch .ts-settings-panel-header {
@@ -1256,18 +1262,21 @@
 
 /* Responsive --------------------------------------------------------------- */
 
-@media (max-width: 720px) {
+@container ts-player (max-width: 720px) {
     .trackswitch .ts-interactive-panel {
         padding: 14px;
     }
+}
 
+@container ts-interactive (max-width: 720px) {
     .trackswitch .ts-dropzone {
         min-height: 200px;
         padding: 24px 18px;
     }
+}
 
-    .trackswitch .ts-compute-bar-row,
-    .trackswitch .ts-settings-add-files {
+@container ts-compute (max-width: 720px) {
+    .trackswitch .ts-compute-bar-row {
         display: flex;
         flex-direction: column;
         align-items: stretch;
@@ -1324,7 +1333,9 @@
     .trackswitch.trackswitch button.ts-cancel-btn {
         width: 100%;
     }
+}
 
+@container ts-player (max-width: 720px) {
     .trackswitch .ts-settings-panel {
         padding: 12px;
     }
@@ -1332,7 +1343,9 @@
     .trackswitch .ts-settings-dialog {
         max-height: min(94vh, 820px);
     }
+}
 
+@container ts-settings (max-width: 720px) {
     .trackswitch .ts-settings-panel-header,
     .trackswitch .ts-settings-panel-body,
     .trackswitch .ts-settings-panel-footer {
@@ -1340,10 +1353,18 @@
         padding-right: 16px;
     }
 
+    .trackswitch .ts-settings-add-files {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
     .trackswitch .ts-settings-add-files-copy {
         text-align: left;
     }
+}
 
+@media (max-width: 720px) {
     .trackswitch .ts-help-tooltip {
         width: min(280px, calc(100vw - 32px));
     }

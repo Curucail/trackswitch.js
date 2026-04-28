@@ -6,19 +6,13 @@
 }
 
 .trackswitch.trackswitch {
-    --ts-slider-thumb-size: 12px;
-    --ts-slider-track-size: 5px;
-    --ts-slider-hit-size: 16px;
-    --ts-slider-width: 80px;
-    --ts-slider-track-color: var(--ts-color-surface-control);
-    --ts-slider-thumb-color: var(--ts-color-accent);
-    --ts-shortcut-delay: 40ms;
-
     background: var(--ts-color-surface-base);
     border-left: 1px solid var(--ts-color-border-mid);
     border-right: 1px solid var(--ts-color-border-mid);
     border-bottom: 1px solid var(--ts-color-border-mid);
     position: relative;
+    container-type: inline-size;
+    container-name: ts-player;
     margin: 10px;
     overflow: hidden;
     color: var(--ts-color-text-primary);

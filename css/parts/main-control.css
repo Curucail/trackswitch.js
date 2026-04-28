@@ -6,17 +6,18 @@
 
 .trackswitch .main-control {
     container-type: inline-size;
+    container-name: ts-main-control;
 }
 
 .trackswitch .main-control ul.control {
     background-color: var(--ts-color-surface-panel-dark);
-    min-height: 36px;
-    padding: 4px 12px;
+    min-height: var(--ts-main-control-height);
+    padding: var(--ts-main-control-padding-block) var(--ts-main-control-padding-inline);
     color: var(--ts-color-text-muted);
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 6px 16px;
+    gap: var(--ts-main-control-gap-row) var(--ts-main-control-gap-column);
 }
 
 .trackswitch .main-control .playback-group {
@@ -62,7 +63,7 @@
 .trackswitch .main-control .playback-group>.playback-controls {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--ts-control-gap-md);
 }
 
 .trackswitch .main-control .playback-group>.playback-controls>li.button {
@@ -75,8 +76,8 @@
 
 /* Generic button styles within main-control */
 .trackswitch .main-control .button {
-    width: 15px;
-    height: 16px;
+    width: var(--ts-control-size-xs);
+    height: var(--ts-control-size-xs);
     cursor: pointer;
 }
 
@@ -118,7 +119,7 @@
 /* Seekbar */
 .trackswitch .main-control .seekwrap {
     overflow: hidden;
-    height: 28px;
+    height: var(--ts-main-seek-hit-height);
     cursor: pointer;
     min-width: 200px;
     width: 100%;
@@ -126,55 +127,22 @@
 
 .trackswitch .main-control .seekwrap .seekbar {
     background-color: var(--ts-color-accent);
-    height: 6px;
-    margin: 11px 4px 0 0;
-    position: relative;
-    box-shadow: 4px 0 0 0 var(--ts-color-accent);
+    height: var(--ts-seekbar-height);
+    margin-block-start: calc((var(--ts-main-seek-hit-height) - var(--ts-seekbar-height)) / 2);
+    margin-inline-end: var(--ts-main-seek-inline-end-pad);
+    box-shadow: var(--ts-main-seek-inline-end-pad) 0 0 0 var(--ts-color-accent);
 }
 
 .trackswitch .main-control .seekwrap .seekbar .seekhead {
     background-color: var(--ts-color-accent);
-    position: absolute;
-    width: 5px;
-    height: 22px;
-    top: -8px;
-    left: 0;
-    transform: translateX(-10%);
-    z-index: 4;
+    width: var(--ts-main-seekhead-width);
+    height: var(--ts-main-seekhead-height);
+    top: calc((var(--ts-seekbar-height) - var(--ts-main-seekhead-height)) / 2);
 }
 
 .trackswitch .main-control .seekwrap .seekbar .loop-marker {
-    position: absolute;
-    width: 8px;
-    height: 22px;
-    top: -8px;
-    display: none;
-    z-index: 2;
-    cursor: ew-resize;
-    margin-left: -4px;
-    background: transparent;
-}
-
-.trackswitch .main-control .seekwrap .seekbar .loop-marker::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    inset-block: 0;
-    width: 2px;
-    background-color: var(--ts-color-surface-panel-dark);
-    transform: translateX(-50%);
-}
-
-.trackswitch .main-control .seekwrap .seekbar .loop-region {
-    position: absolute;
-    inset-block: 0;
-    display: none;
-    background-color: var(--ts-color-accent-soft-15);
-    z-index: 1;
-}
-
-.trackswitch .main-control .seekwrap .seekbar .loop-region.active {
-    background-color: var(--ts-color-accent-soft-30);
+    height: var(--ts-main-seekhead-height);
+    top: calc((var(--ts-seekbar-height) - var(--ts-main-seekhead-height)) / 2);
 }
 
 /* Volume control */
@@ -206,8 +174,8 @@
 
 .trackswitch .main-control .control>li.loop-group>.loop-controls>li.button {
     margin: 0;
-    width: 22px;
-    height: 22px;
+    width: var(--ts-control-size-sm);
+    height: var(--ts-control-size-sm);
     display: inline-flex;
     align-items: center;
     justify-content: center;

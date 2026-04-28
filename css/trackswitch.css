@@ -1,9 +1,11 @@
 @import "./parts/fonts.css";
 @import "./parts/colors.css";
+@import "./parts/layout-tokens.css";
 @import "./parts/base.css";
 @import "./parts/overlay.css";
 @import "./parts/main-control.css";
 @import "./parts/text.css";
+@import "./parts/timeline.css";
 @import "./parts/seekable.css";
 @import "./parts/waveform.css";
 @import "./parts/sheetmusic.css";

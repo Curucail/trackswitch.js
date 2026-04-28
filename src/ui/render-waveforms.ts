@@ -71,16 +71,13 @@ function setDisplay(element: Element, displayValue: string): void {
     (element as HTMLElement).style.display = displayValue;
 }
 
-function setLeftPercent(element: Element, value: number): void {
-    (element as HTMLElement).style.left = value + '%';
+function resolveSeekGeometryRoot(seekWrap: HTMLElement): HTMLElement {
+    const seekbar = seekWrap.querySelector(':scope > .seekbar');
+    return seekbar instanceof HTMLElement ? seekbar : seekWrap;
 }
 
-function setSeekheadPosition(element: Element, value: number): void {
-    (element as HTMLElement).style.left = clampPercent(value) + '%';
-}
-
-function setWidthPercent(element: Element, value: number): void {
-    (element as HTMLElement).style.width = value + '%';
+function setPercentProperty(element: HTMLElement, propertyName: string, value: number): void {
+    element.style.setProperty(propertyName, clampPercent(value) + '%');
 }
 
 function clampTime(value: number, minimum: number, maximum: number): number {
@@ -233,8 +230,14 @@ function getWaveformViewportState(
 function updateWaveformMinimapViewport(surfaceMetadata: WaveformSeekSurfaceMetadata): void {
     const minimapWidth = Math.max(1, surfaceMetadata.zoomMinimapNode.clientWidth);
     const viewportState = getWaveformViewportState(surfaceMetadata);
-    surfaceMetadata.zoomViewportNode.style.left = (viewportState.startRatio * minimapWidth) + 'px';
-    surfaceMetadata.zoomViewportNode.style.width = Math.max(0, viewportState.widthRatio * minimapWidth) + 'px';
+    surfaceMetadata.zoomMinimapNode.style.setProperty(
+        '--ts-zoom-viewport-left',
+        (viewportState.startRatio * minimapWidth) + 'px'
+    );
+    surfaceMetadata.zoomMinimapNode.style.setProperty(
+        '--ts-zoom-viewport-width',
+        Math.max(0, viewportState.widthRatio * minimapWidth) + 'px'
+    );
 }
 
 function resolveWaveformPlaybackMetrics(
@@ -1442,12 +1445,13 @@ export function updateSeekWrapVisuals(ctx: any, seekWrap: any, position: any, du
         const safePosition = safeDuration > 0
             ? clampTime(position, 0, safeDuration)
             : 0;
-        const seekhead = seekWrap.querySelector('.seekhead');
+        const geometryRoot = resolveSeekGeometryRoot(seekWrap);
+        const seekhead = geometryRoot.querySelector('.seekhead');
         if (seekhead) {
             const seekPercent = safeDuration > 0
                 ? clampPercent((safePosition / safeDuration) * 100)
                 : 0;
-            setSeekheadPosition(seekhead, seekPercent);
+            setPercentProperty(geometryRoot, '--ts-playhead-position', seekPercent);
         }
 
         if (!this.features.looping) {
@@ -1457,7 +1461,7 @@ export function updateSeekWrapVisuals(ctx: any, seekWrap: any, position: any, du
         const markerA = seekWrap.querySelector('.loop-marker.marker-a');
         if (markerA && loop.pointA !== null && safeDuration > 0) {
             const pointAPerc = clampPercent((clampTime(loop.pointA, 0, safeDuration) / safeDuration) * 100);
-            setLeftPercent(markerA, pointAPerc);
+            setPercentProperty(geometryRoot, '--ts-loop-marker-a', pointAPerc);
             setDisplay(markerA, 'block');
         } else if (markerA) {
             setDisplay(markerA, 'none');
@@ -1466,7 +1470,7 @@ export function updateSeekWrapVisuals(ctx: any, seekWrap: any, position: any, du
         const markerB = seekWrap.querySelector('.loop-marker.marker-b');
         if (markerB && loop.pointB !== null && safeDuration > 0) {
             const pointBPerc = clampPercent((clampTime(loop.pointB, 0, safeDuration) / safeDuration) * 100);
-            setLeftPercent(markerB, pointBPerc);
+            setPercentProperty(geometryRoot, '--ts-loop-marker-b', pointBPerc);
             setDisplay(markerB, 'block');
         } else if (markerB) {
             setDisplay(markerB, 'none');
@@ -1484,8 +1488,8 @@ export function updateSeekWrapVisuals(ctx: any, seekWrap: any, position: any, du
             const pointAPerc = clampPercent((clampTime(orderedPointA, 0, safeDuration) / safeDuration) * 100);
             const pointBPerc = clampPercent((clampTime(orderedPointB, 0, safeDuration) / safeDuration) * 100);
 
-            setLeftPercent(loopRegion, pointAPerc);
-            setWidthPercent(loopRegion, Math.max(0, pointBPerc - pointAPerc));
+            setPercentProperty(geometryRoot, '--ts-loop-region-start', pointAPerc);
+            setPercentProperty(geometryRoot, '--ts-loop-region-width', Math.max(0, pointBPerc - pointAPerc));
             setDisplay(loopRegion, 'block');
             loopRegion.classList.toggle('active', loop.enabled);
         } else if (loopRegion) {

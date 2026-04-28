@@ -1,0 +1,48 @@
+.trackswitch.trackswitch {
+    --ts-control-size-xs: 16px;
+    --ts-control-size-sm: 22px;
+    --ts-control-size-md: 24px;
+    --ts-control-size-lg: 28px;
+    --ts-control-gap-sm: 6px;
+    --ts-control-gap-md: 10px;
+    --ts-control-gap-lg: 16px;
+
+    --ts-main-control-height: 36px;
+    --ts-main-control-padding-block: 4px;
+    --ts-main-control-padding-inline: 12px;
+    --ts-main-control-gap-row: 6px;
+    --ts-main-control-gap-column: 16px;
+
+    --ts-track-min-height: 32px;
+    --ts-track-padding-block: 8px;
+    --ts-track-padding-inline: 10px;
+    --ts-track-control-column: 30px;
+    --ts-track-control-size: 24px;
+    --ts-track-mix-gap: 14px;
+    --ts-track-mix-padding: 14px;
+
+    --ts-seekbar-height: 6px;
+    --ts-main-seek-hit-height: 28px;
+    --ts-main-seek-inline-end-pad: 4px;
+    --ts-main-seekhead-width: 5px;
+    --ts-main-seekhead-height: 22px;
+    --ts-seek-marker-hit-width: 10px;
+    --ts-seek-marker-line-width: 2px;
+    --ts-seek-marker-dash: 6px;
+    --ts-seek-marker-gap: 2px;
+    --ts-waveform-seekhead-width: 2px;
+
+    --ts-panel-gutter-sm: 12px;
+    --ts-panel-gutter-md: 16px;
+    --ts-panel-gutter-lg: 22px;
+    --ts-interactive-panel-padding: 18px;
+    --ts-interactive-panel-gap: 18px;
+
+    --ts-slider-thumb-size: 12px;
+    --ts-slider-track-size: 5px;
+    --ts-slider-hit-size: 16px;
+    --ts-slider-width: 80px;
+    --ts-slider-track-color: var(--ts-color-surface-control);
+    --ts-slider-thumb-color: var(--ts-color-accent);
+    --ts-shortcut-delay: 40ms;
+}
