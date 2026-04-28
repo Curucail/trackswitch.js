@@ -9,6 +9,10 @@
     --ts-slider-thumb-size: 12px;
     --ts-slider-track-size: 5px;
     --ts-slider-hit-size: 16px;
+    --ts-slider-width: 80px;
+    --ts-slider-track-color: var(--ts-color-surface-control);
+    --ts-slider-thumb-color: var(--ts-color-accent);
+    --ts-shortcut-delay: 40ms;
 
     background: var(--ts-color-surface-base);
     border-left: 1px solid var(--ts-color-border-mid);
@@ -180,7 +184,7 @@
     opacity: 0.96;
     cursor: grabbing;
     pointer-events: none;
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.22);
+    box-shadow: 0 12px 24px var(--ts-color-shadow-medium);
 }
 
 .trackswitch.trackswitch .ts-panel-drop-placeholder {
@@ -248,7 +252,7 @@
 .trackswitch.trackswitch :is(.volume-slider, .mix-slider, .warping-tempo-slider) {
     -webkit-appearance: none;
     appearance: none;
-    width: var(--ts-slider-width, 80px);
+    width: var(--ts-slider-width);
     height: var(--ts-slider-hit-size);
     margin: 0;
     border: 0;
@@ -265,7 +269,7 @@
 .trackswitch.trackswitch :is(.volume-slider, .mix-slider, .warping-tempo-slider)::-webkit-slider-runnable-track {
     height: var(--ts-slider-track-size);
     border-radius: 999px;
-    background: var(--ts-slider-track-color, var(--ts-color-surface-control));
+    background: var(--ts-slider-track-color);
 }
 
 .trackswitch.trackswitch :is(.volume-slider, .mix-slider, .warping-tempo-slider)::-webkit-slider-thumb {
@@ -276,7 +280,7 @@
     margin-top: calc((var(--ts-slider-track-size) - var(--ts-slider-thumb-size)) / 2);
     border: 0;
     border-radius: 50%;
-    background: var(--ts-slider-thumb-color, var(--ts-color-accent));
+    background: var(--ts-slider-thumb-color);
     cursor: pointer;
 }
 
@@ -284,7 +288,7 @@
     height: var(--ts-slider-track-size);
     border: 0;
     border-radius: 999px;
-    background: var(--ts-slider-track-color, var(--ts-color-surface-control));
+    background: var(--ts-slider-track-color);
 }
 
 .trackswitch.trackswitch :is(.volume-slider, .mix-slider, .warping-tempo-slider)::-moz-range-thumb {
@@ -292,7 +296,7 @@
     height: var(--ts-slider-thumb-size);
     border: 0;
     border-radius: 50%;
-    background: var(--ts-slider-thumb-color, var(--ts-color-accent));
+    background: var(--ts-slider-thumb-color);
     cursor: pointer;
 }
 

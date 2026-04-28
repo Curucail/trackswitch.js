@@ -9,9 +9,7 @@
     background-color: var(--ts-track-row-bg);
     position: relative;
     min-height: 32px;
-    /* Required if there is no title defined */
     padding: 8px 10px 8px 40px;
-    /* Top Right Bottom Left */
     display: flex;
     align-items: center;
     cursor: default;
@@ -72,7 +70,6 @@
     justify-content: center;
     width: 24px;
     height: 24px;
-    /*margin: 0; This realignes the controls with bootstrap (overridden) */
 }
 
 .trackswitch .control li.button:not(.sync-global) {
@@ -160,7 +157,6 @@
 }
 
 .trackswitch .control li.solo.radio {
-    /* .radio bootstrap fix */
     margin: 0;
 }
 

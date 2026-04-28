@@ -180,9 +180,9 @@
     max-height: min(82vh, 560px);
     overflow: auto;
     padding: 12px 14px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid var(--ts-color-surface-inverse-soft-12);
     border-radius: 10px;
-    background: rgba(72, 72, 72, 0.96);
+    background: var(--ts-color-shortcut-panel-bg);
     color: var(--ts-color-text-inverse);
     font-size: 14px;
     animation: trackswitch-shortcut-content-fade 220ms ease-out;
@@ -223,7 +223,7 @@
     margin: 0;
     font-size: 13px;
     line-height: 1.25;
-    color: rgba(255, 255, 255, 0.78);
+    color: var(--ts-color-surface-inverse-soft-78);
     font-weight: 400;
     font-family: inherit;
 }
@@ -239,10 +239,10 @@
     gap: 14px;
     align-items: start;
     padding: 10px 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 1px solid var(--ts-color-surface-inverse-soft-10);
     opacity: 0;
     animation: trackswitch-shortcut-content-fade 220ms ease-out forwards;
-    animation-delay: var(--ts-shortcut-delay, 40ms);
+    animation-delay: var(--ts-shortcut-delay);
 }
 
 .trackswitch.trackswitch .shortcut-help-keys {

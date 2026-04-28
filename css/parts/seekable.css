@@ -42,15 +42,11 @@
 .trackswitch .seekable-img-wrap .seekwrap .loop-marker {
     position: absolute;
     width: 10px;
-    /* Wider for click target */
     inset-block: 0;
     display: none;
-    /* Hidden by default, shown via JS */
     z-index: 2;
     cursor: ew-resize;
-    /* Show draggable cursor */
     margin-left: -5px;
-    /* Center the click target */
     background: transparent;
 }
 
@@ -72,13 +68,10 @@
     position: absolute;
     inset-block: 0;
     display: none;
-    /* Hidden by default, shown via JS */
     background-color: var(--ts-color-accent-soft-15);
-    /* Semi-transparent orange */
     z-index: 1;
 }
 
 .trackswitch .seekable-img-wrap .seekwrap .loop-region.active {
     background-color: var(--ts-color-accent-soft-30);
-    /* Brighter orange when looping is active */
 }

@@ -49,9 +49,7 @@
     display: block;
     width: 100%;
     background-color: var(--ts-color-surface-base);
-    /* Subtle background */
     --waveform-color: var(--ts-color-accent);
-    /* CSS custom property for waveform color (orange) */
 }
 
 .trackswitch .waveform-wrap .seekwrap {
@@ -59,7 +57,6 @@
     inset: 0;
     cursor: pointer;
     pointer-events: auto;
-    /* Ensure overlay captures click events */
     touch-action: pan-y;
 }
 
@@ -75,7 +72,7 @@
     --seekhead-vertical-extent: 0.35;
     --seekhead-color: var(--ts-color-surface-panel-dark);
     --seekhead-ref-color: var(--ts-color-surface-panel-dark);
-    --alignment-points-color: rgba(128, 128, 128, 0.5);
+    --alignment-points-color: var(--ts-color-alignment-points);
 }
 
 .trackswitch .waveform-wrap .seekwrap .seekhead {
@@ -110,15 +107,11 @@
 .trackswitch .waveform-wrap .seekwrap .loop-marker {
     position: absolute;
     width: 10px;
-    /* Wider for click target */
     inset-block: 0;
     display: none;
-    /* Hidden by default, shown via JS */
     z-index: 2;
     cursor: ew-resize;
-    /* Show draggable cursor */
     margin-left: -5px;
-    /* Center the click target */
     background: transparent;
 }
 
@@ -140,15 +133,12 @@
     position: absolute;
     inset-block: 0;
     display: none;
-    /* Hidden by default, shown via JS */
     background-color: var(--ts-color-accent-soft-15);
-    /* Semi-transparent orange */
     z-index: 1;
 }
 
 .trackswitch .waveform-wrap .seekwrap .loop-region.active {
     background-color: var(--ts-color-accent-soft-30);
-    /* Brighter orange when looping is active */
 }
 
 .trackswitch .waveform-wrap .waveform-timing,
@@ -192,8 +182,7 @@
     height: 18px;
     overflow: hidden;
     border-radius: 5px;
-    /* background: var(--ts-color-accent-soft-15); */
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+    box-shadow: inset 0 0 0 1px var(--ts-color-surface-raised-18);
     pointer-events: auto;
     cursor: grab;
 }
@@ -217,7 +206,7 @@
     min-width: 0;
     border-radius: 4px;
     border: 1px solid var(--ts-color-text-inverse);
-    background: rgba(255, 255, 255, 0.16);
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18);
+    background: var(--ts-color-surface-raised-16);
+    box-shadow: 0 0 0 1px var(--ts-color-overlay-ring);
     pointer-events: none;
 }

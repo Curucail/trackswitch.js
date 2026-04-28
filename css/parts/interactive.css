@@ -33,11 +33,11 @@
 
 .trackswitch .ts-interactive-panel.ts-interactive-panel-dragover {
     background:
-        linear-gradient(rgba(237, 140, 1, 0.08), rgba(237, 140, 1, 0.08)),
+        linear-gradient(var(--ts-color-accent-soft-08), var(--ts-color-accent-soft-08)),
         var(--ts-color-surface-base);
     box-shadow:
-        inset 0 0 0 4px rgba(237, 140, 1, 0.32),
-        inset 0 0 0 1px rgba(237, 140, 1, 0.55);
+        inset 0 0 0 4px var(--ts-color-accent-soft-32),
+        inset 0 0 0 1px var(--ts-color-accent-soft-55);
 }
 
 /* Drop Zone ---------------------------------------------------------------- */
@@ -51,7 +51,7 @@
     border-radius: 0;
     padding: 28px 24px;
     text-align: center;
-    background: rgba(255, 255, 255, 0.42);
+    background: var(--ts-color-surface-raised-42);
     transition:
         border-color 0.18s ease,
         background-color 0.18s ease,
@@ -88,8 +88,8 @@
     height: 68px;
     border-radius: 50%;
     color: var(--ts-color-accent);
-    background: rgba(237, 140, 1, 0.14);
-    box-shadow: inset 0 0 0 1px rgba(237, 140, 1, 0.2);
+    background: var(--ts-color-accent-soft-15);
+    box-shadow: inset 0 0 0 1px var(--ts-color-accent-soft-20);
 }
 
 .trackswitch .ts-dropzone-icon .ts-icon-slot {
@@ -145,12 +145,12 @@
     min-width: 0;
     padding: 16px;
     border-radius: 0;
-    background: rgba(255, 255, 255, 0.42);
+    background: var(--ts-color-surface-raised-42);
     box-sizing: border-box;
 }
 
 .trackswitch .ts-compute-bar {
-    background: rgba(255, 255, 255, 0.58);
+    background: var(--ts-color-surface-raised-58);
 }
 
 .trackswitch .ts-interactive-list-header {
@@ -165,7 +165,7 @@
     flex: 0 0 auto;
     padding: 5px 10px;
     border-radius: 999px;
-    background: rgba(56, 56, 56, 0.08);
+    background: var(--ts-color-surface-panel-dark-08);
     color: var(--ts-color-text-secondary);
     font-family: var(--ts-font-ui);
     font-size: 12px;
@@ -198,14 +198,14 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--ts-color-text-secondary);
-    border-bottom: 1px solid rgba(153, 153, 153, 0.65);
+    border-bottom: 1px solid var(--ts-color-border-mid-65);
 }
 
 .trackswitch .ts-interactive-file-list td,
 .trackswitch .ts-settings-file-table td {
     padding: 10px 8px;
     vertical-align: middle;
-    border-bottom: 1px solid rgba(153, 153, 153, 0.2);
+    border-bottom: 1px solid var(--ts-color-border-mid-20);
 }
 
 .trackswitch .ts-interactive-file-list tbody tr:last-child td,
@@ -215,7 +215,7 @@
 
 .trackswitch .ts-interactive-file-list tr.is-reference,
 .trackswitch .ts-settings-file-table tr.is-reference {
-    background: rgba(237, 140, 1, 0.08);
+    background: var(--ts-color-accent-soft-08);
 }
 
 .trackswitch .ts-file-name {
@@ -264,7 +264,7 @@
 
 .trackswitch .ts-file-remove-btn:hover {
     color: var(--ts-color-text-error);
-    background: rgba(192, 51, 40, 0.08);
+    background: var(--ts-color-track-error-soft);
 }
 
 .trackswitch .ts-file-remove-btn .ts-icon-slot {
@@ -464,9 +464,9 @@
     width: 18px;
     height: 18px;
     padding: 0;
-    border: 1px solid rgba(153, 153, 153, 0.7);
+    border: 1px solid var(--ts-color-border-mid-70);
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.72);
+    background: var(--ts-color-surface-raised-72);
     color: var(--ts-color-text-secondary);
     font-family: var(--ts-font-ui);
     font-size: 11px;
@@ -483,8 +483,8 @@
 .trackswitch.trackswitch button.ts-help-trigger:hover,
 .trackswitch .ts-help-trigger-wrap.is-open .ts-help-trigger {
     color: var(--ts-color-accent);
-    border-color: rgba(237, 140, 1, 0.5);
-    background: rgba(237, 140, 1, 0.1);
+    border-color: var(--ts-color-accent-soft-50);
+    background: var(--ts-color-accent-soft-10);
 }
 
 .trackswitch.trackswitch button.ts-help-trigger:focus-visible {
@@ -508,10 +508,10 @@
     gap: 10px;
     width: min(420px, calc(100vw - 32px));
     padding: 12px 14px;
-    border: 1px solid rgba(153, 153, 153, 0.6);
+    border: 1px solid var(--ts-color-border-mid-60);
     border-radius: 10px;
-    background: rgba(255, 255, 255, 0.98);
-    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.18);
+    background: var(--ts-color-surface-raised-98);
+    box-shadow: 0 14px 34px var(--ts-color-overlay-ring);
     color: var(--ts-color-text-primary);
     opacity: 0;
     visibility: hidden;
@@ -578,13 +578,13 @@
     padding: 10px 12px;
     border: 1px solid var(--ts-color-border-mid);
     border-radius: 0;
-    background: rgba(255, 255, 255, 0.92);
+    background: var(--ts-color-surface-raised-92);
     box-sizing: border-box;
     color: var(--ts-color-text-primary);
     font-family: var(--ts-font-ui);
     font-size: 14px;
     cursor: pointer;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.42);
+    box-shadow: inset 0 0 0 1px var(--ts-color-surface-raised-42);
 }
 
 .trackswitch.trackswitch .ts-alignment-select.ts-alignment-select-compact {
@@ -601,8 +601,8 @@
     min-height: 52px;
     min-width: 0;
     padding: 8px 10px;
-    border: 1px solid rgba(153, 153, 153, 0.26);
-    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid var(--ts-color-border-mid-26);
+    background: var(--ts-color-surface-raised-72);
     box-sizing: border-box;
     cursor: pointer;
 }
@@ -679,8 +679,8 @@
     position: absolute;
     inset: 0;
     border-radius: 999px;
-    background: rgba(56, 56, 56, 0.16);
-    box-shadow: inset 0 0 0 1px rgba(56, 56, 56, 0.14);
+    background: var(--ts-color-surface-panel-dark-16);
+    box-shadow: inset 0 0 0 1px var(--ts-color-surface-panel-dark-14);
     transition: background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -693,7 +693,7 @@
     height: 20px;
     border-radius: 50%;
     background: var(--ts-color-surface-base);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.22);
+    box-shadow: 0 1px 4px var(--ts-color-shadow-medium);
     transition: transform 0.15s ease;
 }
 
@@ -706,7 +706,7 @@
 
 .trackswitch .ts-sync-toggle-input:checked + .ts-sync-toggle-knob {
     background: var(--ts-color-accent);
-    box-shadow: inset 0 0 0 1px rgba(237, 140, 1, 0.2);
+    box-shadow: inset 0 0 0 1px var(--ts-color-accent-soft-20);
 }
 
 .trackswitch .ts-sync-toggle-input:checked + .ts-sync-toggle-knob::after {
@@ -719,7 +719,7 @@
 
 .trackswitch .ts-sync-toggle-input:focus-visible + .ts-sync-toggle-knob {
     box-shadow:
-        inset 0 0 0 1px rgba(237, 140, 1, 0.2),
+        inset 0 0 0 1px var(--ts-color-accent-soft-20),
         0 0 0 3px var(--ts-color-accent-soft-30);
 }
 
@@ -751,8 +751,8 @@
 }
 
 .trackswitch.trackswitch button.ts-upload-alignment-btn {
-    border-color: var(--ts-color-border-dark);
-    background-color: rgba(255, 255, 255, 0.94);
+    border-color: var(--ts-color-surface-panel-dark);
+    background-color: var(--ts-color-surface-raised-94);
     color: var(--ts-color-text-primary);
 }
 
@@ -763,9 +763,9 @@
     min-height: 40px;
     width: auto;
     padding: 8px 12px;
-    border-color: rgba(120, 120, 120, 0.6);
-    background-color: rgba(255, 255, 255, 0.9);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.42);
+    border-color: var(--ts-color-border-mid-60);
+    background-color: var(--ts-color-surface-raised-90);
+    box-shadow: inset 0 0 0 1px var(--ts-color-surface-raised-42);
     color: var(--ts-color-text-primary);
     font-size: 13px;
     font-weight: 600;
@@ -781,7 +781,7 @@
     padding: 8px 18px;
     border: 1px solid var(--ts-color-border-mid);
     border-radius: 8px;
-    background-color: rgba(255, 255, 255, 0.92);
+    background-color: var(--ts-color-surface-raised-92);
     color: var(--ts-color-text-primary);
     font-family: var(--ts-font-ui);
     font-size: 14px;
@@ -793,7 +793,7 @@
 }
 
 .trackswitch.trackswitch button.ts-cancel-btn:hover {
-    box-shadow: 0 0 0 3px rgba(153, 153, 153, 0.18);
+    box-shadow: 0 0 0 3px var(--ts-color-border-hover-ring);
 }
 
 .trackswitch.trackswitch button.ts-compute-btn .ts-icon-slot {
@@ -811,13 +811,13 @@
 }
 
 .trackswitch.trackswitch button.ts-upload-alignment-btn:not(:disabled):hover {
-    box-shadow: 0 0 0 3px rgba(153, 153, 153, 0.18);
+    box-shadow: 0 0 0 3px var(--ts-color-border-hover-ring);
 }
 
 .trackswitch.trackswitch button.ts-upload-alignment-btn.ts-upload-alignment-btn-subtle:not(:disabled):hover {
     color: var(--ts-color-text-primary);
-    border-color: rgba(153, 153, 153, 0.56);
-    background-color: rgba(255, 255, 255, 0.86);
+    border-color: var(--ts-color-border-mid-56);
+    background-color: var(--ts-color-surface-raised-86);
 }
 
 .trackswitch .ts-compute-status {
@@ -843,7 +843,7 @@
     justify-content: center;
     padding: 20px;
     border-radius: 0;
-    background: rgba(0, 0, 0, 0.48);
+    background: var(--ts-color-overlay-dim-48);
     z-index: 10;
 }
 
@@ -852,11 +852,11 @@
     display: grid;
     gap: 12px;
     padding: 20px 22px;
-    border: 1px solid rgba(153, 153, 153, 0.55);
+    border: 1px solid var(--ts-color-border-mid-55);
     border-radius: 14px;
     background: var(--ts-color-surface-base);
     color: var(--ts-color-text-primary);
-    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 18px 40px var(--ts-color-shadow-strong);
     justify-items: center;
     text-align: center;
 }
@@ -896,7 +896,7 @@
 .trackswitch .ts-progress-bar {
     width: 100%;
     height: 8px;
-    background: rgba(56, 56, 56, 0.12);
+    background: var(--ts-color-surface-panel-dark-12);
     border-radius: 999px;
     overflow: hidden;
     justify-self: stretch;
@@ -959,7 +959,7 @@
     padding: 14px;
     border: 1px solid var(--ts-color-border-mid);
     background: var(--ts-color-surface-base);
-    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.18);
+    box-shadow: 0 16px 32px var(--ts-color-overlay-ring);
 }
 
 .trackswitch .ts-player-settings-title {
@@ -975,8 +975,8 @@
     display: grid;
     gap: 8px;
     padding: 10px 12px;
-    border: 1px solid rgba(153, 153, 153, 0.35);
-    background: rgba(255, 255, 255, 0.48);
+    border: 1px solid var(--ts-color-border-mid-35);
+    background: var(--ts-color-surface-raised-48);
 }
 
 .trackswitch .ts-player-settings-row {
@@ -1014,7 +1014,7 @@
     inset: 0;
     border: 1px solid var(--ts-color-border-mid);
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.92);
+    background: var(--ts-color-surface-raised-92);
     transition: background-color 0.18s ease, border-color 0.18s ease;
 }
 
@@ -1042,7 +1042,7 @@
 
 .trackswitch .ts-player-settings-footer {
     padding-top: 2px;
-    border-top: 1px solid rgba(153, 153, 153, 0.35);
+    border-top: 1px solid var(--ts-color-border-mid-35);
 }
 
 .trackswitch.trackswitch button.ts-player-settings-action {
@@ -1053,7 +1053,7 @@
     min-height: 40px;
     padding: 9px 14px;
     border: 1px solid var(--ts-color-border-mid);
-    background: rgba(255, 255, 255, 0.92);
+    background: var(--ts-color-surface-raised-92);
     color: var(--ts-color-text-primary);
     font-family: var(--ts-font-ui);
     font-size: 13px;
@@ -1082,7 +1082,7 @@
 .trackswitch .ts-settings-backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: var(--ts-color-overlay-dim);
 }
 
 .trackswitch .ts-settings-dialog {
@@ -1091,10 +1091,10 @@
     max-height: min(92vh, 760px);
     display: flex;
     flex-direction: column;
-    border: 1px solid rgba(153, 153, 153, 0.75);
+    border: 1px solid var(--ts-color-border-mid-75);
     border-radius: 0;
     background: var(--ts-color-surface-base);
-    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.26);
+    box-shadow: 0 20px 48px var(--ts-color-shadow-modal);
     overflow: hidden;
 }
 
@@ -1104,9 +1104,9 @@
     justify-content: space-between;
     gap: 16px;
     padding: 20px 22px 18px;
-    background: rgba(255, 255, 255, 0.62);
+    background: var(--ts-color-surface-raised-62);
     color: var(--ts-color-text-primary);
-    border-bottom: 1px solid rgba(153, 153, 153, 0.45);
+    border-bottom: 1px solid var(--ts-color-border-mid-45);
 }
 
 .trackswitch .ts-settings-panel-heading {
@@ -1134,12 +1134,12 @@
     height: 36px;
     border-radius: 50%;
     color: var(--ts-color-text-primary);
-    background: rgba(56, 56, 56, 0.08);
+    background: var(--ts-color-surface-panel-dark-08);
     transition: background-color 0.15s ease, transform 0.15s ease;
 }
 
 .trackswitch .ts-settings-cancel-btn:hover {
-    background: rgba(56, 56, 56, 0.14);
+    background: var(--ts-color-surface-panel-dark-14);
     transform: rotate(90deg);
 }
 
@@ -1152,9 +1152,9 @@
 
 .trackswitch .ts-settings-section {
     padding: 16px;
-    border: 1px solid rgba(153, 153, 153, 0.55);
+    border: 1px solid var(--ts-color-border-mid-55);
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.58);
+    background: var(--ts-color-surface-raised-58);
 }
 
 .trackswitch .ts-settings-section-title {
@@ -1177,9 +1177,9 @@
 
 .trackswitch .ts-settings-file-table-wrap {
     overflow: auto;
-    border: 1px solid rgba(153, 153, 153, 0.35);
+    border: 1px solid var(--ts-color-border-mid-35);
     border-radius: 10px;
-    background: rgba(255, 255, 255, 0.66);
+    background: var(--ts-color-surface-raised-66);
 }
 
 .trackswitch .ts-settings-add-files {
@@ -1198,7 +1198,7 @@
     padding: 8px 14px;
     border: 1px dashed var(--ts-color-border-mid);
     border-radius: 10px;
-    background: rgba(255, 255, 255, 0.72);
+    background: var(--ts-color-surface-raised-72);
     color: var(--ts-color-text-primary);
     font-family: var(--ts-font-ui);
     font-size: 13px;
@@ -1209,7 +1209,7 @@
 .trackswitch .ts-settings-add-files-btn:hover {
     border-color: var(--ts-color-accent);
     color: var(--ts-color-accent);
-    background: rgba(237, 140, 1, 0.06);
+    background: var(--ts-color-accent-soft-06);
 }
 
 .trackswitch .ts-settings-add-files-copy {
@@ -1225,16 +1225,16 @@
     justify-content: flex-end;
     gap: 10px;
     padding: 16px 22px 20px;
-    border-top: 1px solid rgba(153, 153, 153, 0.45);
-    background: rgba(255, 255, 255, 0.52);
+    border-top: 1px solid var(--ts-color-border-mid-45);
+    background: var(--ts-color-surface-raised-52);
 }
 
 .trackswitch .ts-settings-btn {
     min-height: 42px;
     padding: 9px 16px;
-    border: 1px solid rgba(153, 153, 153, 0.7);
+    border: 1px solid var(--ts-color-border-mid-70);
     border-radius: 10px;
-    background: rgba(255, 255, 255, 0.88);
+    background: var(--ts-color-surface-raised-88);
     color: var(--ts-color-text-primary);
     font-family: var(--ts-font-ui);
     font-size: 13px;
@@ -1251,7 +1251,7 @@
     border-color: var(--ts-color-accent);
     background: var(--ts-color-accent);
     color: var(--ts-color-text-inverse);
-    box-shadow: 0 10px 24px rgba(237, 140, 1, 0.18);
+    box-shadow: 0 10px 24px var(--ts-color-accent-shadow);
 }
 
 /* Responsive --------------------------------------------------------------- */
