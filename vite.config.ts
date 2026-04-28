@@ -1,5 +1,5 @@
 import { resolve } from 'node:path';
-import { defineConfig, type UserConfig } from 'vite';
+import { defineConfig, type Plugin, type UserConfig } from 'vite';
 
 const rootDir = __dirname;
 const buildTarget = process.env.TRACKSWITCH_BUILD_TARGET || 'browser';
@@ -22,6 +22,37 @@ const iifeOutput = {
     banner,
     inlineDynamicImports: true,
 } as const;
+
+function examplesRootPlugin(): Plugin {
+    return {
+        name: 'trackswitch-examples-root',
+        configureServer(server) {
+            server.middlewares.use((request, response, next) => {
+                if (request.url === '/' || request.url === '/index.html') {
+                    response.statusCode = 302;
+                    response.setHeader('Location', '/examples/');
+                    response.end();
+                    return;
+                }
+
+                next();
+            });
+        },
+    };
+}
+
+const devConfig = {
+    root: rootDir,
+    plugins: [examplesRootPlugin()],
+    server: {
+        host: '0.0.0.0',
+        port: 8000,
+        strictPort: false,
+        fs: {
+            allow: [rootDir],
+        },
+    },
+} satisfies UserConfig;
 
 const buildTargets = {
     browser: {
@@ -114,8 +145,14 @@ const buildTargets = {
     },
 } satisfies Record<string, UserConfig>;
 
-if (!Object.hasOwn(buildTargets, buildTarget)) {
-    throw new Error('Unknown TRACKSWITCH_BUILD_TARGET: ' + buildTarget);
-}
+export default defineConfig(({ command }) => {
+    if (command === 'serve') {
+        return devConfig;
+    }
 
-export default defineConfig(buildTargets[buildTarget as keyof typeof buildTargets]);
+    if (!Object.hasOwn(buildTargets, buildTarget)) {
+        throw new Error('Unknown TRACKSWITCH_BUILD_TARGET: ' + buildTarget);
+    }
+
+    return buildTargets[buildTarget as keyof typeof buildTargets];
+});

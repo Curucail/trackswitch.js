@@ -99,7 +99,7 @@
     "docs:assets": "node scripts/sync-docs-assets.mjs",
     "docs:build": "npm run build && npm run docs:assets",
     "build:types": "tsc --project tsconfig.build.json",
-    "dev": "vite --host=0.0.0.0 --port=8000",
+    "dev": "vite",
     "prebuild": "npm run clean",
     "prepack": "npm run build",
     "typecheck": "tsc --project tsconfig.json",

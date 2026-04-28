@@ -1275,7 +1275,7 @@
     }
 }
 
-@container ts-compute (max-width: 720px) {
+@media (max-width: 720px) {
     .trackswitch .ts-compute-bar-row {
         display: flex;
         flex-direction: column;
