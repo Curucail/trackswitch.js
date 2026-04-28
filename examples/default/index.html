@@ -5,7 +5,6 @@
     <meta charset="UTF-8">
     <title>Trackswitch.js - Example</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="../../dist/css/trackswitch.min.css">
     <style media="screen">
         body {
             font-family: sans-serif;
@@ -14,12 +13,12 @@
 </head>
 
 <body>
-    <div id="player" style="width: 50%; margin: 0 auto;"></div>
+    <trackswitch id="player" style="display: block; width: 50%; margin: 0 auto;"></trackswitch>
     
-    <script src="../../dist/js/trackswitch.min.js"></script>
+    <script src="../../dist/trackswitch.js"></script>
     <script type="text/javascript">
         document.addEventListener('DOMContentLoaded', function () {
-            TrackSwitch.createTrackSwitch(document.getElementById('player'), {
+            document.getElementById('player').init = {
                 presetNames: ['All Tracks', 'Violins & Synths', 'Drums & Bass', 'Drums Only'],
                 ui: [
                     {
@@ -85,7 +84,7 @@
                     customizablePanelOrder: false,
                     muteOtherPlayerInstances: true,
                 },
-            });
+            };
         });
     </script>
 </body>

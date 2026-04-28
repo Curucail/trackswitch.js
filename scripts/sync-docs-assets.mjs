@@ -6,32 +6,8 @@ const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 const syncPairs = [
   {
-    source: resolve(rootDir, "dist/css/trackswitch.min.css"),
-    target: resolve(rootDir, "docs/css/trackswitch.min.css"),
-  },
-  {
-    source: resolve(rootDir, "dist/js/trackswitch.min.js"),
-    target: resolve(rootDir, "docs/js/trackswitch.min.js"),
-  },
-  {
-    source: resolve(rootDir, "dist/js/trackswitch-interactive.js"),
-    target: resolve(rootDir, "docs/js/trackswitch-interactive.js"),
-  },
-  {
-    source: resolve(rootDir, "dist/js/trackswitch-alignment-worker.js"),
-    target: resolve(rootDir, "docs/js/trackswitch-alignment-worker.js"),
-  },
-  {
-    source: resolve(rootDir, "dist/js/synctoolbox-1.4.2-py3-none-any.whl"),
-    target: resolve(rootDir, "docs/js/synctoolbox-1.4.2-py3-none-any.whl"),
-  },
-  {
-    source: resolve(rootDir, "dist/js/libtsm-1.1.2-py3-none-any.whl"),
-    target: resolve(rootDir, "docs/js/libtsm-1.1.2-py3-none-any.whl"),
-  },
-  {
-    source: resolve(rootDir, "dist/js/basic-pitch"),
-    target: resolve(rootDir, "docs/js/basic-pitch"),
+    source: resolve(rootDir, "dist/trackswitch.js"),
+    target: resolve(rootDir, "docs/js/trackswitch.js"),
   },
   {
     source: resolve(rootDir, "examples/default/data"),

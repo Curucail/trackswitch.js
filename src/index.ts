@@ -1,4 +1,5 @@
 import { createTrackSwitch } from './player/factory';
+import { TrackswitchPlayer, defineTrackswitchElement } from './element';
 import { normalizeFeatures, defaultFeatures } from './domain/options';
 import { createInitialPlayerState, playerStateReducer } from './domain/state';
 import { WaveformEngine } from './engine/waveform-engine';
@@ -7,6 +8,7 @@ import { formatSecondsToHHMMSSmmm } from './shared/format';
 import { parsePresetIndices } from './shared/preset';
 
 export { createTrackSwitch };
+export { TrackswitchPlayer, defineTrackswitchElement };
 export { normalizeFeatures, defaultFeatures };
 export { createInitialPlayerState, playerStateReducer };
 export { WaveformEngine };
@@ -32,11 +34,9 @@ export type {
     TrackSwitchInit,
     TrackSwitchImageConfig,
     TrackSwitchImageUiElement,
-    TrackSwitchMountOptions,
     TrackSwitchPerTrackImageConfig,
     TrackSwitchPerTrackImageUiElement,
     TrackSwitchSnapshot,
-    TrackSwitchShadowDomOptions,
     TrackSwitchTextAlign,
     TrackSwitchTextConfig,
     TrackSwitchTextUiElement,
@@ -51,3 +51,5 @@ export type {
     TrackSwitchMode,
     WaveformSource,
 } from './domain/types';
+
+export type { TrackswitchDomEventName, TrackswitchPlayerElement } from './element';

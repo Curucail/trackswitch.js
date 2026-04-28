@@ -43,7 +43,6 @@
     "README.md",
     "THIRD_PARTY_NOTICES.md"
   ],
-  "style": "dist/css/trackswitch.min.css",
   "module": "dist/esm/index.js",
   "types": "dist/types/index.d.ts",
   "exports": {
@@ -51,40 +50,50 @@
       "types": "./dist/types/index.d.ts",
       "import": "./dist/esm/index.js"
     },
+    "./element": {
+      "types": "./dist/types/element.d.ts",
+      "import": "./dist/esm/element.js"
+    },
     "./react": {
       "types": "./dist/types/react.d.ts",
       "import": "./dist/esm/react.js"
+    },
+    "./vue": {
+      "types": "./dist/types/vue.d.ts",
+      "import": "./dist/esm/vue.js"
+    },
+    "./svelte": {
+      "types": "./dist/types/svelte.d.ts",
+      "import": "./dist/esm/svelte.js"
     },
     "./interactive": {
       "types": "./dist/types/interactive.d.ts",
       "import": "./dist/esm/interactive.js"
     },
-    "./style.css": "./dist/css/trackswitch.min.css",
     "./package.json": "./package.json"
   },
-  "unpkg": "dist/js/trackswitch.min.js",
-  "jsdelivr": "dist/js/trackswitch.min.js",
+  "unpkg": "dist/trackswitch.js",
+  "jsdelivr": "dist/trackswitch.js",
   "peerDependencies": {
-    "react": ">=18"
+    "react": ">=18",
+    "vue": ">=3"
   },
   "peerDependenciesMeta": {
     "react": {
+      "optional": true
+    },
+    "vue": {
       "optional": true
     }
   },
   "scripts": {
     "clean": "rimraf dist",
-    "build": "npm run build:css && npm run build:js && npm run build:types && npm run build:docs-assets",
-    "build:css": "esbuild css/trackswitch.css --bundle --minify --loader:.woff2=file --asset-names=assets/[name]-[hash] --outfile=dist/css/trackswitch.min.css",
-    "build:css:watch": "esbuild css/trackswitch.css --bundle --loader:.woff2=file --asset-names=assets/[name]-[hash] --outfile=dist/css/trackswitch.min.css --watch=forever",
+    "build": "npm run build:browser && npm run build:esm && npm run build:types && npm run build:docs-assets",
+    "build:browser": "vite build",
+    "build:esm": "TRACKSWITCH_BUILD_FORMAT=esm vite build",
     "build:docs-assets": "node scripts/sync-docs-assets.mjs",
-    "build:js": "node scripts/build-js.mjs",
-    "build:js:watch": "node scripts/build-js.mjs --watch",
     "build:types": "tsc --project tsconfig.build.json",
-    "dev": "npm run build && sh -c 'npm run dev:watch & npm run dev:serve & wait'",
-    "dev:serve": "live-server --host=0.0.0.0 --port=8080 --watch=dist,examples,css,src",
-    "dev:watch": "sh -c 'npm run build:css:watch & npm run build:js:watch & wait'",
-    "minify:js": "node scripts/build-js.mjs --minify-only",
+    "dev": "vite --host=0.0.0.0 --port=8000",
     "prebuild": "npm run clean",
     "prepack": "npm run build",
     "typecheck": "tsc --project tsconfig.json",
@@ -98,9 +107,8 @@
   },
   "devDependencies": {
     "@types/d3": "^7.4.3",
-    "esbuild": "^0.27.3",
-    "live-server": "^1.2.2",
     "rimraf": "^6.0.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vite": "^7.2.7"
   }
 }
