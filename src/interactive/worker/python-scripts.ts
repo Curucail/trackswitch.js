@@ -252,29 +252,6 @@ def _fast_C_to_DE(C, dn=np.array([1,1,0], np.int64),
 
 # Monkey-patch the slow pure-Python version
 _dtw_core.__C_to_DE = _fast_C_to_DE
-
-# Also vectorize normalize_feature (called multiple times per MrMsDTW iteration)
-import synctoolbox.feature.utils as _feat_utils
-
-def _fast_normalize_feature(feature, norm_ord, threshold):
-    """Vectorized feature normalization — replaces the per-column Python loop."""
-    d, N = feature.shape
-    norms = np.linalg.norm(feature, ord=norm_ord, axis=0)
-    unit_vec = np.ones(d)
-    unit_vec = unit_vec / np.linalg.norm(unit_vec, norm_ord)
-
-    f_normalized = np.empty_like(feature)
-    below = norms < threshold
-    above = ~below
-
-    if np.any(below):
-        f_normalized[:, below] = unit_vec[:, np.newaxis]
-    if np.any(above):
-        f_normalized[:, above] = feature[:, above] / norms[above]
-
-    return f_normalized
-
-_feat_utils.normalize_feature = _fast_normalize_feature
 `;
 
 /** Shim for packages that synctoolbox imports but we don't need in Pyodide. */
@@ -329,7 +306,7 @@ import libtsm
 from synctoolbox.feature.pitch import audio_to_pitch_features
 from synctoolbox.feature.chroma import pitch_to_chroma, quantize_chroma, quantized_chroma_to_CENS
 from synctoolbox.feature.utils import estimate_tuning, shift_chroma_vectors
-from synctoolbox.dtw.utils import compute_optimal_chroma_shift
+from synctoolbox.dtw.utils import compute_optimal_chroma_shift, make_path_strictly_monotonic
 
 # Try to import onset features (may fail gracefully)
 try:
@@ -413,7 +390,15 @@ def pitch_shift_cents_from_chroma_shift(chroma_shift):
         cents -= 12
     return int(cents * 100)
 
+def ensure_strict_time_map(time_map):
+    if time_map.shape[0] <= 1:
+        return time_map
+    keep = np.ones(time_map.shape[0], dtype=bool)
+    keep[1:] = (np.diff(time_map[:, 0]) > 0) & (np.diff(time_map[:, 1]) > 0)
+    return time_map[keep]
+
 def build_valid_time_map(warping_path, sample_rate, feature_rate):
+    warping_path = make_path_strictly_monotonic(np.asarray(warping_path))
     source_samples = np.round(warping_path[1] / feature_rate * sample_rate).astype(int)
     target_samples = np.round(warping_path[0] / feature_rate * sample_rate).astype(int)
     time_map = np.column_stack((source_samples, target_samples))
@@ -426,17 +411,16 @@ def build_valid_time_map(warping_path, sample_rate, feature_rate):
     time_map[:, 0] = np.clip(time_map[:, 0], 0, max_source)
     time_map[:, 1] = np.clip(time_map[:, 1], 0, max_target)
 
-    keep = np.ones(time_map.shape[0], dtype=bool)
-    if time_map.shape[0] > 1:
-        keep[1:] = (np.diff(time_map[:, 0]) > 0) & (np.diff(time_map[:, 1]) > 0)
-    time_map = time_map[keep]
+    time_map = ensure_strict_time_map(time_map)
     time_map = libtsm.ensure_validity(time_map)
+    time_map = ensure_strict_time_map(time_map)
 
     if time_map.shape[0] == 0:
         raise ValueError('time_map is empty after validity filtering.')
 
     if time_map[0, 1] != 0:
-        time_map = np.vstack(([time_map[0, 0], 0], time_map))
+        time_map = np.vstack(([0, 0], time_map))
+        time_map = ensure_strict_time_map(time_map)
 
     if time_map.shape[0] < 2:
         raise ValueError('time_map has too few anchor points after filtering.')
