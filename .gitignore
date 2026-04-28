@@ -3,6 +3,7 @@ node_modules
 _site/
 dist/
 example_ulli/
+synctoolbox-dist/
 AGENTS.md
 testings.ipynb
 docs/js/trackswitch.min.js
