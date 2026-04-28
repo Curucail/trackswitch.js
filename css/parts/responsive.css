@@ -208,7 +208,7 @@
     }
 }
 
-@container ts-tracks (max-width: 767px) {
+@media (max-width: 767px) {
     .trackswitch li.track {
         min-height: 40px;
     }
@@ -223,7 +223,9 @@
     .trackswitch li.track .mix-slider {
         width: 68px;
     }
+}
 
+@media (max-width: 767px) {
     .trackswitch li.track .track-volume-icon {
         font-size: 18px;
         margin-right: 10px;
