@@ -639,7 +639,6 @@
     function renderInteractiveQuickstartSnippet() {
       var snippetLines = [
         '<link rel="stylesheet" href="dist/css/trackswitch.min.css" />',
-        '<script src="dist/js/trackswitch.min.js"></script>',
         '<script src="dist/js/trackswitch-interactive.js"></script>',
         '',
         '<div id="player"></div>',
@@ -675,14 +674,13 @@
           : '';
 
       snippetLines = [
-        '<link rel="stylesheet" href="dist/css/trackswitch.min.css" />',
-        '<script src="dist/js/trackswitch.min.js"></script>',
+        '<script src="dist/trackswitch.js"></script>',
         '',
-        '<div id="player"></div>',
+        '<trackswitch-player id="player"></trackswitch-player>',
         '',
         '<script>',
         "document.addEventListener('DOMContentLoaded', function () {",
-        "  TrackSwitch.createTrackSwitch(document.getElementById('player'), {",
+        "  document.getElementById('player').init = {",
         "    presetNames: ['All Tracks', 'Violins & Synths', 'Drums & Bass', 'Drums Only'],",
         '    ui: [',
       ];
@@ -741,7 +739,7 @@
         '      tabView: ' + Boolean(model.tabView) + ',',
         '      iosAudioUnlock: ' + Boolean(model.iosAudioUnlock) + ',',
         '    },',
-        '  });',
+        '  };',
         '});',
         '</script>',
       ]);
@@ -764,14 +762,13 @@
           : '';
 
       snippetLines = [
-        '<link rel="stylesheet" href="dist/css/trackswitch.min.css" />',
+        '<script src="dist/trackswitch.js"></script>',
         '',
-        '<div id="player"></div>',
+        '<trackswitch-player id="player"></trackswitch-player>',
         '',
-        '<script src="dist/js/trackswitch.min.js"></script>',
         '<script>',
         "document.addEventListener('DOMContentLoaded', function () {",
-        "  TrackSwitch.createTrackSwitch(document.getElementById('player'), {",
+        "  document.getElementById('player').init = {",
         '    alignment: {',
         "      csv: 'alignment.csv',",
         "      referenceTimeColumn: 'time_score',",
@@ -868,7 +865,7 @@
         '      tabView: ' + Boolean(model.tabView) + ',',
         '      iosAudioUnlock: ' + Boolean(model.iosAudioUnlock) + ',',
         '    },',
-        '  });',
+        '  };',
         '});',
         '</script>',
       ]);
