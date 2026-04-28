@@ -19,6 +19,8 @@ docs/assets/alignment/
 .jekyll-metadata
 .sass-cache/
 .bundle/
+vendor/bundle/
+docs/vendor/bundle/
 .idea/
 .vscode/
 .DS_Store
