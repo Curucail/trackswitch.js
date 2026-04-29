@@ -397,7 +397,7 @@ def ensure_strict_time_map(time_map):
     keep[1:] = (np.diff(time_map[:, 0]) > 0) & (np.diff(time_map[:, 1]) > 0)
     return time_map[keep]
 
-def build_valid_time_map(warping_path, sample_rate, feature_rate):
+def build_valid_time_map(warping_path, source_sample_count, target_sample_count, sample_rate, feature_rate):
     warping_path = make_path_strictly_monotonic(np.asarray(warping_path))
     source_samples = np.round(warping_path[1] / feature_rate * sample_rate).astype(int)
     target_samples = np.round(warping_path[0] / feature_rate * sample_rate).astype(int)
@@ -406,8 +406,8 @@ def build_valid_time_map(warping_path, sample_rate, feature_rate):
     if time_map.shape[0] == 0:
         raise ValueError('time_map is empty.')
 
-    max_source = max(0, int(source_samples.max()))
-    max_target = max(0, int(target_samples.max()))
+    max_source = max(0, int(source_sample_count) - 1)
+    max_target = max(0, int(target_sample_count) - 1)
     time_map[:, 0] = np.clip(time_map[:, 0], 0, max_source)
     time_map[:, 1] = np.clip(time_map[:, 1], 0, max_target)
 
@@ -418,8 +418,16 @@ def build_valid_time_map(warping_path, sample_rate, feature_rate):
     if time_map.shape[0] == 0:
         raise ValueError('time_map is empty after validity filtering.')
 
-    if time_map[0, 1] != 0:
+    if time_map.shape[0] > 0 and time_map[0, 0] > 0 and time_map[0, 1] > 0:
         time_map = np.vstack(([0, 0], time_map))
+        time_map = ensure_strict_time_map(time_map)
+
+    if (
+        time_map.shape[0] > 0
+        and time_map[-1, 0] < max_source
+        and time_map[-1, 1] < max_target
+    ):
+        time_map = np.vstack((time_map, [max_source, max_target]))
         time_map = ensure_strict_time_map(time_map)
 
     if time_map.shape[0] < 2:
@@ -446,9 +454,14 @@ def encode_wav_bytes(audio_data, sample_rate):
 
 def render_synchronized_audio(fid, warping_path, chroma_shift, progress_fn=None):
     sample_rate = int(audio_sample_rates[str(fid)])
+    if reference_file_id in full_resolution_audio:
+        reference_sample_rate = int(audio_sample_rates[str(reference_file_id)])
+        reference_duration = len(full_resolution_audio[reference_file_id][0]) / reference_sample_rate
+    else:
+        reference_duration = ref_length / FEATURE_RATE
+    target_sample_count = int(round(reference_duration * sample_rate))
     if progress_fn is not None:
         progress_fn(0.02, 'preparing time map')
-    time_map = build_valid_time_map(warping_path, sample_rate, FEATURE_RATE)
     pitch_shift_cents = pitch_shift_cents_from_chroma_shift(chroma_shift)
     rendered_channels = []
     total_channels = len(full_resolution_audio[fid])
@@ -456,6 +469,14 @@ def render_synchronized_audio(fid, warping_path, chroma_shift, progress_fn=None)
     for channel_index, channel_audio in enumerate(full_resolution_audio[fid]):
         channel_start = channel_index / max(total_channels, 1)
         channel_span = 1.0 / max(total_channels, 1)
+        channel_audio = np.asarray(channel_audio, dtype=np.float64).reshape(-1)
+        time_map = build_valid_time_map(
+            warping_path,
+            len(channel_audio),
+            target_sample_count,
+            sample_rate,
+            FEATURE_RATE
+        )
         if progress_fn is not None:
             progress_fn(
                 channel_start + 0.05 * channel_span,
