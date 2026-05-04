@@ -1,114 +1,67 @@
-import { TrackRuntime, TrackTiming } from '../domain/types';
+import { TrackRuntime, TrackTiming, WaveformSummary, WaveformSummaryLevel } from '../domain/types';
 
 export type TrackTimelineProjector = (runtime: TrackRuntime, trackTimelineTimeSeconds: number) => number;
 
+const SUMMARY_WINDOW_SAMPLES = 256;
+const RMS_BLEND = 0.18;
+
 export class WaveformEngine {
-    calculateWaveformPeaks(
-        buffer: AudioBuffer,
-        width: number,
-        startOffsetSeconds = 0,
-        durationSeconds?: number
-    ): Float32Array {
-        if (!buffer || width <= 0 || !Number.isFinite(width)) {
-            return new Float32Array(0);
+    createSummary(buffer: AudioBuffer): WaveformSummary {
+        const sampleRate = WaveformEngine.resolveSampleRate(buffer);
+        const sampleCount = buffer.length;
+        const duration = Number.isFinite(buffer.duration) && buffer.duration > 0
+            ? buffer.duration
+            : sampleCount / sampleRate;
+        const levels: WaveformSummaryLevel[] = [];
+
+        if (sampleCount <= 0) {
+            return {
+                duration: Math.max(0, duration),
+                sampleRate,
+                sampleCount: 0,
+                levels: [{
+                    samplesPerEntry: SUMMARY_WINDOW_SAMPLES,
+                    peaks: new Float32Array(0),
+                    rms: new Float32Array(0),
+                }],
+            };
         }
 
-        const channelData = buffer.getChannelData(0);
-        const safeWidth = Math.max(1, Math.floor(width));
-        if (channelData.length === 0) {
-            return new Float32Array(safeWidth);
+        levels.push(this.createBaseSummaryLevel(buffer));
+        while (levels[levels.length - 1].peaks.length > 1) {
+            levels.push(this.createCoarserSummaryLevel(levels[levels.length - 1]));
         }
 
-        const rawSampleRate = Number(buffer.sampleRate);
-        const rawDuration = Number(buffer.duration);
-        const fallbackSampleRate = rawDuration > 0 ? channelData.length / rawDuration : channelData.length;
-        const sampleRate = Number.isFinite(rawSampleRate) && rawSampleRate > 0
-            ? rawSampleRate
-            : Math.max(1, fallbackSampleRate);
-
-        const safeStartOffsetSeconds = Number.isFinite(startOffsetSeconds) && startOffsetSeconds > 0
-            ? startOffsetSeconds
-            : 0;
-        const startSample = Math.min(channelData.length, Math.floor(safeStartOffsetSeconds * sampleRate));
-        const maxSampleLength = channelData.length - startSample;
-        const safeDurationSeconds = durationSeconds !== undefined && Number.isFinite(durationSeconds)
-            ? Math.max(0, durationSeconds)
-            : (maxSampleLength / sampleRate);
-        const segmentSampleLength = Math.min(maxSampleLength, Math.floor(safeDurationSeconds * sampleRate));
-        const endSample = startSample + segmentSampleLength;
-
-        if (segmentSampleLength <= 0) {
-            return new Float32Array(safeWidth);
-        }
-
-        const samplesPerPixel = Math.max(1, Math.floor(segmentSampleLength / safeWidth));
-        const peaks = new Float32Array(safeWidth);
-
-        for (let x = 0; x < safeWidth; x += 1) {
-            const start = startSample + (x * samplesPerPixel);
-            if (start >= endSample) {
-                break;
-            }
-            const end = Math.min(endSample, start + samplesPerPixel);
-            let max = 0;
-
-            for (let i = start; i < end; i += 1) {
-                const sample = Math.abs(channelData[i]);
-                if (sample > max) {
-                    max = sample;
-                }
-            }
-
-            peaks[x] = max;
-        }
-
-        return peaks;
+        return {
+            duration,
+            sampleRate,
+            sampleCount,
+            levels,
+        };
     }
 
     getTrackPeaks(
         runtime: TrackRuntime,
         peakCount: number,
-        barWidth: number,
-        trimStartSeconds = 0,
-        audioDurationSeconds?: number
+        startSeconds = 0,
+        durationSeconds?: number
     ): Float32Array | null {
-        if (!runtime.buffer) {
+        if (!runtime.waveformSummary) {
             return null;
         }
 
-        const count = Math.max(1, Math.floor(peakCount));
-        const safeTrimStartSeconds = Number.isFinite(trimStartSeconds) && trimStartSeconds > 0
-            ? trimStartSeconds
-            : 0;
-        const safeAudioDuration = audioDurationSeconds !== undefined && Number.isFinite(audioDurationSeconds)
-            ? Math.max(0, audioDurationSeconds)
-            : null;
-        const key = [
-            count,
-            Math.max(1, Math.floor(barWidth)),
-            safeTrimStartSeconds.toFixed(6),
-            safeAudioDuration === null ? 'all' : safeAudioDuration.toFixed(6),
-        ].join(':');
-
-        const cached = runtime.waveformCache.get(key);
-        if (cached) {
-            return cached;
-        }
-
-        const peaks = this.calculateWaveformPeaks(
-            runtime.buffer,
-            count,
-            safeTrimStartSeconds,
-            safeAudioDuration === null ? undefined : safeAudioDuration
+        return this.querySummary(
+            runtime.waveformSummary,
+            peakCount,
+            startSeconds,
+            durationSeconds
         );
-        runtime.waveformCache.set(key, peaks);
-        return peaks;
     }
 
     calculateMixedWaveform(
         runtimes: TrackRuntime[],
         peakCount: number,
-        barWidth: number,
+        _barWidth: number,
         timelineDuration?: number,
         trackTimelineProjector?: TrackTimelineProjector
     ): Float32Array | null {
@@ -140,7 +93,6 @@ export class WaveformEngine {
                 const peaks = this.getTrackTimelinePeaks(
                     runtime,
                     count,
-                    barWidth,
                     safeTimelineDuration,
                     trackTimelineProjector
                 );
@@ -183,14 +135,160 @@ export class WaveformEngine {
         return mixed;
     }
 
+    private createBaseSummaryLevel(buffer: AudioBuffer): WaveformSummaryLevel {
+        const sampleCount = buffer.length;
+        const entryCount = Math.max(1, Math.ceil(sampleCount / SUMMARY_WINDOW_SAMPLES));
+        const peaks = new Float32Array(entryCount);
+        const rms = new Float32Array(entryCount);
+        const channelCount = Math.max(1, buffer.numberOfChannels);
+        const channels: Float32Array[] = [];
+
+        for (let channelIndex = 0; channelIndex < channelCount; channelIndex += 1) {
+            channels.push(buffer.getChannelData(channelIndex));
+        }
+
+        for (let entryIndex = 0; entryIndex < entryCount; entryIndex += 1) {
+            const start = entryIndex * SUMMARY_WINDOW_SAMPLES;
+            const end = Math.min(sampleCount, start + SUMMARY_WINDOW_SAMPLES);
+            let peak = 0;
+            let squareSum = 0;
+            let count = 0;
+
+            for (let sampleIndex = start; sampleIndex < end; sampleIndex += 1) {
+                let sample = 0;
+                for (let channelIndex = 0; channelIndex < channels.length; channelIndex += 1) {
+                    const channelSample = Math.abs(channels[channelIndex][sampleIndex]);
+                    if (channelSample > sample) {
+                        sample = channelSample;
+                    }
+                }
+
+                if (sample > peak) {
+                    peak = sample;
+                }
+                squareSum += sample * sample;
+                count += 1;
+            }
+
+            peaks[entryIndex] = peak;
+            rms[entryIndex] = count > 0 ? Math.sqrt(squareSum / count) : 0;
+        }
+
+        return {
+            samplesPerEntry: SUMMARY_WINDOW_SAMPLES,
+            peaks,
+            rms,
+        };
+    }
+
+    private createCoarserSummaryLevel(previous: WaveformSummaryLevel): WaveformSummaryLevel {
+        const entryCount = Math.max(1, Math.ceil(previous.peaks.length / 2));
+        const peaks = new Float32Array(entryCount);
+        const rms = new Float32Array(entryCount);
+
+        for (let entryIndex = 0; entryIndex < entryCount; entryIndex += 1) {
+            const sourceIndex = entryIndex * 2;
+            const peakA = previous.peaks[sourceIndex] || 0;
+            const peakB = previous.peaks[sourceIndex + 1] || 0;
+            const rmsA = previous.rms[sourceIndex] || 0;
+            const rmsB = previous.rms[sourceIndex + 1] || 0;
+            const hasB = sourceIndex + 1 < previous.rms.length;
+
+            peaks[entryIndex] = Math.max(peakA, peakB);
+            rms[entryIndex] = hasB
+                ? Math.sqrt(((rmsA * rmsA) + (rmsB * rmsB)) / 2)
+                : rmsA;
+        }
+
+        return {
+            samplesPerEntry: previous.samplesPerEntry * 2,
+            peaks,
+            rms,
+        };
+    }
+
+    private querySummary(
+        summary: WaveformSummary,
+        peakCount: number,
+        startSeconds = 0,
+        durationSeconds?: number
+    ): Float32Array {
+        const count = Math.max(1, Math.floor(peakCount));
+        const peaks = new Float32Array(count);
+        if (!summary.levels.length || summary.sampleCount <= 0) {
+            return peaks;
+        }
+
+        const safeStartSeconds = Number.isFinite(startSeconds) && startSeconds > 0
+            ? startSeconds
+            : 0;
+        const maxDurationSeconds = Math.max(0, summary.duration - safeStartSeconds);
+        const safeDurationSeconds = durationSeconds !== undefined && Number.isFinite(durationSeconds)
+            ? Math.max(0, Math.min(durationSeconds, maxDurationSeconds))
+            : maxDurationSeconds;
+
+        if (safeDurationSeconds <= 0) {
+            return peaks;
+        }
+
+        const startSample = Math.min(summary.sampleCount, Math.floor(safeStartSeconds * summary.sampleRate));
+        const endSample = Math.min(
+            summary.sampleCount,
+            Math.max(startSample, Math.ceil((safeStartSeconds + safeDurationSeconds) * summary.sampleRate))
+        );
+        const samplesPerPeak = Math.max(1, (endSample - startSample) / count);
+        const level = this.selectSummaryLevel(summary, samplesPerPeak);
+
+        for (let peakIndex = 0; peakIndex < count; peakIndex += 1) {
+            const rangeStartSample = startSample + Math.floor(peakIndex * samplesPerPeak);
+            const rangeEndSample = peakIndex === count - 1
+                ? endSample
+                : startSample + Math.ceil((peakIndex + 1) * samplesPerPeak);
+            const startEntry = Math.max(0, Math.floor(rangeStartSample / level.samplesPerEntry));
+            const endEntry = Math.min(
+                level.peaks.length,
+                Math.max(startEntry + 1, Math.ceil(rangeEndSample / level.samplesPerEntry))
+            );
+            let peak = 0;
+            let squareSum = 0;
+            let entryCount = 0;
+
+            for (let entryIndex = startEntry; entryIndex < endEntry; entryIndex += 1) {
+                const entryPeak = level.peaks[entryIndex];
+                const entryRms = level.rms[entryIndex];
+                if (entryPeak > peak) {
+                    peak = entryPeak;
+                }
+                squareSum += entryRms * entryRms;
+                entryCount += 1;
+            }
+
+            const rms = entryCount > 0 ? Math.sqrt(squareSum / entryCount) : 0;
+            peaks[peakIndex] = (peak * (1 - RMS_BLEND)) + (rms * RMS_BLEND);
+        }
+
+        return peaks;
+    }
+
+    private selectSummaryLevel(summary: WaveformSummary, samplesPerPeak: number): WaveformSummaryLevel {
+        let selected = summary.levels[0];
+        for (let index = 1; index < summary.levels.length; index += 1) {
+            const candidate = summary.levels[index];
+            if (candidate.samplesPerEntry > samplesPerPeak) {
+                break;
+            }
+            selected = candidate;
+        }
+        return selected;
+    }
+
     private getTrackTimelinePeaks(
         runtime: TrackRuntime,
         peakCount: number,
-        barWidth: number,
         timelineDuration: number,
         trackTimelineProjector?: TrackTimelineProjector
     ): Float32Array | null {
-        if (!runtime.buffer) {
+        if (!runtime.waveformSummary) {
             return null;
         }
 
@@ -207,7 +305,7 @@ export class WaveformEngine {
         }
 
         const waveformLength = Math.max(1, Math.round((audioDuration / timelineDuration) * safePeakCount));
-        const trackPeaks = this.getTrackPeaks(runtime, waveformLength, barWidth, trimStart, audioDuration);
+        const trackPeaks = this.getTrackPeaks(runtime, waveformLength, trimStart, audioDuration);
 
         if (!trackPeaks) {
             return null;
@@ -283,19 +381,22 @@ export class WaveformEngine {
     }
 
     private static normalizeTiming(runtime: TrackRuntime): TrackTiming | null {
-        if (!runtime.buffer) {
+        if (!runtime.waveformSummary && !runtime.buffer) {
             return null;
         }
 
         const rawTiming = runtime.timing;
         if (!rawTiming) {
-            const bufferDuration = Number(runtime.buffer.duration);
-            const safeBufferDuration = Number.isFinite(bufferDuration) && bufferDuration > 0 ? bufferDuration : 1;
+            const summaryDuration = runtime.waveformSummary ? runtime.waveformSummary.duration : 0;
+            const bufferDuration = runtime.buffer ? Number(runtime.buffer.duration) : 0;
+            const safeDuration = Number.isFinite(summaryDuration) && summaryDuration > 0
+                ? summaryDuration
+                : (Number.isFinite(bufferDuration) && bufferDuration > 0 ? bufferDuration : 1);
             return {
                 trimStart: 0,
                 padStart: 0,
-                audioDuration: safeBufferDuration,
-                effectiveDuration: safeBufferDuration,
+                audioDuration: safeDuration,
+                effectiveDuration: safeDuration,
             };
         }
 
@@ -322,6 +423,16 @@ export class WaveformEngine {
             return timing.effectiveDuration;
         }
         return 1;
+    }
+
+    private static resolveSampleRate(buffer: AudioBuffer): number {
+        const rawSampleRate = Number(buffer.sampleRate);
+        if (Number.isFinite(rawSampleRate) && rawSampleRate > 0) {
+            return rawSampleRate;
+        }
+
+        const rawDuration = Number(buffer.duration);
+        return rawDuration > 0 ? Math.max(1, buffer.length / rawDuration) : Math.max(1, buffer.length);
     }
 
     drawWaveform(

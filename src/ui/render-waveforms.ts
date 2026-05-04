@@ -748,14 +748,18 @@ export function buildWaveformNormalizationCacheKey(ctx: any, surfaceMetadata: an
         const sourceKey = runtimes.map((runtime: TrackRuntime, index: number) => {
             const duration = runtime.buffer ? runtime.buffer.duration : 0;
             const timingDuration = runtime.timing ? runtime.timing.effectiveDuration : 0;
+            const summarySampleCount = runtime.waveformSummary ? runtime.waveformSummary.sampleCount : 0;
             const selected = sourceRuntimes.indexOf(runtime) !== -1 ? 1 : 0;
             return [
                 index,
                 selected,
+                runtime.activeVariant,
+                runtime.sourceIndex,
                 runtime.state.solo ? 1 : 0,
                 Math.round(runtime.state.volume * 1000),
                 Math.round(duration * 1000),
                 Math.round(timingDuration * 1000),
+                summarySampleCount,
             ].join(':');
         }).join('|');
 

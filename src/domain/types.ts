@@ -200,10 +200,24 @@ export interface TrackState {
 
 export type TrackSourceVariant = 'base' | 'synced';
 
+export interface WaveformSummaryLevel {
+    samplesPerEntry: number;
+    peaks: Float32Array;
+    rms: Float32Array;
+}
+
+export interface WaveformSummary {
+    duration: number;
+    sampleRate: number;
+    sampleCount: number;
+    levels: WaveformSummaryLevel[];
+}
+
 export interface TrackLoadedSource {
     buffer: AudioBuffer | null;
     timing: TrackTiming | null;
     sourceIndex: number;
+    waveformSummary: WaveformSummary | null;
 }
 
 export interface TrackRuntime {
@@ -220,7 +234,7 @@ export interface TrackRuntime {
     syncedSource: TrackLoadedSource | null;
     successful: boolean;
     errored: boolean;
-    waveformCache: Map<string, Float32Array>;
+    waveformSummary: WaveformSummary | null;
 }
 
 export interface LoopState {

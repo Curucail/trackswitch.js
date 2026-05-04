@@ -35,10 +35,11 @@ export function createTrackRuntime(definition: TrackDefinition, _index: number):
             buffer: null,
             timing: null,
             sourceIndex: -1,
+            waveformSummary: null,
         },
         syncedSource: null,
         successful: false,
         errored: false,
-        waveformCache: new Map<string, Float32Array>(),
+        waveformSummary: null,
     };
 }

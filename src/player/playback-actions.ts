@@ -61,9 +61,10 @@ export function load(ctx: any): any {
                     buffer: null,
                     timing: null,
                     sourceIndex: -1,
+                    waveformSummary: null,
                 };
                 runtime.syncedSource = null;
-                runtime.waveformCache.clear();
+                runtime.waveformSummary = null;
             });
 
             await this.audioEngine.loadTracks(this.runtimes);
@@ -71,6 +72,21 @@ export function load(ctx: any): any {
             if (this.isDestroyed) {
                 return;
             }
+
+            this.runtimes.forEach((runtime: TrackRuntime) => {
+                if (runtime.baseSource.buffer) {
+                    runtime.baseSource.waveformSummary = this.waveformEngine.createSummary(runtime.baseSource.buffer);
+                }
+
+                if (runtime.syncedSource && runtime.syncedSource.buffer) {
+                    runtime.syncedSource.waveformSummary = this.waveformEngine.createSummary(runtime.syncedSource.buffer);
+                }
+
+                const activeSource = runtime.activeVariant === 'synced'
+                    ? runtime.syncedSource
+                    : runtime.baseSource;
+                runtime.waveformSummary = activeSource ? activeSource.waveformSummary : null;
+            });
 
             this.isLoading = false;
             this.renderer.setOverlayLoading(false);

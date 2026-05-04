@@ -367,12 +367,14 @@ export class AudioEngine {
             buffer: baseSelectionResult.selection.buffer,
             timing: baseSelectionResult.selection.timing,
             sourceIndex: baseSelectionResult.selection.sourceIndex,
+            waveformSummary: null,
         };
 
         runtime.activeVariant = 'base';
         runtime.buffer = runtime.baseSource.buffer;
         runtime.timing = runtime.baseSource.timing;
         runtime.sourceIndex = runtime.baseSource.sourceIndex;
+        runtime.waveformSummary = runtime.baseSource.waveformSummary;
 
         const alignmentSources = runtime.definition.alignment?.synchronizedSources;
         const shouldLoadSyncedSources = this.features.mode === 'alignment'
@@ -392,12 +394,12 @@ export class AudioEngine {
                 buffer: syncedSelectionResult.selection.buffer,
                 timing: syncedSelectionResult.selection.timing,
                 sourceIndex: syncedSelectionResult.selection.sourceIndex,
+                waveformSummary: null,
             };
         } else {
             runtime.syncedSource = null;
         }
 
-        runtime.waveformCache.clear();
         runtime.errored = false;
         runtime.successful = true;
 

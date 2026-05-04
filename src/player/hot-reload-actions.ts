@@ -142,6 +142,21 @@ export async function updateInit(
         stagedRuntimes = nextRuntimes;
         await controller.audioEngine.loadTracks(nextRuntimes);
 
+        nextRuntimes.forEach((runtime: TrackRuntime) => {
+            if (runtime.baseSource.buffer) {
+                runtime.baseSource.waveformSummary = controller.waveformEngine.createSummary(runtime.baseSource.buffer);
+            }
+
+            if (runtime.syncedSource && runtime.syncedSource.buffer) {
+                runtime.syncedSource.waveformSummary = controller.waveformEngine.createSummary(runtime.syncedSource.buffer);
+            }
+
+            const activeSource = runtime.activeVariant === 'synced'
+                ? runtime.syncedSource
+                : runtime.baseSource;
+            runtime.waveformSummary = activeSource ? activeSource.waveformSummary : null;
+        });
+
         const erroredTracks = nextRuntimes.filter(function(runtime) {
             return runtime.errored;
         });

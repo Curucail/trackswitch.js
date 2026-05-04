@@ -181,7 +181,7 @@ export function setRuntimeActiveVariant(ctx: any, runtime: any, variant: any): a
         runtime.buffer = source.buffer;
         runtime.timing = source.timing;
         runtime.sourceIndex = source.sourceIndex;
-        runtime.waveformCache.clear();
+        runtime.waveformSummary = source.waveformSummary;
         return true;
     }).call(ctx, runtime, variant);
 }
