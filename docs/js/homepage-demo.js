@@ -190,9 +190,10 @@
       !playerRoot ||
       !controlsRoot ||
       typeof window.TrackSwitch === 'undefined' ||
-      typeof window.TrackSwitch.createTrackSwitch !== 'function' ||
+      typeof window.TrackSwitch.createDefaultTrackSwitch !== 'function' ||
+      typeof window.TrackSwitch.createAlignmentTrackSwitch !== 'function' ||
       typeof window.TrackSwitchInteractive === 'undefined' ||
-      typeof window.TrackSwitchInteractive.createInteractiveTrackSwitch !== 'function'
+      typeof window.TrackSwitchInteractive.createAlignmentInteractiveTrackSwitch !== 'function'
     ) {
       return;
     }
@@ -639,20 +640,16 @@
     function renderInteractiveQuickstartSnippet() {
       var snippetLines = [
         '<link rel="stylesheet" href="dist/css/trackswitch.min.css" />',
-        '<script src="dist/js/trackswitch-interactive.js"></script>',
+        '<script src="dist/js/trackswitch-alignment-interactive.js"></script>',
         '',
-        '<div id="player"></div>',
+        '<trackswitch-alignment-interactive id="player"></trackswitch-alignment-interactive>',
         '',
         '<script>',
         "document.addEventListener('DOMContentLoaded', function () {",
-        "  var player = TrackSwitchInteractive.createInteractiveTrackSwitch(",
-        "    document.getElementById('player'),",
-        '    {',
-        "      workerUrl: 'dist/js/trackswitch-alignment-worker.js',",
-        "      alignmentMethod: 'mrmsdtw',",
-        '    }',
-        '  );',
-        '  player.initialize();',
+        "  document.getElementById('player').init = {",
+        "    workerUrl: 'dist/js/trackswitch-alignment-worker.js',",
+        "    algorithm: 'mrmsdtw',",
+        '  };',
         '});',
         '</script>',
       ];
@@ -674,7 +671,7 @@
           : '';
 
       snippetLines = [
-        '<script src="dist/trackswitch.js"></script>',
+        '<script src="dist/js/trackswitch-player.js"></script>',
         '',
         '<trackswitch-player id="player"></trackswitch-player>',
         '',
@@ -724,7 +721,6 @@
       snippetLines = snippetLines.concat([
         '    ],',
         '    features: {',
-        "      mode: 'default',",
         '      looping: ' + Boolean(model.looping) + ',',
         '      repeat: ' + Boolean(model.repeatEnabled) + ',',
         '      globalVolume: ' + Boolean(model.globalVolume) + ',',
@@ -762,9 +758,9 @@
           : '';
 
       snippetLines = [
-        '<script src="dist/trackswitch.js"></script>',
+        '<script src="dist/js/trackswitch-alignment-player.js"></script>',
         '',
-        '<trackswitch-player id="player"></trackswitch-player>',
+        '<trackswitch-alignment-player id="player"></trackswitch-alignment-player>',
         '',
         '<script>',
         "document.addEventListener('DOMContentLoaded', function () {",
@@ -850,7 +846,6 @@
       snippetLines = snippetLines.concat([
         '    ],',
         '    features: {',
-        "      mode: 'alignment',",
         '      looping: ' + Boolean(model.looping) + ',',
         '      repeat: ' + Boolean(model.repeatEnabled) + ',',
         '      globalVolume: ' + Boolean(model.globalVolume) + ',',
@@ -922,7 +917,7 @@
       );
       escaped = escaped.replace(/\b(true|false)\b/g, '<span class="ts-code-bool">$1</span>');
       escaped = escaped.replace(
-        /\b(document|TrackSwitch|function|addEventListener|getElementById|createTrackSwitch)\b/g,
+        /\b(document|TrackSwitch|function|addEventListener|getElementById|createDefaultTrackSwitch|createAlignmentTrackSwitch|createAlignmentInteractiveTrackSwitch|createInteractiveTrackSwitch)\b/g,
         '<span class="ts-code-keyword">$1</span>'
       );
       escaped = escaped.replace(/\b([a-zA-Z_$][a-zA-Z0-9_$]*)\b(?=\s*:)/g, '<span class="ts-code-key">$1</span>');
@@ -1094,7 +1089,6 @@
       init = {
         ui: uiConfig,
         features: {
-          mode: currentMode,
           looping: model.looping,
           repeat: model.repeatEnabled,
           globalVolume: model.globalVolume,
@@ -1194,7 +1188,7 @@
 
       playerRoot.innerHTML = '';
       if (isInteractiveMode(currentMode)) {
-        controller = window.TrackSwitchInteractive.createInteractiveTrackSwitch(
+        controller = window.TrackSwitchInteractive.createAlignmentInteractiveTrackSwitch(
           playerRoot,
           buildInitFromModel(model)
         );
@@ -1203,10 +1197,17 @@
         return;
       }
 
-      controller = window.TrackSwitch.createTrackSwitch(
-        playerRoot,
-        buildInitFromModel(model)
-      );
+      if (isAlignmentMode(currentMode)) {
+        controller = window.TrackSwitch.createAlignmentTrackSwitch(
+          playerRoot,
+          buildInitFromModel(model)
+        );
+      } else {
+        controller = window.TrackSwitch.createDefaultTrackSwitch(
+          playerRoot,
+          buildInitFromModel(model)
+        );
+      }
       controller.setRepeat(Boolean(model.repeatEnabled));
       scheduleGuideArrowUpdate();
 

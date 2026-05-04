@@ -54,6 +54,38 @@ const devConfig = {
 } satisfies UserConfig;
 
 const buildTargets = {
+    default: {
+        build: {
+            ...commonBuild,
+            outDir: 'dist/js',
+            assetsInlineLimit: Number.MAX_SAFE_INTEGER,
+            lib: {
+                entry: resolve(rootDir, 'src/default-browser.ts'),
+                name: 'TrackSwitchDefault',
+                formats: ['iife'],
+                fileName: () => 'trackswitch-player.js',
+            },
+            rollupOptions: {
+                output: iifeOutput,
+            },
+        },
+    },
+    alignment: {
+        build: {
+            ...commonBuild,
+            outDir: 'dist/js',
+            assetsInlineLimit: Number.MAX_SAFE_INTEGER,
+            lib: {
+                entry: resolve(rootDir, 'src/alignment-browser.ts'),
+                name: 'TrackSwitchAlignment',
+                formats: ['iife'],
+                fileName: () => 'trackswitch-alignment-player.js',
+            },
+            rollupOptions: {
+                output: iifeOutput,
+            },
+        },
+    },
     browser: {
         build: {
             ...commonBuild,
@@ -78,7 +110,7 @@ const buildTargets = {
                 entry: resolve(rootDir, 'src/interactive-browser.ts'),
                 name: 'TrackSwitchInteractive',
                 formats: ['iife'],
-                fileName: () => 'trackswitch-interactive.js',
+                fileName: () => 'trackswitch-alignment-interactive.js',
             },
             rollupOptions: {
                 output: iifeOutput,

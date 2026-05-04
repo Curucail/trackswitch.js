@@ -1,7 +1,13 @@
 import { defineComponent, h, onBeforeUnmount, onMounted, ref, watch, type PropType } from 'vue';
-import { defineTrackswitchElement, TRACKSWITCH_DOM_EVENTS } from './element';
+import {
+    defineTrackswitchAlignmentElement,
+    defineTrackswitchDefaultElement,
+    TRACKSWITCH_DOM_EVENTS,
+} from './element';
+import { defineTrackswitchInteractiveElement } from './interactive/interactive-element';
 import type { TrackSwitchController, TrackSwitchEventMap, TrackSwitchInit } from './domain/types';
 import type { TrackswitchDomEventName, TrackswitchPlayer } from './element';
+import type { InteractiveTrackSwitchController, InteractiveTrackSwitchInit } from './interactive/types';
 
 type TrackSwitchVueEventHandlers = {
     loaded: (payload: TrackSwitchEventMap['loaded']) => true;
@@ -15,35 +21,148 @@ export interface TrackSwitchVueExpose {
     controller: TrackSwitchController | null;
 }
 
-export const TrackSwitchPlayer = defineComponent({
-    name: 'TrackSwitchPlayer',
+export interface TrackSwitchInteractiveVueExpose {
+    element: HTMLElement | null;
+    controller: InteractiveTrackSwitchController | null;
+}
+
+function createTrackSwitchVueComponent(
+    componentName: string,
+    tagName: 'trackswitch-player' | 'trackswitch-alignment-player'
+) {
+    return defineComponent({
+        name: componentName,
+        props: {
+            init: {
+                type: Object as PropType<TrackSwitchInit>,
+                required: true,
+            },
+        },
+        emits: {
+            loaded: (_payload: TrackSwitchEventMap['loaded']) => true,
+            error: (_payload: TrackSwitchEventMap['error']) => true,
+            position: (_payload: TrackSwitchEventMap['position']) => true,
+            trackState: (_payload: TrackSwitchEventMap['trackState']) => true,
+        } satisfies TrackSwitchVueEventHandlers,
+        setup(
+            props: { init: TrackSwitchInit },
+            {
+                emit,
+                expose,
+                attrs,
+            }: {
+                emit: (eventName: keyof TrackSwitchVueEventHandlers, payload: any) => void;
+                expose: (exposed: TrackSwitchVueExpose) => void;
+                attrs: Record<string, unknown>;
+            }
+        ) {
+            const elementRef = ref<TrackswitchPlayer | null>(null);
+
+            const controller = function(): TrackSwitchController | null {
+                return elementRef.value?.controller || null;
+            };
+
+            expose({
+                get element() {
+                    return elementRef.value;
+                },
+                get controller() {
+                    return controller();
+                },
+            } satisfies TrackSwitchVueExpose);
+
+            onMounted(() => {
+                if (tagName === 'trackswitch-alignment-player') {
+                    defineTrackswitchAlignmentElement();
+                } else {
+                    defineTrackswitchDefaultElement();
+                }
+                if (elementRef.value) {
+                    elementRef.value.init = props.init;
+                }
+            });
+
+            watch(
+                () => props.init,
+                (nextInit) => {
+                    if (elementRef.value) {
+                        elementRef.value.init = nextInit;
+                    }
+                },
+                { deep: false }
+            );
+
+            const listeners: Array<() => void> = [];
+            onMounted(() => {
+                const element = elementRef.value;
+                if (!element) {
+                    return;
+                }
+
+                const bind = function(
+                    eventName: TrackswitchDomEventName,
+                    vueEventName: keyof TrackSwitchVueEventHandlers
+                ) {
+                    const listener = function(event: Event) {
+                        emit(vueEventName, (event as CustomEvent).detail);
+                    };
+                    element.addEventListener(eventName, listener);
+                    listeners.push(function unsubscribe() {
+                        element.removeEventListener(eventName, listener);
+                    });
+                };
+
+                bind(TRACKSWITCH_DOM_EVENTS.loaded, 'loaded');
+                bind(TRACKSWITCH_DOM_EVENTS.error, 'error');
+                bind(TRACKSWITCH_DOM_EVENTS.position, 'position');
+                bind(TRACKSWITCH_DOM_EVENTS.trackState, 'trackState');
+            });
+
+            onBeforeUnmount(() => {
+                listeners.forEach((unsubscribe) => unsubscribe());
+                listeners.length = 0;
+            });
+
+            return function render() {
+                return h(tagName, {
+                    ...attrs,
+                    ref: elementRef,
+                });
+            };
+        },
+    });
+}
+
+export const TrackSwitchPlayer = createTrackSwitchVueComponent('TrackSwitchPlayer', 'trackswitch-player');
+export const TrackSwitchAlignmentPlayer = createTrackSwitchVueComponent(
+    'TrackSwitchAlignmentPlayer',
+    'trackswitch-alignment-player'
+);
+
+export const TrackSwitchAlignmentInteractive = defineComponent({
+    name: 'TrackSwitchAlignmentInteractive',
     props: {
         init: {
-            type: Object as PropType<TrackSwitchInit>,
-            required: true,
+            type: Object as PropType<InteractiveTrackSwitchInit>,
+            required: false,
         },
     },
-    emits: {
-        loaded: (_payload: TrackSwitchEventMap['loaded']) => true,
-        error: (_payload: TrackSwitchEventMap['error']) => true,
-        position: (_payload: TrackSwitchEventMap['position']) => true,
-        trackState: (_payload: TrackSwitchEventMap['trackState']) => true,
-    } satisfies TrackSwitchVueEventHandlers,
     setup(
-        props: { init: TrackSwitchInit },
+        props: { init?: InteractiveTrackSwitchInit },
         {
-            emit,
             expose,
             attrs,
         }: {
-            emit: (eventName: keyof TrackSwitchVueEventHandlers, payload: any) => void;
-            expose: (exposed: TrackSwitchVueExpose) => void;
+            expose: (exposed: TrackSwitchInteractiveVueExpose) => void;
             attrs: Record<string, unknown>;
         }
     ) {
-        const elementRef = ref<TrackswitchPlayer | null>(null);
+        const elementRef = ref<(HTMLElement & {
+            init?: InteractiveTrackSwitchInit;
+            controller?: InteractiveTrackSwitchController | null;
+        }) | null>(null);
 
-        const controller = function(): TrackSwitchController | null {
+        const controller = function(): InteractiveTrackSwitchController | null {
             return elementRef.value?.controller || null;
         };
 
@@ -54,12 +173,12 @@ export const TrackSwitchPlayer = defineComponent({
             get controller() {
                 return controller();
             },
-        } satisfies TrackSwitchVueExpose);
+        } satisfies TrackSwitchInteractiveVueExpose);
 
         onMounted(() => {
-            defineTrackswitchElement();
+            defineTrackswitchInteractiveElement();
             if (elementRef.value) {
-                elementRef.value.init = props.init;
+                elementRef.value.init = props.init || {};
             }
         });
 
@@ -67,45 +186,14 @@ export const TrackSwitchPlayer = defineComponent({
             () => props.init,
             (nextInit) => {
                 if (elementRef.value) {
-                    elementRef.value.init = nextInit;
+                    elementRef.value.init = nextInit || {};
                 }
             },
             { deep: false }
         );
 
-        const listeners: Array<() => void> = [];
-        onMounted(() => {
-            const element = elementRef.value;
-            if (!element) {
-                return;
-            }
-
-            const bind = function(
-                eventName: TrackswitchDomEventName,
-                vueEventName: keyof TrackSwitchVueEventHandlers
-            ) {
-                const listener = function(event: Event) {
-                    emit(vueEventName, (event as CustomEvent).detail);
-                };
-                element.addEventListener(eventName, listener);
-                listeners.push(function unsubscribe() {
-                    element.removeEventListener(eventName, listener);
-                });
-            };
-
-            bind(TRACKSWITCH_DOM_EVENTS.loaded, 'loaded');
-            bind(TRACKSWITCH_DOM_EVENTS.error, 'error');
-            bind(TRACKSWITCH_DOM_EVENTS.position, 'position');
-            bind(TRACKSWITCH_DOM_EVENTS.trackState, 'trackState');
-        });
-
-        onBeforeUnmount(() => {
-            listeners.forEach((unsubscribe) => unsubscribe());
-            listeners.length = 0;
-        });
-
         return function render() {
-            return h('trackswitch-player', {
+            return h('trackswitch-alignment-interactive', {
                 ...attrs,
                 ref: elementRef,
             });

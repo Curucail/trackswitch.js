@@ -1,9 +1,18 @@
-import { defineTrackswitchElement, TRACKSWITCH_DOM_EVENTS } from './element';
+import {
+    defineTrackswitchAlignmentElement,
+    defineTrackswitchDefaultElement,
+    TRACKSWITCH_DOM_EVENTS,
+} from './element';
+import { defineTrackswitchInteractiveElement } from './interactive/interactive-element';
 import type { TrackSwitchController, TrackSwitchEventMap, TrackSwitchInit } from './domain/types';
 import type { TrackswitchDomEventName, TrackswitchPlayer } from './element';
+import type { InteractiveTrackSwitchController, InteractiveTrackSwitchInit } from './interactive/types';
+
+export type TrackswitchSvelteVariant = 'default' | 'alignment' | 'alignment-interactive';
 
 export interface TrackswitchSvelteOptions {
-    init: TrackSwitchInit;
+    init: TrackSwitchInit | InteractiveTrackSwitchInit;
+    variant?: TrackswitchSvelteVariant;
     onLoaded?: (payload: TrackSwitchEventMap['loaded']) => void;
     onError?: (payload: TrackSwitchEventMap['error']) => void;
     onPosition?: (payload: TrackSwitchEventMap['position']) => void;
@@ -15,8 +24,13 @@ export interface TrackswitchSvelteAction {
     destroy(): void;
 }
 
+type TrackswitchSvelteElement = HTMLElement & {
+    init?: TrackSwitchInit | InteractiveTrackSwitchInit;
+    controller?: TrackSwitchController | InteractiveTrackSwitchController | null;
+};
+
 function bindEvent(
-    element: TrackswitchPlayer,
+    element: HTMLElement,
     eventName: TrackswitchDomEventName,
     getHandler: () => ((payload: any) => void) | undefined
 ): () => void {
@@ -30,11 +44,25 @@ function bindEvent(
     };
 }
 
+function defineElementForVariant(variant: TrackswitchSvelteVariant | undefined): void {
+    if (variant === 'alignment') {
+        defineTrackswitchAlignmentElement();
+        return;
+    }
+
+    if (variant === 'alignment-interactive') {
+        defineTrackswitchInteractiveElement();
+        return;
+    }
+
+    defineTrackswitchDefaultElement();
+}
+
 export function useTrackswitch(
-    node: TrackswitchPlayer,
+    node: TrackswitchSvelteElement,
     options: TrackswitchSvelteOptions
 ): TrackswitchSvelteAction {
-    defineTrackswitchElement();
+    defineElementForVariant(options.variant);
 
     let currentOptions = options;
     node.init = currentOptions.init;
@@ -48,6 +76,7 @@ export function useTrackswitch(
 
     return {
         update(nextOptions: TrackswitchSvelteOptions) {
+            defineElementForVariant(nextOptions.variant);
             currentOptions = nextOptions;
             node.init = nextOptions.init;
         },
@@ -59,4 +88,10 @@ export function useTrackswitch(
 
 export function getTrackswitchController(node: TrackswitchPlayer): TrackSwitchController | null {
     return node.controller;
+}
+
+export function getTrackswitchInteractiveController(
+    node: TrackswitchSvelteElement
+): InteractiveTrackSwitchController | null {
+    return (node.controller as InteractiveTrackSwitchController | null) || null;
 }

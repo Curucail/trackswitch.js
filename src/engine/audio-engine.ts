@@ -69,12 +69,14 @@ function clampPan(value: number): number {
 export class AudioEngine {
     private context: AudioContext | null;
     private readonly features: TrackSwitchFeatures;
+    private readonly alignmentEnabled: boolean;
     private gainNodeMaster: GainNode | null;
     private gainNodeVolume: GainNode | null;
     private masterVolume: number;
 
-    constructor(features: TrackSwitchFeatures, initialVolume: number) {
+    constructor(features: TrackSwitchFeatures, initialVolume: number, alignmentEnabled = false) {
         this.features = features;
+        this.alignmentEnabled = alignmentEnabled;
         this.context = null;
         this.gainNodeMaster = null;
         this.gainNodeVolume = null;
@@ -377,7 +379,7 @@ export class AudioEngine {
         runtime.waveformSummary = runtime.baseSource.waveformSummary;
 
         const alignmentSources = runtime.definition.alignment?.synchronizedSources;
-        const shouldLoadSyncedSources = this.features.mode === 'alignment'
+        const shouldLoadSyncedSources = this.alignmentEnabled
             && Array.isArray(alignmentSources)
             && alignmentSources.length > 0;
 
@@ -457,7 +459,7 @@ export class AudioEngine {
             collected.push(...this.filterPlayableSources(runtime.definition.sources || []));
 
             const alignmentSources = runtime.definition.alignment?.synchronizedSources;
-            const shouldLoadSyncedSources = this.features.mode === 'alignment'
+            const shouldLoadSyncedSources = this.alignmentEnabled
                 && Array.isArray(alignmentSources)
                 && alignmentSources.length > 0;
 

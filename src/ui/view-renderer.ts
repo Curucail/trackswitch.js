@@ -11,7 +11,6 @@ import { TrackTimelineProjector, WaveformEngine } from '../engine/waveform-engin
 import type { ScaleLinear, Selection } from 'd3';
 import * as viewRendererCore from './render-layout';
 import * as viewRendererWaveform from './render-waveforms';
-import * as viewRendererWarping from './render-warping-matrix';
 
 type SvgSelection = Selection<SVGSVGElement, unknown, null, undefined>;
 type GroupSelection = Selection<SVGGElement, unknown, null, undefined>;
@@ -281,32 +280,36 @@ public queryAll(selector: string): HTMLElement[] {
         return viewRendererCore.queryAll(this, selector);
     }
 
+public isAlignmentMode(): boolean {
+        return false;
+    }
+
 public getWarpingMatrixPathStrokeWidth(): number {
-        return viewRendererWarping.getWarpingMatrixPathStrokeWidth(this);
+        return 3;
     }
 
 public getWarpingMatrixLocalTempoWindowSeconds(host: WarpingMatrixHostMetadata): number {
-        return viewRendererWarping.getWarpingMatrixLocalTempoWindowSeconds(this, host);
+        return host.tempoWindowSeconds;
     }
 
 public getWarpingMatrixLocalTempoSmoothingSeconds(host: WarpingMatrixHostMetadata): number {
-        return viewRendererWarping.getWarpingMatrixLocalTempoSmoothingSeconds(this, host);
+        return host.tempoSmoothingSeconds;
     }
 
 public updateWarpingMatrixTempoControlLabels(host: WarpingMatrixHostMetadata): void {
-        return viewRendererWarping.updateWarpingMatrixTempoControlLabels(this, host);
+        void host;
     }
 
 public persistWarpingMatrixTempoControls(host: WarpingMatrixHostMetadata): void {
-        return viewRendererWarping.persistWarpingMatrixTempoControls(this, host);
+        void host;
     }
 
 public getWarpingMatrixSquarePlotSize(plot: WarpingMatrixPlotState): number {
-        return viewRendererWarping.getWarpingMatrixSquarePlotSize(this, plot);
+        return Math.max(1, Math.min(plot.innerWidth, plot.innerHeight));
     }
 
 public resolveWarpingMatrixColumnColor(_columnKey: string, _columnOrder: string[]): string {
-        return viewRendererWarping.resolveWarpingMatrixColumnColor(this, _columnKey, _columnOrder);
+        return '#ED8C01';
     }
 
 public getCanvasPixelRatio(): number {
@@ -383,7 +386,7 @@ getPreparedSheetMusicHosts(): SheetMusicHostConfig[] {
     }
 
 public wrapWarpingMatrixContainers(): void {
-        return viewRendererWarping.wrapWarpingMatrixContainers(this);
+        return;
     }
 
 public createWarpingMatrixPlotState(
@@ -391,7 +394,10 @@ public createWarpingMatrixPlotState(
         width: number,
         height: number
     ): WarpingMatrixPlotState {
-        return viewRendererWarping.createWarpingMatrixPlotState(this, plotHost, width, height);
+        void plotHost;
+        void width;
+        void height;
+        throw new Error('warpingMatrix requires the alignment player variant.');
     }
 
 public createWarpingTempoPlotState(
@@ -399,7 +405,10 @@ public createWarpingTempoPlotState(
         width: number,
         height: number
     ): WarpingTempoPlotState {
-        return viewRendererWarping.createWarpingTempoPlotState(this, plotHost, width, height);
+        void plotHost;
+        void width;
+        void height;
+        throw new Error('warpingMatrix requires the alignment player variant.');
     }
 
 public applyWarpingMatrixPlotDimensions(
@@ -407,7 +416,9 @@ public applyWarpingMatrixPlotDimensions(
         width: number,
         height: number
     ): void {
-        return viewRendererWarping.applyWarpingMatrixPlotDimensions(this, plot, width, height);
+        void plot;
+        void width;
+        void height;
     }
 
 public applyWarpingTempoPlotDimensions(
@@ -415,7 +426,9 @@ public applyWarpingTempoPlotDimensions(
         width: number,
         height: number
     ): void {
-        return viewRendererWarping.applyWarpingTempoPlotDimensions(this, plot, width, height);
+        void plot;
+        void width;
+        void height;
     }
 
 public isPointerInsidePlotArea(
@@ -426,84 +439,104 @@ public isPointerInsidePlotArea(
         clientX: number,
         clientY: number
     ): boolean {
-        return viewRendererWarping.isPointerInsidePlotArea(this, plotHost, margins, innerWidth, innerHeight, clientX, clientY);
+        void plotHost;
+        void margins;
+        void innerWidth;
+        void innerHeight;
+        void clientX;
+        void clientY;
+        return false;
     }
 
 public onWarpingMatrixPointerDown(host: WarpingMatrixHostMetadata, event: PointerEvent): void {
-        return viewRendererWarping.onWarpingMatrixPointerDown(this, host, event);
+        void host;
+        void event;
     }
 
 public onWarpingMatrixPointerMove(host: WarpingMatrixHostMetadata, event: PointerEvent): void {
-        return viewRendererWarping.onWarpingMatrixPointerMove(this, host, event);
+        void host;
+        void event;
     }
 
 public onWarpingMatrixPointerUp(host: WarpingMatrixHostMetadata, event: PointerEvent): void {
-        return viewRendererWarping.onWarpingMatrixPointerUp(this, host, event);
+        void host;
+        void event;
     }
 
 public seekWarpingMatrixFromPointerX(host: WarpingMatrixHostMetadata, clientX: number): void {
-        return viewRendererWarping.seekWarpingMatrixFromPointerX(this, host, clientX);
+        void host;
+        void clientX;
     }
 
 public onWarpingTempoPointerDown(host: WarpingMatrixHostMetadata, event: PointerEvent): void {
-        return viewRendererWarping.onWarpingTempoPointerDown(this, host, event);
+        void host;
+        void event;
     }
 
 public onWarpingTempoWheel(host: WarpingMatrixHostMetadata, event: WheelEvent): void {
-        return viewRendererWarping.onWarpingTempoWheel(this, host, event);
+        void host;
+        void event;
     }
 
 public seekWarpingMatrixFromTempoPointerX(host: WarpingMatrixHostMetadata, clientX: number): void {
-        return viewRendererWarping.seekWarpingMatrixFromTempoPointerX(this, host, clientX);
+        void host;
+        void clientX;
     }
 
 public getPrimaryWarpingSeriesData(host: WarpingMatrixHostMetadata): WarpingMatrixPathSeriesData | null {
-        return viewRendererWarping.getPrimaryWarpingSeriesData(this, host);
+        void host;
+        return null;
     }
 
 public getPrimaryTempoSeries(host: WarpingMatrixHostMetadata): WarpingMatrixTempoPoint[] {
-        return viewRendererWarping.getPrimaryTempoSeries(this, host);
+        void host;
+        return [];
     }
 
 public getPrimaryTempoSeriesData(host: WarpingMatrixHostMetadata): WarpingMatrixTempoSeriesData | null {
-        return viewRendererWarping.getPrimaryTempoSeriesData(this, host);
+        void host;
+        return null;
     }
 
 public ensureWarpingLayout(host: WarpingMatrixHostMetadata): void {
-        return viewRendererWarping.ensureWarpingLayout(this, host);
+        void host;
     }
 
 public applyWarpingMatrixContext(
         host: WarpingMatrixHostMetadata,
         context: WarpingMatrixRenderContext
     ): void {
-        return viewRendererWarping.applyWarpingMatrixContext(this, host, context);
+        void host;
+        void context;
     }
 
 public updateWarpingMatrix(
         host: WarpingMatrixHostMetadata,
         context: WarpingMatrixRenderContext | undefined
     ): void {
-        return viewRendererWarping.updateWarpingMatrix(this, host, context);
+        void host;
+        void context;
     }
 
 public updateWarpingMatrixPlaybackState(
         host: WarpingMatrixHostMetadata,
         context: WarpingMatrixRenderContext | undefined
     ): void {
-        return viewRendererWarping.updateWarpingMatrixPlaybackState(this, host, context);
+        void host;
+        void context;
     }
 
 public renderWarpingMatrixPathPlot(host: WarpingMatrixHostMetadata, pathStrokeWidth: number): void {
-        return viewRendererWarping.renderWarpingMatrixPathPlot(this, host, pathStrokeWidth);
+        void host;
+        void pathStrokeWidth;
     }
 
 public renderWarpingMatrixPlayhead(host: WarpingMatrixHostMetadata): void {
-        return viewRendererWarping.renderWarpingMatrixPlayhead(this, host);
+        void host;
     }
 
 public renderWarpingMatrixTempoPlot(host: WarpingMatrixHostMetadata): void {
-        return viewRendererWarping.renderWarpingMatrixTempoPlot(this, host);
+        void host;
     }
 
 public resolveCenteredWarpingWindow(
@@ -511,29 +544,39 @@ public resolveCenteredWarpingWindow(
         windowSeconds: number,
         _maxTime: number
     ): [number, number] {
-        return viewRendererWarping.resolveCenteredWarpingWindow(this, center, windowSeconds, _maxTime);
+        const halfWindow = Math.max(0, windowSeconds) / 2;
+        const maxTime = Math.max(0, _maxTime);
+        const start = Math.max(0, Math.min(center - halfWindow, maxTime));
+        const end = Math.max(start, Math.min(center + halfWindow, maxTime));
+        return [start, end];
     }
 
 public buildWarpingMatrixData(
         trackSeries: WarpingMatrixTrackSeries[],
         referenceDuration: number
     ): WarpingMatrixMatrixData {
-        return viewRendererWarping.buildWarpingMatrixData(this, trackSeries, referenceDuration);
+        void trackSeries;
+        void referenceDuration;
+        return { byColumn: new Map() };
     }
 
 public buildWarpingTempoData(
         matrixData: WarpingMatrixMatrixData | null,
         smoothingSeconds: number
     ): WarpingMatrixTempoData {
-        return viewRendererWarping.buildWarpingTempoData(this, matrixData, smoothingSeconds);
+        void matrixData;
+        void smoothingSeconds;
+        return { byColumn: new Map() };
     }
 
 public interpolateWarpingTrackTime(points: WarpingMatrixPathPoint[], referenceTime: number): number {
-        return viewRendererWarping.interpolateWarpingTrackTime(this, points, referenceTime);
+        void points;
+        return referenceTime;
     }
 
 public interpolateWarpingReferenceTime(pointsByTrackTime: WarpingMatrixPathPoint[], trackTime: number): number {
-        return viewRendererWarping.interpolateWarpingReferenceTime(this, pointsByTrackTime, trackTime);
+        void pointsByTrackTime;
+        return trackTime;
     }
 
 public createWaveformTimingNode(overlay: HTMLElement): HTMLElement {

@@ -14,9 +14,9 @@ import { InteractiveTrackSwitchControllerImpl } from './interactive-controller';
  *
  * @example
  * ```ts
- * import { createInteractiveTrackSwitch } from 'trackswitch/interactive';
+ * import { createAlignmentInteractiveTrackSwitch } from 'trackswitch/interactive';
  *
- * const player = createInteractiveTrackSwitch(
+ * const player = createAlignmentInteractiveTrackSwitch(
  *   document.getElementById('player')!,
  *   { workerUrl: './trackswitch-alignment-worker.js' }
  * );
@@ -29,3 +29,5 @@ export function createInteractiveTrackSwitch(
 ): InteractiveTrackSwitchController {
     return new InteractiveTrackSwitchControllerImpl(rootElement, init || {});
 }
+
+export const createAlignmentInteractiveTrackSwitch = createInteractiveTrackSwitch;

@@ -1,5 +1,4 @@
 import { TrackRuntime } from '../domain/types';
-import { buildMeasureMapFromColumns } from '../shared/measure-map';
 import { playerStateReducer } from '../domain/state';
 import { clamp } from '../shared/math';
 import { getSeekMetrics } from '../shared/seek';
@@ -104,7 +103,7 @@ export function load(ctx: any): any {
             this.alignmentContext = null;
             this.alignmentPlaybackTrackIndex = null;
 
-            if (this.features.mode === 'alignment') {
+            if (this.isAlignmentMode()) {
                 const alignmentError = await this.initializeAlignmentMode();
                 if (alignmentError) {
                     this.handleError(alignmentError);
@@ -539,61 +538,7 @@ export function initializeSheetMusic(ctx: any): any {
             cursorAlpha: number;
         }) => {
             const measureColumn = typeof host.measureColumn === 'string' ? host.measureColumn.trim() : '';
-            const measureMapsPromise = measureColumn
-                ? (
-                    !this.alignmentConfig
-                        ? Promise.reject(
-                            new Error(
-                                'Sheet music measure sync requires init.alignment when sheetMusic.measureColumn is set.'
-                            )
-                        )
-                        : this.loadAlignmentCsv()
-                ).then((parsedCsv: { headers: string[]; rows: Array<Record<string, number>> }) => {
-                        const referenceTimeColumn = this.resolveReferenceTimeColumn(this.alignmentConfig);
-                        if (!referenceTimeColumn) {
-                            throw new Error(
-                                'Sheet music measure sync requires alignment.referenceTimeColumn when sheetMusic.measureColumn is set.'
-                            );
-                        }
-
-                        const baseMeasureMap = buildMeasureMapFromColumns(
-                            parsedCsv.rows,
-                            parsedCsv.headers,
-                            referenceTimeColumn,
-                            measureColumn
-                        );
-
-                        const referenceTimeColumnSync = this.resolveReferenceTimeColumnSync(this.alignmentConfig);
-                        let syncMeasureMap = null;
-                        if (
-                            referenceTimeColumnSync
-                            && parsedCsv.headers.indexOf(referenceTimeColumnSync) >= 0
-                        ) {
-                            try {
-                                syncMeasureMap = buildMeasureMapFromColumns(
-                                    parsedCsv.rows,
-                                    parsedCsv.headers,
-                                    referenceTimeColumnSync,
-                                    measureColumn
-                                );
-                            } catch (error) {
-                                console.warn(
-                                    '[trackswitch] Failed to load sync-axis sheet-music measure map:',
-                                    host.source,
-                                    error
-                                );
-                            }
-                        }
-
-                        return {
-                            base: baseMeasureMap,
-                            sync: syncMeasureMap,
-                        };
-                    })
-                : Promise.resolve({
-                    base: null,
-                    sync: null,
-                });
+            const measureMapsPromise = this.buildSheetMusicMeasureMaps(measureColumn, host.source);
 
             return {
                 ...host,
@@ -642,7 +587,7 @@ export function startAudio(ctx: any, newPosition: any, snippetDuration: any): an
         let enginePosition = requestedPosition;
         let nextReferencePosition = requestedPosition;
 
-        if (this.features.mode === 'alignment' && this.alignmentContext) {
+        if (this.isAlignmentMode() && this.alignmentContext) {
             const activeTrackIndex = this.getAlignmentPlaybackTrackIndex();
             if (activeTrackIndex < 0) {
                 return;

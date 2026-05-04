@@ -1,7 +1,21 @@
-import { createInteractiveTrackSwitch } from './interactive/interactive-factory';
+import {
+    createAlignmentInteractiveTrackSwitch,
+    createInteractiveTrackSwitch,
+} from './interactive/interactive-factory';
+import {
+    TRACKSWITCH_ALIGNMENT_INTERACTIVE_ELEMENT_NAME,
+    TrackswitchAlignmentInteractive,
+    defineTrackswitchInteractiveElement,
+} from './interactive/interactive-element';
+
+defineTrackswitchInteractiveElement();
 
 const TrackSwitchInteractive = {
+    TRACKSWITCH_ALIGNMENT_INTERACTIVE_ELEMENT_NAME,
+    TrackswitchAlignmentInteractive,
+    createAlignmentInteractiveTrackSwitch,
     createInteractiveTrackSwitch,
+    defineTrackswitchInteractiveElement,
 };
 
 declare global {
@@ -14,4 +28,10 @@ if (typeof window !== 'undefined') {
     window.TrackSwitchInteractive = TrackSwitchInteractive;
 }
 
-export { createInteractiveTrackSwitch };
+export {
+    TRACKSWITCH_ALIGNMENT_INTERACTIVE_ELEMENT_NAME,
+    TrackswitchAlignmentInteractive,
+    createAlignmentInteractiveTrackSwitch,
+    createInteractiveTrackSwitch,
+    defineTrackswitchInteractiveElement,
+};

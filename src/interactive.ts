@@ -1,4 +1,12 @@
-export { createInteractiveTrackSwitch } from './interactive/interactive-factory';
+export {
+    createAlignmentInteractiveTrackSwitch,
+    createInteractiveTrackSwitch,
+} from './interactive/interactive-factory';
+export {
+    TRACKSWITCH_ALIGNMENT_INTERACTIVE_ELEMENT_NAME,
+    TrackswitchAlignmentInteractive,
+    defineTrackswitchInteractiveElement,
+} from './interactive/interactive-element';
 
 export type {
     AlignmentAlgorithmId,

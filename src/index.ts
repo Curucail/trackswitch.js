@@ -1,5 +1,28 @@
-import { createTrackSwitch } from './player/factory';
-import { TrackswitchPlayer, defineTrackswitchElement } from './element';
+import {
+    createAlignmentTrackSwitch,
+    createDefaultTrackSwitch,
+    createTrackSwitch,
+} from './player/factory';
+import {
+    TrackswitchAlignmentPlayer,
+    TrackswitchPlayer,
+    TRACKSWITCH_ALIGNMENT_ELEMENT_NAME,
+    TRACKSWITCH_DEFAULT_ELEMENT_NAME,
+    TRACKSWITCH_ELEMENT_NAME,
+    defineTrackswitchAlignmentElement,
+    defineTrackswitchDefaultElement,
+    defineTrackswitchElement,
+    defineTrackswitchElements,
+} from './element';
+import {
+    TRACKSWITCH_ALIGNMENT_INTERACTIVE_ELEMENT_NAME,
+    TrackswitchAlignmentInteractive,
+    defineTrackswitchInteractiveElement,
+} from './interactive/interactive-element';
+import {
+    createAlignmentInteractiveTrackSwitch,
+    createInteractiveTrackSwitch,
+} from './interactive/interactive-factory';
 import { normalizeFeatures, defaultFeatures } from './domain/options';
 import { createInitialPlayerState, playerStateReducer } from './domain/state';
 import { WaveformEngine } from './engine/waveform-engine';
@@ -7,8 +30,27 @@ import { inferSourceMimeType } from './shared/audio';
 import { formatSecondsToHHMMSSmmm } from './shared/format';
 import { parsePresetIndices } from './shared/preset';
 
-export { createTrackSwitch };
-export { TrackswitchPlayer, defineTrackswitchElement };
+export {
+    createAlignmentInteractiveTrackSwitch,
+    createAlignmentTrackSwitch,
+    createDefaultTrackSwitch,
+    createInteractiveTrackSwitch,
+    createTrackSwitch,
+};
+export {
+    TrackswitchAlignmentPlayer,
+    TrackswitchAlignmentInteractive,
+    TrackswitchPlayer,
+    TRACKSWITCH_ALIGNMENT_ELEMENT_NAME,
+    TRACKSWITCH_ALIGNMENT_INTERACTIVE_ELEMENT_NAME,
+    TRACKSWITCH_DEFAULT_ELEMENT_NAME,
+    TRACKSWITCH_ELEMENT_NAME,
+    defineTrackswitchAlignmentElement,
+    defineTrackswitchDefaultElement,
+    defineTrackswitchElement,
+    defineTrackswitchElements,
+    defineTrackswitchInteractiveElement,
+};
 export { normalizeFeatures, defaultFeatures };
 export { createInitialPlayerState, playerStateReducer };
 export { WaveformEngine };
@@ -48,7 +90,6 @@ export type {
     TrackSwitchUiElement,
     TrackSwitchWaveformConfig,
     TrackSwitchWaveformUiElement,
-    TrackSwitchMode,
     WaveformSource,
 } from './domain/types';
 

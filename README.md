@@ -39,7 +39,10 @@ Or download the browser bundle from GitHub Releases:
 ```text
 trackswitch-release/
 ├── dist/
-│   └── trackswitch.js
+│   └── js/
+│       ├── trackswitch-player.js
+│       ├── trackswitch-alignment-player.js
+│       └── trackswitch-alignment-interactive.js
 ├── LICENSE
 └── THIRD_PARTY_NOTICES.md
 ```
@@ -82,7 +85,7 @@ Features
 Programmatic API
 ----------------
 
-`TrackSwitch.createTrackSwitch(rootElement, init)` returns a controller for playback, seeking, looping, presets, and track state. This means that the player can be controlled by your application, independently from the end user.
+`TrackSwitch.createDefaultTrackSwitch(rootElement, init)` and `TrackSwitch.createAlignmentTrackSwitch(rootElement, init)` return controllers for playback, seeking, looping, presets, and track state. This means that the player can be controlled by your application, independently from the end user.
 
 Further Links
 -------------

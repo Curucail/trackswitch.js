@@ -1,10 +1,8 @@
 import {
-    AlignmentOutOfRangeMode,
     AudioDownloadSizeInfo,
     LoopMarker,
     NormalizedTrackSwitchConfig,
     PlayerState,
-    TrackAlignmentConfig,
     TrackSourceVariant,
     TrackRuntime,
     TrackSwitchController,
@@ -20,18 +18,16 @@ import { createInitialPlayerState, PlayerAction } from '../domain/state';
 import { createTrackRuntime } from '../domain/runtime';
 import { AudioEngine } from '../engine/audio-engine';
 import { SheetMusicEngine } from '../engine/sheet-music-engine';
+import type { SheetMusicMeasureMapsByAxis } from '../engine/sheet-music/types';
 import { TrackTimelineProjector, WaveformEngine } from '../engine/waveform-engine';
 import {
     ViewRenderer,
     WarpingMatrixRenderContext,
-    WarpingMatrixTrackSeries,
     WaveformTimelineContext,
 } from '../ui/view-renderer';
 import { InputBinder, InputController } from '../input/dom-event-binder';
 import { derivePresetNames } from '../shared/preset';
 import { ControllerPointerEvent } from '../shared/seek';
-import { TimeMappingSeries } from '../shared/alignment';
-import type { ParsedNumericCsv } from '../shared/alignment';
 import {
     allocateInstanceId,
     registerController,
@@ -40,34 +36,11 @@ import {
 import * as controllerPlayback from './playback-actions';
 import * as controllerInput from './input-actions';
 import * as controllerSeek from './seek-actions';
-import * as controllerAlignment from './alignment-actions';
 import * as controllerUi from './ui-sync';
 import * as controllerEvents from './event-emitter';
 import * as controllerHotReload from './hot-reload-actions';
 
-interface TrackAlignmentConverter {
-    referenceToTrack: TimeMappingSeries;
-    trackToReference: TimeMappingSeries;
-}
-
 type AlignmentReferenceAxisKey = 'base' | 'sync';
-
-interface AlignmentAxisContext {
-    referenceTimeColumn: string;
-    referenceDuration: number;
-    converters: Map<number, TrackAlignmentConverter>;
-}
-
-interface AlignmentContext {
-    outOfRange: AlignmentOutOfRangeMode;
-    baseAxis: AlignmentAxisContext;
-    syncAxis: AlignmentAxisContext | null;
-    baseToSync: TimeMappingSeries | null;
-    syncToBase: TimeMappingSeries | null;
-    columnByTrack: Map<number, string>;
-    uniqueColumnOrder: string[];
-    warpingSeriesByTrack: Map<number, WarpingMatrixTrackSeries>;
-}
 
 interface SeekTimelineContext {
     duration: number;
@@ -95,14 +68,15 @@ interface WaveformMinimapDragState {
 
 export class TrackSwitchControllerImpl implements TrackSwitchController, InputController {
     public readonly root: HTMLElement;
+    public readonly variant: NormalizedTrackSwitchConfig['variant'];
     public readonly features: TrackSwitchFeatures;
     public readonly audioEngine: AudioEngine;
     public readonly waveformEngine: WaveformEngine;
     public readonly sheetMusicEngine: SheetMusicEngine;
     public readonly renderer: ViewRenderer;
     public readonly inputBinder: InputBinder;
-    public alignmentConfig: TrackAlignmentConfig | undefined;
-    public alignmentCsvRequest: Promise<ParsedNumericCsv> | null = null;
+    public alignmentConfig: NormalizedTrackSwitchConfig['alignment'];
+    public alignmentCsvRequest: Promise<unknown> | null = null;
 
     public state: PlayerState;
     public longestDuration = 0;
@@ -127,7 +101,7 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     public readonly touchSeekMoveThresholdPx = 10;
 
     public iOSPlaybackUnlocked = false;
-    public alignmentContext: AlignmentContext | null = null;
+    public alignmentContext: unknown | null = null;
     public alignmentPlaybackTrackIndex: number | null = null;
     public globalSyncEnabled = false;
     public effectiveSingleSoloMode = false;
@@ -155,14 +129,14 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
     constructor(rootElement: HTMLElement, config: NormalizedTrackSwitchConfig) {
         this.root = rootElement;
+        this.variant = config.variant;
         this.alignmentConfig = config.alignment;
-
         this.features = normalizeFeatures(config.features);
-        if (this.features.mode === 'alignment') {
+        if (this.variant === 'alignment') {
             this.features.exclusiveSolo = true;
             this.features.presets = false;
         }
-        this.effectiveSingleSoloMode = this.features.mode === 'alignment'
+        this.effectiveSingleSoloMode = this.variant === 'alignment'
             ? true
             : this.features.exclusiveSolo;
         this.state = createInitialPlayerState(this.features.repeat);
@@ -195,23 +169,12 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
             : derivePresetNames(config);
         this.presetCount = presetNames.length;
 
-        this.audioEngine = new AudioEngine(this.features, this.state.volume);
+        this.audioEngine = new AudioEngine(this.features, this.state.volume, this.isAlignmentMode());
         this.waveformEngine = new WaveformEngine();
         this.sheetMusicEngine = new SheetMusicEngine((referenceTime) => {
             this.seekTo(referenceTime);
         });
-        this.renderer = new ViewRenderer(
-            this.root,
-            this.features,
-            presetNames,
-            config.trackGroups,
-            (referenceTime) => {
-                this.seekTo(referenceTime);
-            },
-            (referenceTime) => {
-                return this.sheetMusicEngine.resolveReferenceBpm(referenceTime);
-            }
-        );
+        this.renderer = this.createRenderer(this.root, this.features, presetNames, config.trackGroups);
 
         this.instanceId = allocateInstanceId();
 
@@ -236,6 +199,26 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         }
 
         registerController(this);
+    }
+
+    protected createRenderer(
+        root: HTMLElement,
+        features: TrackSwitchFeatures,
+        presetNames: string[],
+        trackGroups: NormalizedTrackSwitchConfig['trackGroups']
+    ): ViewRenderer {
+        return new ViewRenderer(
+            root,
+            features,
+            presetNames,
+            trackGroups,
+            (referenceTime) => {
+                this.seekTo(referenceTime);
+            },
+            (referenceTime) => {
+                return this.sheetMusicEngine.resolveReferenceBpm(referenceTime);
+            }
+        );
     }
 
     async load(): Promise<void> {
@@ -585,35 +568,58 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     }
 
     public isAlignmentMode(): boolean {
-        return controllerAlignment.isAlignmentMode(this);
+        return false;
     }
 
     public hasSyncedVariant(runtime: TrackRuntime): boolean {
-        return controllerAlignment.hasSyncedVariant(this, runtime);
+        return !!runtime.syncedSource && !!runtime.syncedSource.buffer;
     }
 
     public isTrackSyncLocked(trackIndex: number): boolean {
-        return controllerAlignment.isTrackSyncLocked(this, trackIndex);
+        void trackIndex;
+        return false;
     }
 
     public setEffectiveSoloMode(singleSoloMode: boolean): void {
-        return controllerAlignment.setEffectiveSoloMode(this, singleSoloMode);
+        this.effectiveSingleSoloMode = singleSoloMode;
+
+        if (!singleSoloMode || this.runtimes.length === 0) {
+            return;
+        }
+
+        const previousSoloIndex = this.getActiveSoloTrackIndex();
+        const targetSoloIndex = previousSoloIndex >= 0 ? previousSoloIndex : 0;
+
+        this.runtimes.forEach(function(runtime, index) {
+            runtime.state.solo = index === targetSoloIndex;
+        });
     }
 
     public toggleGlobalSync(): void {
-        return controllerAlignment.toggleGlobalSync(this);
+        return;
     }
 
     public applyGlobalSyncState(syncOn: boolean): void {
-        return controllerAlignment.applyGlobalSyncState(this, syncOn);
+        void syncOn;
     }
 
     public setRuntimeActiveVariant(runtime: TrackRuntime, variant: TrackSourceVariant): boolean {
-        return controllerAlignment.setRuntimeActiveVariant(this, runtime, variant);
+        const source = variant === 'synced' ? runtime.syncedSource : runtime.baseSource;
+        if (!source || !source.buffer) {
+            return false;
+        }
+
+        runtime.activeVariant = variant;
+        runtime.buffer = source.buffer;
+        runtime.timing = source.timing;
+        runtime.sourceIndex = source.sourceIndex;
+        runtime.waveformSummary = source.waveformSummary;
+        return true;
     }
 
     public shouldBypassAlignmentMapping(trackIndex: number): boolean {
-        return controllerAlignment.shouldBypassAlignmentMapping(this, trackIndex);
+        void trackIndex;
+        return false;
     }
 
     public applyTrackProperties(): void {
@@ -630,6 +636,20 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
 
     public async initializeSheetMusic(): Promise<void> {
         return controllerPlayback.initializeSheetMusic(this);
+    }
+
+    public buildSheetMusicMeasureMaps(measureColumn: string, source: string): Promise<SheetMusicMeasureMapsByAxis> {
+        void source;
+        if (measureColumn) {
+            return Promise.reject(
+                new Error('Sheet music measure sync requires the alignment player variant.')
+            );
+        }
+
+        return Promise.resolve({
+            base: null,
+            sync: null,
+        });
     }
 
     public dispatch(action: PlayerAction): void {
@@ -667,59 +687,105 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     }
 
     public async initializeAlignmentMode(): Promise<string | null> {
-        return controllerAlignment.initializeAlignmentMode(this);
+        return 'Alignment mode requires the alignment player variant.';
     }
 
-    public async buildAlignmentContext(): Promise<AlignmentContext | string> {
-        return controllerAlignment.buildAlignmentContext(this);
+    public async buildAlignmentContext(): Promise<unknown | string> {
+        return 'Alignment mode requires the alignment player variant.';
     }
 
-    public loadAlignmentCsv(): Promise<ParsedNumericCsv> {
-        return controllerAlignment.loadAlignmentCsv(this);
+    public loadAlignmentCsv(): Promise<unknown> {
+        return Promise.reject(new Error('Alignment mode requires the alignment player variant.'));
     }
 
     public collectUniqueAlignmentColumns(mappingByTrack: Map<number, string>): string[] {
-        return controllerAlignment.collectUniqueAlignmentColumns(this, mappingByTrack);
+        const seenColumns = new Set<string>();
+        const uniqueColumns: string[] = [];
+
+        for (const [, rawColumn] of mappingByTrack) {
+            const column = String(rawColumn || '').trim();
+            if (!column || seenColumns.has(column)) {
+                continue;
+            }
+
+            seenColumns.add(column);
+            uniqueColumns.push(column);
+        }
+
+        return uniqueColumns;
     }
 
     public getWarpingMatrixContext(): WarpingMatrixRenderContext | undefined {
-        return controllerAlignment.getWarpingMatrixContext(this);
+        return undefined;
     }
 
     public getAudibleTrackIndexesForWarpingMatrix(): number[] {
-        return controllerAlignment.getAudibleTrackIndexesForWarpingMatrix(this);
+        return this.runtimes.map(function(_runtime, index) {
+            return index;
+        });
     }
 
-    public resolveReferenceTimeColumn(config: TrackAlignmentConfig): string | null {
-        return controllerAlignment.resolveReferenceTimeColumn(this, config);
+    public resolveReferenceTimeColumn(config: { referenceTimeColumn?: string }): string | null {
+        const configuredReferenceTimeColumn = typeof config.referenceTimeColumn === 'string'
+            ? config.referenceTimeColumn.trim()
+            : '';
+
+        return configuredReferenceTimeColumn || null;
     }
 
-    public resolveReferenceTimeColumnSync(config: TrackAlignmentConfig): string | null {
-        return controllerAlignment.resolveReferenceTimeColumnSync(this, config);
+    public resolveReferenceTimeColumnSync(config: { referenceTimeColumnSync?: string }): string | null {
+        const configuredReferenceTimeColumnSync = typeof config.referenceTimeColumnSync === 'string'
+            ? config.referenceTimeColumnSync.trim()
+            : '';
+
+        return configuredReferenceTimeColumnSync || null;
     }
 
     public resolveReferenceDuration(rows: Array<Record<string, number>>, referenceTimeColumn: string): number | string {
-        return controllerAlignment.resolveReferenceDuration(this, rows, referenceTimeColumn);
+        let maxReference = Number.NEGATIVE_INFINITY;
+
+        rows.forEach(function(row: Record<string, unknown>) {
+            const value = Number(row[referenceTimeColumn]);
+            if (Number.isFinite(value) && value > maxReference) {
+                maxReference = value;
+            }
+        });
+
+        if (!Number.isFinite(maxReference)) {
+            return 'Alignment CSV does not contain valid numeric values for referenceTimeColumn: ' + referenceTimeColumn;
+        }
+
+        return Math.max(0, maxReference);
     }
 
-    public resolveAlignmentMappingsByTrack(config: TrackAlignmentConfig): Map<number, string> | string {
-        return controllerAlignment.resolveAlignmentMappingsByTrack(this, config);
+    public resolveAlignmentMappingsByTrack(_config: unknown): Map<number, string> | string {
+        return 'Alignment mode requires the alignment player variant.';
     }
 
     public getActiveSoloTrackIndex(): number {
-        return controllerAlignment.getActiveSoloTrackIndex(this);
+        for (let index = 0; index < this.runtimes.length; index += 1) {
+            if (this.runtimes[index].state.solo) {
+                return index;
+            }
+        }
+
+        if (this.effectiveSingleSoloMode && this.runtimes.length > 0) {
+            return 0;
+        }
+
+        return -1;
     }
 
     public getActiveAlignmentAxisKey(): AlignmentReferenceAxisKey {
-        return controllerAlignment.getActiveAlignmentAxisKey(this);
+        return 'base';
     }
 
     public isSyncReferenceAxisActive(): boolean {
-        return controllerAlignment.isSyncReferenceAxisActive(this);
+        return false;
     }
 
     public isGlobalSyncAvailable(): boolean {
-        return controllerAlignment.isGlobalSyncAvailable(this);
+        return false;
     }
 
     public mapAlignmentAxisTime(
@@ -727,15 +793,17 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
         fromAxisKey: AlignmentReferenceAxisKey,
         toAxisKey: AlignmentReferenceAxisKey
     ): number {
-        return controllerAlignment.mapAlignmentAxisTime(this, time, fromAxisKey, toAxisKey);
+        void fromAxisKey;
+        void toAxisKey;
+        return Number.isFinite(time) ? time : 0;
     }
 
     public getAlignmentPlaybackTrackIndex(): number {
-        return controllerAlignment.getAlignmentPlaybackTrackIndex(this);
+        return -1;
     }
 
     public currentPlaybackReferencePosition(): number {
-        return controllerAlignment.currentPlaybackReferencePosition(this);
+        return this.audioEngine.currentTime - this.state.startTime;
     }
 
     public isFixedWaveformLocalAxisEnabled(): boolean {
@@ -755,15 +823,17 @@ export class TrackSwitchControllerImpl implements TrackSwitchController, InputCo
     }
 
     public referenceToTrackTime(trackIndex: number, referenceTime: number): number {
-        return controllerAlignment.referenceToTrackTime(this, trackIndex, referenceTime);
+        void trackIndex;
+        return referenceTime;
     }
 
     public trackToReferenceTime(trackIndex: number, trackTime: number): number {
-        return controllerAlignment.trackToReferenceTime(this, trackIndex, trackTime);
+        void trackIndex;
+        return trackTime;
     }
 
     public handleAlignmentTrackSwitch(nextActiveTrackIndex: number): void {
-        return controllerAlignment.handleAlignmentTrackSwitch(this, nextActiveTrackIndex);
+        void nextActiveTrackIndex;
     }
 
     public emit<K extends TrackSwitchEventName>(eventName: K, payload: TrackSwitchEventMap[K]): void {

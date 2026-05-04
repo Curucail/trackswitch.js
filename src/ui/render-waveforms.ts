@@ -1,6 +1,5 @@
 import {
     TrackRuntime,
-    TrackSwitchFeatures,
     WaveformPlaybackFollowMode,
     WaveformSource,
 } from '../domain/types';
@@ -119,7 +118,7 @@ function isWaveformTrackAudible(ctx: any, runtimes: TrackRuntime[], trackIndex: 
         return false;
     }
 
-    if (ctx.features.mode === 'alignment') {
+    if (ctx.isAlignmentMode()) {
         return true;
     }
 
@@ -134,9 +133,9 @@ function isWaveformTrackAudible(ctx: any, runtimes: TrackRuntime[], trackIndex: 
     return !!ctx.features.exclusiveSolo;
 }
 
-function parseWaveformTimerEnabled(value: string | null, mode: TrackSwitchFeatures['mode']): boolean {
+function parseWaveformTimerEnabled(value: string | null, alignmentMode: boolean): boolean {
     if (value === null) {
-        return mode === 'alignment';
+        return alignmentMode;
     }
 
     return value.trim().toLowerCase() === 'true';
@@ -414,7 +413,7 @@ export function wrapWaveformCanvases(ctx: any): any {
             );
             const timerEnabled = parseWaveformTimerEnabled(
                 canvasElement.getAttribute('data-waveform-timer'),
-                this.features.mode
+                this.isAlignmentMode()
             );
             const alignedPlayhead = parseWaveformAlignedPlayheadEnabled(
                 canvasElement.getAttribute('data-waveform-aligned-playhead')

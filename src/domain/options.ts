@@ -1,7 +1,6 @@
 import { TrackSwitchFeatures } from './types';
 
 export const defaultFeatures: Readonly<TrackSwitchFeatures> = {
-    mode: 'default',
     exclusiveSolo: false,
     muteOtherPlayerInstances: true,
     globalVolume: false,
@@ -42,19 +41,6 @@ export function normalizeFeatures(features: Partial<TrackSwitchFeatures> | undef
         ...defaultFeatures,
         ...(features ?? {}),
     };
-
-    if (
-        normalized.mode !== 'default'
-        && normalized.mode !== 'alignment'
-        && normalized.mode !== 'alignment_interactive'
-    ) {
-        normalized.mode = 'default';
-    }
-
-    if (normalized.mode === 'alignment_interactive') {
-        normalized.exclusiveSolo = true;
-        normalized.presets = false;
-    }
 
     if (normalized.exclusiveSolo) {
         normalized.presets = false;

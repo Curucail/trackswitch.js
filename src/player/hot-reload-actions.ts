@@ -15,7 +15,7 @@ import type { TrackSwitchControllerImpl } from './player-controller';
 
 function resolveControllerFeatures(config: NormalizedTrackSwitchConfig): TrackSwitchFeatures {
     const features = normalizeFeatures(config.features);
-    if (features.mode === 'alignment') {
+    if (config.variant === 'alignment') {
         features.exclusiveSolo = true;
         features.presets = false;
     }
@@ -92,7 +92,7 @@ async function buildStagedAlignmentContext(
     config: NormalizedTrackSwitchConfig,
     runtimes: TrackRuntime[]
 ): Promise<unknown | null> {
-    if (controller.features.mode !== 'alignment') {
+    if (!controller.isAlignmentMode()) {
         return null;
     }
 
@@ -132,7 +132,7 @@ export async function updateInit(
     let committed = false;
 
     try {
-        const nextConfig = normalizeTrackSwitchConfig(nextInit);
+        const nextConfig = normalizeTrackSwitchConfig(nextInit, { variant: controller.variant });
         const nextFeatures = resolveControllerFeatures(nextConfig);
         if (!featuresEqual(controller.features, nextFeatures)) {
             throw new Error('TrackSwitch hot reload does not support changing features; recreate the player instead.');
@@ -212,7 +212,7 @@ export async function updateInit(
         controller.renderer.hideOverlayOnLoaded();
         controller.longestDuration = controller.findLongestDuration();
 
-        if (controller.features.mode === 'alignment') {
+        if (controller.isAlignmentMode()) {
             controller.alignmentContext = stagedAlignmentContext as typeof controller.alignmentContext;
             const alignmentContext = controller.alignmentContext as {
                 baseAxis: { referenceDuration: number };

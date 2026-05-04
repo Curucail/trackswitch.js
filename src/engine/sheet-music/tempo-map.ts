@@ -1,4 +1,4 @@
-import { requestText } from '../../shared/csv';
+import { requestText } from '../../shared/request-text';
 import type {
     SheetMusicMeasureMapsByAxis,
     SheetMusicProjectedTempoSegment,

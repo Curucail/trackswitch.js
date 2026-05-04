@@ -1,4 +1,5 @@
 import Papa from 'papaparse';
+export { requestText } from './request-text';
 
 export interface ParsedCsvRecords {
     headers: string[];
@@ -8,31 +9,6 @@ export interface ParsedCsvRecords {
 interface ParseCsvRecordsOptions {
     emptyDataError: string;
     transformHeader?(header: string): string;
-}
-
-export function requestText(url: string, sourceLabel: string): Promise<string> {
-    return new Promise(function(resolve, reject) {
-        const request = new XMLHttpRequest();
-        request.open('GET', url, true);
-
-        request.onreadystatechange = function() {
-            if (request.readyState !== 4) {
-                return;
-            }
-
-            if (request.status >= 200 && request.status < 300) {
-                resolve(String(request.responseText ?? request.response ?? ''));
-            } else {
-                reject(new Error('Failed to request ' + sourceLabel + ': ' + url));
-            }
-        };
-
-        request.onerror = function() {
-            reject(new Error('Network error while requesting ' + sourceLabel + ': ' + url));
-        };
-
-        request.send();
-    });
 }
 
 export function parseCsvRecords(csvText: string, options: ParseCsvRecordsOptions): ParsedCsvRecords {

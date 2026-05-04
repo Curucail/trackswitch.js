@@ -36,7 +36,7 @@ permalink: /documentation.html
 ### In ESM / TypeScript {#in-esm--typescript}
 
 ```ts
-import { defineTrackswitchElement, type TrackSwitchInit } from 'trackswitch';
+import { defineTrackswitchDefaultElement, type TrackSwitchInit } from 'trackswitch';
 
 const init: TrackSwitchInit = {
   ui: [
@@ -52,7 +52,7 @@ const init: TrackSwitchInit = {
   ],
 };
 
-defineTrackswitchElement();
+defineTrackswitchDefaultElement();
 document.querySelector('trackswitch-player')!.init = init;
 ```
 
@@ -90,7 +90,7 @@ Use the React entrypoint only in client components. The player itself needs the 
 ### In HTML {#in-html}
 
 ```html
-<script src="dist/trackswitch.js"></script>
+<script src="dist/js/trackswitch-player.js"></script>
 
 <trackswitch-player id="player"></trackswitch-player>
 
@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', function () {
 ### Default Mode {#default-mode}
 
 ```javascript
-TrackSwitch.createTrackSwitch(rootElement, {
+TrackSwitch.createDefaultTrackSwitch(rootElement, {
   presetNames: ['Full Mix', 'Strings', 'Rhythm'],
   ui: [
     {
@@ -182,7 +182,6 @@ TrackSwitch.createTrackSwitch(rootElement, {
     {
       type: 'sheetMusic',
       src: 'score.musicxml',
-      measureColumn: 'measure',
       maxWidth: 960,
       maxHeight: 360,
       renderScale: 0.75,
@@ -192,12 +191,7 @@ TrackSwitch.createTrackSwitch(rootElement, {
       style: 'margin: 0;',
     },
   ],
-  alignment: {
-    csv: 'alignment.csv',
-    referenceTimeColumn: 'score_time_sec',
-  },
   features: {
-    mode: 'default',
     exclusiveSolo: false,
     muteOtherPlayerInstances: true,
     globalVolume: true,
@@ -218,7 +212,7 @@ TrackSwitch.createTrackSwitch(rootElement, {
 ### Alignment Mode {#alignment-mode}
 
 ```javascript
-TrackSwitch.createTrackSwitch(rootElement, {
+TrackSwitch.createAlignmentTrackSwitch(rootElement, {
   ui: [
     {
       type: 'image',
@@ -318,8 +312,6 @@ TrackSwitch.createTrackSwitch(rootElement, {
     outOfRange: 'clamp',
   },
   features: {
-    mode: 'alignment',
-    exclusiveSolo: true,
     muteOtherPlayerInstances: true,
     globalVolume: true,
     trackMixControls: true,
@@ -375,7 +367,6 @@ Notes:
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `mode?` | `'default' | 'alignment'` | `'default'` | Chooses between a standard multitrack player and an aligned performance comparison player. |
 | `exclusiveSolo?` | `boolean` | `false` | Listen to one track at a time only instead of mixing several tracks together. |
 | `muteOtherPlayerInstances?` | `boolean` | `true` | Stops another player on the same page when this one starts playing. |
 | `globalVolume?` | `boolean` | `false` | Shows a main volume control for the whole player. |

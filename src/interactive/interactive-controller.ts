@@ -30,7 +30,7 @@ import {
 import { buildPlayerSettingsMenuHtml } from './ui/render-player-settings';
 import { injectSettingsButton } from './ui/settings-button';
 import { renderIconSlotHtml } from '../ui/icons';
-import { createTrackSwitch } from '../player/factory';
+import { createAlignmentTrackSwitch } from '../player/alignment-factory';
 import { parseNumericCsv } from '../shared/alignment';
 
 export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwitchController {
@@ -554,7 +554,6 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
 
         const playerInit = {
             features: {
-                mode: 'alignment' as const,
                 seekBar: true,
                 timer: true,
                 keyboard: true,
@@ -576,7 +575,7 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
         this.rootElement.classList.add('ts-interactive-player');
 
         try {
-            this.innerController = createTrackSwitch(this.rootElement, playerInit);
+            this.innerController = createAlignmentTrackSwitch(this.rootElement, playerInit);
 
             // Load the player
             this.innerController.load().then(() => {

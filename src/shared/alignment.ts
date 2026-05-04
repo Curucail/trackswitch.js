@@ -1,5 +1,6 @@
 import { AlignmentOutOfRangeMode } from '../domain/types';
-import { parseCsvRecords, requestText } from './csv';
+import { parseCsvRecords } from './csv';
+import { requestText } from './request-text';
 
 export interface CsvNumericRow {
     [column: string]: number;

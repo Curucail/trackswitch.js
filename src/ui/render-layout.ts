@@ -391,7 +391,6 @@ function buildTrackShortcutAction(trackCount: number, singleSoloMode: boolean): 
 }
 
 function getShortcutHelpEntries(features: {
-    mode: string;
     exclusiveSolo: boolean;
     globalVolume: boolean;
     looping: boolean;
@@ -407,7 +406,7 @@ function getShortcutHelpEntries(features: {
             keys: '1 .. 0',
             action: buildTrackShortcutAction(
                 trackCount,
-                features.mode === 'alignment' || features.exclusiveSolo
+                features.exclusiveSolo
             ),
         },
     ];
@@ -432,7 +431,6 @@ function getShortcutHelpEntries(features: {
 }
 
 function buildShortcutHelpHtml(features: {
-    mode: string;
     exclusiveSolo: boolean;
     globalVolume: boolean;
     looping: boolean;
@@ -607,7 +605,7 @@ export function buildMainControlHtml(ctx: any, runtimes: any): any {
 
 export function shouldRenderGlobalSync(ctx: any, runtimes: any): any {
     return (function(this: any, runtimes: any) {
-        if (this.features.mode !== 'alignment') {
+        if (!this.isAlignmentMode()) {
             return false;
         }
 

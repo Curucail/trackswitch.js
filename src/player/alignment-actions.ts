@@ -19,7 +19,7 @@ import {
 
 export function isAlignmentMode(ctx: any): any {
     return (function(this: any) {
-        return this.features.mode === 'alignment';
+        return this.variant === 'alignment';
     }).call(ctx);
 }
 
@@ -621,7 +621,7 @@ export function currentPlaybackReferencePosition(ctx: any): any {
     return (function(this: any) {
         const rawPlaybackPosition = this.audioEngine.currentTime - this.state.startTime;
         if (
-            this.features.mode !== 'alignment'
+            !this.isAlignmentMode()
             || !this.alignmentContext
             || this.alignmentPlaybackTrackIndex === null
         ) {

@@ -72,8 +72,8 @@
     },
     "./package.json": "./package.json"
   },
-  "unpkg": "dist/trackswitch.js",
-  "jsdelivr": "dist/trackswitch.js",
+  "unpkg": "dist/js/trackswitch-player.js",
+  "jsdelivr": "dist/js/trackswitch-player.js",
   "peerDependencies": {
     "react": ">=18",
     "vue": ">=3"
@@ -89,7 +89,10 @@
   "scripts": {
     "clean": "rimraf dist",
     "build": "npm run build:browser && npm run build:interactive && npm run build:worker && npm run build:css && npm run build:python-assets && npm run build:runtime-assets && npm run build:esm && npm run build:types",
-    "build:browser": "vite build",
+    "build:browser": "npm run build:default && npm run build:alignment",
+    "build:default": "TRACKSWITCH_BUILD_TARGET=default vite build",
+    "build:alignment": "TRACKSWITCH_BUILD_TARGET=alignment vite build",
+    "build:browser:all": "vite build",
     "build:interactive": "TRACKSWITCH_BUILD_TARGET=interactive vite build",
     "build:worker": "TRACKSWITCH_BUILD_TARGET=worker vite build",
     "build:css": "TRACKSWITCH_BUILD_TARGET=css vite build && rimraf dist/css/trackswitch-style-entry.js",

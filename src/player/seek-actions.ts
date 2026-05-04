@@ -640,7 +640,7 @@ export function getWaveformTimelineContext(ctx: any): any {
 
 export function getWaveformTimelineProjector(ctx: any): any {
     return (function(this: any) {
-        if (this.features.mode !== 'alignment' || !this.alignmentContext) {
+        if (!this.isAlignmentMode() || !this.alignmentContext) {
             return undefined;
         }
 

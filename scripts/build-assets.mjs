@@ -21,16 +21,20 @@ export const runtimeAssets = [
 
 export const docsAssets = [
   {
-    source: 'dist/trackswitch.js',
-    docs: 'docs/js/trackswitch.js',
+    source: 'dist/js/trackswitch-player.js',
+    docs: 'docs/js/trackswitch-player.js',
+  },
+  {
+    source: 'dist/js/trackswitch-alignment-player.js',
+    docs: 'docs/js/trackswitch-alignment-player.js',
   },
   {
     source: 'dist/css/trackswitch.min.css',
     docs: 'docs/css/trackswitch.min.css',
   },
   {
-    source: 'dist/js/trackswitch-interactive.js',
-    docs: 'docs/js/trackswitch-interactive.js',
+    source: 'dist/js/trackswitch-alignment-interactive.js',
+    docs: 'docs/js/trackswitch-alignment-interactive.js',
   },
   {
     source: 'dist/js/trackswitch-alignment-worker.js',

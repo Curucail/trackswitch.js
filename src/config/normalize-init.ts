@@ -2,8 +2,11 @@ import {
     NormalizedTrackGroupLayout,
     NormalizedTrackSwitchConfig,
     TrackDefinition,
+    TrackSwitchVariant,
     TrackSwitchInit,
+    TrackSwitchSheetMusicUiElement,
     TrackSwitchUiElement,
+    TrackSwitchWaveformUiElement,
 } from '../domain/types';
 import { injectConfiguredUiElements, normalizeUiElement } from './ui-elements';
 import { assertAllowedKeys, toConfigRecord } from './validation';
@@ -12,6 +15,10 @@ import { normalizeFeatures } from '../domain/options';
 export const TRACKS_REQUIRED_ERROR = 'TrackSwitch requires at least one ui entry with type "trackGroup" and non-empty trackGroup.';
 const initAllowedKeys = ['presetNames', 'features', 'alignment', 'ui'] as const;
 const alignmentAllowedKeys = ['csv', 'referenceTimeColumn', 'referenceTimeColumnSync', 'outOfRange'] as const;
+
+export interface NormalizeTrackSwitchOptions {
+    variant: TrackSwitchVariant;
+}
 
 function validateInitKeys(init: TrackSwitchInit): void {
     const initRecord = toConfigRecord(init, 'init');
@@ -107,22 +114,88 @@ function hasWarpingMatrixInferScoreBpm(resolvedUi: TrackSwitchUiElement[] | unde
     });
 }
 
-export function normalizeInit(root: HTMLElement, init: TrackSwitchInit): NormalizedTrackSwitchConfig {
-    const normalized = normalizeTrackSwitchConfig(init);
+function assertNoFeatureMode(init: TrackSwitchInit): void {
+    if (
+        init.features
+        && typeof init.features === 'object'
+        && Object.prototype.hasOwnProperty.call(init.features, 'mode')
+    ) {
+        throw new Error('Invalid feature key: mode. Use the default or alignment TrackSwitch variant instead.');
+    }
+}
+
+function isAlignmentTrack(track: TrackDefinition): boolean {
+    return !!track.alignment;
+}
+
+function isAlignmentSheetMusic(entry: TrackSwitchUiElement): entry is TrackSwitchSheetMusicUiElement {
+    return entry.type === 'sheetMusic' && typeof entry.measureColumn === 'string' && entry.measureColumn.trim().length > 0;
+}
+
+function isAlignmentWaveform(entry: TrackSwitchUiElement): entry is TrackSwitchWaveformUiElement {
+    return entry.type === 'waveform' && (!!entry.alignedPlayhead || !!entry.showAlignmentPoints);
+}
+
+function validateVariantConfig(
+    variant: TrackSwitchVariant,
+    init: TrackSwitchInit,
+    resolvedUi: TrackSwitchUiElement[] | undefined,
+    tracks: TrackDefinition[]
+): void {
+    if (variant === 'default') {
+        if (init.alignment !== undefined) {
+            throw new Error('Invalid default player configuration: alignment config requires the alignment player variant.');
+        }
+        if (tracks.some(isAlignmentTrack)) {
+            throw new Error('Invalid default player configuration: track alignment config requires the alignment player variant.');
+        }
+        if (resolvedUi?.some((entry) => entry.type === 'warpingMatrix')) {
+            throw new Error('Invalid default player configuration: warpingMatrix requires the alignment player variant.');
+        }
+        if (resolvedUi?.some(isAlignmentSheetMusic)) {
+            throw new Error('Invalid default player configuration: sheetMusic.measureColumn requires the alignment player variant.');
+        }
+        if (resolvedUi?.some(isAlignmentWaveform)) {
+            throw new Error('Invalid default player configuration: aligned waveform options require the alignment player variant.');
+        }
+        return;
+    }
+
+    if (!init.alignment) {
+        throw new Error('Invalid alignment player configuration: alignment config is required.');
+    }
+
+    tracks.forEach(function(track) {
+        const column = track.alignment?.column;
+        if (typeof column !== 'string' || column.trim().length === 0) {
+            throw new Error('Invalid alignment player configuration: each track requires alignment.column.');
+        }
+    });
+}
+
+export function normalizeInit(
+    root: HTMLElement,
+    init: TrackSwitchInit,
+    options: NormalizeTrackSwitchOptions
+): NormalizedTrackSwitchConfig {
+    const normalized = normalizeTrackSwitchConfig(init, options);
     injectConfiguredUiElements(root, normalized.ui);
     return normalized;
 }
 
-export function normalizeTrackSwitchConfig(init: TrackSwitchInit): NormalizedTrackSwitchConfig {
+export function normalizeTrackSwitchConfig(
+    init: TrackSwitchInit,
+    options: NormalizeTrackSwitchOptions
+): NormalizedTrackSwitchConfig {
     validateInitKeys(init);
+    assertNoFeatureMode(init);
 
     const resolvedUi = Array.isArray(init.ui)
         ? init.ui.map(normalizeUiElement)
         : undefined;
     const normalizedFeatures = normalizeFeatures(init.features);
     const usesExclusiveSoloMode = normalizedFeatures.exclusiveSolo
-        || normalizedFeatures.mode === 'alignment'
-        || normalizedFeatures.mode === 'alignment_interactive';
+        || options.variant === 'alignment';
     if (hasPerTrackImageUi(resolvedUi) && !usesExclusiveSoloMode) {
         throw new Error('Invalid init configuration: perTrackImage requires features.exclusiveSolo to be true.');
     }
@@ -131,12 +204,14 @@ export function normalizeTrackSwitchConfig(init: TrackSwitchInit): NormalizedTra
     }
 
     const resolvedTrackData = resolveTracksFromUi(resolvedUi);
+    validateVariantConfig(options.variant, init, resolvedUi, resolvedTrackData.tracks);
 
-    if (resolvedTrackData.tracks.length === 0 && normalizedFeatures.mode !== 'alignment_interactive') {
+    if (resolvedTrackData.tracks.length === 0) {
         throw new Error(TRACKS_REQUIRED_ERROR);
     }
 
     return {
+        variant: options.variant,
         tracks: resolvedTrackData.tracks,
         presetNames: init.presetNames,
         features: init.features,

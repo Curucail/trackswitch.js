@@ -1,5 +1,5 @@
 export type LoopMarker = 'A' | 'B';
-export type TrackSwitchMode = 'default' | 'alignment' | 'alignment_interactive';
+export type TrackSwitchVariant = 'default' | 'alignment';
 export type AlignmentOutOfRangeMode = 'clamp' | 'linear';
 export type WaveformSource = 'audible' | number | number[];
 export type WaveformPlaybackFollowMode = 'off' | 'center' | 'jump';
@@ -37,7 +37,6 @@ export interface TrackDefinition {
 }
 
 export interface TrackSwitchFeatures {
-    mode: TrackSwitchMode;
     exclusiveSolo: boolean;
     muteOtherPlayerInstances: boolean;
     globalVolume: boolean;
@@ -166,6 +165,7 @@ export interface TrackSwitchConfig {
 }
 
 export interface NormalizedTrackSwitchConfig extends TrackSwitchConfig {
+    variant: TrackSwitchVariant;
     trackGroups: NormalizedTrackGroupLayout[];
 }
 
