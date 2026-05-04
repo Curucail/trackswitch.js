@@ -99,7 +99,12 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             this.innerController = null;
         }
         this.rootElement.innerHTML = '';
-        this.rootElement.classList.remove('trackswitch', 'ts-controls-disabled', 'ts-interactive-player');
+        this.rootElement.classList.remove(
+            'trackswitch',
+            'ts-controls-disabled',
+            'ts-interactive-player',
+            'ts-interactive-setup'
+        );
     }
 
     getInnerController(): TrackSwitchController | null {
@@ -121,6 +126,7 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
         // The inner player teardown removes its managed root classes, so restore
         // the interactive setup styling before rebuilding this phase.
         this.rootElement.classList.add('trackswitch');
+        this.rootElement.classList.add('ts-interactive-setup');
         this.rootElement.classList.remove('ts-interactive-player');
         let html = this.buildDisabledNavBarHtml();
         html += buildFullDropZonePanel(
@@ -163,12 +169,7 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
             + '</li>'
             + '</ul>'
             + '</li>'
-            + '<li class="timing"><span class="time">--:--:--:---</span> / <span class="length">--:--:--:---</span></li>'
-            + '<li class="seekwrap">'
-            + '<div class="seekbar">'
-            + '<div class="seekhead"></div>'
-            + '</div>'
-            + '</li>';
+            + '<li class="timing"><span class="time">--:--:--:---</span> / <span class="length">--:--:--:---</span></li>';
 
         html += '</ul>'
             + '</div>';
@@ -573,6 +574,7 @@ export class InteractiveTrackSwitchControllerImpl implements InteractiveTrackSwi
         // Clear and mount
         this.rootElement.innerHTML = '';
         this.rootElement.classList.add('ts-interactive-player');
+        this.rootElement.classList.remove('ts-interactive-setup');
 
         try {
             this.innerController = createAlignmentTrackSwitch(this.rootElement, playerInit);

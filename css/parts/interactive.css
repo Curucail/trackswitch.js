@@ -938,6 +938,37 @@
     overflow: visible;
 }
 
+.trackswitch.ts-interactive-player .main-control .settings-button {
+    order: 65;
+    margin-left: auto;
+}
+
+.trackswitch.ts-interactive-player .main-control .timing {
+    order: 70;
+    margin-left: 0;
+    text-align: right;
+}
+
+.trackswitch.ts-interactive-player .main-control .seekwrap {
+    order: 50;
+}
+
+@container ts-main-control (max-width: 500px) {
+    .trackswitch.ts-interactive-player .main-control ul.control {
+        display: flex;
+    }
+
+    .trackswitch.ts-interactive-player .main-control .timing,
+    .trackswitch.ts-interactive-player .main-control .seekwrap {
+        grid-column: auto;
+        justify-self: auto;
+    }
+
+    .trackswitch.ts-interactive-player .main-control .seekwrap {
+        flex-basis: 100%;
+    }
+}
+
 /* Settings button ---------------------------------------------------------- */
 
 .trackswitch .settings-button {

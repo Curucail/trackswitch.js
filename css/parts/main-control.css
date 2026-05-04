@@ -136,12 +136,6 @@
     width: var(--ts-main-seekhead-width);
     height: var(--ts-main-seekhead-height);
     top: calc((var(--ts-seekbar-height) - var(--ts-main-seekhead-height)) / 2);
-    left: clamp(
-        0px,
-        calc(var(--ts-playhead-position) - var(--ts-main-seekhead-half-width)),
-        calc(100% - var(--ts-main-seekhead-width))
-    );
-    transform: none;
 }
 
 .trackswitch .main-control .seekwrap .seekbar .loop-marker {
