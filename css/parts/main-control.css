@@ -118,7 +118,7 @@
 
 /* Seekbar */
 .trackswitch .main-control .seekwrap {
-    overflow: hidden;
+    overflow: visible;
     height: var(--ts-main-seek-hit-height);
     cursor: pointer;
     min-width: 200px;
