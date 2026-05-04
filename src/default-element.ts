@@ -47,6 +47,7 @@ export abstract class TrackswitchPlayerBase extends HTMLElement implements Track
     private mountRoot: HTMLDivElement | null = null;
     private unsubscribeHandlers: Array<() => void> = [];
     private loadGeneration = 0;
+    private controllerLoadPromise: Promise<void> | null = null;
 
     get init(): TrackSwitchInit | undefined {
         return this.currentInit;
@@ -108,20 +109,28 @@ export abstract class TrackswitchPlayerBase extends HTMLElement implements Track
             return;
         }
 
-        const nextInit = this.currentInit;
         const controller = this.currentController;
 
         if (controller) {
             try {
-                await controller.updateInit(nextInit);
+                if (this.controllerLoadPromise) {
+                    await this.controllerLoadPromise;
+                }
+                if (!this.isConnected || this.currentController !== controller || !this.currentInit) {
+                    return;
+                }
+                await controller.updateInit(this.currentInit);
                 return;
             } catch (_error) {
+                if (!this.isConnected || !this.currentInit) {
+                    return;
+                }
                 this.destroyController();
             }
         }
 
         try {
-            this.mountController(nextInit);
+            this.mountController(this.currentInit);
         } catch (error) {
             dispatchTrackSwitchEvent(this, 'error', {
                 message: error instanceof Error ? error.message : 'Unexpected error while mounting TrackSwitch.',
@@ -145,7 +154,7 @@ export abstract class TrackswitchPlayerBase extends HTMLElement implements Track
         ];
 
         const generation = ++this.loadGeneration;
-        void controller.load().catch((error) => {
+        const loadPromise = controller.load().catch((error) => {
             if (this.currentController !== controller || this.loadGeneration !== generation) {
                 return;
             }
@@ -153,12 +162,18 @@ export abstract class TrackswitchPlayerBase extends HTMLElement implements Track
             dispatchTrackSwitchEvent(this, 'error', {
                 message: error instanceof Error ? error.message : 'Unexpected error while loading TrackSwitch.',
             });
+        }).finally(() => {
+            if (this.currentController === controller && this.loadGeneration === generation) {
+                this.controllerLoadPromise = null;
+            }
         });
+        this.controllerLoadPromise = loadPromise;
     }
 
     private destroyController(): void {
         const controller = this.currentController;
         this.currentController = null;
+        this.controllerLoadPromise = null;
         this.loadGeneration += 1;
 
         this.unsubscribeHandlers.forEach((unsubscribe) => unsubscribe());

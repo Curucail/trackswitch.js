@@ -104,9 +104,6 @@ export function useTrackSwitchElement(
             return;
         }
 
-        element.init = init;
-        controllerRef.current = element.controller;
-
         const unsubscribeLoaded = addTrackswitchListener(element, TRACKSWITCH_DOM_EVENTS.loaded, onLoaded);
         const unsubscribeError = addTrackswitchListener(element, TRACKSWITCH_DOM_EVENTS.error, onError);
         const unsubscribePosition = addTrackswitchListener(element, TRACKSWITCH_DOM_EVENTS.position, onPosition);
@@ -133,7 +130,7 @@ export function useTrackSwitchElement(
 
         element.init = init;
         controllerRef.current = element.controller;
-    }, [init]);
+    }, [init, initKey]);
 
     return {
         rootRef,

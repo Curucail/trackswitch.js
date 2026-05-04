@@ -612,6 +612,20 @@ export class AudioEngine {
         });
     }
 
+    private stopRuntimeSource(runtime: TrackRuntime, when: number): void {
+        if (!runtime.activeSource) {
+            return;
+        }
+
+        try {
+            runtime.activeSource.stop(when);
+        } catch (_error) {
+            // ignore
+        }
+
+        runtime.activeSource = null;
+    }
+
     start(
         runtimes: TrackRuntime[],
         position: number,
@@ -638,7 +652,7 @@ export class AudioEngine {
         }
 
         runtimes.forEach((runtime) => {
-            runtime.activeSource = null;
+            this.stopRuntimeSource(runtime, now);
 
             if (!runtime.buffer || !runtime.gainNode) {
                 return;
@@ -716,16 +730,8 @@ export class AudioEngine {
         this.gainNodeMaster.gain.setValueAtTime(1.0, now);
         this.gainNodeMaster.gain.linearRampToValueAtTime(0.0, now + downwardRamp);
 
-        runtimes.forEach(function(runtime) {
-            if (!runtime.activeSource) {
-                return;
-            }
-            try {
-                runtime.activeSource.stop(now + downwardRamp);
-            } catch (_error) {
-                // ignore
-            }
-            runtime.activeSource = null;
+        runtimes.forEach((runtime) => {
+            this.stopRuntimeSource(runtime, now + downwardRamp);
         });
     }
 

@@ -96,10 +96,13 @@ function eventToPointerEvent(event: Event): ControllerPointerEvent {
 }
 
 export class InputBinder {
+    private static readonly COMPAT_MOUSE_SUPPRESSION_MS = 700;
+
     private readonly root: HTMLElement;
     private readonly features: TrackSwitchFeatures;
     private readonly controller: InputController;
     private readonly unbinders: Array<() => void> = [];
+    private lastTouchPointerEventTime = 0;
 
     constructor(root: HTMLElement, features: TrackSwitchFeatures, controller: InputController) {
         this.root = root;
@@ -164,9 +167,13 @@ export class InputBinder {
 
     private addPointerDelegatedListener(selector: string, handler: (event: ControllerPointerEvent) => void): void {
         this.addDelegatedListener('touchstart', selector, (event) => {
+            this.lastTouchPointerEventTime = Date.now();
             handler(event);
         });
         this.addDelegatedListener('mousedown', selector, (event) => {
+            if (Date.now() - this.lastTouchPointerEventTime < InputBinder.COMPAT_MOUSE_SUPPRESSION_MS) {
+                return;
+            }
             handler(event);
         });
     }
