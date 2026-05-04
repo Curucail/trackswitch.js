@@ -7,10 +7,7 @@
 
 .trackswitch.trackswitch {
     background: var(--ts-color-surface-base);
-    border-top: 1px solid var(--ts-color-border-mid);
-    border-left: 1px solid var(--ts-color-border-mid);
-    border-right: 1px solid var(--ts-color-border-mid);
-    border-bottom: 1px solid var(--ts-color-border-mid);
+    border: 0;
     position: relative;
     container-type: inline-size;
     container-name: ts-player;
@@ -30,6 +27,19 @@
     white-space: normal;
     word-spacing: normal;
     /* Reset line-height to stop it inheriting from page */
+}
+
+.trackswitch.trackswitch > .ts-stack-section:not(.main-control) {
+    border-left: 1px solid var(--ts-color-border-mid);
+    border-right: 1px solid var(--ts-color-border-mid);
+}
+
+.trackswitch.trackswitch > .main-control + .ts-stack-section {
+    border-top: 1px solid var(--ts-color-border-mid);
+}
+
+.trackswitch.trackswitch > .ts-stack-section:not(.main-control):last-child {
+    border-bottom: 1px solid var(--ts-color-border-mid);
 }
 
 .trackswitch.trackswitch :is(

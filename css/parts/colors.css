@@ -1,6 +1,6 @@
 .trackswitch {
     /* Canonical palette tokens. */
-    --ts-font-ui: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    --ts-font-ui: system-ui, sans-serif;
 
     --ts-color-text-primary: #000000;
     --ts-color-text-inverse: #FFFFFF;

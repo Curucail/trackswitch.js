@@ -25,10 +25,10 @@
     --ts-doc-color-focus: rgba(153, 153, 153, 0.55);
     --ts-doc-page-width: 1180px;
     --ts-doc-page-gutter: 24px;
-    --ts-doc-font-text: "IBM Plex Sans", "Segoe UI", sans-serif;
-    --ts-doc-font-ui: "IBM Plex Sans", "Segoe UI", sans-serif;
-    --ts-doc-font-brand: "Archivo", sans-serif;
-    --ts-doc-font-code: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+    --ts-doc-font-text: system-ui, sans-serif;
+    --ts-doc-font-ui: system-ui, sans-serif;
+    --ts-doc-font-brand: system-ui, sans-serif;
+    --ts-doc-font-code: ui-monospace, monospace;
 }
 
 html {
