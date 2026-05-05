@@ -78,13 +78,14 @@ interface WaveformSeekSurfaceMetadata {
     timingNode: HTMLElement | null;
     zoomNode: HTMLElement;
     zoomMinimapNode: HTMLElement;
-    zoomCanvas: HTMLCanvasElement;
+    zoomSvg: SVGSVGElement;
+    zoomPath: SVGPathElement;
     zoomViewportNode: HTMLElement;
-    zoomCanvasLastDrawKey: string | null;
+    zoomSvgLastDrawKey: string | null;
     waveformColor: string | null;
     tiles: Map<number, {
-        canvas: HTMLCanvasElement;
-        context: CanvasRenderingContext2D | null;
+        svg: SVGSVGElement;
+        path: SVGPathElement;
         lastDrawKey: string | null;
     }>;
     normalizationPeak: number;
@@ -315,10 +316,6 @@ public getWarpingMatrixSquarePlotSize(plot: WarpingMatrixPlotState): number {
 
 public resolveWarpingMatrixColumnColor(_columnKey: string, _columnOrder: string[]): string {
         return '#ED8C01';
-    }
-
-public getCanvasPixelRatio(): number {
-        return viewRendererWaveform.getCanvasPixelRatio(this);
     }
 
 initialize(runtimes: TrackRuntime[]): void {
@@ -602,20 +599,20 @@ public setWaveformSurfaceWidth(surfaceMetadata: WaveformSeekSurfaceMetadata): vo
 
 public forEachVisibleWaveformTile(
         surfaceMetadata: WaveformSeekSurfaceMetadata,
-        pixelRatio: number,
         callback: (tile: {
             tileIndex: number;
             tileStartPx: number;
             tileCssWidth: number;
+            tileCssHeight: number;
             surfaceWidth: number;
-            canvas: HTMLCanvasElement;
-            context: CanvasRenderingContext2D;
+            svg: SVGSVGElement;
+            path: SVGPathElement;
             renderBarWidth: number;
             isNew: boolean;
-            record: { canvas: HTMLCanvasElement; lastDrawKey: string | null };
+            record: { svg: SVGSVGElement; path: SVGPathElement; lastDrawKey: string | null };
         }) => void
     ): void {
-        return viewRendererWaveform.forEachVisibleWaveformTile(this, surfaceMetadata, pixelRatio, callback);
+        return viewRendererWaveform.forEachVisibleWaveformTile(this, surfaceMetadata, callback);
     }
 
 public scheduleVisibleWaveformTileRefresh(): void {
@@ -632,9 +629,10 @@ public computeNormalizationPeak(
         renderBarWidth: number,
         duration: number,
         baseProjector: TrackTimelineProjector | undefined,
-        baseWidth: number
+        baseWidth: number,
+        ignoreTrackPadding?: boolean
     ): number {
-        return viewRendererWaveform.computeNormalizationPeak(this, waveformEngine, sourceRuntimes, renderBarWidth, duration, baseProjector, baseWidth);
+        return viewRendererWaveform.computeNormalizationPeak(this, waveformEngine, sourceRuntimes, renderBarWidth, duration, baseProjector, baseWidth, ignoreTrackPadding);
     }
 
 public buildWaveformNormalizationCacheKey(

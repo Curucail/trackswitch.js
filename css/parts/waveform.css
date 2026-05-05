@@ -34,10 +34,23 @@
     inset: 0;
 }
 
-.trackswitch .waveform-wrap .waveform-surface canvas.waveform-tile {
+.trackswitch .waveform-wrap .waveform-surface .waveform-tile {
     position: absolute;
     top: 0;
     display: block;
+}
+
+.trackswitch .waveform-wrap .waveform-surface svg.waveform-tile {
+    overflow: hidden;
+}
+
+.trackswitch .waveform-wrap .waveform-surface svg.waveform-tile path,
+.trackswitch .waveform-wrap .waveform-zoom .waveform-zoom-svg path {
+    fill: none;
+    stroke: var(--waveform-color);
+    stroke-linecap: butt;
+    shape-rendering: crispEdges;
+    vector-effect: non-scaling-stroke;
 }
 
 .trackswitch .waveform-wrap .waveform-overlay {
@@ -47,7 +60,7 @@
     z-index: 5;
 }
 
-.trackswitch canvas.waveform {
+.trackswitch .waveform {
     display: block;
     width: 100%;
     background-color: var(--ts-color-surface-base);
@@ -153,12 +166,13 @@
     cursor: grabbing;
 }
 
-.trackswitch .waveform-wrap .waveform-zoom .waveform-zoom-canvas {
+.trackswitch .waveform-wrap .waveform-zoom .waveform-zoom-svg {
     display: block;
     width: 100%;
     height: 100%;
     opacity: 0.95;
     pointer-events: none;
+    overflow: hidden;
 }
 
 .trackswitch .waveform-wrap .waveform-zoom .waveform-zoom-viewport {

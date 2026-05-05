@@ -75,7 +75,8 @@ export class WaveformEngine {
         timelineDuration?: number,
         trackTimelineProjector?: TrackTimelineProjector,
         startSeconds = 0,
-        durationSeconds?: number
+        durationSeconds?: number,
+        ignoreTrackPadding = false
     ): WaveformPeakBuckets | null {
         if (!runtimes.length || peakCount <= 0) {
             return null;
@@ -122,7 +123,8 @@ export class WaveformEngine {
                     safeTimelineDuration,
                     trackTimelineProjector,
                     safeStartSeconds,
-                    safeDurationSeconds
+                    safeDurationSeconds,
+                    ignoreTrackPadding
                 );
                 if (!buckets) {
                     return null;
@@ -340,7 +342,8 @@ export class WaveformEngine {
         timelineDuration: number,
         trackTimelineProjector?: TrackTimelineProjector,
         startSeconds = 0,
-        durationSeconds?: number
+        durationSeconds?: number,
+        ignoreTrackPadding = false
     ): WaveformPeakBuckets | null {
         if (!runtime.waveformSummary) {
             return null;
@@ -354,7 +357,7 @@ export class WaveformEngine {
 
         const timing = WaveformEngine.normalizeTiming(runtime);
         const trimStart = timing ? timing.trimStart : 0;
-        const padStart = timing ? timing.padStart : 0;
+        const padStart = ignoreTrackPadding ? 0 : (timing ? timing.padStart : 0);
         const audioDuration = timing ? timing.audioDuration : WaveformEngine.getRuntimeDuration(runtime);
 
         const safeStartSeconds = Number.isFinite(startSeconds) && startSeconds > 0 ? startSeconds : 0;
@@ -530,84 +533,4 @@ export class WaveformEngine {
         return rawDuration > 0 ? Math.max(1, buffer.length / rawDuration) : Math.max(1, buffer.length);
     }
 
-    drawWaveform(
-        canvas: HTMLCanvasElement,
-        context: CanvasRenderingContext2D,
-        buckets: WaveformPeakBuckets | null,
-        barWidth: number,
-        normalizationPeak?: number,
-        waveformColor?: string
-    ): void {
-        const width = canvas.width;
-        const height = canvas.height;
-
-        context.clearRect(0, 0, width, height);
-        context.imageSmoothingEnabled = false;
-
-        if (!buckets || buckets.maxes.length === 0) {
-            return;
-        }
-
-        let maxPeak = Number.isFinite(normalizationPeak) && (normalizationPeak as number) > 0
-            ? (normalizationPeak as number)
-            : 0;
-        if (maxPeak <= 0) {
-            for (let i = 0; i < buckets.maxes.length; i += 1) {
-                maxPeak = Math.max(maxPeak, Math.abs(buckets.mins[i]), Math.abs(buckets.maxes[i]));
-            }
-        }
-
-        if (maxPeak <= 0) {
-            maxPeak = 1;
-        }
-
-        context.fillStyle = waveformColor || getComputedStyle(canvas).getPropertyValue('--waveform-color').trim() || '#ED8C01';
-
-        const centerY = Math.round(height / 2);
-        const scale = (height * 0.475) / maxPeak;
-        const snappedBarWidth = Math.max(1, Math.round(barWidth));
-
-        for (let x = 0; x < buckets.maxes.length; x += 1) {
-            const snappedX = Math.round(x * snappedBarWidth);
-            if (snappedX >= width) {
-                break;
-            }
-
-            const top = Math.round(centerY - (buckets.maxes[x] * scale));
-            const bottom = Math.round(centerY - (buckets.mins[x] * scale));
-            const y = Math.max(0, Math.min(top, bottom));
-            const barHeight = Math.max(1, Math.min(height - y, Math.abs(bottom - top)));
-            context.fillRect(snappedX, y, Math.min(snappedBarWidth, width - snappedX), barHeight);
-        }
-    }
-
-    drawPlaceholder(
-        canvas: HTMLCanvasElement,
-        context: CanvasRenderingContext2D,
-        barWidth: number,
-        alpha: number,
-        waveformColor?: string
-    ): void {
-        const width = canvas.width;
-        const height = canvas.height;
-
-        context.clearRect(0, 0, width, height);
-        context.imageSmoothingEnabled = false;
-
-        context.fillStyle = waveformColor || getComputedStyle(canvas).getPropertyValue('--waveform-color').trim() || '#ED8C01';
-        context.globalAlpha = alpha;
-
-        const snappedBarWidth = Math.max(1, Math.round(barWidth));
-        const bars = Math.max(1, Math.floor(width / snappedBarWidth));
-        for (let x = 0; x < bars; x += 1) {
-            const waveA = Math.sin(x * 0.21);
-            const waveB = Math.sin(x * 0.051 + 0.8);
-            const amplitude = 0.25 + 0.75 * (Math.abs(waveA + waveB) / 2);
-            const barHeight = Math.max(1, Math.round(amplitude * height * 0.7));
-            const y = Math.round((height - barHeight) / 2);
-            context.fillRect(x * snappedBarWidth, y, snappedBarWidth, barHeight);
-        }
-
-        context.globalAlpha = 1;
-    }
 }
