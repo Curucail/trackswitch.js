@@ -6,7 +6,7 @@ import {
 import { sanitizeInlineStyle } from '../shared/dom';
 import { formatSecondsToHHMMSSmmm } from '../shared/format';
 import { clampPercent } from '../shared/math';
-import { TrackTimelineProjector } from '../engine/waveform-engine';
+import { TrackTimelineProjector, WaveformPeakBuckets } from '../engine/waveform-engine';
 import {
     parseWaveformSource,
     resolveFixedWaveformTrackIndex,
@@ -42,6 +42,8 @@ interface WaveformSeekSurfaceMetadata {
     }>;
     normalizationPeak: number;
     normalizationCacheKey: string | null;
+    tilePeakCache: Map<string, WaveformPeakBuckets>;
+    tilePeakCacheOrder: string[];
     alignedPlayhead: boolean;
     refHooksPath: SVGPathElement | null;
     showAlignmentPoints: boolean;
@@ -54,6 +56,7 @@ interface WaveformSeekSurfaceMetadata {
 const MIN_WAVEFORM_ZOOM = 1;
 const DEFAULT_MAX_WAVEFORM_ZOOM_SECONDS = 5;
 const WAVEFORM_TILE_WIDTH_PX = 1024;
+const WAVEFORM_TILE_PEAK_CACHE_LIMIT = 64;
 function buildSeekWrap(leftPercent: number, rightPercent: number): string {
     return '<div class="seekwrap" style="left: ' + leftPercent + '%; right: ' + rightPercent + '%;">'
         + '<div class="loop-region"></div>'
@@ -206,6 +209,58 @@ function clampWaveformZoom(zoom: number, maximum: number): number {
 
 function resolveWaveformColor(element: HTMLElement): string {
     return getComputedStyle(element).getPropertyValue('--waveform-color').trim() || '#ED8C01';
+}
+
+function getWaveformBucketPeak(buckets: WaveformPeakBuckets | null): number {
+    if (!buckets) {
+        return 0;
+    }
+
+    let peak = 0;
+    for (let index = 0; index < buckets.maxes.length; index += 1) {
+        peak = Math.max(peak, Math.abs(buckets.mins[index]), Math.abs(buckets.maxes[index]));
+    }
+    return peak;
+}
+
+function clearWaveformTilePeakCache(surfaceMetadata: WaveformSeekSurfaceMetadata): void {
+    surfaceMetadata.tilePeakCache.clear();
+    surfaceMetadata.tilePeakCacheOrder = [];
+}
+
+function getCachedWaveformTilePeaks(
+    surfaceMetadata: WaveformSeekSurfaceMetadata,
+    key: string
+): WaveformPeakBuckets | null {
+    const cached = surfaceMetadata.tilePeakCache.get(key);
+    if (!cached) {
+        return null;
+    }
+
+    const existingIndex = surfaceMetadata.tilePeakCacheOrder.indexOf(key);
+    if (existingIndex !== -1) {
+        surfaceMetadata.tilePeakCacheOrder.splice(existingIndex, 1);
+    }
+    surfaceMetadata.tilePeakCacheOrder.push(key);
+    return cached;
+}
+
+function setCachedWaveformTilePeaks(
+    surfaceMetadata: WaveformSeekSurfaceMetadata,
+    key: string,
+    buckets: WaveformPeakBuckets
+): void {
+    if (!surfaceMetadata.tilePeakCache.has(key)) {
+        surfaceMetadata.tilePeakCacheOrder.push(key);
+    }
+    surfaceMetadata.tilePeakCache.set(key, buckets);
+
+    while (surfaceMetadata.tilePeakCacheOrder.length > WAVEFORM_TILE_PEAK_CACHE_LIMIT) {
+        const oldestKey = surfaceMetadata.tilePeakCacheOrder.shift();
+        if (oldestKey) {
+            surfaceMetadata.tilePeakCache.delete(oldestKey);
+        }
+    }
 }
 
 function getWaveformSurfaceWidth(surfaceMetadata: WaveformSeekSurfaceMetadata): number {
@@ -516,6 +571,8 @@ export function wrapWaveformCanvases(ctx: any): any {
                     }>(),
                     normalizationPeak: 1,
                     normalizationCacheKey: null,
+                    tilePeakCache: new Map<string, WaveformPeakBuckets>(),
+                    tilePeakCacheOrder: [],
                     alignedPlayhead: alignedPlayhead,
                     refHooksPath: refHooksPath,
                     showAlignmentPoints: showAlignmentPoints,
@@ -646,6 +703,7 @@ export function forEachVisibleWaveformTile(ctx: any, surfaceMetadata: any, pixel
                 continue;
             }
             tileRecord.context = context;
+            context.imageSmoothingEnabled = false;
 
             const renderBarWidth = Math.max(1, Math.round(surfaceMetadata.barWidth * pixelRatio));
             callback({
@@ -726,17 +784,11 @@ export function computeNormalizationPeak(ctx: any, waveformEngine: any, sourceRu
             duration,
             baseProjector
         );
-        if (!mixed || mixed.length === 0) {
+        if (!mixed || mixed.maxes.length === 0) {
             return 1;
         }
 
-        let maxPeak = 0;
-        for (let index = 0; index < mixed.length; index += 1) {
-            if (mixed[index] > maxPeak) {
-                maxPeak = mixed[index];
-            }
-        }
-
+        const maxPeak = getWaveformBucketPeak(mixed);
         return maxPeak > 0 ? maxPeak : 1;
     
     }).call(ctx, waveformEngine, sourceRuntimes, renderBarWidth, duration, baseProjector, baseWidth);
@@ -780,7 +832,7 @@ function renderWaveformMinimap(
     waveformEngine: any,
     sourceRuntimes: TrackRuntime[],
     fullDuration: number,
-    baseProjector: TrackTimelineProjector,
+    baseProjector: TrackTimelineProjector | undefined,
     normalizationPeak: number,
     normalizationCacheKey: string,
     pixelRatio: number
@@ -808,6 +860,7 @@ function renderWaveformMinimap(
     if (!context) {
         return;
     }
+    context.imageSmoothingEnabled = false;
 
     const drawKey = [
         normalizationCacheKey,
@@ -997,7 +1050,7 @@ export function drawDummyWaveforms(ctx: any, waveformEngine: any): any {
                     waveformEngine,
                     [],
                     0,
-                    (_runtime, trackTimelineTimeSeconds) => trackTimelineTimeSeconds,
+                    undefined,
                     1,
                     'placeholder',
                     pixelRatio
@@ -1071,6 +1124,9 @@ export function renderWaveformsInternal(ctx: any, waveformEngine: any, runtimes:
             const baseProjector: TrackTimelineProjector = useLocalAxis
                 ? ((_runtime, trackTimelineTimeSeconds) => trackTimelineTimeSeconds)
                 : (trackTimelineProjector || ((_runtime, trackTimelineTimeSeconds) => trackTimelineTimeSeconds));
+            const waveformProjector = !useLocalAxis && !!trackTimelineProjector
+                ? baseProjector
+                : undefined;
             setWaveformZoomForSurface(
                 surfaceMetadata,
                 surfaceMetadata.zoom,
@@ -1094,10 +1150,11 @@ export function renderWaveformsInternal(ctx: any, waveformEngine: any, runtimes:
                     sourceRuntimes,
                     surfaceRenderBarWidth,
                     fullDuration,
-                    baseProjector,
+                    waveformProjector,
                     surfaceMetadata.baseWidth
                 );
                 surfaceMetadata.normalizationCacheKey = normalizationCacheKey;
+                clearWaveformTilePeakCache(surfaceMetadata);
             }
 
             const normalizationPeak = surfaceMetadata.normalizationPeak;
@@ -1152,21 +1209,28 @@ export function renderWaveformsInternal(ctx: any, waveformEngine: any, runtimes:
                     return;
                 }
 
-                const tileProjector: TrackTimelineProjector = (runtime, trackTimelineTimeSeconds) => {
-                    const mapped = baseProjector(runtime, trackTimelineTimeSeconds);
-                    if (!Number.isFinite(mapped)) {
-                        return NaN;
-                    }
-                    return mapped - tileStartTime;
-                };
-
-                const mixed = waveformEngine.calculateMixedWaveform(
-                    sourceRuntimes,
+                const peakCacheKey = [
+                    tileDrawKey,
+                    Math.round(tileStartTime * 1000000),
+                    Math.round(tileDuration * 1000000),
                     peakCount,
-                    tile.renderBarWidth,
-                    tileDuration,
-                    tileProjector
-                );
+                    pixelRatio,
+                ].join('#');
+                let mixed = getCachedWaveformTilePeaks(surfaceMetadata, peakCacheKey);
+                if (!mixed) {
+                    mixed = waveformEngine.calculateMixedWaveform(
+                        sourceRuntimes,
+                        peakCount,
+                        tile.renderBarWidth,
+                        fullDuration,
+                        waveformProjector,
+                        tileStartTime,
+                        tileDuration
+                    );
+                    if (mixed) {
+                        setCachedWaveformTilePeaks(surfaceMetadata, peakCacheKey, mixed);
+                    }
+                }
 
                 if (!mixed) {
                     waveformEngine.drawPlaceholder(
@@ -1195,7 +1259,7 @@ export function renderWaveformsInternal(ctx: any, waveformEngine: any, runtimes:
                 waveformEngine,
                 sourceRuntimes,
                 fullDuration,
-                baseProjector,
+                waveformProjector,
                 normalizationPeak,
                 normalizationCacheKey,
                 pixelRatio

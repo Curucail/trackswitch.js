@@ -3,7 +3,11 @@ import { TrackRuntime, TrackTiming, WaveformSummary, WaveformSummaryLevel } from
 export type TrackTimelineProjector = (runtime: TrackRuntime, trackTimelineTimeSeconds: number) => number;
 
 const SUMMARY_WINDOW_SAMPLES = 256;
-const RMS_BLEND = 0.18;
+
+export interface WaveformPeakBuckets {
+    mins: Float32Array;
+    maxes: Float32Array;
+}
 
 export class WaveformEngine {
     createSummary(buffer: AudioBuffer): WaveformSummary {
@@ -21,14 +25,14 @@ export class WaveformEngine {
                 sampleCount: 0,
                 levels: [{
                     samplesPerEntry: SUMMARY_WINDOW_SAMPLES,
-                    peaks: new Float32Array(0),
-                    rms: new Float32Array(0),
+                    mins: new Float32Array(0),
+                    maxes: new Float32Array(0),
                 }],
             };
         }
 
         levels.push(this.createBaseSummaryLevel(buffer));
-        while (levels[levels.length - 1].peaks.length > 1) {
+        while (levels[levels.length - 1].mins.length > 1) {
             levels.push(this.createCoarserSummaryLevel(levels[levels.length - 1]));
         }
 
@@ -50,12 +54,18 @@ export class WaveformEngine {
             return null;
         }
 
-        return this.querySummary(
+        const buckets = this.querySummary(
             runtime.waveformSummary,
             peakCount,
             startSeconds,
             durationSeconds
         );
+        const peaks = new Float32Array(buckets.maxes.length);
+        for (let index = 0; index < peaks.length; index += 1) {
+            peaks[index] = Math.max(Math.abs(buckets.mins[index]), Math.abs(buckets.maxes[index]));
+        }
+
+        return peaks;
     }
 
     calculateMixedWaveform(
@@ -63,8 +73,10 @@ export class WaveformEngine {
         peakCount: number,
         _barWidth: number,
         timelineDuration?: number,
-        trackTimelineProjector?: TrackTimelineProjector
-    ): Float32Array | null {
+        trackTimelineProjector?: TrackTimelineProjector,
+        startSeconds = 0,
+        durationSeconds?: number
+    ): WaveformPeakBuckets | null {
         if (!runtimes.length || peakCount <= 0) {
             return null;
         }
@@ -88,48 +100,75 @@ export class WaveformEngine {
             return null;
         }
 
-        const mappedPeaks = audible
+        const safeStartSeconds = Number.isFinite(startSeconds) && startSeconds > 0
+            ? startSeconds
+            : 0;
+        const safeDurationSeconds = durationSeconds !== undefined && Number.isFinite(durationSeconds)
+            ? Math.max(0, Math.min(durationSeconds, Math.max(0, safeTimelineDuration - safeStartSeconds)))
+            : Math.max(0, safeTimelineDuration - safeStartSeconds);
+
+        if (safeDurationSeconds <= 0) {
+            return {
+                mins: new Float32Array(count),
+                maxes: new Float32Array(count),
+            };
+        }
+
+        const mappedBuckets = audible
             .map((runtime) => {
-                const peaks = this.getTrackTimelinePeaks(
+                const buckets = this.getTrackTimelineBuckets(
                     runtime,
                     count,
                     safeTimelineDuration,
-                    trackTimelineProjector
+                    trackTimelineProjector,
+                    safeStartSeconds,
+                    safeDurationSeconds
                 );
-                if (!peaks) {
+                if (!buckets) {
                     return null;
                 }
 
                 const weight = Math.max(0, Math.min(1, runtime.state.volume));
                 if (weight >= 0.999999) {
-                    return peaks;
+                    return buckets;
                 }
 
-                const scaled = new Float32Array(peaks.length);
-                for (let index = 0; index < peaks.length; index += 1) {
-                    scaled[index] = peaks[index] * weight;
+                const scaled: WaveformPeakBuckets = {
+                    mins: new Float32Array(buckets.mins.length),
+                    maxes: new Float32Array(buckets.maxes.length),
+                };
+                for (let index = 0; index < buckets.maxes.length; index += 1) {
+                    scaled.mins[index] = buckets.mins[index] * weight;
+                    scaled.maxes[index] = buckets.maxes[index] * weight;
                 }
                 return scaled;
             })
-            .filter(function(peaks): peaks is Float32Array {
-                return !!peaks;
+            .filter(function(buckets): buckets is WaveformPeakBuckets {
+                return !!buckets;
             });
 
-        if (!mappedPeaks.length) {
+        if (!mappedBuckets.length) {
             return null;
         }
 
-        if (mappedPeaks.length === 1) {
-            return mappedPeaks[0];
+        if (mappedBuckets.length === 1) {
+            return mappedBuckets[0];
         }
 
-        const mixed = new Float32Array(count);
+        const mixed: WaveformPeakBuckets = {
+            mins: new Float32Array(count),
+            maxes: new Float32Array(count),
+        };
+        const divisor = Math.sqrt(mappedBuckets.length);
         for (let x = 0; x < count; x += 1) {
-            let sum = 0;
-            for (let i = 0; i < mappedPeaks.length; i += 1) {
-                sum += mappedPeaks[i][x];
+            let minSum = 0;
+            let maxSum = 0;
+            for (let i = 0; i < mappedBuckets.length; i += 1) {
+                minSum += mappedBuckets[i].mins[x];
+                maxSum += mappedBuckets[i].maxes[x];
             }
-            mixed[x] = sum / Math.sqrt(mappedPeaks.length);
+            mixed.mins[x] = minSum / divisor;
+            mixed.maxes[x] = maxSum / divisor;
         }
 
         return mixed;
@@ -138,8 +177,8 @@ export class WaveformEngine {
     private createBaseSummaryLevel(buffer: AudioBuffer): WaveformSummaryLevel {
         const sampleCount = buffer.length;
         const entryCount = Math.max(1, Math.ceil(sampleCount / SUMMARY_WINDOW_SAMPLES));
-        const peaks = new Float32Array(entryCount);
-        const rms = new Float32Array(entryCount);
+        const mins = new Float32Array(entryCount);
+        const maxes = new Float32Array(entryCount);
         const channelCount = Math.max(1, buffer.numberOfChannels);
         const channels: Float32Array[] = [];
 
@@ -150,60 +189,53 @@ export class WaveformEngine {
         for (let entryIndex = 0; entryIndex < entryCount; entryIndex += 1) {
             const start = entryIndex * SUMMARY_WINDOW_SAMPLES;
             const end = Math.min(sampleCount, start + SUMMARY_WINDOW_SAMPLES);
-            let peak = 0;
-            let squareSum = 0;
-            let count = 0;
+            let min = 0;
+            let max = 0;
 
             for (let sampleIndex = start; sampleIndex < end; sampleIndex += 1) {
-                let sample = 0;
                 for (let channelIndex = 0; channelIndex < channels.length; channelIndex += 1) {
-                    const channelSample = Math.abs(channels[channelIndex][sampleIndex]);
-                    if (channelSample > sample) {
-                        sample = channelSample;
+                    const sample = channels[channelIndex][sampleIndex];
+                    if (sample < min) {
+                        min = sample;
+                    }
+                    if (sample > max) {
+                        max = sample;
                     }
                 }
-
-                if (sample > peak) {
-                    peak = sample;
-                }
-                squareSum += sample * sample;
-                count += 1;
             }
 
-            peaks[entryIndex] = peak;
-            rms[entryIndex] = count > 0 ? Math.sqrt(squareSum / count) : 0;
+            mins[entryIndex] = min;
+            maxes[entryIndex] = max;
         }
 
         return {
             samplesPerEntry: SUMMARY_WINDOW_SAMPLES,
-            peaks,
-            rms,
+            mins,
+            maxes,
         };
     }
 
     private createCoarserSummaryLevel(previous: WaveformSummaryLevel): WaveformSummaryLevel {
-        const entryCount = Math.max(1, Math.ceil(previous.peaks.length / 2));
-        const peaks = new Float32Array(entryCount);
-        const rms = new Float32Array(entryCount);
+        const entryCount = Math.max(1, Math.ceil(previous.mins.length / 2));
+        const mins = new Float32Array(entryCount);
+        const maxes = new Float32Array(entryCount);
 
         for (let entryIndex = 0; entryIndex < entryCount; entryIndex += 1) {
             const sourceIndex = entryIndex * 2;
-            const peakA = previous.peaks[sourceIndex] || 0;
-            const peakB = previous.peaks[sourceIndex + 1] || 0;
-            const rmsA = previous.rms[sourceIndex] || 0;
-            const rmsB = previous.rms[sourceIndex + 1] || 0;
-            const hasB = sourceIndex + 1 < previous.rms.length;
+            const minA = previous.mins[sourceIndex] || 0;
+            const maxA = previous.maxes[sourceIndex] || 0;
+            const hasB = sourceIndex + 1 < previous.mins.length;
+            const minB = hasB ? previous.mins[sourceIndex + 1] : minA;
+            const maxB = hasB ? previous.maxes[sourceIndex + 1] : maxA;
 
-            peaks[entryIndex] = Math.max(peakA, peakB);
-            rms[entryIndex] = hasB
-                ? Math.sqrt(((rmsA * rmsA) + (rmsB * rmsB)) / 2)
-                : rmsA;
+            mins[entryIndex] = Math.min(minA, minB);
+            maxes[entryIndex] = Math.max(maxA, maxB);
         }
 
         return {
             samplesPerEntry: previous.samplesPerEntry * 2,
-            peaks,
-            rms,
+            mins,
+            maxes,
         };
     }
 
@@ -212,11 +244,14 @@ export class WaveformEngine {
         peakCount: number,
         startSeconds = 0,
         durationSeconds?: number
-    ): Float32Array {
+    ): WaveformPeakBuckets {
         const count = Math.max(1, Math.floor(peakCount));
-        const peaks = new Float32Array(count);
+        const buckets: WaveformPeakBuckets = {
+            mins: new Float32Array(count),
+            maxes: new Float32Array(count),
+        };
         if (!summary.levels.length || summary.sampleCount <= 0) {
-            return peaks;
+            return buckets;
         }
 
         const safeStartSeconds = Number.isFinite(startSeconds) && startSeconds > 0
@@ -228,7 +263,7 @@ export class WaveformEngine {
             : maxDurationSeconds;
 
         if (safeDurationSeconds <= 0) {
-            return peaks;
+            return buckets;
         }
 
         const startSample = Math.min(summary.sampleCount, Math.floor(safeStartSeconds * summary.sampleRate));
@@ -237,146 +272,206 @@ export class WaveformEngine {
             Math.max(startSample, Math.ceil((safeStartSeconds + safeDurationSeconds) * summary.sampleRate))
         );
         const samplesPerPeak = Math.max(1, (endSample - startSample) / count);
-        const level = this.selectSummaryLevel(summary, samplesPerPeak);
 
         for (let peakIndex = 0; peakIndex < count; peakIndex += 1) {
             const rangeStartSample = startSample + Math.floor(peakIndex * samplesPerPeak);
             const rangeEndSample = peakIndex === count - 1
                 ? endSample
                 : startSample + Math.ceil((peakIndex + 1) * samplesPerPeak);
-            const startEntry = Math.max(0, Math.floor(rangeStartSample / level.samplesPerEntry));
-            const endEntry = Math.min(
-                level.peaks.length,
-                Math.max(startEntry + 1, Math.ceil(rangeEndSample / level.samplesPerEntry))
-            );
-            let peak = 0;
-            let squareSum = 0;
-            let entryCount = 0;
+            const range = this.querySummarySampleRange(summary, rangeStartSample, rangeEndSample);
+            buckets.mins[peakIndex] = range.min;
+            buckets.maxes[peakIndex] = range.max;
+        }
 
-            for (let entryIndex = startEntry; entryIndex < endEntry; entryIndex += 1) {
-                const entryPeak = level.peaks[entryIndex];
-                const entryRms = level.rms[entryIndex];
-                if (entryPeak > peak) {
-                    peak = entryPeak;
+        return buckets;
+    }
+
+    private querySummarySampleRange(
+        summary: WaveformSummary,
+        startSample: number,
+        endSample: number
+    ): { min: number; max: number } {
+        const safeStart = Math.max(0, Math.min(summary.sampleCount, Math.floor(startSample)));
+        const safeEnd = Math.max(safeStart, Math.min(summary.sampleCount, Math.ceil(endSample)));
+        if (safeEnd <= safeStart || !summary.levels.length) {
+            return { min: 0, max: 0 };
+        }
+
+        let cursor = safeStart;
+        let min = 0;
+        let max = 0;
+        while (cursor < safeEnd) {
+            let selected = summary.levels[0];
+            for (let levelIndex = summary.levels.length - 1; levelIndex >= 0; levelIndex -= 1) {
+                const candidate = summary.levels[levelIndex];
+                const aligned = cursor % candidate.samplesPerEntry === 0;
+                if (aligned && cursor + candidate.samplesPerEntry <= safeEnd) {
+                    selected = candidate;
+                    break;
                 }
-                squareSum += entryRms * entryRms;
-                entryCount += 1;
             }
 
-            const rms = entryCount > 0 ? Math.sqrt(squareSum / entryCount) : 0;
-            peaks[peakIndex] = (peak * (1 - RMS_BLEND)) + (rms * RMS_BLEND);
-        }
-
-        return peaks;
-    }
-
-    private selectSummaryLevel(summary: WaveformSummary, samplesPerPeak: number): WaveformSummaryLevel {
-        let selected = summary.levels[0];
-        for (let index = 1; index < summary.levels.length; index += 1) {
-            const candidate = summary.levels[index];
-            if (candidate.samplesPerEntry > samplesPerPeak) {
-                break;
+            const entryIndex = Math.min(
+                selected.mins.length - 1,
+                Math.max(0, Math.floor(cursor / selected.samplesPerEntry))
+            );
+            const entryMin = selected.mins[entryIndex] || 0;
+            const entryMax = selected.maxes[entryIndex] || 0;
+            if (entryMin < min) {
+                min = entryMin;
             }
-            selected = candidate;
+            if (entryMax > max) {
+                max = entryMax;
+            }
+
+            const entryEndSample = Math.min(
+                safeEnd,
+                (entryIndex + 1) * selected.samplesPerEntry
+            );
+            cursor = entryEndSample > cursor ? entryEndSample : cursor + 1;
         }
-        return selected;
+
+        return { min, max };
     }
 
-    private getTrackTimelinePeaks(
+    private getTrackTimelineBuckets(
         runtime: TrackRuntime,
         peakCount: number,
         timelineDuration: number,
-        trackTimelineProjector?: TrackTimelineProjector
-    ): Float32Array | null {
+        trackTimelineProjector?: TrackTimelineProjector,
+        startSeconds = 0,
+        durationSeconds?: number
+    ): WaveformPeakBuckets | null {
         if (!runtime.waveformSummary) {
             return null;
         }
 
         const safePeakCount = Math.max(1, Math.floor(peakCount));
-        const timelinePeaks = new Float32Array(safePeakCount);
+        const timelineBuckets: WaveformPeakBuckets = {
+            mins: new Float32Array(safePeakCount),
+            maxes: new Float32Array(safePeakCount),
+        };
 
         const timing = WaveformEngine.normalizeTiming(runtime);
         const trimStart = timing ? timing.trimStart : 0;
         const padStart = timing ? timing.padStart : 0;
         const audioDuration = timing ? timing.audioDuration : WaveformEngine.getRuntimeDuration(runtime);
 
-        if (audioDuration <= 0 || timelineDuration <= 0) {
-            return timelinePeaks;
-        }
+        const safeStartSeconds = Number.isFinite(startSeconds) && startSeconds > 0 ? startSeconds : 0;
+        const safeDurationSeconds = durationSeconds !== undefined && Number.isFinite(durationSeconds)
+            ? Math.max(0, durationSeconds)
+            : Math.max(0, timelineDuration - safeStartSeconds);
 
-        const waveformLength = Math.max(1, Math.round((audioDuration / timelineDuration) * safePeakCount));
-        const trackPeaks = this.getTrackPeaks(runtime, waveformLength, trimStart, audioDuration);
-
-        if (!trackPeaks) {
-            return null;
+        if (audioDuration <= 0 || timelineDuration <= 0 || safeDurationSeconds <= 0) {
+            return timelineBuckets;
         }
 
         if (!trackTimelineProjector) {
-            const waveformStart = Math.round((padStart / timelineDuration) * safePeakCount);
+            const windowEnd = safeStartSeconds + safeDurationSeconds;
+            const trackStart = padStart;
+            const trackEnd = padStart + audioDuration;
+            const overlapStart = Math.max(safeStartSeconds, trackStart);
+            const overlapEnd = Math.min(windowEnd, trackEnd);
 
-            for (let x = 0; x < trackPeaks.length; x += 1) {
-                const targetIndex = waveformStart + x;
-                if (targetIndex < 0) {
-                    continue;
-                }
-                if (targetIndex >= safePeakCount) {
-                    break;
-                }
-                timelinePeaks[targetIndex] = trackPeaks[x];
+            if (overlapEnd <= overlapStart) {
+                return timelineBuckets;
             }
 
-            return timelinePeaks;
+            const secondsPerPeak = safeDurationSeconds / safePeakCount;
+            for (let peakIndex = 0; peakIndex < safePeakCount; peakIndex += 1) {
+                const bucketStart = safeStartSeconds + (peakIndex * secondsPerPeak);
+                const bucketEnd = peakIndex === safePeakCount - 1
+                    ? windowEnd
+                    : safeStartSeconds + ((peakIndex + 1) * secondsPerPeak);
+                const bucketOverlapStart = Math.max(bucketStart, overlapStart);
+                const bucketOverlapEnd = Math.min(bucketEnd, overlapEnd);
+                if (bucketOverlapEnd <= bucketOverlapStart) {
+                    continue;
+                }
+
+                const audioStart = trimStart + (bucketOverlapStart - padStart);
+                const audioDurationSeconds = bucketOverlapEnd - bucketOverlapStart;
+                const buckets = this.querySummary(runtime.waveformSummary, 1, audioStart, audioDurationSeconds);
+                timelineBuckets.mins[peakIndex] = buckets.mins[0];
+                timelineBuckets.maxes[peakIndex] = buckets.maxes[0];
+            }
+
+            return timelineBuckets;
         }
 
         let previousTargetIndex: number | null = null;
-        let previousPeak = 0;
+        let previousMin = 0;
+        let previousMax = 0;
+        const summary = runtime.waveformSummary;
+        const level = summary.levels[0];
 
-        for (let x = 0; x < trackPeaks.length; x += 1) {
-            const peak = trackPeaks[x];
-            if (peak <= 0) {
+        for (let sourceIndex = 0; sourceIndex < level.mins.length; sourceIndex += 1) {
+            const min = level.mins[sourceIndex];
+            const max = level.maxes[sourceIndex];
+            if (min === 0 && max === 0) {
                 previousTargetIndex = null;
-                previousPeak = 0;
+                previousMin = 0;
+                previousMax = 0;
                 continue;
             }
 
-            const fraction = trackPeaks.length <= 1 ? 0 : (x / (trackPeaks.length - 1));
-            const trackTimelineTime = padStart + (fraction * audioDuration);
+            const audioStart = (sourceIndex * level.samplesPerEntry) / summary.sampleRate;
+            if (audioStart < trimStart || audioStart > trimStart + audioDuration) {
+                previousTargetIndex = null;
+                continue;
+            }
+
+            const trackTimelineTime = padStart + (audioStart - trimStart);
             const mappedTimelineTime = trackTimelineProjector(runtime, trackTimelineTime);
 
-            if (!Number.isFinite(mappedTimelineTime) || mappedTimelineTime < 0 || mappedTimelineTime > timelineDuration) {
+            if (
+                !Number.isFinite(mappedTimelineTime)
+                || mappedTimelineTime < safeStartSeconds
+                || mappedTimelineTime > safeStartSeconds + safeDurationSeconds
+            ) {
                 previousTargetIndex = null;
                 continue;
             }
 
             const targetIndex = Math.min(
                 safePeakCount - 1,
-                Math.floor((mappedTimelineTime / timelineDuration) * safePeakCount)
+                Math.max(0, Math.floor(((mappedTimelineTime - safeStartSeconds) / safeDurationSeconds) * safePeakCount))
             );
-            this.mergeTimelinePeak(timelinePeaks, targetIndex, peak);
+            this.mergeTimelineBucket(timelineBuckets, targetIndex, min, max);
 
             if (previousTargetIndex !== null && previousTargetIndex !== targetIndex) {
                 const distance = targetIndex - previousTargetIndex;
                 const step = distance > 0 ? 1 : -1;
                 for (let cursor: number = previousTargetIndex + step; cursor !== targetIndex; cursor += step) {
                     const t = Math.abs((cursor - previousTargetIndex) / distance);
-                    const interpolatedPeak = previousPeak + ((peak - previousPeak) * t);
-                    this.mergeTimelinePeak(timelinePeaks, cursor, interpolatedPeak);
+                    const interpolatedMin = previousMin + ((min - previousMin) * t);
+                    const interpolatedMax = previousMax + ((max - previousMax) * t);
+                    this.mergeTimelineBucket(timelineBuckets, cursor, interpolatedMin, interpolatedMax);
                 }
             }
 
             previousTargetIndex = targetIndex;
-            previousPeak = peak;
+            previousMin = min;
+            previousMax = max;
         }
 
-        return timelinePeaks;
+        return timelineBuckets;
     }
 
-    private mergeTimelinePeak(target: Float32Array, index: number, peak: number): void {
-        if (index < 0 || index >= target.length || !Number.isFinite(peak)) {
+    private mergeTimelineBucket(target: WaveformPeakBuckets, index: number, min: number, max: number): void {
+        if (
+            index < 0
+            || index >= target.mins.length
+            || !Number.isFinite(min)
+            || !Number.isFinite(max)
+        ) {
             return;
         }
-        if (peak > target[index]) {
-            target[index] = peak;
+        if (min < target.mins[index]) {
+            target.mins[index] = min;
+        }
+        if (max > target.maxes[index]) {
+            target.maxes[index] = max;
         }
     }
 
@@ -438,7 +533,7 @@ export class WaveformEngine {
     drawWaveform(
         canvas: HTMLCanvasElement,
         context: CanvasRenderingContext2D,
-        peaks: Float32Array | null,
+        buckets: WaveformPeakBuckets | null,
         barWidth: number,
         normalizationPeak?: number,
         waveformColor?: string
@@ -447,8 +542,9 @@ export class WaveformEngine {
         const height = canvas.height;
 
         context.clearRect(0, 0, width, height);
+        context.imageSmoothingEnabled = false;
 
-        if (!peaks || peaks.length === 0) {
+        if (!buckets || buckets.maxes.length === 0) {
             return;
         }
 
@@ -456,10 +552,8 @@ export class WaveformEngine {
             ? (normalizationPeak as number)
             : 0;
         if (maxPeak <= 0) {
-            for (let i = 0; i < peaks.length; i += 1) {
-                if (peaks[i] > maxPeak) {
-                    maxPeak = peaks[i];
-                }
+            for (let i = 0; i < buckets.maxes.length; i += 1) {
+                maxPeak = Math.max(maxPeak, Math.abs(buckets.mins[i]), Math.abs(buckets.maxes[i]));
             }
         }
 
@@ -469,11 +563,21 @@ export class WaveformEngine {
 
         context.fillStyle = waveformColor || getComputedStyle(canvas).getPropertyValue('--waveform-color').trim() || '#ED8C01';
 
-        for (let x = 0; x < peaks.length && x < width; x += 1) {
-            const normalized = peaks[x] / maxPeak;
-            const barHeight = normalized * height * 0.95;
-            const y = (height - barHeight) / 2;
-            context.fillRect(x * barWidth, y, barWidth, barHeight);
+        const centerY = Math.round(height / 2);
+        const scale = (height * 0.475) / maxPeak;
+        const snappedBarWidth = Math.max(1, Math.round(barWidth));
+
+        for (let x = 0; x < buckets.maxes.length; x += 1) {
+            const snappedX = Math.round(x * snappedBarWidth);
+            if (snappedX >= width) {
+                break;
+            }
+
+            const top = Math.round(centerY - (buckets.maxes[x] * scale));
+            const bottom = Math.round(centerY - (buckets.mins[x] * scale));
+            const y = Math.max(0, Math.min(top, bottom));
+            const barHeight = Math.max(1, Math.min(height - y, Math.abs(bottom - top)));
+            context.fillRect(snappedX, y, Math.min(snappedBarWidth, width - snappedX), barHeight);
         }
     }
 
@@ -488,18 +592,20 @@ export class WaveformEngine {
         const height = canvas.height;
 
         context.clearRect(0, 0, width, height);
+        context.imageSmoothingEnabled = false;
 
         context.fillStyle = waveformColor || getComputedStyle(canvas).getPropertyValue('--waveform-color').trim() || '#ED8C01';
         context.globalAlpha = alpha;
 
-        const bars = Math.max(1, Math.floor(width / barWidth));
+        const snappedBarWidth = Math.max(1, Math.round(barWidth));
+        const bars = Math.max(1, Math.floor(width / snappedBarWidth));
         for (let x = 0; x < bars; x += 1) {
             const waveA = Math.sin(x * 0.21);
             const waveB = Math.sin(x * 0.051 + 0.8);
             const amplitude = 0.25 + 0.75 * (Math.abs(waveA + waveB) / 2);
-            const barHeight = amplitude * height * 0.7;
-            const y = (height - barHeight) / 2;
-            context.fillRect(x * barWidth, y, barWidth, barHeight);
+            const barHeight = Math.max(1, Math.round(amplitude * height * 0.7));
+            const y = Math.round((height - barHeight) / 2);
+            context.fillRect(x * snappedBarWidth, y, snappedBarWidth, barHeight);
         }
 
         context.globalAlpha = 1;

@@ -89,6 +89,11 @@ interface WaveformSeekSurfaceMetadata {
     }>;
     normalizationPeak: number;
     normalizationCacheKey: string | null;
+    tilePeakCache: Map<string, {
+        mins: Float32Array;
+        maxes: Float32Array;
+    }>;
+    tilePeakCacheOrder: string[];
     alignedPlayhead: boolean;
     refHooksPath: SVGPathElement | null;
 }
@@ -626,7 +631,7 @@ public computeNormalizationPeak(
         sourceRuntimes: TrackRuntime[],
         renderBarWidth: number,
         duration: number,
-        baseProjector: TrackTimelineProjector,
+        baseProjector: TrackTimelineProjector | undefined,
         baseWidth: number
     ): number {
         return viewRendererWaveform.computeNormalizationPeak(this, waveformEngine, sourceRuntimes, renderBarWidth, duration, baseProjector, baseWidth);

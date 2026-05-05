@@ -202,8 +202,8 @@ export type TrackSourceVariant = 'base' | 'synced';
 
 export interface WaveformSummaryLevel {
     samplesPerEntry: number;
-    peaks: Float32Array;
-    rms: Float32Array;
+    mins: Float32Array;
+    maxes: Float32Array;
 }
 
 export interface WaveformSummary {

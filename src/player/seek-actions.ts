@@ -10,6 +10,32 @@ interface SeekTimelineContext {
     fromReferenceTime(referenceTime: number): number;
 }
 
+const WAVEFORM_WHEEL_ZOOM_SPEED = 0.002;
+const WAVEFORM_TRACKPAD_DELTA_BOOST = 8;
+const WAVEFORM_ZOOM_OUT_DELTA_BOOST = 1.35;
+const WAVEFORM_MAX_WHEEL_DELTA = 240;
+
+function normalizeWaveformWheelDelta(event: WheelEvent): number {
+    let deltaY = event.deltaY;
+
+    if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) {
+        deltaY *= 16;
+    } else if (event.deltaMode === WheelEvent.DOM_DELTA_PAGE) {
+        const ownerNode = event.currentTarget instanceof Node
+            ? event.currentTarget
+            : (event.target instanceof Node ? event.target : null);
+        deltaY *= Math.max(1, getOwnerWindow(ownerNode).innerHeight);
+    } else if (Math.abs(deltaY) < 16) {
+        deltaY *= WAVEFORM_TRACKPAD_DELTA_BOOST;
+    }
+
+    if (deltaY > 0) {
+        deltaY *= WAVEFORM_ZOOM_OUT_DELTA_BOOST;
+    }
+
+    return clamp(deltaY, -WAVEFORM_MAX_WHEEL_DELTA, WAVEFORM_MAX_WHEEL_DELTA);
+}
+
 function handleWaveformAuxiliarySeekState(controller: any, event: any): boolean {
     if (controller.waveformMinimapDragState) {
         if (controller.updateWaveformMinimapDrag(event)) {
@@ -151,7 +177,7 @@ export function onSeekMove(ctx: any, event: any): any {
 export function onWaveformZoomWheel(ctx: any, event: any): any {
     return (function(this: any, event: any) {
         const wheelEvent = event.originalEvent as WheelEvent | undefined;
-        const deltaY = wheelEvent?.deltaY;
+        const deltaY = wheelEvent ? normalizeWaveformWheelDelta(wheelEvent) : 0;
         if (typeof deltaY !== 'number' || !Number.isFinite(deltaY) || deltaY === 0) {
             return;
         }
@@ -179,7 +205,7 @@ export function onWaveformZoomWheel(ctx: any, event: any): any {
         event.preventDefault();
         event.stopPropagation();
 
-        const zoomFactor = Math.exp((-1 * deltaY) * 0.002);
+        const zoomFactor = Math.exp((-1 * deltaY) * WAVEFORM_WHEEL_ZOOM_SPEED);
         const nextZoom = currentZoom * zoomFactor;
         const changed = this.renderer.setWaveformZoom(
             seekWrap,
