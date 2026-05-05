@@ -939,18 +939,18 @@
 }
 
 .trackswitch.ts-interactive-player .main-control .settings-button {
-    order: 65;
+    order: 18;
     margin-left: auto;
 }
 
 .trackswitch.ts-interactive-player .main-control .timing {
-    order: 70;
+    order: 19;
     margin-left: 0;
     text-align: right;
 }
 
 .trackswitch.ts-interactive-player .main-control .seekwrap {
-    order: 50;
+    order: 100;
 }
 
 @container ts-main-control (max-width: 500px) {
