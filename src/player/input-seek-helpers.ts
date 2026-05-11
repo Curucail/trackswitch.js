@@ -1,9 +1,11 @@
 import { closestInRoot, getOwnerWindow } from "../shared/dom";
+import type { ControllerPointerEvent } from "../shared/seek";
 import { activateLoopRange } from "./playback-actions";
+import type { TrackSwitchControllerImpl } from "./player-controller";
 
 export function resolveWaveformMinimapStart(
-	controller: any,
-	event: any,
+	controller: TrackSwitchControllerImpl,
+	event: ControllerPointerEvent,
 ): {
 	minimapNode: HTMLElement;
 	seekWrap: HTMLElement;
@@ -65,7 +67,10 @@ export function resolveWaveformMinimapStart(
 	};
 }
 
-export function finishSeekEndInteraction(controller: any, event: any): boolean {
+export function finishSeekEndInteraction(
+	controller: TrackSwitchControllerImpl,
+	event: ControllerPointerEvent,
+): boolean {
 	if (controller.waveformMinimapDragState) {
 		controller.endWaveformMinimapDrag();
 		event.preventDefault();
@@ -104,7 +109,9 @@ export function finishSeekEndInteraction(controller: any, event: any): boolean {
 	return false;
 }
 
-export function finalizeRightClickLoopSelection(controller: any): void {
+export function finalizeRightClickLoopSelection(
+	controller: TrackSwitchControllerImpl,
+): void {
 	controller.rightClickDragging = false;
 	controller.loopDragStart = null;
 	const seekTimelineContext = controller.getSeekTimelineContext(

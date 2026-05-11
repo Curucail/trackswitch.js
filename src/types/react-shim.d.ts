@@ -1,5 +1,5 @@
 declare module "react" {
-	export type ReactElement = any;
+	export type ReactElement = unknown;
 	export type CSSProperties = Record<string, string | number | undefined>;
 
 	export interface MutableRefObject<T> {
@@ -16,16 +16,17 @@ declare module "react" {
 	export type ForwardRefExoticComponent<P> = (props: P) => ReactElement | null;
 
 	export function createElement(
-		type: any,
+		type: unknown,
 		props?: Record<string, unknown> | null,
-		...children: any[]
+		...children: unknown[]
 	): ReactElement;
 
-	export function forwardRef<T, P = {}>(
+	export function forwardRef<T, P = Record<PropertyKey, never>>(
 		render: (props: P, ref: Ref<T>) => ReactElement | null,
 	): ForwardRefExoticComponent<P & RefAttributes<T>>;
 
 	export function useEffect(
+		// biome-ignore lint/suspicious/noConfusingVoidType: React effects may return no value or a cleanup callback.
 		effect: () => void | (() => void),
 		deps?: readonly unknown[],
 	): void;

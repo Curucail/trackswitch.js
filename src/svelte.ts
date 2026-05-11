@@ -39,13 +39,13 @@ type TrackswitchSvelteElement = HTMLElement & {
 	controller?: TrackSwitchController | InteractiveTrackSwitchController | null;
 };
 
-function bindEvent(
+function bindEvent<P>(
 	element: HTMLElement,
 	eventName: TrackswitchDomEventName,
-	getHandler: () => ((payload: any) => void) | undefined,
+	getHandler: () => ((payload: P) => void) | undefined,
 ): () => void {
 	const listener = (event: Event) => {
-		getHandler()?.((event as CustomEvent).detail);
+		getHandler()?.((event as CustomEvent<P>).detail);
 	};
 
 	element.addEventListener(eventName, listener);

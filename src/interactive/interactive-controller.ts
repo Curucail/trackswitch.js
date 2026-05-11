@@ -1,4 +1,7 @@
-import type { TrackSwitchController } from "../domain/types";
+import type {
+	TrackSwitchController,
+	TrackSwitchUiConfig,
+} from "../domain/types";
 import { createAlignmentTrackSwitch } from "../player/alignment-factory";
 import { parseNumericCsv } from "../shared/alignment";
 import { renderIconSlotHtml } from "../ui/icons";
@@ -540,12 +543,15 @@ export class InteractiveTrackSwitchControllerImpl
 		);
 
 		// Build UI array
-		const uiElements: any[] = [];
+		const uiElements: TrackSwitchUiConfig = [];
 
 		// Add sheet music for MusicXML files
 		for (const file of this.state.files) {
 			if (file.type === "musicxml") {
-				const xmlBlob = new Blob([file.xmlText!], { type: "application/xml" });
+				if (!file.xmlText) {
+					continue;
+				}
+				const xmlBlob = new Blob([file.xmlText], { type: "application/xml" });
 				const xmlUrl = URL.createObjectURL(xmlBlob);
 				uiElements.push({
 					type: "sheetMusic",

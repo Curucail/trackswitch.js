@@ -272,10 +272,13 @@ audio_sample_rates = {str(fid): int(rate) for fid, rate in dict(audio_sample_rat
 		"sync_reference_time_column",
 	) as string | null;
 	const synchronizedAudioProxy = pyodide.globals.get("sync_audio_outputs");
+	const maybeToJsProxy = synchronizedAudioProxy as
+		| { toJs?: () => unknown }
+		| null
+		| undefined;
 	const synchronizedAudioRecord =
-		synchronizedAudioProxy &&
-		typeof (synchronizedAudioProxy as any).toJs === "function"
-			? (synchronizedAudioProxy as any).toJs()
+		maybeToJsProxy && typeof maybeToJsProxy.toJs === "function"
+			? maybeToJsProxy.toJs()
 			: synchronizedAudioProxy;
 	const synchronizedAudio: WorkerComputeResult["synchronizedAudio"] = [];
 

@@ -12,6 +12,12 @@ import type {
 import { injectConfiguredUiElements, normalizeUiElement } from "./ui-elements";
 import { assertAllowedKeys, toConfigRecord } from "./validation";
 
+const objectHasOwn = (
+	Object as unknown as {
+		hasOwn(object: object, property: PropertyKey): boolean;
+	}
+).hasOwn;
+
 export const TRACKS_REQUIRED_ERROR =
 	'TrackSwitch requires at least one ui entry with type "trackGroup" and non-empty trackGroup.';
 const initAllowedKeys = ["presetNames", "features", "alignment", "ui"] as const;
@@ -129,7 +135,7 @@ function assertNoFeatureMode(init: TrackSwitchInit): void {
 	if (
 		init.features &&
 		typeof init.features === "object" &&
-		Object.prototype.hasOwnProperty.call(init.features, "mode")
+		objectHasOwn(init.features, "mode")
 	) {
 		throw new Error(
 			"Invalid feature key: mode. Use the default or alignment TrackSwitch variant instead.",

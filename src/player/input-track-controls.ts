@@ -1,6 +1,11 @@
+import type { TrackRuntime } from "../domain/types";
 import { eventTargetAsElement } from "../shared/dom";
+import type { TrackSwitchControllerImpl } from "./player-controller";
 
-export function toggleSoloFromPointerEvent(controller: any, event: any): void {
+export function toggleSoloFromPointerEvent(
+	controller: TrackSwitchControllerImpl,
+	event: MouseEvent,
+): void {
 	const index = controller.trackIndexFromTarget(event.target ?? null);
 	if (index < 0) {
 		return;
@@ -12,12 +17,13 @@ export function toggleSoloFromPointerEvent(controller: any, event: any): void {
 		controller.runtimes[index]?.state.solo
 	) {
 		const selectedCount = controller.runtimes.reduce(
-			(count: number, runtime: any) => count + (runtime.state.solo ? 1 : 0),
+			(count: number, runtime: TrackRuntime) =>
+				count + (runtime.state.solo ? 1 : 0),
 			0,
 		);
 
 		if (selectedCount === 1) {
-			controller.runtimes.forEach((runtime: any) => {
+			controller.runtimes.forEach((runtime) => {
 				runtime.state.solo = true;
 			});
 			controller.applyTrackProperties();
@@ -34,8 +40,8 @@ export function parseSliderValue(target: HTMLInputElement): number {
 }
 
 export function getTrackInputTarget(
-	controller: any,
-	event: any,
+	controller: TrackSwitchControllerImpl,
+	event: Event,
 ): { target: HTMLInputElement; trackIndex: number } | null {
 	const target = eventTargetAsElement(event.target ?? null);
 	if (!(target instanceof HTMLInputElement)) {

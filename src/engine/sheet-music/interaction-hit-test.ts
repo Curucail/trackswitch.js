@@ -6,8 +6,22 @@ import {
 	TOUCH_TAP_MOVE_THRESHOLD_PX,
 } from "./types";
 
+interface SheetMusicInteractionContext {
+	onSeekReferenceTime: ((referenceTime: number) => void) | null;
+	resolveAvailableMeasure(
+		entry: SheetMusicEntryModel,
+		desiredMeasure: number,
+	): number | null;
+	moveCursorToMeasure(entry: SheetMusicEntryModel, targetMeasure: number): void;
+	centerCurrentMeasureInViewport(entry: SheetMusicEntryModel): void;
+	resolveReferenceTimeForMeasure(
+		measureMap: NonNullable<SheetMusicEntryModel["measureMap"]>,
+		clickedMeasure: number,
+	): number;
+}
+
 export function handleHostClick(
-	ctx: any,
+	ctx: SheetMusicInteractionContext,
 	entry: SheetMusicEntryModel,
 	event: MouseEvent,
 ): void {
@@ -15,7 +29,7 @@ export function handleHostClick(
 }
 
 export function handleHostTouchStart(
-	_ctx: any,
+	_ctx: unknown,
 	entry: SheetMusicEntryModel,
 	event: TouchEvent,
 ): void {
@@ -39,7 +53,7 @@ export function handleHostTouchStart(
 }
 
 export function handleHostTouchMove(
-	_ctx: any,
+	_ctx: unknown,
 	entry: SheetMusicEntryModel,
 	event: TouchEvent,
 ): void {
@@ -66,7 +80,7 @@ export function handleHostTouchMove(
 }
 
 export function handleHostTouch(
-	ctx: any,
+	ctx: SheetMusicInteractionContext,
 	entry: SheetMusicEntryModel,
 	event: TouchEvent,
 ): void {
@@ -109,7 +123,7 @@ export function findTouchByIdentifier(
 }
 
 export function handleHostInteraction(
-	ctx: any,
+	ctx: SheetMusicInteractionContext,
 	entry: SheetMusicEntryModel,
 	event: MouseEvent | TouchEvent,
 ): void {

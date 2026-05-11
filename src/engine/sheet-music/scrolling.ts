@@ -1,22 +1,29 @@
 import type { SheetMusicEntryModel } from "./types";
 import { clampNumber } from "./types";
 
+interface SheetMusicScrollContext {
+	rebindMeasureCursor(
+		entry: SheetMusicEntryModel,
+	): SheetMusicEntryModel["measureCursor"];
+	refreshCursorElement(entry: SheetMusicEntryModel): void;
+}
+
 export function ensureCurrentMeasureVisible(
-	ctx: any,
+	ctx: SheetMusicScrollContext,
 	entry: SheetMusicEntryModel,
 ): void {
 	scrollCurrentMeasure(ctx, entry, false);
 }
 
 export function centerCurrentMeasureInViewport(
-	ctx: any,
+	ctx: SheetMusicScrollContext,
 	entry: SheetMusicEntryModel,
 ): void {
 	scrollCurrentMeasure(ctx, entry, true);
 }
 
 export function scrollCurrentMeasure(
-	ctx: any,
+	ctx: SheetMusicScrollContext,
 	entry: SheetMusicEntryModel,
 	forceCenter: boolean,
 ): void {

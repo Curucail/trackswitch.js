@@ -6,8 +6,17 @@ import {
 	MIN_OSMD_ZOOM,
 } from "./types";
 
+interface SheetMusicEntryLifecycleContext {
+	destroyed: boolean;
+	loadTempoMap(entry: SheetMusicEntryModel): Promise<void>;
+	handleHostTouchStart(entry: SheetMusicEntryModel, event: TouchEvent): void;
+	handleHostTouchMove(entry: SheetMusicEntryModel, event: TouchEvent): void;
+	handleHostClick(entry: SheetMusicEntryModel, event: MouseEvent): void;
+	handleHostTouch(entry: SheetMusicEntryModel, event: TouchEvent): void;
+}
+
 export async function initializeEntry(
-	ctx: any,
+	ctx: SheetMusicEntryLifecycleContext,
 	entry: SheetMusicEntryModel,
 ): Promise<void> {
 	entry.host.classList.remove(

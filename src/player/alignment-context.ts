@@ -16,8 +16,20 @@ export interface AlignmentAxisContext {
 	converters: Map<number, TrackAlignmentConverter>;
 }
 
+interface AlignmentContextHost {
+	alignmentContext: {
+		baseAxis: AlignmentAxisContext | null;
+		syncAxis: AlignmentAxisContext | null;
+	} | null;
+	resolveReferenceDuration(
+		rows: ParsedNumericCsv["rows"],
+		referenceTimeColumn: string,
+	): number | string;
+	getActiveAlignmentAxisKey(): AlignmentReferenceAxisKey;
+}
+
 export function buildAlignmentAxisContext(
-	controller: any,
+	controller: Pick<AlignmentContextHost, "resolveReferenceDuration">,
 	parsedCsv: ParsedNumericCsv,
 	mappingByTrack: Map<number, string>,
 	referenceTimeColumn: string,
@@ -73,7 +85,7 @@ export function buildAlignmentAxisContext(
 }
 
 export function getAlignmentAxisContext(
-	controller: any,
+	controller: Pick<AlignmentContextHost, "alignmentContext">,
 	axisKey: AlignmentReferenceAxisKey,
 ): AlignmentAxisContext | null {
 	if (!controller.alignmentContext) {
@@ -88,7 +100,10 @@ export function getAlignmentAxisContext(
 }
 
 export function getActiveAlignmentAxisContext(
-	controller: any,
+	controller: Pick<
+		AlignmentContextHost,
+		"alignmentContext" | "getActiveAlignmentAxisKey"
+	>,
 ): AlignmentAxisContext | null {
 	return getAlignmentAxisContext(
 		controller,

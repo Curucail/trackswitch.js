@@ -31,6 +31,11 @@ type TrackSwitchVueEventHandlers = {
 	trackState: (payload: TrackSwitchEventMap["trackState"]) => true;
 };
 
+type TrackSwitchVueEmit = <K extends keyof TrackSwitchVueEventHandlers>(
+	eventName: K,
+	payload: Parameters<TrackSwitchVueEventHandlers[K]>[0],
+) => void;
+
 export interface TrackSwitchVueExpose {
 	element: TrackswitchPlayer | null;
 	controller: TrackSwitchController | null;
@@ -66,10 +71,7 @@ function createTrackSwitchVueComponent(
 				expose,
 				attrs,
 			}: {
-				emit: (
-					eventName: keyof TrackSwitchVueEventHandlers,
-					payload: any,
-				) => void;
+				emit: TrackSwitchVueEmit;
 				expose: (exposed: TrackSwitchVueExpose) => void;
 				attrs: Record<string, unknown>;
 			},

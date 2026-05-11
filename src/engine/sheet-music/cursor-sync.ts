@@ -2,7 +2,19 @@ import type { MeasureMapPoint } from "../../shared/measure-map";
 import type { SheetMusicEntryModel } from "./types";
 import { sanitizePlaybackPosition } from "./types";
 
-export function updatePosition(ctx: any, referencePosition: number): void {
+interface CursorSyncContext {
+	lastPosition: number;
+	entries: SheetMusicEntryModel[];
+	rebindMeasureCursor(
+		entry: SheetMusicEntryModel,
+	): SheetMusicEntryModel["measureCursor"];
+	ensureCurrentMeasureVisible(entry: SheetMusicEntryModel): void;
+}
+
+export function updatePosition(
+	ctx: CursorSyncContext,
+	referencePosition: number,
+): void {
 	ctx.lastPosition = sanitizePlaybackPosition(referencePosition);
 
 	ctx.entries.forEach((entry: SheetMusicEntryModel) => {
@@ -84,7 +96,7 @@ export function resolveAvailableMeasure(
 }
 
 export function moveCursorToMeasure(
-	ctx: any,
+	ctx: CursorSyncContext,
 	entry: SheetMusicEntryModel,
 	targetMeasure: number,
 ): void {
@@ -110,7 +122,7 @@ export function moveCursorToMeasure(
 		maxSteps,
 	);
 
-	if (currentMeasure !== targetMeasure && cursor.reset) {
+	if (currentMeasure !== targetMeasure) {
 		currentMeasure = retryCursorFromReset(entry, cursor, targetMeasure);
 	}
 

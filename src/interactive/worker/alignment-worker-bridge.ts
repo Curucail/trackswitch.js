@@ -59,7 +59,7 @@ export class AlignmentWorkerBridge {
 				const response = event.data;
 				if (response.type === "ready") {
 					this.ready = true;
-					this.worker!.removeEventListener("message", onMessage);
+					this.worker?.removeEventListener("message", onMessage);
 					resolve();
 				} else if (response.type === "error") {
 					reject(new Error(response.message));
@@ -87,24 +87,28 @@ export class AlignmentWorkerBridge {
 			return;
 		}
 		await this.ensureReady();
+		const worker = this.worker;
+		if (!worker) {
+			throw new Error("Alignment worker is unavailable.");
+		}
 
 		return new Promise((resolve, reject) => {
 			const onMessage = (event: MessageEvent<WorkerResponse>) => {
 				const response = event.data;
 				if (response.type === "music21_installed") {
 					this.music21Installed = true;
-					this.worker!.removeEventListener("message", onMessage);
+					worker.removeEventListener("message", onMessage);
 					resolve();
 				} else if (response.type === "error") {
-					this.worker!.removeEventListener("message", onMessage);
+					worker.removeEventListener("message", onMessage);
 					reject(new Error(response.message));
 				} else if (response.type === "progress" && this.onProgress) {
 					this.onProgress(response.message);
 				}
 			};
 
-			this.worker!.addEventListener("message", onMessage);
-			this.worker!.postMessage({ type: "install_music21" });
+			worker.addEventListener("message", onMessage);
+			worker.postMessage({ type: "install_music21" });
 		});
 	}
 
@@ -116,6 +120,10 @@ export class AlignmentWorkerBridge {
 		generateSyncedAudio: boolean,
 	): Promise<WorkerComputeResult> {
 		await this.ensureReady();
+		const worker = this.worker;
+		if (!worker) {
+			throw new Error("Alignment worker is unavailable.");
+		}
 
 		const hasMusicXml = files.some((f) => f.type === "musicxml");
 		if (hasMusicXml) {
@@ -126,7 +134,10 @@ export class AlignmentWorkerBridge {
 
 		const workerFiles: WorkerFile[] = files.map((file): WorkerFile => {
 			if (file.type === "audio") {
-				const pcmCopy = new Float32Array(file.pcmData!);
+				if (!file.pcmData || typeof file.sampleRate !== "number") {
+					throw new Error(`Audio file is missing decoded data: ${file.name}`);
+				}
+				const pcmCopy = new Float32Array(file.pcmData);
 				const fullPcmChannels = (file.fullPcmChannels || []).map(
 					(channelData) => new Float32Array(channelData),
 				);
@@ -136,18 +147,21 @@ export class AlignmentWorkerBridge {
 					type: "audio",
 					pcmData: pcmCopy,
 					fullPcmChannels: fullPcmChannels,
-					sampleRate: file.sampleRate!,
+					sampleRate: file.sampleRate,
 					basicPitchFeatures:
 						featureSet === "basic_pitch" && file.basicPitchFeatures
 							? cloneBasicPitchFeatureSet(file.basicPitchFeatures)
 							: undefined,
 				} as WorkerFileAudio;
 			}
+			if (!file.xmlText) {
+				throw new Error(`MusicXML file is missing XML text: ${file.name}`);
+			}
 			return {
 				id: file.id,
 				name: file.name,
 				type: "musicxml",
-				xmlText: file.xmlText!,
+				xmlText: file.xmlText,
 			} as WorkerFileScore;
 		});
 
@@ -169,17 +183,17 @@ export class AlignmentWorkerBridge {
 			const onMessage = (event: MessageEvent<WorkerResponse>) => {
 				const response = event.data;
 				if (response.type === "result") {
-					this.worker!.removeEventListener("message", onMessage);
+					worker.removeEventListener("message", onMessage);
 					resolve(response.result);
 				} else if (response.type === "error") {
-					this.worker!.removeEventListener("message", onMessage);
+					worker.removeEventListener("message", onMessage);
 					reject(new Error(response.message));
 				} else if (response.type === "progress" && this.onProgress) {
 					this.onProgress(response.message);
 				}
 			};
 
-			this.worker!.addEventListener("message", onMessage);
+			worker.addEventListener("message", onMessage);
 
 			const message: WorkerComputeMessage = {
 				type: "compute",
@@ -193,7 +207,7 @@ export class AlignmentWorkerBridge {
 				generateSyncedAudio: generateSyncedAudio,
 			};
 
-			this.worker!.postMessage(message, transferables);
+			worker.postMessage(message, transferables);
 		});
 	}
 

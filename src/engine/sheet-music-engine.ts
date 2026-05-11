@@ -328,7 +328,12 @@ function resolveEntryReferenceBpm(
 }
 
 function resolveOsmdFallbackTempo(entry: SheetMusicEntryModel): number | null {
-	const sheet = entry.osmd?.Sheet as any;
+	const sheet = entry.osmd?.Sheet as
+		| {
+				DefaultStartTempoInBpm?: unknown;
+				getExpressionsStartTempoInBPM?: () => unknown;
+		  }
+		| undefined;
 	if (!sheet) {
 		return null;
 	}

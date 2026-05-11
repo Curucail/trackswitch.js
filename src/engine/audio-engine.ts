@@ -604,7 +604,8 @@ export class AudioEngine {
 	}
 
 	private decodeAudioData(arrayBuffer: ArrayBuffer): Promise<AudioBuffer> {
-		if (!this.context) {
+		const context = this.context;
+		if (!context) {
 			return Promise.reject(new Error("AudioContext unavailable"));
 		}
 
@@ -630,7 +631,7 @@ export class AudioEngine {
 			};
 
 			try {
-				const maybePromise = this.context!.decodeAudioData(
+				const maybePromise = context.decodeAudioData(
 					arrayBuffer.slice(0),
 					onSuccess,
 					onFailure,
@@ -714,7 +715,8 @@ export class AudioEngine {
 			return null;
 		}
 
-		const now = this.context.currentTime;
+		const context = this.context;
+		const now = context.currentTime;
 		const upwardRamp = 0.03;
 		const downwardRamp = 0.03;
 
@@ -791,7 +793,7 @@ export class AudioEngine {
 				return;
 			}
 
-			const sourceNode = this.context!.createBufferSource();
+			const sourceNode = context.createBufferSource();
 			sourceNode.buffer = buffer;
 			sourceNode.connect(runtime.gainNode);
 			sourceNode.start(startAt, sourceOffset, playDuration);
