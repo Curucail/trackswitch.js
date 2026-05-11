@@ -1,7 +1,5 @@
 export {
-    createDefaultTrackSwitch,
-    createTrackSwitch,
-} from './default-factory';
-export {
-    createAlignmentTrackSwitch,
-} from './alignment-factory';
+	createDefaultTrackSwitch,
+	createTrackSwitch,
+} from "./default-factory";
+export { createAlignmentTrackSwitch } from "./alignment-factory";

@@ -1,231 +1,257 @@
 /* TRACK STYLES ------------------------------------------------------------- */
 
 .trackswitch ul.track_list {
-    padding: 0;
-    container-type: inline-size;
-    container-name: ts-tracks;
+	padding: 0;
+	container-type: inline-size;
+	container-name: ts-tracks;
 }
 
 .trackswitch li.track {
-    --ts-track-row-bg: var(--ts-color-text-muted);
-    background-color: var(--ts-track-row-bg);
-    position: relative;
-    min-height: var(--ts-track-min-height);
-    padding: var(--ts-track-padding-block) var(--ts-track-padding-inline);
-    padding-inline-start: calc(var(--ts-track-control-column) + var(--ts-track-padding-inline));
-    display: flex;
-    align-items: center;
-    cursor: default;
-    container-type: inline-size;
-    container-name: ts-track-row;
+	--ts-track-row-bg: var(--ts-color-text-muted);
+	background-color: var(--ts-track-row-bg);
+	position: relative;
+	min-height: var(--ts-track-min-height);
+	padding: var(--ts-track-padding-block) var(--ts-track-padding-inline);
+	padding-inline-start: calc(
+		var(--ts-track-control-column) +
+		var(--ts-track-padding-inline)
+	);
+	display: flex;
+	align-items: center;
+	cursor: default;
+	container-type: inline-size;
+	container-name: ts-track-row;
 }
 
 .trackswitch li.track.tabs {
-    display: inline-flex;
-    align-items: center;
-    padding-right: 12px;
-    border: 1px solid var(--ts-color-border-mid);
+	display: inline-flex;
+	align-items: center;
+	padding-right: 12px;
+	border: 1px solid var(--ts-color-border-mid);
 }
 
 .trackswitch li.track:not(.tabs):nth-child(even) {
-    --ts-track-row-bg: var(--ts-color-surface-base);
+	--ts-track-row-bg: var(--ts-color-surface-base);
 }
 
 .trackswitch li.track.error,
 .trackswitch li.track.error:not(.tabs):nth-child(even) {
-    --ts-track-row-bg: var(--ts-color-track-error-bg);
+	--ts-track-row-bg: var(--ts-color-track-error-bg);
 }
 
 .trackswitch li.track .track-error-indicator {
-    display: none;
-    align-items: center;
-    gap: 8px;
-    color: var(--ts-color-text-error);
-    margin-right: 10px;
-    flex: 0 0 auto;
+	display: none;
+	align-items: center;
+	gap: 8px;
+	color: var(--ts-color-text-error);
+	margin-right: 10px;
+	flex: 0 0 auto;
 }
 
 .trackswitch li.track .track-error-indicator .ts-icon-slot {
-    font-size: 16px;
-    width: 16px;
-    height: 16px;
+	font-size: 16px;
+	width: 16px;
+	height: 16px;
 }
 
 .trackswitch li.track.error .track-error-indicator {
-    display: inline-flex;
+	display: inline-flex;
 }
 
 .trackswitch li.track .track-error-text {
-    font-size: 12px;
-    font-weight: bold;
-    letter-spacing: 0.02em;
+	font-size: 12px;
+	font-weight: bold;
+	letter-spacing: 0.02em;
 }
 
 .trackswitch li.track ul.control {
-    position: absolute;
-    inset-block-start: 50%;
-    transform: translateY(-50%);
-    inset-inline-start: var(--ts-track-padding-inline);
-    padding-left: 0;
+	position: absolute;
+	inset-block-start: 50%;
+	transform: translateY(-50%);
+	inset-inline-start: var(--ts-track-padding-inline);
+	padding-left: 0;
 }
 
 .trackswitch li.track ul.control li {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: var(--ts-track-control-size);
-    height: var(--ts-track-control-size);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: var(--ts-track-control-size);
+	height: var(--ts-track-control-size);
 }
 
 .trackswitch .control li.button:not(.sync-global) {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0;
-    line-height: 1;
-    cursor: pointer;
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 0;
+	line-height: 1;
+	cursor: pointer;
 }
 
 .trackswitch .control li.button .ts-icon-slot {
-    position: static;
-    width: 1em;
-    height: 1em;
-    font-size: 16px;
+	position: static;
+	width: 1em;
+	height: 1em;
+	font-size: 16px;
 }
 
 .trackswitch .control li.repeat .ts-icon-slot {
-    opacity: 0.5;
+	opacity: 0.5;
 }
 
 .trackswitch .control li.repeat.checked .ts-icon-slot {
-    opacity: 1;
+	opacity: 1;
 }
 
 .trackswitch .control li.loop-a .ts-icon-slot,
 .trackswitch .control li.loop-b .ts-icon-slot {
-    opacity: 0.5;
+	opacity: 0.5;
 }
 
 .trackswitch .control li.loop-a.checked .ts-icon-slot,
 .trackswitch .control li.loop-a.active .ts-icon-slot,
 .trackswitch .control li.loop-b.checked .ts-icon-slot,
 .trackswitch .control li.loop-b.active .ts-icon-slot {
-    opacity: 1;
+	opacity: 1;
 }
 
 .trackswitch .control li.loop-toggle .ts-icon-slot {
-    opacity: 0.5;
+	opacity: 0.5;
 }
 
 .trackswitch .control li.loop-toggle.checked .ts-icon-slot {
-    opacity: 1;
+	opacity: 1;
 }
 
 .trackswitch .control li.loop-clear .ts-icon-slot {
-    opacity: 0.5;
+	opacity: 0.5;
 }
 
 .trackswitch .control li.loop-clear:hover .ts-icon-slot {
-    opacity: 1;
+	opacity: 1;
 }
 
 .trackswitch .control li.solo .ts-icon-slot {
-    position: static;
-    width: 1em;
-    height: 1em;
-    font-size: 16px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transform: none;
+	position: static;
+	width: 1em;
+	height: 1em;
+	font-size: 16px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	transform: none;
 }
 
 .trackswitch .control li.solo .ts-icon-slot .ts-icon-svg {
-    width: 1em;
-    height: 1em;
-    flex: 0 0 1em;
-    transform-origin: center;
+	width: 1em;
+	height: 1em;
+	flex: 0 0 1em;
+	transform-origin: center;
 }
 
 .trackswitch .control li.solo .ts-icon-slot[data-icon="circle"] .ts-icon-svg,
-.trackswitch .control li.solo .ts-icon-slot[data-icon="circle-check"] .ts-icon-svg,
-.trackswitch .control li.solo .ts-icon-slot[data-icon="circle-dot"] .ts-icon-svg {
-    transform: translateY(0.0em) scale(0.96);
+.trackswitch
+	.control
+	li.solo
+	.ts-icon-slot[data-icon="circle-check"]
+	.ts-icon-svg,
+.trackswitch
+	.control
+	li.solo
+	.ts-icon-slot[data-icon="circle-dot"]
+	.ts-icon-svg {
+	transform: translateY(0em) scale(0.96);
 }
 
-.trackswitch .control li.solo .ts-icon-slot[data-icon="circle"] .ts-icon-svg path,
-.trackswitch .control li.solo .ts-icon-slot[data-icon="circle-check"] .ts-icon-svg path,
-.trackswitch .control li.solo .ts-icon-slot[data-icon="circle-dot"] .ts-icon-svg path {
-    stroke: currentColor;
-    stroke-width: 14;
+.trackswitch
+	.control
+	li.solo
+	.ts-icon-slot[data-icon="circle"]
+	.ts-icon-svg
+	path,
+.trackswitch
+	.control
+	li.solo
+	.ts-icon-slot[data-icon="circle-check"]
+	.ts-icon-svg
+	path,
+.trackswitch
+	.control
+	li.solo
+	.ts-icon-slot[data-icon="circle-dot"]
+	.ts-icon-svg
+	path {
+	stroke: currentColor;
+	stroke-width: 14;
 }
 
 .trackswitch .control li.solo.radio {
-    margin: 0;
+	margin: 0;
 }
 
 .trackswitch li.track .control li.button.disabled {
-    opacity: 0.35;
-    cursor: default;
-    pointer-events: none;
+	opacity: 0.35;
+	cursor: default;
+	pointer-events: none;
 }
 
 .trackswitch li.track .track-title {
-    line-height: 1.2;
-    flex: 1 1 auto;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    cursor: default;
+	line-height: 1.2;
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	cursor: default;
 }
 
 .trackswitch li.track .track-mix-controls {
-    margin-left: auto;
-    display: flex;
-    align-items: center;
-    flex: 0 0 auto;
-    gap: var(--ts-track-mix-gap);
-    padding-left: var(--ts-track-mix-padding);
+	margin-left: auto;
+	display: flex;
+	align-items: center;
+	flex: 0 0 auto;
+	gap: var(--ts-track-mix-gap);
+	padding-left: var(--ts-track-mix-padding);
 }
 
 .trackswitch li.track .track-volume-control,
 .trackswitch li.track .track-pan-control {
-    display: flex;
-    align-items: center;
+	display: flex;
+	align-items: center;
 }
 
 .trackswitch li.track .track-volume-icon {
-    font-size: 16px;
-    color: var(--ts-color-text-secondary);
-    margin-right: 8px;
-    width: 16px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: flex-start;
+	font-size: 16px;
+	color: var(--ts-color-text-secondary);
+	margin-right: 8px;
+	width: 16px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: flex-start;
 }
 
 .trackswitch li.track .track-pan-label {
-    color: var(--ts-color-text-secondary);
-    font-family: var(--ts-font-ui);
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.03em;
-    margin-right: 8px;
-    min-width: 24px;
+	color: var(--ts-color-text-secondary);
+	font-family: var(--ts-font-ui);
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: 0.03em;
+	margin-right: 8px;
+	min-width: 24px;
 }
 
 .trackswitch li.track .mix-slider {
-    --ts-slider-track-color: var(--ts-color-border-mid);
+	--ts-slider-track-color: var(--ts-color-border-mid);
 }
 
 .trackswitch li.track .mix-slider:disabled {
-    cursor: default;
-    opacity: 0.45;
+	cursor: default;
+	opacity: 0.45;
 }
 
 .trackswitch li.track .track-pan-control.disabled .track-pan-label,
 .trackswitch li.track .track-mix-controls.disabled .track-volume-icon {
-    opacity: 0.45;
+	opacity: 0.45;
 }

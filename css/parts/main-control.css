@@ -5,234 +5,293 @@
    Seekbar moves to row 2 (full width) if container is too narrow */
 
 .trackswitch .main-control {
-    container-type: inline-size;
-    container-name: ts-main-control;
+	container-type: inline-size;
+	container-name: ts-main-control;
 }
 
 .trackswitch .main-control ul.control {
-    background-color: var(--ts-color-surface-panel-dark);
-    min-height: var(--ts-main-control-height);
-    padding: var(--ts-main-control-padding-block) var(--ts-main-control-padding-inline);
-    color: var(--ts-color-text-muted);
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--ts-main-control-gap-row) var(--ts-main-control-gap-column);
+	background-color: var(--ts-color-surface-panel-dark);
+	min-height: var(--ts-main-control-height);
+	padding: var(--ts-main-control-padding-block)
+		var(--ts-main-control-padding-inline);
+	color: var(--ts-color-text-muted);
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--ts-main-control-gap-row) var(--ts-main-control-gap-column);
 }
 
 .trackswitch .main-control .playback-group {
-    order: 10;
+	order: 10;
 }
 
 .trackswitch .main-control .sync-global {
-    order: 15;
+	order: 15;
 }
 
 .trackswitch .main-control .sync-global.sync-after-loop {
-    order: 35;
+	order: 35;
 }
 
 .trackswitch .main-control .volume {
-    order: 20;
+	order: 20;
 }
 
 .trackswitch .main-control .loop-group {
-    order: 30;
+	order: 30;
 }
 
 .trackswitch .main-control .preset-selector-wrap {
-    order: 40;
+	order: 40;
 }
 
 .trackswitch .main-control .timing {
-    order: 70;
-    margin-left: 0;
+	order: 70;
+	margin-left: 0;
 }
 
 .trackswitch .main-control .settings-button {
-    order: 60;
-    margin-left: auto;
+	order: 60;
+	margin-left: auto;
 }
 
 .trackswitch .main-control .seekwrap {
-    order: 50;
-    flex: 1 1 240px;
+	order: 50;
+	flex: 1 1 240px;
 }
 
 /* Playback group (play/stop/repeat) */
-.trackswitch .main-control .playback-group>.playback-controls {
-    display: flex;
-    align-items: center;
-    gap: var(--ts-control-gap-md);
+.trackswitch .main-control .playback-group > .playback-controls {
+	display: flex;
+	align-items: center;
+	gap: var(--ts-control-gap-md);
 }
 
-.trackswitch .main-control .playback-group>.playback-controls>li.button {
-    margin: 0;
+.trackswitch .main-control .playback-group > .playback-controls > li.button {
+	margin: 0;
 }
 
-.trackswitch .main-control .playback-group>.playback-controls>li.repeat .ts-icon-svg {
-    transform: scale(0.9);
+.trackswitch
+	.main-control
+	.playback-group
+	> .playback-controls
+	> li.repeat
+	.ts-icon-svg {
+	transform: scale(0.9);
 }
 
 /* Generic button styles within main-control */
 .trackswitch .main-control .button {
-    width: var(--ts-control-size-xs);
-    height: var(--ts-control-size-xs);
-    cursor: pointer;
+	width: var(--ts-control-size-xs);
+	height: var(--ts-control-size-xs);
+	cursor: pointer;
 }
 
 .trackswitch .main-control .sync-global {
-    width: auto;
-    min-width: 38px;
-    height: 22px;
-    text-indent: 0;
-    line-height: 18px;
-    font-family: var(--ts-font-ui);
-    font-size: 10px;
-    font-weight: 900;
-    letter-spacing: 0.4px;
-    opacity: 0.7;
-    border: 2px solid currentColor;
-    border-radius: 3px;
-    padding: 0 8px;
-    box-sizing: border-box;
-    text-align: center;
+	width: auto;
+	min-width: 38px;
+	height: 22px;
+	text-indent: 0;
+	line-height: 18px;
+	font-family: var(--ts-font-ui);
+	font-size: 10px;
+	font-weight: 900;
+	letter-spacing: 0.4px;
+	opacity: 0.7;
+	border: 2px solid currentColor;
+	border-radius: 3px;
+	padding: 0 8px;
+	box-sizing: border-box;
+	text-align: center;
 }
 
 .trackswitch .main-control .sync-global.checked {
-    opacity: 1;
+	opacity: 1;
 }
 
 .trackswitch .main-control .sync-global.disabled {
-    opacity: 0.35;
-    cursor: default;
-    pointer-events: none;
+	opacity: 0.35;
+	cursor: default;
+	pointer-events: none;
 }
-
 
 /* Timing */
 .trackswitch .main-control .timing {
-    font-family: monospace;
-    white-space: nowrap;
+	font-family: monospace;
+	white-space: nowrap;
 }
 
 /* Seekbar */
 .trackswitch .main-control .seekwrap {
-    overflow: visible;
-    height: var(--ts-main-seek-hit-height);
-    cursor: pointer;
-    min-width: 200px;
-    width: 100%;
+	overflow: visible;
+	height: var(--ts-main-seek-hit-height);
+	cursor: pointer;
+	min-width: 200px;
+	width: 100%;
 }
 
 .trackswitch .main-control .seekwrap .seekbar {
-    background-color: var(--ts-color-accent);
-    height: var(--ts-seekbar-height);
-    margin-block-start: calc((var(--ts-main-seek-hit-height) - var(--ts-seekbar-height)) / 2);
+	background-color: var(--ts-color-accent);
+	height: var(--ts-seekbar-height);
+	margin-block-start: calc(
+		(var(--ts-main-seek-hit-height) - var(--ts-seekbar-height)) /
+		2
+	);
 }
 
 .trackswitch .main-control .seekwrap .seekbar .seekhead {
-    background-color: var(--ts-color-accent);
-    width: var(--ts-main-seekhead-width);
-    height: var(--ts-main-seekhead-height);
-    top: calc((var(--ts-seekbar-height) - var(--ts-main-seekhead-height)) / 2);
+	background-color: var(--ts-color-accent);
+	width: var(--ts-main-seekhead-width);
+	height: var(--ts-main-seekhead-height);
+	top: calc((var(--ts-seekbar-height) - var(--ts-main-seekhead-height)) / 2);
 }
 
 .trackswitch .main-control .seekwrap .seekbar .loop-marker {
-    height: var(--ts-main-seekhead-height);
-    top: calc((var(--ts-seekbar-height) - var(--ts-main-seekhead-height)) / 2);
+	height: var(--ts-main-seekhead-height);
+	top: calc((var(--ts-seekbar-height) - var(--ts-main-seekhead-height)) / 2);
 }
 
 /* Volume control */
 .trackswitch .main-control .volume-control {
-    display: flex;
-    align-items: center;
+	display: flex;
+	align-items: center;
 }
 
 .trackswitch .main-control .volume-icon {
-    font-size: 16px;
-    color: var(--ts-color-text-muted);
-    margin-right: 8px;
-    width: 16px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: flex-start;
+	font-size: 16px;
+	color: var(--ts-color-text-muted);
+	margin-right: 8px;
+	width: 16px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: flex-start;
 }
 
 .trackswitch .main-control .volume-slider {
-    --ts-slider-track-color: var(--ts-color-surface-control);
+	--ts-slider-track-color: var(--ts-color-surface-control);
 }
 
 /* Loop group */
-.trackswitch .main-control .control>li.loop-group>.loop-controls {
-    display: flex;
-    align-items: center;
-    gap: 1px;
+.trackswitch .main-control .control > li.loop-group > .loop-controls {
+	display: flex;
+	align-items: center;
+	gap: 1px;
 }
 
-.trackswitch .main-control .control>li.loop-group>.loop-controls>li.button {
-    margin: 0;
-    width: var(--ts-control-size-sm);
-    height: var(--ts-control-size-sm);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+.trackswitch
+	.main-control
+	.control
+	> li.loop-group
+	> .loop-controls
+	> li.button {
+	margin: 0;
+	width: var(--ts-control-size-sm);
+	height: var(--ts-control-size-sm);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 }
 
-.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-a .ts-icon-slot,
-.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-b .ts-icon-slot {
-    width: 18px;
-    height: 18px;
-    font-size: 18px;
+.trackswitch
+	.main-control
+	.control
+	> li.loop-group
+	> .loop-controls
+	> li.loop-a
+	.ts-icon-slot,
+.trackswitch
+	.main-control
+	.control
+	> li.loop-group
+	> .loop-controls
+	> li.loop-b
+	.ts-icon-slot {
+	width: 18px;
+	height: 18px;
+	font-size: 18px;
 }
 
-.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-a .ts-icon-svg,
-.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-b .ts-icon-svg {
-    width: 18px;
-    height: 18px;
+.trackswitch
+	.main-control
+	.control
+	> li.loop-group
+	> .loop-controls
+	> li.loop-a
+	.ts-icon-svg,
+.trackswitch
+	.main-control
+	.control
+	> li.loop-group
+	> .loop-controls
+	> li.loop-b
+	.ts-icon-svg {
+	width: 18px;
+	height: 18px;
 }
 
-.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-toggle,
-.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-clear {
-    width: 18px;
-    height: 22px;
+.trackswitch
+	.main-control
+	.control
+	> li.loop-group
+	> .loop-controls
+	> li.loop-toggle,
+.trackswitch
+	.main-control
+	.control
+	> li.loop-group
+	> .loop-controls
+	> li.loop-clear {
+	width: 18px;
+	height: 22px;
 }
 
-.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-toggle .ts-icon-slot,
-.trackswitch .main-control .control>li.loop-group>.loop-controls>li.loop-clear .ts-icon-slot {
-    font-size: 16px;
-    width: 1em;
-    height: 1em;
+.trackswitch
+	.main-control
+	.control
+	> li.loop-group
+	> .loop-controls
+	> li.loop-toggle
+	.ts-icon-slot,
+.trackswitch
+	.main-control
+	.control
+	> li.loop-group
+	> .loop-controls
+	> li.loop-clear
+	.ts-icon-slot {
+	font-size: 16px;
+	width: 1em;
+	height: 1em;
 }
 
 /* Preset selector */
 .trackswitch .main-control .preset-selector-wrap {
-    position: relative;
-    z-index: 3;
+	position: relative;
+	z-index: 3;
 }
 
 .trackswitch .main-control .preset-selector {
-    background-color: var(--ts-color-surface-control);
-    color: var(--ts-color-text-muted);
-    border: 1px solid var(--ts-color-surface-panel-dark);
-    box-sizing: border-box;
-    height: 24px;
-    padding: 0px 4px 0px 4px;
-    font-size: 13px;
-    line-height: 18px;
-    cursor: pointer;
-    border-radius: 4px;
-    pointer-events: auto;
-    touch-action: manipulation;
+	background-color: var(--ts-color-surface-control);
+	color: var(--ts-color-text-muted);
+	border: 1px solid var(--ts-color-surface-panel-dark);
+	box-sizing: border-box;
+	height: 24px;
+	padding: 0px 4px 0px 4px;
+	font-size: 13px;
+	line-height: 18px;
+	cursor: pointer;
+	border-radius: 4px;
+	pointer-events: auto;
+	touch-action: manipulation;
 }
 
 .trackswitch .main-control .preset-selector:focus,
 .trackswitch .main-control .preset-selector:focus-visible {
-    outline: none;
-    box-shadow: none;
+	outline: none;
+	box-shadow: none;
 }
 
 .trackswitch .main-control .preset-selector option {
-    background-color: var(--ts-color-surface-panel-dark);
-    color: var(--ts-color-text-muted);
+	background-color: var(--ts-color-surface-panel-dark);
+	color: var(--ts-color-text-muted);
 }

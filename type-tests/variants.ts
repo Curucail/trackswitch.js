@@ -1,50 +1,50 @@
-import type { TrackSwitchInit } from '../src/index';
+import type { TrackSwitchInit } from "../src/index";
 import {
-    TrackSwitchAlignmentInteractive,
-    TrackSwitchPlayer,
-    type TrackSwitchInteractiveProps,
-    type TrackSwitchPlayerProps,
-} from '../src/react';
-import type { InteractiveTrackSwitchInit } from '../src/interactive';
+	TrackSwitchAlignmentInteractive,
+	TrackSwitchPlayer,
+	type TrackSwitchInteractiveProps,
+	type TrackSwitchPlayerProps,
+} from "../src/react";
+import type { InteractiveTrackSwitchInit } from "../src/interactive";
 
 const defaultInit: TrackSwitchInit = {
-    ui: [
-        {
-            type: 'trackGroup',
-            trackGroup: [
-                {
-                    title: 'Track 1',
-                    sources: [{ src: 'track-1.mp3' }],
-                },
-            ],
-        },
-    ],
+	ui: [
+		{
+			type: "trackGroup",
+			trackGroup: [
+				{
+					title: "Track 1",
+					sources: [{ src: "track-1.mp3" }],
+				},
+			],
+		},
+	],
 };
 
 void defaultInit;
 
 const modeFeatureInit: TrackSwitchInit = {
-    ui: [
-        {
-            type: 'trackGroup',
-            trackGroup: [
-                {
-                    title: 'Track 1',
-                    sources: [{ src: 'track-1.mp3' }],
-                },
-            ],
-        },
-    ],
-    features: {
-        // @ts-expect-error features.mode is not part of the public config.
-        mode: 'alignment',
-    },
+	ui: [
+		{
+			type: "trackGroup",
+			trackGroup: [
+				{
+					title: "Track 1",
+					sources: [{ src: "track-1.mp3" }],
+				},
+			],
+		},
+	],
+	features: {
+		// @ts-expect-error features.mode is not part of the public config.
+		mode: "alignment",
+	},
 };
 
 void modeFeatureInit;
 
 const reactPlayerProps: TrackSwitchPlayerProps = {
-    config: defaultInit,
+	config: defaultInit,
 };
 
 void reactPlayerProps;
@@ -54,11 +54,11 @@ void TrackSwitchPlayer({ config: defaultInit });
 void TrackSwitchPlayer({ init: defaultInit });
 
 const interactiveConfig: InteractiveTrackSwitchInit = {
-    workerUrl: 'trackswitch-alignment-worker.js',
+	workerUrl: "trackswitch-alignment-worker.js",
 };
 
 const reactInteractiveProps: TrackSwitchInteractiveProps = {
-    config: interactiveConfig,
+	config: interactiveConfig,
 };
 
 void reactInteractiveProps;
@@ -68,4 +68,4 @@ void TrackSwitchAlignmentInteractive({ config: interactiveConfig });
 void TrackSwitchAlignmentInteractive({ init: interactiveConfig });
 
 // @ts-expect-error TrackSwitchMode is no longer exported from the public API.
-import type { TrackSwitchMode } from '../src/index';
+import type { TrackSwitchMode } from "../src/index";

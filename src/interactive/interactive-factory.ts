@@ -1,5 +1,8 @@
-import type { InteractiveTrackSwitchController, InteractiveTrackSwitchInit } from './types';
-import { InteractiveTrackSwitchControllerImpl } from './interactive-controller';
+import type {
+	InteractiveTrackSwitchController,
+	InteractiveTrackSwitchInit,
+} from "./types";
+import { InteractiveTrackSwitchControllerImpl } from "./interactive-controller";
 
 /**
  * Creates an interactive TrackSwitch alignment player.
@@ -24,10 +27,11 @@ import { InteractiveTrackSwitchControllerImpl } from './interactive-controller';
  * ```
  */
 export function createInteractiveTrackSwitch(
-    rootElement: HTMLElement,
-    init?: InteractiveTrackSwitchInit
+	rootElement: HTMLElement,
+	init?: InteractiveTrackSwitchInit,
 ): InteractiveTrackSwitchController {
-    return new InteractiveTrackSwitchControllerImpl(rootElement, init || {});
+	return new InteractiveTrackSwitchControllerImpl(rootElement, init || {});
 }
 
-export const createAlignmentInteractiveTrackSwitch = createInteractiveTrackSwitch;
+export const createAlignmentInteractiveTrackSwitch =
+	createInteractiveTrackSwitch;

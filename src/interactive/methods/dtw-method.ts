@@ -5,4 +5,4 @@
  * from synctoolbox.dtw.core. It can operate on any compatible feature
  * matrix the interactive alignment pipeline prepares.
  */
-export { getAlignmentMethod } from './alignment-method';
+export { getAlignmentMethod } from "./alignment-method";

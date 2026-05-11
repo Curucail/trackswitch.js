@@ -5,4 +5,4 @@
  * The interactive pipeline can feed it plain feature matrices or
  * chroma-plus-onset combinations depending on the selected feature set.
  */
-export { getAlignmentMethod } from './alignment-method';
+export { getAlignmentMethod } from "./alignment-method";

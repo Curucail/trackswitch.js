@@ -1,190 +1,190 @@
 /* WAVEFORM VISUALIZATION STYLES -------------------------------------------- */
 
 .trackswitch .waveform-wrap {
-    display: block;
-    position: relative;
-    width: 100%;
-    margin: 0;
-    container-type: inline-size;
-    container-name: ts-waveform;
+	display: block;
+	position: relative;
+	width: 100%;
+	margin: 0;
+	container-type: inline-size;
+	container-name: ts-waveform;
 }
 
 .trackswitch .waveform-wrap .waveform-scroll {
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    position: relative;
+	overflow-x: auto;
+	overflow-y: hidden;
+	-webkit-overflow-scrolling: touch;
+	scrollbar-width: none;
+	-ms-overflow-style: none;
+	position: relative;
 }
 
 .trackswitch .waveform-wrap .waveform-scroll::-webkit-scrollbar {
-    width: 0;
-    height: 0;
-    display: none;
+	width: 0;
+	height: 0;
+	display: none;
 }
 
 .trackswitch .waveform-wrap .waveform-surface {
-    position: relative;
-    min-width: 100%;
+	position: relative;
+	min-width: 100%;
 }
 
 .trackswitch .waveform-wrap .waveform-surface .waveform-tile-layer {
-    position: absolute;
-    inset: 0;
+	position: absolute;
+	inset: 0;
 }
 
 .trackswitch .waveform-wrap .waveform-surface .waveform-tile {
-    position: absolute;
-    top: 0;
-    display: block;
+	position: absolute;
+	top: 0;
+	display: block;
 }
 
 .trackswitch .waveform-wrap .waveform-surface svg.waveform-tile {
-    overflow: hidden;
+	overflow: hidden;
 }
 
 .trackswitch .waveform-wrap .waveform-surface svg.waveform-tile path,
 .trackswitch .waveform-wrap .waveform-zoom .waveform-zoom-svg path {
-    fill: none;
-    stroke: var(--waveform-color);
-    stroke-linecap: butt;
-    shape-rendering: crispEdges;
-    vector-effect: non-scaling-stroke;
+	fill: none;
+	stroke: var(--waveform-color);
+	stroke-linecap: butt;
+	shape-rendering: crispEdges;
+	vector-effect: non-scaling-stroke;
 }
 
 .trackswitch .waveform-wrap .waveform-overlay {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 5;
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	z-index: 5;
 }
 
 .trackswitch .waveform {
-    display: block;
-    width: 100%;
-    background-color: var(--ts-color-surface-base);
-    --waveform-color: var(--ts-color-accent);
+	display: block;
+	width: 100%;
+	background-color: var(--ts-color-surface-base);
+	--waveform-color: var(--ts-color-accent);
 }
 
 .trackswitch .waveform-wrap .seekwrap {
-    position: absolute;
-    inset: 0;
-    cursor: pointer;
-    pointer-events: auto;
-    touch-action: pan-y;
+	position: absolute;
+	inset: 0;
+	cursor: pointer;
+	pointer-events: auto;
+	touch-action: pan-y;
 }
 
 .trackswitch .waveform-wrap .seekwrap .seekhead {
-    inset-block: 0;
-    width: var(--ts-waveform-seekhead-width);
+	inset-block: 0;
+	width: var(--ts-waveform-seekhead-width);
 }
 
 .trackswitch .waveform-wrap .seekwrap {
-    --seekhead-vertical-extent: 0.35;
-    --seekhead-color: var(--ts-color-surface-panel-dark);
-    --seekhead-ref-color: var(--ts-color-surface-panel-dark);
-    --alignment-points-color: var(--ts-color-alignment-points);
+	--seekhead-vertical-extent: 0.35;
+	--seekhead-color: var(--ts-color-surface-panel-dark);
+	--seekhead-ref-color: var(--ts-color-surface-panel-dark);
+	--alignment-points-color: var(--ts-color-alignment-points);
 }
 
 .trackswitch .waveform-wrap .seekwrap .seekhead {
-    background-color: var(--seekhead-color);
+	background-color: var(--seekhead-color);
 }
 
 .trackswitch .waveform-wrap .seekwrap .seekhead-ref-hooks {
-    position: absolute;
-    inset: 0;
-    overflow: visible;
-    pointer-events: none;
-    z-index: 4;
+	position: absolute;
+	inset: 0;
+	overflow: visible;
+	pointer-events: none;
+	z-index: 4;
 }
 
 .trackswitch .waveform-wrap .seekwrap .seekhead-ref-hooks path {
-    fill: none;
-    stroke: var(--seekhead-ref-color);
-    stroke-width: 2px;
+	fill: none;
+	stroke: var(--seekhead-ref-color);
+	stroke-width: 2px;
 }
 
 .trackswitch .waveform-wrap .seekwrap .alignment-points-group path {
-    fill: none;
-    stroke: var(--alignment-points-color);
-    stroke-width: 1px;
-    stroke-dasharray: 1 1;
+	fill: none;
+	stroke: var(--alignment-points-color);
+	stroke-width: 1px;
+	stroke-dasharray: 1 1;
 }
 
 .trackswitch .waveform-wrap .seekwrap.aligned-playhead .seekhead {
-    display: none;
+	display: none;
 }
 
 .trackswitch .waveform-wrap .waveform-timing,
 .trackswitch .waveform-wrap .waveform-zoom {
-    position: absolute;
-    top: 4px;
-    width: max-content;
-    z-index: 1;
-    border-radius: 4px;
-    font-family: monospace;
-    font-size: 11px;
-    color: var(--ts-color-text-inverse);
-    background: var(--ts-color-surface-panel-dark);
-    user-select: none;
+	position: absolute;
+	top: 4px;
+	width: max-content;
+	z-index: 1;
+	border-radius: 4px;
+	font-family: monospace;
+	font-size: 11px;
+	color: var(--ts-color-text-inverse);
+	background: var(--ts-color-surface-panel-dark);
+	user-select: none;
 }
 
 .trackswitch .waveform-wrap .waveform-timing {
-    right: 8px;
-    padding: 4px 6px;
-    background: var(--ts-color-surface-panel-dark-50);
-    pointer-events: none;
+	right: 8px;
+	padding: 4px 6px;
+	background: var(--ts-color-surface-panel-dark-50);
+	pointer-events: none;
 }
 
 .trackswitch .waveform-wrap .waveform-zoom {
-    left: 6px;
-    display: none;
-    align-items: center;
-    gap: 6px;
-    padding: 2px 3px;
-    background: var(--ts-color-surface-panel-dark-50);
-    pointer-events: auto;
+	left: 6px;
+	display: none;
+	align-items: center;
+	gap: 6px;
+	padding: 2px 3px;
+	background: var(--ts-color-surface-panel-dark-50);
+	pointer-events: auto;
 }
 
 .trackswitch .waveform-wrap .waveform-zoom .waveform-zoom-label {
-    pointer-events: none;
+	pointer-events: none;
 }
 
 .trackswitch .waveform-wrap .waveform-zoom .waveform-zoom-minimap {
-    position: relative;
-    width: clamp(50px, 16cqw, 220px);
-    height: 18px;
-    overflow: hidden;
-    border-radius: 5px;
-    box-shadow: inset 0 0 0 1px var(--ts-color-surface-raised-18);
-    pointer-events: auto;
-    cursor: grab;
+	position: relative;
+	width: clamp(50px, 16cqw, 220px);
+	height: 18px;
+	overflow: hidden;
+	border-radius: 5px;
+	box-shadow: inset 0 0 0 1px var(--ts-color-surface-raised-18);
+	pointer-events: auto;
+	cursor: grab;
 }
 
 .trackswitch .waveform-wrap .waveform-zoom .waveform-zoom-minimap:active {
-    cursor: grabbing;
+	cursor: grabbing;
 }
 
 .trackswitch .waveform-wrap .waveform-zoom .waveform-zoom-svg {
-    display: block;
-    width: 100%;
-    height: 100%;
-    opacity: 0.95;
-    pointer-events: none;
-    overflow: hidden;
+	display: block;
+	width: 100%;
+	height: 100%;
+	opacity: 0.95;
+	pointer-events: none;
+	overflow: hidden;
 }
 
 .trackswitch .waveform-wrap .waveform-zoom .waveform-zoom-viewport {
-    position: absolute;
-    left: var(--ts-zoom-viewport-left);
-    width: var(--ts-zoom-viewport-width);
-    top: 1px;
-    bottom: 1px;
-    min-width: 0;
-    border-radius: 4px;
-    border: 1px solid var(--ts-color-text-inverse);
-    background: var(--ts-color-surface-raised-16);
-    box-shadow: 0 0 0 1px var(--ts-color-overlay-ring);
-    pointer-events: none;
+	position: absolute;
+	left: var(--ts-zoom-viewport-left);
+	width: var(--ts-zoom-viewport-width);
+	top: 1px;
+	bottom: 1px;
+	min-width: 0;
+	border-radius: 4px;
+	border: 1px solid var(--ts-color-text-inverse);
+	background: var(--ts-color-surface-raised-16);
+	box-shadow: 0 0 0 1px var(--ts-color-overlay-ring);
+	pointer-events: none;
 }

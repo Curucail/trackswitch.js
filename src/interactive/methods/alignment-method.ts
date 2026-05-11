@@ -1,36 +1,36 @@
-import type { AlignmentAlgorithmId, AlignmentFeatureSetId } from '../types';
+import type { AlignmentAlgorithmId, AlignmentFeatureSetId } from "../types";
 
 const CHROMA_DLNCO_COST_ALPHA = 0.5;
 
 export interface AlignmentMethodConfig {
-    featureRate: number;
-    featureSet: AlignmentFeatureSetId;
+	featureRate: number;
+	featureSet: AlignmentFeatureSetId;
 }
 
 export interface AlignmentMethod {
-    id: AlignmentAlgorithmId;
-    name: string;
-    /** Return the Python script that performs alignment given features are already extracted. */
-    getPythonScript(config: AlignmentMethodConfig): string;
+	id: AlignmentAlgorithmId;
+	name: string;
+	/** Return the Python script that performs alignment given features are already extracted. */
+	getPythonScript(config: AlignmentMethodConfig): string;
 }
 
 export function getAlignmentMethod(id: AlignmentAlgorithmId): AlignmentMethod {
-    switch (id) {
-        case 'dtw':
-            return dtwMethod;
-        case 'mrmsdtw':
-            return mrmsdtwMethod;
-        default:
-            return mrmsdtwMethod;
-    }
+	switch (id) {
+		case "dtw":
+			return dtwMethod;
+		case "mrmsdtw":
+			return mrmsdtwMethod;
+		default:
+			return mrmsdtwMethod;
+	}
 }
 
 const dtwMethod: AlignmentMethod = {
-    id: 'dtw',
-    name: 'DTW',
-    getPythonScript(config: AlignmentMethodConfig): string {
-        if (config.featureSet === 'chroma_dlnco') {
-            return `
+	id: "dtw",
+	name: "DTW",
+	getPythonScript(config: AlignmentMethodConfig): string {
+		if (config.featureSet === "chroma_dlnco") {
+			return `
 import numpy as np
 from synctoolbox.dtw.cost import compute_high_res_cost_matrix, cosine_distance
 from synctoolbox.dtw.core import compute_warping_path
@@ -54,9 +54,9 @@ def align_pair(f_ref, f_other, f_aux_ref=None, f_aux_other=None):
     wp = make_path_strictly_monotonic(wp)
     return wp
 `;
-        }
+		}
 
-        return `
+		return `
 import numpy as np
 from synctoolbox.dtw.cost import cosine_distance
 from synctoolbox.dtw.core import compute_warping_path
@@ -70,15 +70,15 @@ def align_pair(f_ref, f_other):
     wp = make_path_strictly_monotonic(wp)
     return wp
 `;
-    },
+	},
 };
 
 const mrmsdtwMethod: AlignmentMethod = {
-    id: 'mrmsdtw',
-    name: 'MrMsDTW',
-    getPythonScript(config: AlignmentMethodConfig): string {
-        if (config.featureSet === 'chroma_dlnco') {
-            return `
+	id: "mrmsdtw",
+	name: "MrMsDTW",
+	getPythonScript(config: AlignmentMethodConfig): string {
+		if (config.featureSet === "chroma_dlnco") {
+			return `
 import numpy as np
 from synctoolbox.dtw.anchor import derive_anchors_from_projected_alignment, derive_neighboring_anchors, project_alignment_on_a_new_feature_rate
 from synctoolbox.dtw.utils import build_path_from_warping_paths, compute_cost_matrices_between_anchors, compute_warping_paths_from_cost_matrices, find_anchor_indices_in_warping_path, make_path_strictly_monotonic
@@ -257,9 +257,9 @@ def align_pair(f_ref, f_other, f_aux_ref=None, f_aux_other=None):
     wp = make_path_strictly_monotonic(wp)
     return wp
 `;
-        }
+		}
 
-        return `
+		return `
 import numpy as np
 from synctoolbox.dtw.mrmsdtw import sync_via_mrmsdtw
 from synctoolbox.dtw.utils import make_path_strictly_monotonic
@@ -282,5 +282,5 @@ def align_pair(f_ref, f_other, f_aux_ref=None, f_aux_other=None):
     wp = make_path_strictly_monotonic(wp)
     return wp
 `;
-    },
+	},
 };
