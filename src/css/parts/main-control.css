@@ -268,21 +268,30 @@
 .trackswitch .main-control .preset-selector-wrap {
 	position: relative;
 	z-index: 3;
+	display: inline-flex;
+	align-items: center;
+	height: var(--ts-preset-selector-height);
+	line-height: 1;
 }
 
 .trackswitch .main-control .preset-selector {
+	appearance: auto;
 	background-color: var(--ts-color-surface-control);
 	color: var(--ts-color-text-muted);
 	border: 1px solid var(--ts-color-surface-panel-dark);
 	box-sizing: border-box;
-	height: 24px;
-	padding: 0px 4px 0px 4px;
+	display: block;
+	height: var(--ts-preset-selector-height);
+	min-height: 0;
+	max-height: var(--ts-preset-selector-height);
+	padding: 0 4px;
 	font-size: 13px;
-	line-height: 18px;
+	line-height: calc(var(--ts-preset-selector-height) - 2px);
 	cursor: pointer;
 	border-radius: 4px;
 	pointer-events: auto;
 	touch-action: manipulation;
+	vertical-align: middle;
 }
 
 .trackswitch .main-control .preset-selector:focus,
