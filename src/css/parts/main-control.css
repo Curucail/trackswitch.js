@@ -21,6 +21,15 @@
 	gap: var(--ts-main-control-gap-row) var(--ts-main-control-gap-column);
 }
 
+.trackswitch .main-control ul.control > li {
+	min-height: var(--ts-main-control-row-height);
+}
+
+.trackswitch .main-control ul.control > li:not(.seekwrap) {
+	display: flex;
+	align-items: center;
+}
+
 .trackswitch .main-control .playback-group {
 	order: 10;
 }
@@ -270,7 +279,7 @@
 	z-index: 3;
 	display: inline-flex;
 	align-items: center;
-	height: var(--ts-preset-selector-height);
+	height: var(--ts-main-control-row-height);
 	line-height: 1;
 }
 

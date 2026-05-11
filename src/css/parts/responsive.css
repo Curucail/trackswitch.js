@@ -78,6 +78,7 @@
 	.trackswitch .main-control ul.control {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) auto;
+		grid-auto-rows: var(--ts-main-control-row-height);
 		align-items: center;
 		column-gap: 14px;
 		row-gap: var(--ts-main-control-gap-row);

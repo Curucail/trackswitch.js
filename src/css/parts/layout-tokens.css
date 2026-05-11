@@ -8,7 +8,8 @@
 	--ts-control-gap-md: 10px;
 	--ts-control-gap-lg: 16px;
 
-	--ts-main-control-height: 36px;
+	--ts-main-control-height: 28px;
+	--ts-main-control-row-height: var(--ts-main-seek-hit-height);
 	--ts-main-control-padding-block: 4px;
 	--ts-main-control-padding-inline: 12px;
 	--ts-main-control-gap-row: 6px;
