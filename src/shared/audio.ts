@@ -1,4 +1,4 @@
-import { TrackSourceDefinition, TrackTiming } from "../domain/types";
+import type { TrackSourceDefinition, TrackTiming } from "../domain/types";
 
 export function inferSourceMimeType(
 	sourceUrl: string,
@@ -6,7 +6,7 @@ export function inferSourceMimeType(
 	mimeTypeTable: Record<string, string>,
 ): string {
 	if (sourceType) {
-		return sourceType.endsWith(";") ? sourceType : sourceType + ";";
+		return sourceType.endsWith(";") ? sourceType : `${sourceType};`;
 	}
 
 	const withoutHash = sourceUrl.split("#")[0];
@@ -22,7 +22,7 @@ export function inferSourceMimeType(
 		return mimeTypeTable[ext];
 	}
 
-	return "audio/" + ext.slice(1) + ";";
+	return `audio/${ext.slice(1)};`;
 }
 
 export function calculateTrackTiming(

@@ -1,16 +1,16 @@
-import {
+import { normalizeFeatures } from "../domain/options";
+import type {
 	NormalizedTrackGroupLayout,
 	NormalizedTrackSwitchConfig,
 	TrackDefinition,
-	TrackSwitchVariant,
 	TrackSwitchInit,
 	TrackSwitchSheetMusicUiElement,
 	TrackSwitchUiElement,
+	TrackSwitchVariant,
 	TrackSwitchWaveformUiElement,
 } from "../domain/types";
 import { injectConfiguredUiElements, normalizeUiElement } from "./ui-elements";
 import { assertAllowedKeys, toConfigRecord } from "./validation";
-import { normalizeFeatures } from "../domain/options";
 
 export const TRACKS_REQUIRED_ERROR =
 	'TrackSwitch requires at least one ui entry with type "trackGroup" and non-empty trackGroup.';
@@ -43,9 +43,9 @@ function hasValidTrackSources(track: TrackDefinition): boolean {
 		return false;
 	}
 
-	return track.sources.some(function (source) {
-		return typeof source.src === "string" && source.src.trim().length > 0;
-	});
+	return track.sources.some(
+		(source) => typeof source.src === "string" && source.src.trim().length > 0,
+	);
 }
 
 function resolveTracksFromUi(resolvedUi: TrackSwitchUiElement[] | undefined): {
@@ -60,7 +60,7 @@ function resolveTracksFromUi(resolvedUi: TrackSwitchUiElement[] | undefined): {
 	const trackGroups: NormalizedTrackGroupLayout[] = [];
 	let groupIndex = 0;
 
-	resolvedUi.forEach(function (entry) {
+	resolvedUi.forEach((entry) => {
 		if (entry.type !== "trackGroup") {
 			return;
 		}
@@ -70,7 +70,7 @@ function resolveTracksFromUi(resolvedUi: TrackSwitchUiElement[] | undefined): {
 		}
 
 		const startTrackIndex = tracks.length;
-		entry.trackGroup.forEach(function (track) {
+		entry.trackGroup.forEach((track) => {
 			if (!hasValidTrackSources(track)) {
 				throw new Error(
 					"Each track in ui trackGroup must define at least one valid source src.",
@@ -100,9 +100,7 @@ function hasPerTrackImageUi(
 		return false;
 	}
 
-	return resolvedUi.some(function (entry) {
-		return entry.type === "perTrackImage";
-	});
+	return resolvedUi.some((entry) => entry.type === "perTrackImage");
 }
 
 function hasSheetMusicUi(
@@ -112,9 +110,7 @@ function hasSheetMusicUi(
 		return false;
 	}
 
-	return resolvedUi.some(function (entry) {
-		return entry.type === "sheetMusic";
-	});
+	return resolvedUi.some((entry) => entry.type === "sheetMusic");
 }
 
 function hasWarpingMatrixInferScoreBpm(
@@ -124,9 +120,9 @@ function hasWarpingMatrixInferScoreBpm(
 		return false;
 	}
 
-	return resolvedUi.some(function (entry) {
-		return entry.type === "warpingMatrix" && entry.bpm === "infer_score";
-	});
+	return resolvedUi.some(
+		(entry) => entry.type === "warpingMatrix" && entry.bpm === "infer_score",
+	);
 }
 
 function assertNoFeatureMode(init: TrackSwitchInit): void {
@@ -205,7 +201,7 @@ function validateVariantConfig(
 		);
 	}
 
-	tracks.forEach(function (track) {
+	tracks.forEach((track) => {
 		const column = track.alignment?.column;
 		if (typeof column !== "string" || column.trim().length === 0) {
 			throw new Error(

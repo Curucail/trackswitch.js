@@ -1,5 +1,5 @@
-import { TrackRuntime } from "../domain/types";
 import { playerStateReducer } from "../domain/state";
+import type { TrackRuntime } from "../domain/types";
 import { clamp } from "../shared/math";
 import { getSeekMetrics } from "../shared/seek";
 import { pauseOtherControllers, unregisterController } from "./player-registry";
@@ -48,7 +48,7 @@ export function load(ctx: any): any {
 				? true
 				: this.features.exclusiveSolo;
 
-			this.runtimes.forEach(function (runtime: TrackRuntime) {
+			this.runtimes.forEach((runtime: TrackRuntime) => {
 				runtime.successful = false;
 				runtime.errored = false;
 				runtime.buffer = null;
@@ -80,7 +80,7 @@ export function load(ctx: any): any {
 						this.waveformEngine.createSummary(runtime.baseSource.buffer);
 				}
 
-				if (runtime.syncedSource && runtime.syncedSource.buffer) {
+				if (runtime.syncedSource?.buffer) {
 					runtime.syncedSource.waveformSummary =
 						this.waveformEngine.createSummary(runtime.syncedSource.buffer);
 				}
@@ -97,11 +97,9 @@ export function load(ctx: any): any {
 			this.isLoading = false;
 			this.renderer.setOverlayLoading(false);
 
-			const erroredTracks = this.runtimes.filter(function (
-				runtime: TrackRuntime,
-			) {
-				return runtime.errored;
-			});
+			const erroredTracks = this.runtimes.filter(
+				(runtime: TrackRuntime) => runtime.errored,
+			);
 
 			if (erroredTracks.length > 0) {
 				this.handleError("One or more audio files failed to load.");
@@ -516,7 +514,7 @@ export function toggleSolo(ctx: any, trackIndex: any, exclusive: any): any {
 		const currentState = runtime.state.solo;
 
 		if (exclusive || this.effectiveSingleSoloMode) {
-			this.runtimes.forEach(function (entry: TrackRuntime) {
+			this.runtimes.forEach((entry: TrackRuntime) => {
 				entry.state.solo = false;
 			});
 		}
@@ -551,7 +549,7 @@ export function applyPreset(ctx: any, presetIndex: any): any {
 			return;
 		}
 
-		this.runtimes.forEach(function (runtime: TrackRuntime) {
+		this.runtimes.forEach((runtime: TrackRuntime) => {
 			const presets = runtime.definition.presets ?? [];
 			runtime.state.solo = presets.indexOf(presetIndex) !== -1;
 		});
@@ -777,7 +775,7 @@ export function findLongestDuration(ctx: any): any {
 	return function (this: any) {
 		let longest = 0;
 
-		this.runtimes.forEach(function (runtime: TrackRuntime) {
+		this.runtimes.forEach((runtime: TrackRuntime) => {
 			const duration = (ctx.constructor as any).getRuntimeDuration(runtime);
 
 			if (duration > longest) {

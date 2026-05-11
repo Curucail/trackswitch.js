@@ -6,12 +6,9 @@ export function getInlineConfigScripts(
 	element: HTMLElement,
 ): HTMLScriptElement[] {
 	return Array.from(element.children).filter(
-		function (child): child is HTMLScriptElement {
-			return (
-				child instanceof HTMLScriptElement &&
-				child.type.trim().toLowerCase() === INLINE_CONFIG_SCRIPT_TYPE
-			);
-		},
+		(child): child is HTMLScriptElement =>
+			child instanceof HTMLScriptElement &&
+			child.type.trim().toLowerCase() === INLINE_CONFIG_SCRIPT_TYPE,
 	);
 }
 

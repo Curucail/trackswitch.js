@@ -1,10 +1,13 @@
-import {
+import { normalizeFeatures } from "../domain/options";
+import { createTrackRuntime } from "../domain/runtime";
+import { createInitialPlayerState, type PlayerAction } from "../domain/state";
+import type {
 	AudioDownloadSizeInfo,
 	LoopMarker,
 	NormalizedTrackSwitchConfig,
 	PlayerState,
-	TrackSourceVariant,
 	TrackRuntime,
+	TrackSourceVariant,
 	TrackSwitchController,
 	TrackSwitchEventHandler,
 	TrackSwitchEventMap,
@@ -13,32 +16,28 @@ import {
 	TrackSwitchInit,
 	TrackSwitchSnapshot,
 } from "../domain/types";
-import { normalizeFeatures } from "../domain/options";
-import { createInitialPlayerState, PlayerAction } from "../domain/state";
-import { createTrackRuntime } from "../domain/runtime";
 import { AudioEngine } from "../engine/audio-engine";
-import { SheetMusicEngine } from "../engine/sheet-music-engine";
 import type { SheetMusicMeasureMapsByAxis } from "../engine/sheet-music/types";
+import { SheetMusicEngine } from "../engine/sheet-music-engine";
 import {
-	TrackTimelineProjector,
+	type TrackTimelineProjector,
 	WaveformEngine,
 } from "../engine/waveform-engine";
+import { InputBinder, type InputController } from "../input/dom-event-binder";
+import { derivePresetNames } from "../shared/preset";
+import type { ControllerPointerEvent } from "../shared/seek";
 import {
 	ViewRenderer,
-	WarpingMatrixRenderContext,
-	WaveformTimelineContext,
+	type WarpingMatrixRenderContext,
+	type WaveformTimelineContext,
 } from "../ui/view-renderer";
-import { InputBinder, InputController } from "../input/dom-event-binder";
-import { derivePresetNames } from "../shared/preset";
-import { ControllerPointerEvent } from "../shared/seek";
-import { allocateInstanceId, registerController } from "./player-registry";
-
-import * as controllerPlayback from "./playback-actions";
-import * as controllerInput from "./input-actions";
-import * as controllerSeek from "./seek-actions";
-import * as controllerUi from "./ui-sync";
 import * as controllerEvents from "./event-emitter";
 import * as controllerHotReload from "./hot-reload-actions";
+import * as controllerInput from "./input-actions";
+import * as controllerPlayback from "./playback-actions";
+import { allocateInstanceId, registerController } from "./player-registry";
+import * as controllerSeek from "./seek-actions";
+import * as controllerUi from "./ui-sync";
 
 type AlignmentReferenceAxisKey = "base" | "sync";
 
@@ -145,25 +144,23 @@ export class TrackSwitchControllerImpl
 			this.variant === "alignment" ? true : this.features.exclusiveSolo;
 		this.state = createInitialPlayerState(this.features.repeat);
 
-		this.runtimes = config.tracks.map(function (track, index) {
-			return createTrackRuntime(track, index);
-		});
+		this.runtimes = config.tracks.map((track, index) =>
+			createTrackRuntime(track, index),
+		);
 
-		const hasAnySelectedTrack = this.runtimes.some(function (runtime) {
-			return runtime.state.solo;
-		});
+		const hasAnySelectedTrack = this.runtimes.some(
+			(runtime) => runtime.state.solo,
+		);
 		if (!hasAnySelectedTrack && this.runtimes.length > 0) {
 			if (this.features.exclusiveSolo) {
 				this.runtimes[0].state.solo = true;
 			} else {
 				const hasExplicitSoloConfiguration = config.tracks.some(
-					function (track) {
-						return typeof track.solo === "boolean";
-					},
+					(track) => typeof track.solo === "boolean",
 				);
 
 				if (!hasExplicitSoloConfiguration) {
-					this.runtimes.forEach(function (runtime) {
+					this.runtimes.forEach((runtime) => {
 						runtime.state.solo = true;
 					});
 				}
@@ -243,47 +240,47 @@ export class TrackSwitchControllerImpl
 	}
 
 	destroy(): void {
-		return controllerPlayback.destroy(this);
+		controllerPlayback.destroy(this);
 	}
 
 	togglePlay(): void {
-		return controllerPlayback.togglePlay(this);
+		controllerPlayback.togglePlay(this);
 	}
 
 	play(): void {
-		return controllerPlayback.play(this);
+		controllerPlayback.play(this);
 	}
 
 	pause(): void {
-		return controllerPlayback.pause(this);
+		controllerPlayback.pause(this);
 	}
 
 	stop(): void {
-		return controllerPlayback.stop(this);
+		controllerPlayback.stop(this);
 	}
 
 	seekTo(seconds: number): void {
-		return controllerPlayback.seekTo(this, seconds);
+		controllerPlayback.seekTo(this, seconds);
 	}
 
 	seekRelative(seconds: number): void {
-		return controllerPlayback.seekRelative(this, seconds);
+		controllerPlayback.seekRelative(this, seconds);
 	}
 
 	setRepeat(enabled: boolean): void {
-		return controllerPlayback.setRepeat(this, enabled);
+		controllerPlayback.setRepeat(this, enabled);
 	}
 
 	setVolume(volumeZeroToOne: number): void {
-		return controllerPlayback.setVolume(this, volumeZeroToOne);
+		controllerPlayback.setVolume(this, volumeZeroToOne);
 	}
 
 	setTrackVolume(trackIndex: number, volumeZeroToOne: number): void {
-		return controllerPlayback.setTrackVolume(this, trackIndex, volumeZeroToOne);
+		controllerPlayback.setTrackVolume(this, trackIndex, volumeZeroToOne);
 	}
 
 	setTrackPan(trackIndex: number, panMinusOneToOne: number): void {
-		return controllerPlayback.setTrackPan(this, trackIndex, panMinusOneToOne);
+		controllerPlayback.setTrackPan(this, trackIndex, panMinusOneToOne);
 	}
 
 	setLoopPoint(marker: LoopMarker): boolean {
@@ -295,15 +292,15 @@ export class TrackSwitchControllerImpl
 	}
 
 	clearLoop(): void {
-		return controllerPlayback.clearLoop(this);
+		controllerPlayback.clearLoop(this);
 	}
 
 	toggleSolo(trackIndex: number, exclusive = false): void {
-		return controllerPlayback.toggleSolo(this, trackIndex, exclusive);
+		controllerPlayback.toggleSolo(this, trackIndex, exclusive);
 	}
 
 	applyPreset(presetIndex: number): void {
-		return controllerPlayback.applyPreset(this, presetIndex);
+		controllerPlayback.applyPreset(this, presetIndex);
 	}
 
 	getState(): TrackSwitchSnapshot {
@@ -321,111 +318,111 @@ export class TrackSwitchControllerImpl
 		eventName: K,
 		handler: TrackSwitchEventHandler<K>,
 	): void {
-		return controllerEvents.off(this, eventName, handler);
+		controllerEvents.off(this, eventName, handler);
 	}
 
 	setKeyboardActive(): void {
-		return controllerInput.setKeyboardActive(this);
+		controllerInput.setKeyboardActive(this);
 	}
 
 	openShortcutHelp(): void {
-		return controllerInput.openShortcutHelp(this);
+		controllerInput.openShortcutHelp(this);
 	}
 
 	toggleShortcutHelp(): void {
-		return controllerInput.toggleShortcutHelp(this);
+		controllerInput.toggleShortcutHelp(this);
 	}
 
 	closeShortcutHelp(): void {
-		return controllerInput.closeShortcutHelp(this);
+		controllerInput.closeShortcutHelp(this);
 	}
 
 	onOverlayActivate(event: ControllerPointerEvent): void {
-		return controllerInput.onOverlayActivate(this, event);
+		controllerInput.onOverlayActivate(this, event);
 	}
 
 	onOverlayInfo(event: ControllerPointerEvent): void {
-		return controllerInput.onOverlayInfo(this, event);
+		controllerInput.onOverlayInfo(this, event);
 	}
 
 	onShortcutHelpOverlay(event: ControllerPointerEvent): void {
-		return controllerInput.onShortcutHelpOverlay(this, event);
+		controllerInput.onShortcutHelpOverlay(this, event);
 	}
 
 	onPlayPause(event: ControllerPointerEvent): void {
-		return controllerInput.onPlayPause(this, event);
+		controllerInput.onPlayPause(this, event);
 	}
 
 	onStop(event: ControllerPointerEvent): void {
-		return controllerInput.onStop(this, event);
+		controllerInput.onStop(this, event);
 	}
 
 	onRepeat(event: ControllerPointerEvent): void {
-		return controllerInput.onRepeat(this, event);
+		controllerInput.onRepeat(this, event);
 	}
 
 	onSeekStart(event: ControllerPointerEvent): void {
-		return controllerInput.onSeekStart(this, event);
+		controllerInput.onSeekStart(this, event);
 	}
 
 	onSeekMove(event: ControllerPointerEvent): void {
-		return controllerSeek.onSeekMove(this, event);
+		controllerSeek.onSeekMove(this, event);
 	}
 
 	onSeekEnd(event: ControllerPointerEvent): void {
-		return controllerInput.onSeekEnd(this, event);
+		controllerInput.onSeekEnd(this, event);
 	}
 
 	onSolo(event: ControllerPointerEvent): void {
-		return controllerInput.onSolo(this, event);
+		controllerInput.onSolo(this, event);
 	}
 
 	onTrackRowToggle(event: ControllerPointerEvent): void {
-		return controllerInput.onTrackRowToggle(this, event);
+		controllerInput.onTrackRowToggle(this, event);
 	}
 
 	onAlignmentSync(event: ControllerPointerEvent): void {
-		return controllerInput.onAlignmentSync(this, event);
+		controllerInput.onAlignmentSync(this, event);
 	}
 
 	onVolume(event: ControllerPointerEvent): void {
-		return controllerInput.onVolume(this, event);
+		controllerInput.onVolume(this, event);
 	}
 
 	onVolumeReset(event: ControllerPointerEvent): void {
-		return controllerInput.onVolumeReset(this, event);
+		controllerInput.onVolumeReset(this, event);
 	}
 
 	onTrackVolume(event: ControllerPointerEvent): void {
-		return controllerInput.onTrackVolume(this, event);
+		controllerInput.onTrackVolume(this, event);
 	}
 
 	onTrackVolumeReset(event: ControllerPointerEvent): void {
-		return controllerInput.onTrackVolumeReset(this, event);
+		controllerInput.onTrackVolumeReset(this, event);
 	}
 
 	onTrackPan(event: ControllerPointerEvent): void {
-		return controllerInput.onTrackPan(this, event);
+		controllerInput.onTrackPan(this, event);
 	}
 
 	onTrackPanReset(event: ControllerPointerEvent): void {
-		return controllerInput.onTrackPanReset(this, event);
+		controllerInput.onTrackPanReset(this, event);
 	}
 
 	onPreset(event: ControllerPointerEvent): void {
-		return controllerInput.onPreset(this, event);
+		controllerInput.onPreset(this, event);
 	}
 
 	onPresetScroll(event: ControllerPointerEvent): void {
-		return controllerInput.onPresetScroll(this, event);
+		controllerInput.onPresetScroll(this, event);
 	}
 
 	onWaveformZoomWheel(event: ControllerPointerEvent): void {
-		return controllerSeek.onWaveformZoomWheel(this, event);
+		controllerSeek.onWaveformZoomWheel(this, event);
 	}
 
 	onWaveformMinimapStart(event: ControllerPointerEvent): void {
-		return controllerInput.onWaveformMinimapStart(this, event);
+		controllerInput.onWaveformMinimapStart(this, event);
 	}
 
 	onPanelReorderStart(event: ControllerPointerEvent): void {
@@ -453,27 +450,27 @@ export class TrackSwitchControllerImpl
 	}
 
 	onSetLoopA(event: ControllerPointerEvent): void {
-		return controllerInput.onSetLoopA(this, event);
+		controllerInput.onSetLoopA(this, event);
 	}
 
 	onSetLoopB(event: ControllerPointerEvent): void {
-		return controllerInput.onSetLoopB(this, event);
+		controllerInput.onSetLoopB(this, event);
 	}
 
 	onToggleLoop(event: ControllerPointerEvent): void {
-		return controllerInput.onToggleLoop(this, event);
+		controllerInput.onToggleLoop(this, event);
 	}
 
 	onClearLoop(event: ControllerPointerEvent): void {
-		return controllerInput.onClearLoop(this, event);
+		controllerInput.onClearLoop(this, event);
 	}
 
 	onMarkerDragStart(event: ControllerPointerEvent): void {
-		return controllerInput.onMarkerDragStart(this, event);
+		controllerInput.onMarkerDragStart(this, event);
 	}
 
 	onKeyboard(event: ControllerPointerEvent): void {
-		return controllerInput.onKeyboard(this, event);
+		controllerInput.onKeyboard(this, event);
 	}
 
 	public getKeyboardTrackIndex(event: ControllerPointerEvent): number | null {
@@ -481,7 +478,7 @@ export class TrackSwitchControllerImpl
 	}
 
 	onResize(): void {
-		return controllerInput.onResize(this);
+		controllerInput.onResize(this);
 	}
 
 	public prefetchAudioDownloadSize(): Promise<void> {
@@ -517,7 +514,7 @@ export class TrackSwitchControllerImpl
 	}
 
 	public requestWaveformRender(): void {
-		return controllerSeek.requestWaveformRender(this);
+		controllerSeek.requestWaveformRender(this);
 	}
 
 	public isWaveformSeekSurface(seekWrap: HTMLElement | null): boolean {
@@ -528,11 +525,11 @@ export class TrackSwitchControllerImpl
 		event: ControllerPointerEvent,
 		seekWrap: HTMLElement,
 	): void {
-		return controllerSeek.startInteractiveSeek(this, event, seekWrap);
+		controllerSeek.startInteractiveSeek(this, event, seekWrap);
 	}
 
 	public disableLoopWhenSeekOutsideRegion(): void {
-		return controllerSeek.disableLoopWhenSeekOutsideRegion(this);
+		controllerSeek.disableLoopWhenSeekOutsideRegion(this);
 	}
 
 	public tryStartPendingWaveformTouchSeek(
@@ -553,7 +550,7 @@ export class TrackSwitchControllerImpl
 	}
 
 	public applyPendingWaveformTouchSeekTap(event: ControllerPointerEvent): void {
-		return controllerSeek.applyPendingWaveformTouchSeekTap(this, event);
+		controllerSeek.applyPendingWaveformTouchSeekTap(this, event);
 	}
 
 	public getTouchPair(event: ControllerPointerEvent): [Touch, Touch] | null {
@@ -584,7 +581,7 @@ export class TrackSwitchControllerImpl
 	}
 
 	public endWaveformMinimapDrag(): void {
-		return controllerSeek.endWaveformMinimapDrag(this);
+		controllerSeek.endWaveformMinimapDrag(this);
 	}
 
 	public updatePinchZoom(event: ControllerPointerEvent): boolean {
@@ -592,7 +589,7 @@ export class TrackSwitchControllerImpl
 	}
 
 	public endPinchZoom(): void {
-		return controllerSeek.endPinchZoom(this);
+		controllerSeek.endPinchZoom(this);
 	}
 
 	public trackIndexFromTarget(target: EventTarget | null): number {
@@ -622,7 +619,7 @@ export class TrackSwitchControllerImpl
 		const previousSoloIndex = this.getActiveSoloTrackIndex();
 		const targetSoloIndex = previousSoloIndex >= 0 ? previousSoloIndex : 0;
 
-		this.runtimes.forEach(function (runtime, index) {
+		this.runtimes.forEach((runtime, index) => {
 			runtime.state.solo = index === targetSoloIndex;
 		});
 	}
@@ -641,7 +638,7 @@ export class TrackSwitchControllerImpl
 	): boolean {
 		const source =
 			variant === "synced" ? runtime.syncedSource : runtime.baseSource;
-		if (!source || !source.buffer) {
+		if (!source?.buffer) {
 			return false;
 		}
 
@@ -659,15 +656,15 @@ export class TrackSwitchControllerImpl
 	}
 
 	public applyTrackProperties(): void {
-		return controllerUi.applyTrackProperties(this);
+		controllerUi.applyTrackProperties(this);
 	}
 
 	public updateMainControls(): void {
-		return controllerUi.updateMainControls(this);
+		controllerUi.updateMainControls(this);
 	}
 
 	public updatePlaybackPositionUi(): void {
-		return controllerUi.updatePlaybackPositionUi(this);
+		controllerUi.updatePlaybackPositionUi(this);
 	}
 
 	public async initializeSheetMusic(): Promise<void> {
@@ -694,30 +691,30 @@ export class TrackSwitchControllerImpl
 	}
 
 	public dispatch(action: PlayerAction): void {
-		return controllerPlayback.dispatch(this, action);
+		controllerPlayback.dispatch(this, action);
 	}
 
 	public pauseOthers(): void {
-		return controllerPlayback.pauseOthers(this);
+		controllerPlayback.pauseOthers(this);
 	}
 
 	public startAudio(newPosition?: number, snippetDuration?: number): void {
-		return controllerPlayback.startAudio(this, newPosition, snippetDuration);
+		controllerPlayback.startAudio(this, newPosition, snippetDuration);
 	}
 
 	public stopAudio(): void {
-		return controllerPlayback.stopAudio(this);
+		controllerPlayback.stopAudio(this);
 	}
 
 	public monitorPosition(): void {
-		return controllerPlayback.monitorPosition(this);
+		controllerPlayback.monitorPosition(this);
 	}
 
 	public seekFromEvent(
 		event: ControllerPointerEvent,
 		usePreviewSnippet = true,
 	): void {
-		return controllerPlayback.seekFromEvent(this, event, usePreviewSnippet);
+		controllerPlayback.seekFromEvent(this, event, usePreviewSnippet);
 	}
 
 	public findLongestDuration(): number {
@@ -770,9 +767,7 @@ export class TrackSwitchControllerImpl
 	}
 
 	public getAudibleTrackIndexesForWarpingMatrix(): number[] {
-		return this.runtimes.map(function (_runtime, index) {
-			return index;
-		});
+		return this.runtimes.map((_runtime, index) => index);
 	}
 
 	public resolveReferenceTimeColumn(config: {
@@ -803,7 +798,7 @@ export class TrackSwitchControllerImpl
 	): number | string {
 		let maxReference = Number.NEGATIVE_INFINITY;
 
-		rows.forEach(function (row: Record<string, unknown>) {
+		rows.forEach((row: Record<string, unknown>) => {
 			const value = Number(row[referenceTimeColumn]);
 			if (Number.isFinite(value) && value > maxReference) {
 				maxReference = value;
@@ -909,10 +904,10 @@ export class TrackSwitchControllerImpl
 		eventName: K,
 		payload: TrackSwitchEventMap[K],
 	): void {
-		return controllerEvents.emit(this, eventName, payload);
+		controllerEvents.emit(this, eventName, payload);
 	}
 
 	public handleError(message: string): void {
-		return controllerPlayback.handleError(this, message);
+		controllerPlayback.handleError(this, message);
 	}
 }

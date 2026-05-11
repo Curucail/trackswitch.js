@@ -1,4 +1,4 @@
-import { TrackRuntime } from "../domain/types";
+import type { TrackRuntime } from "../domain/types";
 import { closestInRoot, getOwnerWindow } from "../shared/dom";
 import { clamp } from "../shared/math";
 import { getSeekMetrics } from "../shared/seek";
@@ -781,7 +781,7 @@ export function getWaveformTimelineProjector(ctx: any): any {
 		const trackIndexByRuntime = new Map<TrackRuntime, number>();
 		const trackIndexByDefinition = new Map<object, number>();
 
-		this.runtimes.forEach(function (runtime: TrackRuntime, index: number) {
+		this.runtimes.forEach((runtime: TrackRuntime, index: number) => {
 			trackIndexByRuntime.set(runtime, index);
 			trackIndexByDefinition.set(runtime.definition, index);
 		});

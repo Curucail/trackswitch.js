@@ -1,9 +1,9 @@
-import { ViewRenderer } from "./view-renderer";
+import * as viewRendererWarping from "./render-warping-matrix";
 import type {
 	WarpingMatrixRenderContext,
 	WarpingMatrixTrackSeries,
 } from "./view-renderer";
-import * as viewRendererWarping from "./render-warping-matrix";
+import { ViewRenderer } from "./view-renderer";
 
 type WarpingMatrixHostMetadata = ViewRenderer["warpingMatrixHosts"][number];
 type WarpingMatrixPlotState = NonNullable<
@@ -62,16 +62,13 @@ export class AlignmentViewRenderer extends ViewRenderer {
 	public updateWarpingMatrixTempoControlLabels(
 		host: WarpingMatrixHostMetadata,
 	): void {
-		return viewRendererWarping.updateWarpingMatrixTempoControlLabels(
-			this,
-			host,
-		);
+		viewRendererWarping.updateWarpingMatrixTempoControlLabels(this, host);
 	}
 
 	public persistWarpingMatrixTempoControls(
 		host: WarpingMatrixHostMetadata,
 	): void {
-		return viewRendererWarping.persistWarpingMatrixTempoControls(this, host);
+		viewRendererWarping.persistWarpingMatrixTempoControls(this, host);
 	}
 
 	public getWarpingMatrixSquarePlotSize(plot: WarpingMatrixPlotState): number {
@@ -90,7 +87,7 @@ export class AlignmentViewRenderer extends ViewRenderer {
 	}
 
 	public wrapWarpingMatrixContainers(): void {
-		return viewRendererWarping.wrapWarpingMatrixContainers(this);
+		viewRendererWarping.wrapWarpingMatrixContainers(this);
 	}
 
 	public createWarpingMatrixPlotState(
@@ -124,7 +121,7 @@ export class AlignmentViewRenderer extends ViewRenderer {
 		width: number,
 		height: number,
 	): void {
-		return viewRendererWarping.applyWarpingMatrixPlotDimensions(
+		viewRendererWarping.applyWarpingMatrixPlotDimensions(
 			this,
 			plot,
 			width,
@@ -137,7 +134,7 @@ export class AlignmentViewRenderer extends ViewRenderer {
 		width: number,
 		height: number,
 	): void {
-		return viewRendererWarping.applyWarpingTempoPlotDimensions(
+		viewRendererWarping.applyWarpingTempoPlotDimensions(
 			this,
 			plot,
 			width,
@@ -168,57 +165,49 @@ export class AlignmentViewRenderer extends ViewRenderer {
 		host: WarpingMatrixHostMetadata,
 		event: PointerEvent,
 	): void {
-		return viewRendererWarping.onWarpingMatrixPointerDown(this, host, event);
+		viewRendererWarping.onWarpingMatrixPointerDown(this, host, event);
 	}
 
 	public onWarpingMatrixPointerMove(
 		host: WarpingMatrixHostMetadata,
 		event: PointerEvent,
 	): void {
-		return viewRendererWarping.onWarpingMatrixPointerMove(this, host, event);
+		viewRendererWarping.onWarpingMatrixPointerMove(this, host, event);
 	}
 
 	public onWarpingMatrixPointerUp(
 		host: WarpingMatrixHostMetadata,
 		event: PointerEvent,
 	): void {
-		return viewRendererWarping.onWarpingMatrixPointerUp(this, host, event);
+		viewRendererWarping.onWarpingMatrixPointerUp(this, host, event);
 	}
 
 	public seekWarpingMatrixFromPointerX(
 		host: WarpingMatrixHostMetadata,
 		clientX: number,
 	): void {
-		return viewRendererWarping.seekWarpingMatrixFromPointerX(
-			this,
-			host,
-			clientX,
-		);
+		viewRendererWarping.seekWarpingMatrixFromPointerX(this, host, clientX);
 	}
 
 	public onWarpingTempoPointerDown(
 		host: WarpingMatrixHostMetadata,
 		event: PointerEvent,
 	): void {
-		return viewRendererWarping.onWarpingTempoPointerDown(this, host, event);
+		viewRendererWarping.onWarpingTempoPointerDown(this, host, event);
 	}
 
 	public onWarpingTempoWheel(
 		host: WarpingMatrixHostMetadata,
 		event: WheelEvent,
 	): void {
-		return viewRendererWarping.onWarpingTempoWheel(this, host, event);
+		viewRendererWarping.onWarpingTempoWheel(this, host, event);
 	}
 
 	public seekWarpingMatrixFromTempoPointerX(
 		host: WarpingMatrixHostMetadata,
 		clientX: number,
 	): void {
-		return viewRendererWarping.seekWarpingMatrixFromTempoPointerX(
-			this,
-			host,
-			clientX,
-		);
+		viewRendererWarping.seekWarpingMatrixFromTempoPointerX(this, host, clientX);
 	}
 
 	public getPrimaryWarpingSeriesData(
@@ -242,39 +231,35 @@ export class AlignmentViewRenderer extends ViewRenderer {
 	}
 
 	public ensureWarpingLayout(host: WarpingMatrixHostMetadata): void {
-		return viewRendererWarping.ensureWarpingLayout(this, host);
+		viewRendererWarping.ensureWarpingLayout(this, host);
 	}
 
 	public applyWarpingMatrixContext(
 		host: WarpingMatrixHostMetadata,
 		context: WarpingMatrixRenderContext,
 	): void {
-		return viewRendererWarping.applyWarpingMatrixContext(this, host, context);
+		viewRendererWarping.applyWarpingMatrixContext(this, host, context);
 	}
 
 	public updateWarpingMatrix(
 		host: WarpingMatrixHostMetadata,
 		context: WarpingMatrixRenderContext | undefined,
 	): void {
-		return viewRendererWarping.updateWarpingMatrix(this, host, context);
+		viewRendererWarping.updateWarpingMatrix(this, host, context);
 	}
 
 	public updateWarpingMatrixPlaybackState(
 		host: WarpingMatrixHostMetadata,
 		context: WarpingMatrixRenderContext | undefined,
 	): void {
-		return viewRendererWarping.updateWarpingMatrixPlaybackState(
-			this,
-			host,
-			context,
-		);
+		viewRendererWarping.updateWarpingMatrixPlaybackState(this, host, context);
 	}
 
 	public renderWarpingMatrixPathPlot(
 		host: WarpingMatrixHostMetadata,
 		pathStrokeWidth: number,
 	): void {
-		return viewRendererWarping.renderWarpingMatrixPathPlot(
+		viewRendererWarping.renderWarpingMatrixPathPlot(
 			this,
 			host,
 			pathStrokeWidth,
@@ -282,11 +267,11 @@ export class AlignmentViewRenderer extends ViewRenderer {
 	}
 
 	public renderWarpingMatrixPlayhead(host: WarpingMatrixHostMetadata): void {
-		return viewRendererWarping.renderWarpingMatrixPlayhead(this, host);
+		viewRendererWarping.renderWarpingMatrixPlayhead(this, host);
 	}
 
 	public renderWarpingMatrixTempoPlot(host: WarpingMatrixHostMetadata): void {
-		return viewRendererWarping.renderWarpingMatrixTempoPlot(this, host);
+		viewRendererWarping.renderWarpingMatrixTempoPlot(this, host);
 	}
 
 	public resolveCenteredWarpingWindow(

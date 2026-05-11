@@ -2,17 +2,17 @@ import { closestInRoot, eventTargetAsElement } from "../shared/dom";
 import { parseStrictNonNegativeInt } from "../shared/preset";
 import { getSeekMetrics, isPrimaryInput } from "../shared/seek";
 import {
+	finalizeRightClickLoopSelection,
+	finishSeekEndInteraction,
+	resolveWaveformMinimapStart,
+} from "./input-seek-helpers";
+import {
 	getKeyboardTrackIndex as getKeyboardTrackIndexFromEvent,
 	handleGlobalKeyboardShortcut,
 	handleShortcutHelpKeyboard,
 	handleTrackKeyboardSelection,
 	isShortcutHelpToggleKey,
 } from "./input-shortcuts";
-import {
-	finalizeRightClickLoopSelection,
-	finishSeekEndInteraction,
-	resolveWaveformMinimapStart,
-} from "./input-seek-helpers";
 import {
 	getTrackInputTarget,
 	parseSliderValue,
@@ -87,7 +87,7 @@ export function onOverlayInfo(ctx: any, event: any): any {
 export function onShortcutHelpOverlay(ctx: any, event: any): any {
 	return function (this: any, event: any) {
 		const target = eventTargetAsElement(event.target ?? null);
-		if (target && target.closest(".shortcut-help-panel")) {
+		if (target?.closest(".shortcut-help-panel")) {
 			return;
 		}
 
@@ -557,8 +557,7 @@ export function onKeyboard(ctx: any, event: any): any {
 
 		const target = eventTargetAsElement(event.target ?? null);
 		if (
-			target &&
-			target.closest(
+			target?.closest(
 				'input, textarea, select, [contenteditable="true"], [contenteditable=""], [role="textbox"]',
 			)
 		) {

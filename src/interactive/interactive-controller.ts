@@ -1,40 +1,40 @@
-import type {
-	InteractiveAlignmentResult,
-	InteractiveFile,
-	InteractiveState,
-	InteractiveTrackSwitchController,
-	InteractiveTrackSwitchInit,
-	AlignmentAlgorithmId,
-	AlignmentFeatureSetId,
-	WorkerComputeResult,
-} from "./types";
 import type { TrackSwitchController } from "../domain/types";
-import {
-	ensureBasicPitchFeatures,
-	resolveBasicPitchModelUrl,
-} from "./basic-pitch";
+import { createAlignmentTrackSwitch } from "../player/alignment-factory";
+import { parseNumericCsv } from "../shared/alignment";
+import { renderIconSlotHtml } from "../ui/icons";
 import {
 	coerceAlignmentSelectionForAlgorithm,
 	coerceAlignmentSelectionForFeatureSet,
 	normalizeAlignmentSelection,
 } from "./alignment-options";
 import {
-	processFile,
-	readFileAsText,
+	ensureBasicPitchFeatures,
+	resolveBasicPitchModelUrl,
+} from "./basic-pitch";
+import {
 	buildUniqueAlignmentColumnMaps,
 	fileNameToDisplayTitle,
+	processFile,
+	readFileAsText,
 } from "./file-handler";
-import { AlignmentWorkerBridge } from "./worker/alignment-worker-bridge";
+import type {
+	AlignmentAlgorithmId,
+	AlignmentFeatureSetId,
+	InteractiveAlignmentResult,
+	InteractiveFile,
+	InteractiveState,
+	InteractiveTrackSwitchController,
+	InteractiveTrackSwitchInit,
+	WorkerComputeResult,
+} from "./types";
 import {
-	buildFullDropZonePanel,
 	bindDropZoneEvents,
+	buildFullDropZonePanel,
 	type DropZoneEvents,
 } from "./ui/render-dropzone";
 import { buildPlayerSettingsMenuHtml } from "./ui/render-player-settings";
 import { injectSettingsButton } from "./ui/settings-button";
-import { renderIconSlotHtml } from "../ui/icons";
-import { createAlignmentTrackSwitch } from "../player/alignment-factory";
-import { parseNumericCsv } from "../shared/alignment";
+import { AlignmentWorkerBridge } from "./worker/alignment-worker-bridge";
 
 export class InteractiveTrackSwitchControllerImpl
 	implements InteractiveTrackSwitchController
@@ -210,7 +210,7 @@ export class InteractiveTrackSwitchControllerImpl
 
 	private getStatusMessage(): string {
 		if (this.state.computationError) {
-			return "Error: " + this.state.computationError;
+			return `Error: ${this.state.computationError}`;
 		}
 		if (this.state.computationStatus === "initializing") {
 			return "Preparing alignment engine...";
@@ -245,9 +245,7 @@ export class InteractiveTrackSwitchControllerImpl
 
 		// Auto-select reference: first score file, else first item
 		if (!this.state.referenceFileId && this.state.files.length > 0) {
-			const firstScore = this.state.files.find(function (f) {
-				return f.type === "musicxml";
-			});
+			const firstScore = this.state.files.find((f) => f.type === "musicxml");
 			this.state.referenceFileId = firstScore
 				? firstScore.id
 				: this.state.files[0].id;
@@ -305,15 +303,11 @@ export class InteractiveTrackSwitchControllerImpl
 	}
 
 	private handleFileRemoved(fileId: string): void {
-		this.state.files = this.state.files.filter(function (f) {
-			return f.id !== fileId;
-		});
+		this.state.files = this.state.files.filter((f) => f.id !== fileId);
 
 		if (this.state.referenceFileId === fileId) {
 			if (this.state.files.length > 0) {
-				const firstScore = this.state.files.find(function (f) {
-					return f.type === "musicxml";
-				});
+				const firstScore = this.state.files.find((f) => f.type === "musicxml");
 				this.state.referenceFileId = firstScore
 					? firstScore.id
 					: this.state.files[0].id;
@@ -423,9 +417,7 @@ export class InteractiveTrackSwitchControllerImpl
 	}
 
 	private async ensureBasicPitchFeaturesForAlignment(): Promise<void> {
-		const audioFiles = this.state.files.filter(function (file) {
-			return file.type === "audio";
-		});
+		const audioFiles = this.state.files.filter((file) => file.type === "audio");
 
 		if (audioFiles.length === 0) {
 			return;
@@ -436,18 +428,15 @@ export class InteractiveTrackSwitchControllerImpl
 
 		for (let index = 0; index < total; index += 1) {
 			const file = audioFiles[index];
-			const fileLabel =
-				"Basic Pitch " + (index + 1) + "/" + total + ": " + file.name;
+			const fileLabel = `Basic Pitch ${index + 1}/${total}: ${file.name}`;
 
 			await ensureBasicPitchFeatures(file, modelUrl, (progress) => {
 				const percentage = Number.isFinite(progress.progress)
 					? Math.max(0, Math.min(100, Math.round(progress.progress * 100)))
 					: null;
 				const prefix =
-					percentage === null
-						? fileLabel
-						: fileLabel + " (" + percentage + "%)";
-				this.onWorkerProgress(prefix + " - " + progress.message);
+					percentage === null ? fileLabel : `${fileLabel} (${percentage}%)`;
+				this.onWorkerProgress(`${prefix} - ${progress.message}`);
 			});
 		}
 	}
@@ -542,12 +531,12 @@ export class InteractiveTrackSwitchControllerImpl
 			referenceFile.type === "musicxml" ? "infer_score" : null;
 
 		// Encode CSV as data URL for the existing alignment system
-		const csvDataUrl =
-			"data:text/csv;base64," + btoa(this.state.alignmentResult.csv);
+		const csvDataUrl = `data:text/csv;base64,${btoa(this.state.alignmentResult.csv)}`;
 		const synchronizedAudioByFileId = new Map(
-			this.state.alignmentResult.synchronizedAudio.map(function (entry) {
-				return [entry.fileId, entry];
-			}),
+			this.state.alignmentResult.synchronizedAudio.map((entry) => [
+				entry.fileId,
+				entry,
+			]),
 		);
 
 		// Build UI array
@@ -786,8 +775,7 @@ export class InteractiveTrackSwitchControllerImpl
 
 		const buttonRect = settingsBtn.getBoundingClientRect();
 		const rootRect = this.rootElement.getBoundingClientRect();
-		menu.style.top =
-			String(Math.round(buttonRect.bottom - rootRect.top + 8)) + "px";
+		menu.style.top = `${String(Math.round(buttonRect.bottom - rootRect.top + 8))}px`;
 		menu.style.right =
 			String(Math.max(12, Math.round(rootRect.right - buttonRect.right))) +
 			"px";
@@ -886,7 +874,7 @@ export class InteractiveTrackSwitchControllerImpl
 			this.settingsMenuDismissHandler = null;
 		}
 
-		if (this.settingsMenuContainer && this.settingsMenuContainer.parentNode) {
+		if (this.settingsMenuContainer?.parentNode) {
 			this.settingsMenuContainer.parentNode.removeChild(
 				this.settingsMenuContainer,
 			);
@@ -940,11 +928,7 @@ export class InteractiveTrackSwitchControllerImpl
 	}
 
 	private buildAlignmentCacheKey(): string {
-		const fileIds = this.state.files
-			.map(function (file) {
-				return file.id;
-			})
-			.join("|");
+		const fileIds = this.state.files.map((file) => file.id).join("|");
 
 		return [
 			fileIds,
@@ -995,7 +979,7 @@ export class InteractiveTrackSwitchControllerImpl
 			source: "computed",
 			csv: result.csv,
 			syncReferenceTimeColumn: result.syncReferenceTimeColumn,
-			synchronizedAudio: result.synchronizedAudio.map(function (entry) {
+			synchronizedAudio: result.synchronizedAudio.map((entry) => {
 				const mimeType = entry.mimeType || "audio/wav";
 				return {
 					fileId: entry.fileId,
@@ -1021,7 +1005,7 @@ export class InteractiveTrackSwitchControllerImpl
 	private revokeSynchronizedAudioUrls(
 		result: InteractiveAlignmentResult,
 	): void {
-		result.synchronizedAudio.forEach(function (entry) {
+		result.synchronizedAudio.forEach((entry) => {
 			URL.revokeObjectURL(entry.objectUrl);
 		});
 	}
@@ -1056,7 +1040,7 @@ export class InteractiveTrackSwitchControllerImpl
 			);
 			if (progressPercent) {
 				progressPercent.textContent =
-					percentage >= 0 ? percentage + "%" : "--%";
+					percentage >= 0 ? `${percentage}%` : "--%";
 			}
 
 			if (percentage >= 0) {
@@ -1064,7 +1048,7 @@ export class InteractiveTrackSwitchControllerImpl
 					".ts-progress-fill",
 				) as HTMLElement;
 				if (progressFill) {
-					progressFill.style.width = percentage + "%";
+					progressFill.style.width = `${percentage}%`;
 				}
 			}
 		}

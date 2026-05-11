@@ -3,7 +3,7 @@ export function toConfigRecord(
 	label: string,
 ): Record<string, unknown> {
 	if (!value || typeof value !== "object" || Array.isArray(value)) {
-		throw new Error("Invalid " + label + " configuration.");
+		throw new Error(`Invalid ${label} configuration.`);
 	}
 
 	return value as Record<string, unknown>;
@@ -15,7 +15,7 @@ export function assertAllowedKeys(
 	label: string,
 ): void {
 	const allowed = new Set(allowedKeys);
-	Object.keys(target).forEach(function (key) {
+	Object.keys(target).forEach((key) => {
 		if (!allowed.has(key)) {
 			throw new Error(
 				"Invalid " +

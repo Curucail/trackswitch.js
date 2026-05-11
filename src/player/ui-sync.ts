@@ -1,9 +1,9 @@
-import type { TrackSwitchControllerImpl } from "./player-controller";
 import {
 	createPositionEventPayload,
 	createTrackStateEventPayload,
 	createUiState,
 } from "./controller-state";
+import type { TrackSwitchControllerImpl } from "./player-controller";
 
 function emitPositionUpdate(controller: TrackSwitchControllerImpl): void {
 	controller.emit("position", createPositionEventPayload(controller));

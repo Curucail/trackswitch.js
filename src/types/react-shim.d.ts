@@ -13,9 +13,7 @@ declare module "react" {
 		ref?: Ref<T>;
 	}
 
-	export interface ForwardRefExoticComponent<P> {
-		(props: P): ReactElement | null;
-	}
+	export type ForwardRefExoticComponent<P> = (props: P) => ReactElement | null;
 
 	export function createElement(
 		type: any,

@@ -1,4 +1,5 @@
-import {
+import type { ScaleContinuousNumeric, ScaleLinear, Selection } from "d3";
+import type {
 	AudioDownloadSizeInfo,
 	NormalizedTrackGroupLayout,
 	TrackRuntime,
@@ -13,7 +14,6 @@ import {
 	formatSecondsToHHMMSSmmm,
 } from "../shared/format";
 import { clampPercent } from "../shared/math";
-import type { ScaleContinuousNumeric, ScaleLinear, Selection } from "d3";
 import { getHostIconSlot, renderIconSlotHtml, setHostIcon } from "./icons";
 
 type SvgSelection = Selection<SVGSVGElement, unknown, null, undefined>;
@@ -263,14 +263,11 @@ function getReorderablePanels(
 	const excludedSet = new Set(excluded);
 
 	return Array.from(root.children).filter(
-		function (child): child is HTMLElement {
-			return (
-				child instanceof HTMLElement &&
-				child.classList.contains("ts-stack-section") &&
-				child.getAttribute("data-customizable-panel") === "true" &&
-				!excludedSet.has(child)
-			);
-		},
+		(child): child is HTMLElement =>
+			child instanceof HTMLElement &&
+			child.classList.contains("ts-stack-section") &&
+			child.getAttribute("data-customizable-panel") === "true" &&
+			!excludedSet.has(child),
 	);
 }
 
@@ -475,8 +472,8 @@ function buildShortcutHelpHtml(
 ): string {
 	const entries = getShortcutHelpEntries(features, trackCount);
 	const itemsHtml = entries
-		.map(function (entry: ShortcutHelpEntry, index: number) {
-			return (
+		.map(
+			(entry: ShortcutHelpEntry, index: number) =>
 				'<li class="shortcut-help-item" style="--ts-shortcut-delay: ' +
 				String(40 + index * 20) +
 				'ms;">' +
@@ -486,9 +483,8 @@ function buildShortcutHelpHtml(
 				'<span class="shortcut-help-action">' +
 				escapeHtml(entry.action) +
 				"</span>" +
-				"</li>"
-			);
-		})
+				"</li>",
+		)
 		.join("");
 
 	return (
@@ -532,7 +528,7 @@ function renderOverlayDownloadInfoText(info: AudioDownloadSizeInfo): string {
 			);
 		}
 
-		return "Expected download size for this player: " + formatted;
+		return `Expected download size for this player: ${formatted}`;
 	}
 
 	return "Expected download size for this player: unavailable";
@@ -571,11 +567,11 @@ export function initialize(ctx: any, runtimes: any): any {
 		this.prepareCustomizablePanels();
 
 		if (this.query(".seekable:not(.seekable-img-wrap > .seekable)")) {
-			this.queryAll(".main-control .seekwrap").forEach(function (
-				seekWrap: HTMLElement,
-			) {
-				setDisplay(seekWrap, "none");
-			});
+			this.queryAll(".main-control .seekwrap").forEach(
+				(seekWrap: HTMLElement) => {
+					setDisplay(seekWrap, "none");
+				},
+			);
 		}
 
 		this.updateTiming(0, 0);
@@ -685,7 +681,7 @@ export function shouldRenderGlobalSync(ctx: any, runtimes: any): any {
 			return false;
 		}
 
-		return runtimes.some(function (runtime: TrackRuntime) {
+		return runtimes.some((runtime: TrackRuntime) => {
 			const sources = runtime.definition.alignment?.synchronizedSources;
 			return Array.isArray(sources) && sources.length > 0;
 		});
@@ -699,7 +695,7 @@ export function buildTrackRow(ctx: any, runtime: any, index: any): any {
 		const wholeSoloClass = this.features.exclusiveSolo ? " solo" : "";
 
 		const track = document.createElement("li");
-		track.className = "track" + tabviewClass + wholeSoloClass;
+		track.className = `track${tabviewClass}${wholeSoloClass}`;
 		track.setAttribute(
 			"style",
 			sanitizeInlineStyle(runtime.definition.style || ""),
@@ -715,14 +711,14 @@ export function buildTrackRow(ctx: any, runtime: any, index: any): any {
 
 		const title = document.createElement("span");
 		title.className = "track-title";
-		title.textContent = runtime.definition.title || "Track " + (index + 1);
+		title.textContent = runtime.definition.title || `Track ${index + 1}`;
 		track.appendChild(title);
 
 		const controls = document.createElement("ul");
 		controls.className = "control";
 
 		const solo = document.createElement("li");
-		solo.className = "solo button" + radioSoloClass;
+		solo.className = `solo button${radioSoloClass}`;
 		solo.title = "Solo";
 		solo.textContent = "Solo";
 		solo.insertAdjacentHTML("beforeend", renderIconSlotHtml("circle"));
@@ -783,7 +779,7 @@ export function buildTrackRow(ctx: any, runtime: any, index: any): any {
 
 export function renderTrackList(ctx: any, runtimes: any): any {
 	return function (this: any, runtimes: any) {
-		this.queryAll(".track_list").forEach(function (existing: HTMLElement) {
+		this.queryAll(".track_list").forEach((existing: HTMLElement) => {
 			existing.remove();
 		});
 
@@ -817,14 +813,14 @@ export function renderTrackList(ctx: any, runtimes: any): any {
 					Number.isFinite(group.rowHeight) &&
 					group.rowHeight > 0
 				) {
-					row.style.minHeight = String(Math.round(group.rowHeight)) + "px";
+					row.style.minHeight = `${String(Math.round(group.rowHeight))}px`;
 				}
 
 				list.appendChild(row);
 			}
 
 			const container = this.query(
-				'.track-group[data-track-group-index="' + group.groupIndex + '"]',
+				`.track-group[data-track-group-index="${group.groupIndex}"]`,
 			);
 			if (container) {
 				container.appendChild(list);
@@ -867,7 +863,7 @@ export function prepareTextPanels(ctx: any): any {
 				hostElement.getAttribute("data-ts-text-font-size"),
 			);
 			if (fontSize !== null) {
-				hostElement.style.fontSize = fontSize + "px";
+				hostElement.style.fontSize = `${fontSize}px`;
 			} else {
 				hostElement.style.removeProperty("font-size");
 			}
@@ -879,23 +875,20 @@ export function prepareCustomizablePanels(ctx: any): any {
 	return function (this: any) {
 		const root = this.root as HTMLElement;
 		const panels = Array.from(this.root.children).filter(
-			function (child): child is HTMLElement {
-				return (
-					child instanceof HTMLElement &&
-					child.classList.contains("ts-stack-section") &&
-					!child.classList.contains("main-control")
-				);
-			},
+			(child): child is HTMLElement =>
+				child instanceof HTMLElement &&
+				child.classList.contains("ts-stack-section") &&
+				!child.classList.contains("main-control"),
 		);
 
 		if (!this.features.customizablePanelOrder) {
 			panels.forEach((panel: HTMLElement) => {
 				if (!panel.classList.contains("ts-customizable-panel-shell")) {
-					panel.querySelectorAll(".ts-panel-handle").forEach(function (
-						handle: Element,
-					) {
-						handle.remove();
-					});
+					panel
+						.querySelectorAll(".ts-panel-handle")
+						.forEach((handle: Element) => {
+							handle.remove();
+						});
 					return;
 				}
 
@@ -994,7 +987,7 @@ export function startPanelReorder(ctx: any, event: any): any {
 		const rect = panel.getBoundingClientRect();
 		const placeholder = document.createElement("div");
 		placeholder.className = "ts-panel-drop-placeholder";
-		placeholder.style.height = Math.max(1, rect.height) + "px";
+		placeholder.style.height = `${Math.max(1, rect.height)}px`;
 
 		panel.parentElement.insertBefore(placeholder, panel.nextSibling);
 
@@ -1007,10 +1000,10 @@ export function startPanelReorder(ctx: any, event: any): any {
 		}
 
 		panel.classList.add("ts-panel-dragging");
-		panel.style.width = rect.width + "px";
-		panel.style.height = rect.height + "px";
-		panel.style.left = rect.left + "px";
-		panel.style.top = rect.top + "px";
+		panel.style.width = `${rect.width}px`;
+		panel.style.height = `${rect.height}px`;
+		panel.style.left = `${rect.left}px`;
+		panel.style.top = `${rect.top}px`;
 		this.root.classList.add("ts-panel-reorder-active");
 
 		this.panelDragState = {
@@ -1050,8 +1043,7 @@ export function movePanelReorder(ctx: any, event: any): any {
 			return false;
 		}
 
-		dragState.panel.style.top =
-			pageY - window.scrollY - dragState.pointerOffsetY + "px";
+		dragState.panel.style.top = `${pageY - window.scrollY - dragState.pointerOffsetY}px`;
 
 		const panelCenterY =
 			pageY - dragState.pointerOffsetY + dragState.panelHeight / 2;
@@ -1197,9 +1189,9 @@ export function wrapSheetMusicContainers(ctx: any): any {
 				wrapper.className = "sheetmusic-wrap ts-stack-section";
 				wrapper.setAttribute(
 					"style",
-					sanitizeInlineStyle(
+					`${sanitizeInlineStyle(
 						hostElement.getAttribute("data-sheetmusic-style"),
-					) + "; display: block;",
+					)}; display: block;`,
 				);
 
 				scrollContainer = document.createElement("div");
@@ -1229,7 +1221,7 @@ export function wrapSheetMusicContainers(ctx: any): any {
 			);
 			if (maxWidth !== null) {
 				wrapper.style.width = "100%";
-				wrapper.style.maxWidth = maxWidth + "px";
+				wrapper.style.maxWidth = `${maxWidth}px`;
 				wrapper.style.marginLeft = "auto";
 				wrapper.style.marginRight = "auto";
 				wrapper.setAttribute("data-sheetmusic-max-width-applied", "true");
@@ -1247,9 +1239,9 @@ export function wrapSheetMusicContainers(ctx: any): any {
 				hostElement.getAttribute("data-sheetmusic-max-height"),
 			);
 			if (maxHeight !== null) {
-				scrollContainer.style.maxHeight = maxHeight + "px";
-				scrollContainer.style.height = maxHeight + "px";
-				scrollContainer.style.minHeight = maxHeight + "px";
+				scrollContainer.style.maxHeight = `${maxHeight}px`;
+				scrollContainer.style.height = `${maxHeight}px`;
+				scrollContainer.style.minHeight = `${maxHeight}px`;
 				wrapper.classList.add("sheetmusic-scrollable");
 			} else {
 				scrollContainer.style.removeProperty("max-height");
@@ -1334,11 +1326,11 @@ export function updateMainControls(
 			setHostIcon(element, state.playing ? "pause" : "play");
 		});
 
-		this.queryAll(".repeat").forEach(function (element: HTMLElement) {
+		this.queryAll(".repeat").forEach((element: HTMLElement) => {
 			element.classList.toggle("checked", state.repeat);
 		});
 
-		this.queryAll(".sync-global").forEach(function (element: HTMLElement) {
+		this.queryAll(".sync-global").forEach((element: HTMLElement) => {
 			element.classList.toggle("checked", state.syncEnabled);
 			element.classList.toggle("disabled", !state.syncAvailable);
 		});
@@ -1351,17 +1343,17 @@ export function updateMainControls(
 			return;
 		}
 
-		this.queryAll(".loop-a").forEach(function (element: HTMLElement) {
+		this.queryAll(".loop-a").forEach((element: HTMLElement) => {
 			element.classList.toggle("checked", state.loop.pointA !== null);
 			element.classList.toggle("active", state.loop.enabled);
 		});
 
-		this.queryAll(".loop-b").forEach(function (element: HTMLElement) {
+		this.queryAll(".loop-b").forEach((element: HTMLElement) => {
 			element.classList.toggle("checked", state.loop.pointB !== null);
 			element.classList.toggle("active", state.loop.enabled);
 		});
 
-		this.queryAll(".loop-toggle").forEach(function (element: HTMLElement) {
+		this.queryAll(".loop-toggle").forEach((element: HTMLElement) => {
 			element.classList.toggle("checked", state.loop.enabled);
 		});
 	}.call(ctx, state, runtimes, waveformTimelineContext, warpingMatrixContext);
@@ -1424,7 +1416,7 @@ export function updateTrackControls(
 		syncEnabled: any,
 	) {
 		runtimes.forEach((runtime: TrackRuntime, index: number) => {
-			const row = this.query('.track[data-track-index="' + index + '"]');
+			const row = this.query(`.track[data-track-index="${index}"]`);
 			if (!row) {
 				return;
 			}
@@ -1495,7 +1487,7 @@ export function switchPosterImage(ctx: any, runtimes: any): any {
 		let imageSrc: string | null = null;
 		const switchTargets = this.queryAll('img[data-per-track-image="true"]');
 
-		runtimes.forEach(function (runtime: TrackRuntime) {
+		runtimes.forEach((runtime: TrackRuntime) => {
 			if (runtime.state.solo) {
 				soloCount += 1;
 				const configuredImage =
@@ -1560,7 +1552,7 @@ export function setTrackVolumeSlider(
 	volumeZeroToOne: any,
 ): any {
 	return function (this: any, trackIndex: any, volumeZeroToOne: any) {
-		const row = this.query('.track[data-track-index="' + trackIndex + '"]');
+		const row = this.query(`.track[data-track-index="${trackIndex}"]`);
 		if (!row) {
 			return;
 		}
@@ -1580,7 +1572,7 @@ export function setTrackPanSlider(
 	panMinusOneToOne: any,
 ): any {
 	return function (this: any, trackIndex: any, panMinusOneToOne: any) {
-		const row = this.query('.track[data-track-index="' + trackIndex + '"]');
+		const row = this.query(`.track[data-track-index="${trackIndex}"]`);
 		if (!row) {
 			return;
 		}
@@ -1625,21 +1617,19 @@ export function applyVolumeIconState(
 
 export function setOverlayLoading(ctx: any, isLoading: any): any {
 	return function (this: any, isLoading: any) {
-		this.queryAll(".overlay-activation .activate").forEach(function (
-			activate: HTMLElement,
-		) {
-			activate.classList.toggle("loading", isLoading);
-			setHostIcon(activate, isLoading ? "spinner" : "power-off");
+		this.queryAll(".overlay-activation .activate").forEach(
+			(activate: HTMLElement) => {
+				activate.classList.toggle("loading", isLoading);
+				setHostIcon(activate, isLoading ? "spinner" : "power-off");
 
-			const iconSlot = getHostIconSlot(activate);
-			if (iconSlot) {
-				iconSlot.classList.toggle("is-spinning", isLoading);
-			}
-		});
+				const iconSlot = getHostIconSlot(activate);
+				if (iconSlot) {
+					iconSlot.classList.toggle("is-spinning", isLoading);
+				}
+			},
+		);
 
-		this.queryAll(".overlay-activation").forEach(function (
-			overlay: HTMLElement,
-		) {
+		this.queryAll(".overlay-activation").forEach((overlay: HTMLElement) => {
 			overlay.classList.toggle("loading", isLoading);
 		});
 	}.call(ctx, isLoading);
@@ -1647,9 +1637,7 @@ export function setOverlayLoading(ctx: any, isLoading: any): any {
 
 export function setShortcutHelpVisible(ctx: any, isVisible: any): any {
 	return function (this: any, isVisible: any) {
-		this.queryAll(".overlay-shortcuts").forEach(function (
-			overlay: HTMLElement,
-		) {
+		this.queryAll(".overlay-shortcuts").forEach((overlay: HTMLElement) => {
 			overlay.classList.toggle("is-hidden", !isVisible);
 			overlay.setAttribute("aria-hidden", isVisible ? "false" : "true");
 
@@ -1674,11 +1662,11 @@ export function setShortcutHelpVisible(ctx: any, isVisible: any): any {
 
 export function showOverlayInfoText(ctx: any): any {
 	return function (this: any) {
-		this.queryAll(".overlay .info").forEach(function (info: HTMLElement) {
+		this.queryAll(".overlay .info").forEach((info: HTMLElement) => {
 			setDisplay(info, "none");
 		});
 
-		this.queryAll(".overlay .text").forEach(function (text: HTMLElement) {
+		this.queryAll(".overlay .text").forEach((text: HTMLElement) => {
 			setDisplay(text, "block");
 		});
 	}.call(ctx);
@@ -1697,9 +1685,7 @@ export function updateOverlayDownloadInfo(ctx: any, info: any): any {
 
 export function hideOverlayOnLoaded(ctx: any): any {
 	return function (this: any) {
-		this.queryAll(".overlay-activation").forEach(function (
-			overlay: HTMLElement,
-		) {
+		this.queryAll(".overlay-activation").forEach((overlay: HTMLElement) => {
 			overlay.classList.add("is-hidden");
 		});
 	}.call(ctx);
@@ -1709,23 +1695,21 @@ export function showError(ctx: any, message: any, runtimes: any): any {
 	return function (this: any, message: any, runtimes: any) {
 		this.root.classList.add("error");
 
-		this.queryAll(".overlay-activation").forEach(function (
-			overlay: HTMLElement,
-		) {
+		this.queryAll(".overlay-activation").forEach((overlay: HTMLElement) => {
 			overlay.classList.remove("is-hidden");
 		});
 
-		this.queryAll(".overlay-activation .activate").forEach(function (
-			activate: HTMLElement,
-		) {
-			activate.classList.remove("loading");
-			setHostIcon(activate, "exclamation");
+		this.queryAll(".overlay-activation .activate").forEach(
+			(activate: HTMLElement) => {
+				activate.classList.remove("loading");
+				setHostIcon(activate, "exclamation");
 
-			const iconSlot = getHostIconSlot(activate);
-			if (iconSlot) {
-				iconSlot.classList.remove("is-spinning");
-			}
-		});
+				const iconSlot = getHostIconSlot(activate);
+				if (iconSlot) {
+					iconSlot.classList.remove("is-spinning");
+				}
+			},
+		);
 
 		const overlayText = this.query("#overlaytext");
 		if (overlayText) {
@@ -1737,7 +1721,7 @@ export function showError(ctx: any, message: any, runtimes: any): any {
 				return;
 			}
 
-			const row = this.query('.track[data-track-index="' + index + '"]');
+			const row = this.query(`.track[data-track-index="${index}"]`);
 			if (row) {
 				row.classList.add("error");
 			}
@@ -1777,11 +1761,11 @@ export function updateTiming(
 	longestDuration: any,
 ): any {
 	return function (this: any, position: any, longestDuration: any) {
-		this.queryAll(".timing .time").forEach(function (node: HTMLElement) {
+		this.queryAll(".timing .time").forEach((node: HTMLElement) => {
 			node.textContent = formatSecondsToHHMMSSmmm(position);
 		});
 
-		this.queryAll(".timing .length").forEach(function (node: HTMLElement) {
+		this.queryAll(".timing .length").forEach((node: HTMLElement) => {
 			node.textContent = formatSecondsToHHMMSSmmm(longestDuration);
 		});
 	}.call(ctx, position, longestDuration);

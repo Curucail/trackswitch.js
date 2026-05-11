@@ -111,7 +111,7 @@ export function buildAlignmentHelpLabelHtml(
 	options: AlignmentHelpLabelHtmlOptions,
 ): string {
 	const labelAttributes = options.selectId
-		? ' for="' + escapeHtml(options.selectId) + '"'
+		? ` for="${escapeHtml(options.selectId)}"`
 		: "";
 	const labelTag = options.selectId ? "label" : "span";
 
@@ -134,16 +134,15 @@ export function buildAlignmentHelpLabelHtml(
 export function buildAlignmentHelpTriggerHtml(
 	options: AlignmentHelpLabelHtmlOptions,
 ): string {
-	const tooltipDomId =
-		"ts-help-tooltip-" + options.idPrefix + "-" + options.tooltipId;
+	const tooltipDomId = `ts-help-tooltip-${options.idPrefix}-${options.tooltipId}`;
 	const tooltipContent = ALIGNMENT_HELP_TOOLTIP_CONTENT[options.tooltipId];
 	const triggerAlignClass =
 		options.align === "end"
 			? " ts-help-trigger-wrap-end"
 			: " ts-help-trigger-wrap-start";
 	const itemsHtml = tooltipContent.items
-		.map(function (item) {
-			return (
+		.map(
+			(item) =>
 				'<li class="ts-help-tooltip-item">' +
 				'<strong class="ts-help-tooltip-item-title">' +
 				escapeHtml(item.title) +
@@ -151,9 +150,8 @@ export function buildAlignmentHelpTriggerHtml(
 				'<span class="ts-help-tooltip-item-copy">' +
 				escapeHtml(item.description) +
 				"</span>" +
-				"</li>"
-			);
-		})
+				"</li>",
+		)
 		.join("");
 
 	return (
@@ -187,9 +185,7 @@ export function bindAlignmentHelpTooltips(container: HTMLElement): void {
 
 	const roots = Array.from(
 		container.querySelectorAll(".ts-help-trigger-wrap"),
-	).filter(function (node) {
-		return node instanceof HTMLElement;
-	}) as TooltipRootElement[];
+	).filter((node) => node instanceof HTMLElement) as TooltipRootElement[];
 
 	if (roots.length === 0) {
 		return;
@@ -237,9 +233,9 @@ export function bindAlignmentHelpTooltips(container: HTMLElement): void {
 			180,
 			Math.floor(playerRect.width - margin * 2),
 		);
-		tooltip.style.maxWidth = availableWidth + "px";
-		tooltip.style.left = margin + "px";
-		tooltip.style.top = margin + "px";
+		tooltip.style.maxWidth = `${availableWidth}px`;
+		tooltip.style.left = `${margin}px`;
+		tooltip.style.top = `${margin}px`;
 		tooltip.style.transform = "none";
 
 		const tooltipRect = tooltip.getBoundingClientRect();
@@ -263,9 +259,8 @@ export function bindAlignmentHelpTooltips(container: HTMLElement): void {
 			buttonRect.height / 2 -
 			tooltipHeight / 2;
 
-		tooltip.style.left =
-			Math.min(Math.max(preferredLeft, minLeft), maxLeft) + "px";
-		tooltip.style.top = Math.min(Math.max(preferredTop, minTop), maxTop) + "px";
+		tooltip.style.left = `${Math.min(Math.max(preferredLeft, minLeft), maxLeft)}px`;
+		tooltip.style.top = `${Math.min(Math.max(preferredTop, minTop), maxTop)}px`;
 	}
 
 	function closeRoot(root: TooltipRootElement): void {
@@ -275,7 +270,7 @@ export function bindAlignmentHelpTooltips(container: HTMLElement): void {
 		}
 		if (root.__tsHelpTooltip) {
 			const placeholder = root.__tsHelpTooltipPlaceholder;
-			if (placeholder && placeholder.parentNode) {
+			if (placeholder?.parentNode) {
 				placeholder.parentNode.insertBefore(root.__tsHelpTooltip, placeholder);
 				placeholder.parentNode.removeChild(placeholder);
 			}
@@ -300,7 +295,7 @@ export function bindAlignmentHelpTooltips(container: HTMLElement): void {
 	}
 
 	function closeAll(): void {
-		roots.forEach(function (root) {
+		roots.forEach((root) => {
 			closeRoot(root);
 		});
 	}
@@ -329,7 +324,7 @@ export function bindAlignmentHelpTooltips(container: HTMLElement): void {
 
 	const teardownCallbacks: Array<() => void> = [];
 
-	roots.forEach(function (root) {
+	roots.forEach((root) => {
 		const button = root.querySelector(
 			".ts-help-trigger",
 		) as HTMLButtonElement | null;
@@ -342,13 +337,13 @@ export function bindAlignmentHelpTooltips(container: HTMLElement): void {
 			return;
 		}
 
-		const handleMouseEnter = function (): void {
+		const handleMouseEnter = (): void => {
 			if (manualRoot && manualRoot !== root) {
 				return;
 			}
 			openRootWithMode(root, false);
 		};
-		const handleMouseLeave = function (event: MouseEvent): void {
+		const handleMouseLeave = (event: MouseEvent): void => {
 			if (manualRoot === root) {
 				return;
 			}
@@ -362,7 +357,7 @@ export function bindAlignmentHelpTooltips(container: HTMLElement): void {
 			}
 			closeRoot(root);
 		};
-		const handleTooltipMouseLeave = function (event: MouseEvent): void {
+		const handleTooltipMouseLeave = (event: MouseEvent): void => {
 			if (manualRoot === root) {
 				return;
 			}
@@ -372,14 +367,14 @@ export function bindAlignmentHelpTooltips(container: HTMLElement): void {
 			}
 			closeRoot(root);
 		};
-		const handleFocusIn = function (): void {
+		const handleFocusIn = (): void => {
 			if (manualRoot && manualRoot !== root) {
 				return;
 			}
 			openRootWithMode(root, false);
 		};
-		const handleFocusOut = function (): void {
-			window.setTimeout(function () {
+		const handleFocusOut = (): void => {
+			window.setTimeout(() => {
 				if (!ensureConnected()) {
 					return;
 				}
@@ -393,7 +388,7 @@ export function bindAlignmentHelpTooltips(container: HTMLElement): void {
 				closeRoot(root);
 			}, 0);
 		};
-		const handleClick = function (event: MouseEvent): void {
+		const handleClick = (event: MouseEvent): void => {
 			event.preventDefault();
 			event.stopPropagation();
 			if (manualRoot === root) {
@@ -410,7 +405,7 @@ export function bindAlignmentHelpTooltips(container: HTMLElement): void {
 		button.addEventListener("click", handleClick);
 		tooltip?.addEventListener("mouseleave", handleTooltipMouseLeave);
 
-		teardownCallbacks.push(function () {
+		teardownCallbacks.push(() => {
 			root.removeEventListener("mouseenter", handleMouseEnter);
 			root.removeEventListener("mouseleave", handleMouseLeave);
 			root.removeEventListener("focusin", handleFocusIn);
@@ -420,7 +415,7 @@ export function bindAlignmentHelpTooltips(container: HTMLElement): void {
 		});
 	});
 
-	const handleDocumentPointerDown = function (event: PointerEvent): void {
+	const handleDocumentPointerDown = (event: PointerEvent): void => {
 		if (!ensureConnected()) {
 			return;
 		}
@@ -429,15 +424,16 @@ export function bindAlignmentHelpTooltips(container: HTMLElement): void {
 			closeAll();
 			return;
 		}
-		const clickedInsideTooltip = roots.some(function (root) {
-			return root.contains(target) || !!root.__tsHelpTooltip?.contains(target);
-		});
+		const clickedInsideTooltip = roots.some(
+			(root) =>
+				root.contains(target) || !!root.__tsHelpTooltip?.contains(target),
+		);
 		if (!clickedInsideTooltip) {
 			closeAll();
 		}
 	};
 
-	const handleDocumentKeyDown = function (event: KeyboardEvent): void {
+	const handleDocumentKeyDown = (event: KeyboardEvent): void => {
 		if (!ensureConnected()) {
 			return;
 		}
@@ -450,7 +446,7 @@ export function bindAlignmentHelpTooltips(container: HTMLElement): void {
 		}
 	};
 
-	const handleWindowLayoutChange = function (): void {
+	const handleWindowLayoutChange = (): void => {
 		if (!ensureConnected() || !openRoot) {
 			return;
 		}
@@ -471,7 +467,7 @@ export function bindAlignmentHelpTooltips(container: HTMLElement): void {
 	ownerWindow.addEventListener("resize", handleWindowLayoutChange);
 	ownerWindow.addEventListener("scroll", handleWindowLayoutChange, true);
 
-	teardownCallbacks.push(function () {
+	teardownCallbacks.push(() => {
 		container.ownerDocument.removeEventListener(
 			"pointerdown",
 			handleDocumentPointerDown,
@@ -487,7 +483,7 @@ export function bindAlignmentHelpTooltips(container: HTMLElement): void {
 	});
 
 	function cleanup(): void {
-		teardownCallbacks.forEach(function (callback) {
+		teardownCallbacks.forEach((callback) => {
 			callback();
 		});
 		tooltipContainer.__tsAlignmentHelpCleanup__ = undefined;

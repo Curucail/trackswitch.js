@@ -1,14 +1,14 @@
 import {
-	createDefaultTrackSwitch,
-	createTrackSwitch,
-} from "./player/default-factory";
-import {
+	defineTrackswitchDefaultElement,
+	defineTrackswitchElement,
 	TRACKSWITCH_DEFAULT_ELEMENT_NAME,
 	TRACKSWITCH_ELEMENT_NAME,
 	TrackswitchPlayer,
-	defineTrackswitchDefaultElement,
-	defineTrackswitchElement,
 } from "./default-element";
+import {
+	createDefaultTrackSwitch,
+	createTrackSwitch,
+} from "./player/default-factory";
 
 defineTrackswitchDefaultElement();
 
@@ -33,11 +33,11 @@ if (typeof window !== "undefined") {
 }
 
 export {
-	TRACKSWITCH_DEFAULT_ELEMENT_NAME,
-	TRACKSWITCH_ELEMENT_NAME,
-	TrackswitchPlayer,
 	createDefaultTrackSwitch,
 	createTrackSwitch,
 	defineTrackswitchDefaultElement,
 	defineTrackswitchElement,
+	TRACKSWITCH_DEFAULT_ELEMENT_NAME,
+	TRACKSWITCH_ELEMENT_NAME,
+	TrackswitchPlayer,
 };

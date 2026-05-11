@@ -1,4 +1,5 @@
-import {
+import type { ScaleLinear, Selection } from "d3";
+import type {
 	AudioDownloadSizeInfo,
 	NormalizedTrackGroupLayout,
 	TrackRuntime,
@@ -7,11 +8,10 @@ import {
 	WaveformPlaybackFollowMode,
 	WaveformSource,
 } from "../domain/types";
-import {
+import type {
 	TrackTimelineProjector,
 	WaveformEngine,
 } from "../engine/waveform-engine";
-import type { ScaleLinear, Selection } from "d3";
 import * as viewRendererCore from "./render-layout";
 import * as viewRendererWaveform from "./render-waveforms";
 
@@ -345,7 +345,7 @@ export class ViewRenderer {
 	}
 
 	initialize(runtimes: TrackRuntime[]): void {
-		return viewRendererCore.initialize(this, runtimes);
+		viewRendererCore.initialize(this, runtimes);
 	}
 
 	public buildMainControlHtml(runtimes: TrackRuntime[]): string {
@@ -361,15 +361,15 @@ export class ViewRenderer {
 	}
 
 	public renderTrackList(runtimes: TrackRuntime[]): void {
-		return viewRendererCore.renderTrackList(this, runtimes);
+		viewRendererCore.renderTrackList(this, runtimes);
 	}
 
 	public prepareCustomizablePanels(): void {
-		return viewRendererCore.prepareCustomizablePanels(this);
+		viewRendererCore.prepareCustomizablePanels(this);
 	}
 
 	public prepareTextPanels(): void {
-		return viewRendererCore.prepareTextPanels(this);
+		viewRendererCore.prepareTextPanels(this);
 	}
 
 	public startPanelReorder(event: {
@@ -398,15 +398,15 @@ export class ViewRenderer {
 	}
 
 	public wrapSeekableImages(): void {
-		return viewRendererCore.wrapSeekableImages(this);
+		viewRendererCore.wrapSeekableImages(this);
 	}
 
 	public wrapWaveformCanvases(): void {
-		return viewRendererWaveform.wrapWaveformCanvases(this);
+		viewRendererWaveform.wrapWaveformCanvases(this);
 	}
 
 	public wrapSheetMusicContainers(): void {
-		return viewRendererCore.wrapSheetMusicContainers(this);
+		viewRendererCore.wrapSheetMusicContainers(this);
 	}
 
 	getPreparedSheetMusicHosts(): SheetMusicHostConfig[] {
@@ -665,7 +665,7 @@ export class ViewRenderer {
 	public setWaveformSurfaceWidth(
 		surfaceMetadata: WaveformSeekSurfaceMetadata,
 	): void {
-		return viewRendererWaveform.setWaveformSurfaceWidth(this, surfaceMetadata);
+		viewRendererWaveform.setWaveformSurfaceWidth(this, surfaceMetadata);
 	}
 
 	public forEachVisibleWaveformTile(
@@ -687,7 +687,7 @@ export class ViewRenderer {
 			};
 		}) => void,
 	): void {
-		return viewRendererWaveform.forEachVisibleWaveformTile(
+		viewRendererWaveform.forEachVisibleWaveformTile(
 			this,
 			surfaceMetadata,
 			callback,
@@ -695,13 +695,11 @@ export class ViewRenderer {
 	}
 
 	public scheduleVisibleWaveformTileRefresh(): void {
-		return viewRendererWaveform.scheduleVisibleWaveformTileRefresh(this);
+		viewRendererWaveform.scheduleVisibleWaveformTileRefresh(this);
 	}
 
 	public refreshVisibleWaveformTilesFromLatestInput(): void {
-		return viewRendererWaveform.refreshVisibleWaveformTilesFromLatestInput(
-			this,
-		);
+		viewRendererWaveform.refreshVisibleWaveformTilesFromLatestInput(this);
 	}
 
 	public computeNormalizationPeak(
@@ -753,7 +751,7 @@ export class ViewRenderer {
 	}
 
 	reflowWaveforms(): void {
-		return viewRendererWaveform.reflowWaveforms(this);
+		viewRendererWaveform.reflowWaveforms(this);
 	}
 
 	getWaveformZoom(seekWrap: HTMLElement): number | null {
@@ -804,7 +802,7 @@ export class ViewRenderer {
 	}
 
 	drawDummyWaveforms(waveformEngine: WaveformEngine): void {
-		return viewRendererWaveform.drawDummyWaveforms(this, waveformEngine);
+		viewRendererWaveform.drawDummyWaveforms(this, waveformEngine);
 	}
 
 	renderWaveforms(
@@ -814,7 +812,7 @@ export class ViewRenderer {
 		trackTimelineProjector?: TrackTimelineProjector,
 		waveformTimelineContext?: WaveformTimelineContext,
 	): void {
-		return viewRendererWaveform.renderWaveforms(
+		viewRendererWaveform.renderWaveforms(
 			this,
 			waveformEngine,
 			runtimes,
@@ -833,7 +831,7 @@ export class ViewRenderer {
 		performReflow = true,
 		forceRedrawVisibleTiles = true,
 	): void {
-		return viewRendererWaveform.renderWaveformsInternal(
+		viewRendererWaveform.renderWaveformsInternal(
 			this,
 			waveformEngine,
 			runtimes,
@@ -873,7 +871,7 @@ export class ViewRenderer {
 		waveformTimelineContext?: WaveformTimelineContext,
 		warpingMatrixContext?: WarpingMatrixRenderContext,
 	): void {
-		return viewRendererCore.updateMainControls(
+		viewRendererCore.updateMainControls(
 			this,
 			state,
 			runtimes,
@@ -888,7 +886,7 @@ export class ViewRenderer {
 		waveformTimelineContext?: WaveformTimelineContext,
 		warpingMatrixContext?: WarpingMatrixRenderContext,
 	): void {
-		return viewRendererCore.updatePlaybackPosition(
+		viewRendererCore.updatePlaybackPosition(
 			this,
 			state,
 			runtimes,
@@ -898,14 +896,14 @@ export class ViewRenderer {
 	}
 
 	public updateWaveformZoomIndicators(): void {
-		return viewRendererWaveform.updateWaveformZoomIndicators(this);
+		viewRendererWaveform.updateWaveformZoomIndicators(this);
 	}
 
 	public applyFixedWaveformLocalSeekVisuals(
 		state: TrackSwitchUiState,
 		waveformTimelineContext?: WaveformTimelineContext,
 	): void {
-		return viewRendererWaveform.applyFixedWaveformLocalSeekVisuals(
+		viewRendererWaveform.applyFixedWaveformLocalSeekVisuals(
 			this,
 			state,
 			waveformTimelineContext,
@@ -928,7 +926,7 @@ export class ViewRenderer {
 		runtimes: TrackRuntime[],
 		waveformTimelineContext?: WaveformTimelineContext,
 	): void {
-		return viewRendererWaveform.updateWaveformTiming(
+		viewRendererWaveform.updateWaveformTiming(
 			this,
 			state,
 			runtimes,
@@ -942,7 +940,7 @@ export class ViewRenderer {
 		waveformTimelineContext?: WaveformTimelineContext,
 		suppressFollow = false,
 	): void {
-		return viewRendererWaveform.updateWaveformPlaybackFollow(
+		viewRendererWaveform.updateWaveformPlaybackFollow(
 			this,
 			state,
 			runtimes,
@@ -957,7 +955,7 @@ export class ViewRenderer {
 		duration: number,
 		loop: { pointA: number | null; pointB: number | null; enabled: boolean },
 	): void {
-		return viewRendererWaveform.updateSeekWrapVisuals(
+		viewRendererWaveform.updateSeekWrapVisuals(
 			this,
 			seekWrap,
 			position,
@@ -973,7 +971,7 @@ export class ViewRenderer {
 		panSupported = true,
 		syncEnabled = false,
 	): void {
-		return viewRendererCore.updateTrackControls(
+		viewRendererCore.updateTrackControls(
 			this,
 			runtimes,
 			syncLockedTrackIndexes,
@@ -984,66 +982,58 @@ export class ViewRenderer {
 	}
 
 	switchPosterImage(runtimes: TrackRuntime[]): void {
-		return viewRendererCore.switchPosterImage(this, runtimes);
+		viewRendererCore.switchPosterImage(this, runtimes);
 	}
 
 	setVolumeSlider(volumeZeroToOne: number): void {
-		return viewRendererCore.setVolumeSlider(this, volumeZeroToOne);
+		viewRendererCore.setVolumeSlider(this, volumeZeroToOne);
 	}
 
 	setTrackVolumeSlider(trackIndex: number, volumeZeroToOne: number): void {
-		return viewRendererCore.setTrackVolumeSlider(
-			this,
-			trackIndex,
-			volumeZeroToOne,
-		);
+		viewRendererCore.setTrackVolumeSlider(this, trackIndex, volumeZeroToOne);
 	}
 
 	setTrackPanSlider(trackIndex: number, panMinusOneToOne: number): void {
-		return viewRendererCore.setTrackPanSlider(
-			this,
-			trackIndex,
-			panMinusOneToOne,
-		);
+		viewRendererCore.setTrackPanSlider(this, trackIndex, panMinusOneToOne);
 	}
 
 	updateVolumeIcon(volumeZeroToOne: number): void {
-		return viewRendererCore.updateVolumeIcon(this, volumeZeroToOne);
+		viewRendererCore.updateVolumeIcon(this, volumeZeroToOne);
 	}
 
 	public applyVolumeIconState(
 		icon: HTMLElement,
 		volumeZeroToOne: number,
 	): void {
-		return viewRendererCore.applyVolumeIconState(this, icon, volumeZeroToOne);
+		viewRendererCore.applyVolumeIconState(this, icon, volumeZeroToOne);
 	}
 
 	setOverlayLoading(isLoading: boolean): void {
-		return viewRendererCore.setOverlayLoading(this, isLoading);
+		viewRendererCore.setOverlayLoading(this, isLoading);
 	}
 
 	setShortcutHelpVisible(isVisible: boolean): void {
-		return viewRendererCore.setShortcutHelpVisible(this, isVisible);
+		viewRendererCore.setShortcutHelpVisible(this, isVisible);
 	}
 
 	updateOverlayDownloadInfo(info: AudioDownloadSizeInfo): void {
-		return viewRendererCore.updateOverlayDownloadInfo(this, info);
+		viewRendererCore.updateOverlayDownloadInfo(this, info);
 	}
 
 	showOverlayInfoText(): void {
-		return viewRendererCore.showOverlayInfoText(this);
+		viewRendererCore.showOverlayInfoText(this);
 	}
 
 	hideOverlayOnLoaded(): void {
-		return viewRendererCore.hideOverlayOnLoaded(this);
+		viewRendererCore.hideOverlayOnLoaded(this);
 	}
 
 	showError(message: string, runtimes: TrackRuntime[]): void {
-		return viewRendererCore.showError(this, message, runtimes);
+		viewRendererCore.showError(this, message, runtimes);
 	}
 
 	destroy(): void {
-		return viewRendererCore.destroy(this);
+		viewRendererCore.destroy(this);
 	}
 
 	getPresetCount(): number {
@@ -1051,6 +1041,6 @@ export class ViewRenderer {
 	}
 
 	updateTiming(position: number, longestDuration: number): void {
-		return viewRendererCore.updateTiming(this, position, longestDuration);
+		viewRendererCore.updateTiming(this, position, longestDuration);
 	}
 }

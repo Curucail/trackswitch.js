@@ -1,12 +1,12 @@
 import stylesheetText from "../css/trackswitch.css?inline";
 import { loadElementConfig } from "./config/element-config";
-import { createDefaultTrackSwitch } from "./player/default-factory";
 import type {
 	TrackSwitchController,
 	TrackSwitchEventMap,
 	TrackSwitchEventName,
 	TrackSwitchInit,
 } from "./domain/types";
+import { createDefaultTrackSwitch } from "./player/default-factory";
 
 export type TrackswitchDomEventName =
 	| "trackswitch-loaded"
@@ -95,7 +95,7 @@ export abstract class TrackswitchPlayerBase
 
 	private ensureShadowRoot(): void {
 		const root = this.shadowRoot || this.attachShadow({ mode: "open" });
-		if (this.mountRoot && this.mountRoot.isConnected) {
+		if (this.mountRoot?.isConnected) {
 			return;
 		}
 
@@ -246,7 +246,9 @@ export abstract class TrackswitchPlayerBase
 		this.controllerLoadPromise = null;
 		this.loadGeneration += 1;
 
-		this.unsubscribeHandlers.forEach((unsubscribe) => unsubscribe());
+		this.unsubscribeHandlers.forEach((unsubscribe) => {
+			unsubscribe();
+		});
 		this.unsubscribeHandlers = [];
 
 		if (controller) {

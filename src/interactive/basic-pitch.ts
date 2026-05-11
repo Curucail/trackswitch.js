@@ -33,14 +33,12 @@ function createFeatureMatrix(
 	const binCount = rows[0].length;
 	for (let rowIndex = 1; rowIndex < rows.length; rowIndex += 1) {
 		if (rows[rowIndex].length !== binCount) {
-			throw new Error(
-				"Basic Pitch returned inconsistent " + label + " row widths.",
-			);
+			throw new Error(`Basic Pitch returned inconsistent ${label} row widths.`);
 		}
 	}
 
 	const data = new Float32Array(rows.length * binCount);
-	rows.forEach(function (row, rowIndex) {
+	rows.forEach((row, rowIndex) => {
 		data.set(row, rowIndex * binCount);
 	});
 
@@ -206,11 +204,11 @@ export async function ensureBasicPitchFeatures(
 
 	await basicPitch.evaluateModel(
 		file.pcmData,
-		function (nextFrames, _nextOnsets, nextContours) {
+		(nextFrames, _nextOnsets, nextContours) => {
 			frames.push(...nextFrames);
 			contours.push(...nextContours);
 		},
-		function (progress) {
+		(progress) => {
 			onProgress?.({
 				progress: progress,
 				message: "Running Basic Pitch inference",

@@ -1,4 +1,4 @@
-import { WaveformSource } from "../domain/types";
+import type { WaveformSource } from "../domain/types";
 
 function normalizeTrackIndex(value: unknown): number | null {
 	if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {

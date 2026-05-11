@@ -4,8 +4,8 @@ import type {
 	TrackSwitchEventName,
 	TrackSwitchSnapshot,
 } from "../domain/types";
-import type { TrackSwitchControllerImpl } from "./player-controller";
 import { createControllerSnapshot } from "./controller-state";
+import type { TrackSwitchControllerImpl } from "./player-controller";
 
 type UntypedEventHandler = (payload: unknown) => void;
 

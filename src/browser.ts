@@ -1,28 +1,28 @@
 import {
-	createAlignmentTrackSwitch,
-	createDefaultTrackSwitch,
-	createTrackSwitch,
-} from "./player/factory";
-import {
-	TrackswitchAlignmentPlayer,
-	TrackswitchPlayer,
-	TRACKSWITCH_ALIGNMENT_ELEMENT_NAME,
-	TRACKSWITCH_DEFAULT_ELEMENT_NAME,
-	TRACKSWITCH_ELEMENT_NAME,
 	defineTrackswitchAlignmentElement,
 	defineTrackswitchDefaultElement,
 	defineTrackswitchElement,
 	defineTrackswitchElements,
+	TRACKSWITCH_ALIGNMENT_ELEMENT_NAME,
+	TRACKSWITCH_DEFAULT_ELEMENT_NAME,
+	TRACKSWITCH_ELEMENT_NAME,
+	TrackswitchAlignmentPlayer,
+	TrackswitchPlayer,
 } from "./element";
 import {
+	defineTrackswitchInteractiveElement,
 	TRACKSWITCH_ALIGNMENT_INTERACTIVE_ELEMENT_NAME,
 	TrackswitchAlignmentInteractive,
-	defineTrackswitchInteractiveElement,
 } from "./interactive/interactive-element";
 import {
 	createAlignmentInteractiveTrackSwitch,
 	createInteractiveTrackSwitch,
 } from "./interactive/interactive-factory";
+import {
+	createAlignmentTrackSwitch,
+	createDefaultTrackSwitch,
+	createTrackSwitch,
+} from "./player/factory";
 
 defineTrackswitchElements();
 
@@ -57,13 +57,6 @@ if (typeof window !== "undefined") {
 }
 
 export {
-	TrackswitchAlignmentPlayer,
-	TrackswitchAlignmentInteractive,
-	TrackswitchPlayer,
-	TRACKSWITCH_ALIGNMENT_ELEMENT_NAME,
-	TRACKSWITCH_ALIGNMENT_INTERACTIVE_ELEMENT_NAME,
-	TRACKSWITCH_DEFAULT_ELEMENT_NAME,
-	TRACKSWITCH_ELEMENT_NAME,
 	createAlignmentInteractiveTrackSwitch,
 	createAlignmentTrackSwitch,
 	createDefaultTrackSwitch,
@@ -74,4 +67,11 @@ export {
 	defineTrackswitchElement,
 	defineTrackswitchElements,
 	defineTrackswitchInteractiveElement,
+	TRACKSWITCH_ALIGNMENT_ELEMENT_NAME,
+	TRACKSWITCH_ALIGNMENT_INTERACTIVE_ELEMENT_NAME,
+	TRACKSWITCH_DEFAULT_ELEMENT_NAME,
+	TRACKSWITCH_ELEMENT_NAME,
+	TrackswitchAlignmentInteractive,
+	TrackswitchAlignmentPlayer,
+	TrackswitchPlayer,
 };

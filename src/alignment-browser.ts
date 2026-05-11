@@ -1,9 +1,9 @@
-import { createAlignmentTrackSwitch } from "./player/alignment-factory";
 import {
+	defineTrackswitchAlignmentElement,
 	TRACKSWITCH_ALIGNMENT_ELEMENT_NAME,
 	TrackswitchAlignmentPlayer,
-	defineTrackswitchAlignmentElement,
 } from "./alignment-element";
+import { createAlignmentTrackSwitch } from "./player/alignment-factory";
 
 defineTrackswitchAlignmentElement();
 
@@ -25,8 +25,8 @@ if (typeof window !== "undefined") {
 }
 
 export {
-	TRACKSWITCH_ALIGNMENT_ELEMENT_NAME,
-	TrackswitchAlignmentPlayer,
 	createAlignmentTrackSwitch,
 	defineTrackswitchAlignmentElement,
+	TRACKSWITCH_ALIGNMENT_ELEMENT_NAME,
+	TrackswitchAlignmentPlayer,
 };

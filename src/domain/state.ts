@@ -1,4 +1,4 @@
-import { LoopMarker, PlayerState } from "./types";
+import type { LoopMarker, PlayerState } from "./types";
 
 export type PlayerAction =
 	| { type: "set-playing"; playing: boolean }

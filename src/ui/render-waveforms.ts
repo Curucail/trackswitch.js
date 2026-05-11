@@ -1,15 +1,15 @@
-import {
+import type {
 	TrackRuntime,
 	WaveformPlaybackFollowMode,
 	WaveformSource,
 } from "../domain/types";
-import { sanitizeInlineStyle } from "../shared/dom";
-import { formatSecondsToHHMMSSmmm } from "../shared/format";
-import { clampPercent } from "../shared/math";
-import {
+import type {
 	TrackTimelineProjector,
 	WaveformPeakBuckets,
 } from "../engine/waveform-engine";
+import { sanitizeInlineStyle } from "../shared/dom";
+import { formatSecondsToHHMMSSmmm } from "../shared/format";
+import { clampPercent } from "../shared/math";
 import {
 	parseWaveformSource,
 	resolveFixedWaveformTrackIndex,
@@ -97,7 +97,7 @@ function setPercentProperty(
 	propertyName: string,
 	value: number,
 ): void {
-	element.style.setProperty(propertyName, clampPercent(value) + "%");
+	element.style.setProperty(propertyName, `${clampPercent(value)}%`);
 }
 
 function clampTime(value: number, minimum: number, maximum: number): number {
@@ -147,9 +147,7 @@ function isWaveformTrackAudible(
 		return true;
 	}
 
-	const anySolo = runtimes.some(function (entry: TrackRuntime) {
-		return entry.state.solo;
-	});
+	const anySolo = runtimes.some((entry: TrackRuntime) => entry.state.solo);
 
 	if (anySolo) {
 		return runtime.state.solo;
@@ -350,7 +348,7 @@ function buildWaveformSvgPath(
 			y2 = clampTime(centerY + 0.5, 0, height);
 		}
 
-		commands.push("M" + x + " " + Math.round(y1) + "V" + Math.round(y2));
+		commands.push(`M${x} ${Math.round(y1)}V${Math.round(y2)}`);
 	}
 
 	return commands.join("");
@@ -376,7 +374,7 @@ function buildPlaceholderSvgPath(
 		const barHeight = Math.max(1, Math.round(amplitude * height * 0.7));
 		const y = Math.round((height - barHeight) / 2);
 		const pathX = Math.round(x * snappedBarWidth + snappedBarWidth / 2);
-		commands.push("M" + pathX + " " + y + "V" + (y + barHeight));
+		commands.push(`M${pathX} ${y}V${y + barHeight}`);
 	}
 
 	return commands.join("");
@@ -391,7 +389,7 @@ function renderWaveformSvgPath(
 	barWidth: number,
 	normalizationPeak?: number,
 ): void {
-	svg.setAttribute("viewBox", "0 0 " + width + " " + height);
+	svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
 	path.setAttribute("stroke-width", String(Math.max(1, Math.round(barWidth))));
 	path.setAttribute(
 		"d",
@@ -408,7 +406,7 @@ function renderPlaceholderSvgPath(
 	barWidth: number,
 	alpha: number,
 ): void {
-	svg.setAttribute("viewBox", "0 0 " + width + " " + height);
+	svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
 	path.setAttribute("stroke-width", String(Math.max(1, Math.round(barWidth))));
 	path.setAttribute("d", buildPlaceholderSvgPath(width, height, barWidth));
 	path.style.opacity = String(alpha);
@@ -451,11 +449,11 @@ function updateWaveformMinimapViewport(
 	const viewportState = getWaveformViewportState(surfaceMetadata);
 	surfaceMetadata.zoomMinimapNode.style.setProperty(
 		"--ts-zoom-viewport-left",
-		viewportState.startRatio * minimapWidth + "px",
+		`${viewportState.startRatio * minimapWidth}px`,
 	);
 	surfaceMetadata.zoomMinimapNode.style.setProperty(
 		"--ts-zoom-viewport-width",
-		Math.max(0, viewportState.widthRatio * minimapWidth) + "px",
+		`${Math.max(0, viewportState.widthRatio * minimapWidth)}px`,
 	);
 }
 
@@ -480,11 +478,7 @@ function resolveWaveformPlaybackMetrics(
 		surfaceMetadata.waveformSource,
 	);
 
-	if (
-		waveformTimelineContext &&
-		waveformTimelineContext.enabled &&
-		fixedTrackIndex !== null
-	) {
+	if (waveformTimelineContext?.enabled && fixedTrackIndex !== null) {
 		const trackDuration = sanitizeDuration(
 			waveformTimelineContext.getTrackDuration(fixedTrackIndex),
 		);
@@ -628,10 +622,9 @@ function setWaveformZoomForSurface(
 
 	surfaceMetadata.zoom = nextZoom;
 	const nextSurfaceWidth = getWaveformSurfaceWidth(surfaceMetadata);
-	surfaceMetadata.surface.style.width = nextSurfaceWidth + "px";
-	surfaceMetadata.surface.style.height = surfaceMetadata.originalHeight + "px";
-	surfaceMetadata.tileLayer.style.height =
-		surfaceMetadata.originalHeight + "px";
+	surfaceMetadata.surface.style.width = `${nextSurfaceWidth}px`;
+	surfaceMetadata.surface.style.height = `${surfaceMetadata.originalHeight}px`;
+	surfaceMetadata.tileLayer.style.height = `${surfaceMetadata.originalHeight}px`;
 
 	const maxScrollLeft = Math.max(
 		0,
@@ -724,8 +717,8 @@ export function wrapWaveformCanvases(ctx: any): any {
 				surface.appendChild(tileLayer);
 			}
 
-			surface.style.height = originalHeight + "px";
-			scrollContainer.style.height = originalHeight + "px";
+			surface.style.height = `${originalHeight}px`;
+			scrollContainer.style.height = `${originalHeight}px`;
 			canvasElement.remove();
 
 			if (seekWrap instanceof HTMLElement) {
@@ -881,11 +874,9 @@ export function resolveWaveformBaseWidth(
 export function setWaveformSurfaceWidth(ctx: any, surfaceMetadata: any): any {
 	return function (this: any, surfaceMetadata: any) {
 		const width = getWaveformSurfaceWidth(surfaceMetadata);
-		surfaceMetadata.surface.style.width = width + "px";
-		surfaceMetadata.surface.style.height =
-			surfaceMetadata.originalHeight + "px";
-		surfaceMetadata.tileLayer.style.height =
-			surfaceMetadata.originalHeight + "px";
+		surfaceMetadata.surface.style.width = `${width}px`;
+		surfaceMetadata.surface.style.height = `${surfaceMetadata.originalHeight}px`;
+		surfaceMetadata.tileLayer.style.height = `${surfaceMetadata.originalHeight}px`;
 		updateWaveformMinimapViewport(surfaceMetadata);
 	}.call(ctx, surfaceMetadata);
 }
@@ -959,9 +950,9 @@ export function forEachVisibleWaveformTile(
 				Math.round(surfaceMetadata.originalHeight),
 			);
 
-			tileSvg.style.left = tileStartPx + "px";
-			tileSvg.style.width = tileCssWidth + "px";
-			tileSvg.style.height = tileCssHeight + "px";
+			tileSvg.style.left = `${tileStartPx}px`;
+			tileSvg.style.width = `${tileCssWidth}px`;
+			tileSvg.style.height = `${tileCssHeight}px`;
 
 			const renderBarWidth = Math.max(1, Math.round(surfaceMetadata.barWidth));
 			callback({
@@ -1505,7 +1496,7 @@ export function renderWaveformsInternal(
 				: 0;
 
 		let longestTrackDuration = 0;
-		if (waveformTimelineContext && waveformTimelineContext.enabled) {
+		if (waveformTimelineContext?.enabled) {
 			for (let ti = 0; ti < waveformTimelineContext.getTrackCount(); ti++) {
 				const d = sanitizeDuration(
 					waveformTimelineContext.getTrackDuration(ti),
@@ -1549,7 +1540,7 @@ export function renderWaveformsInternal(
 				: trackTimelineProjector ||
 					((_runtime, trackTimelineTimeSeconds) => trackTimelineTimeSeconds);
 			const waveformProjector =
-				!useLocalAxis && !!trackTimelineProjector ? baseProjector : undefined;
+				!useLocalAxis && trackTimelineProjector ? baseProjector : undefined;
 			const ignoreTrackPadding = useLocalAxis;
 			setWaveformZoomForSurface(
 				surfaceMetadata,
@@ -1768,7 +1759,7 @@ export function applyFixedWaveformLocalSeekVisuals(
 	waveformTimelineContext: any,
 ): any {
 	return function (this: any, state: any, waveformTimelineContext: any) {
-		if (!waveformTimelineContext || !waveformTimelineContext.enabled) {
+		if (!waveformTimelineContext?.enabled) {
 			this.waveformSeekSurfaces.forEach(
 				(surface: WaveformSeekSurfaceMetadata) => {
 					surface.seekWrap.classList.remove("aligned-playhead");
@@ -1972,7 +1963,7 @@ export function getLongestWaveformSourceDuration(
 			waveformSource,
 		);
 		let longest = 0;
-		sourceRuntimes.forEach(function (runtime: TrackRuntime) {
+		sourceRuntimes.forEach((runtime: TrackRuntime) => {
 			const duration = getRuntimeDuration(runtime);
 			if (duration > longest) {
 				longest = duration;

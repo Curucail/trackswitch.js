@@ -41,7 +41,7 @@ export function unregisterController(
 export function pauseOtherControllers(
 	controller: ControllerRegistryEntry,
 ): void {
-	controllerRegistry.forEach(function (entry) {
+	controllerRegistry.forEach((entry) => {
 		if (entry !== controller) {
 			entry.pause();
 		}

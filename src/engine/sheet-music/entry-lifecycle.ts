@@ -1,10 +1,10 @@
 import { CursorType, OpenSheetMusicDisplay } from "./osmd";
+import type { SheetMusicCursor, SheetMusicEntryModel } from "./types";
 import {
 	MAX_OSMD_ZOOM,
 	MIN_HOST_WIDTH_DELTA_FOR_RERENDER_PX,
 	MIN_OSMD_ZOOM,
 } from "./types";
-import type { SheetMusicCursor, SheetMusicEntryModel } from "./types";
 
 export async function initializeEntry(
 	ctx: any,
@@ -333,7 +333,5 @@ export function collectAvailableMeasures(
 		unique.add(Math.floor(parsedMeasureNumber));
 	});
 
-	return Array.from(unique).sort(function (a, b) {
-		return a - b;
-	});
+	return Array.from(unique).sort((a, b) => a - b);
 }

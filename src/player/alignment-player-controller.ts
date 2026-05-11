@@ -6,10 +6,10 @@ import type {
 import type { SheetMusicMeasureMapsByAxis } from "../engine/sheet-music/types";
 import type { ParsedNumericCsv } from "../shared/alignment";
 import { buildMeasureMapFromColumns } from "../shared/measure-map";
-import type { WarpingMatrixRenderContext } from "../ui/view-renderer";
 import { AlignmentViewRenderer } from "../ui/alignment-view-renderer";
-import { TrackSwitchControllerImpl } from "./player-controller";
+import type { WarpingMatrixRenderContext } from "../ui/view-renderer";
 import * as controllerAlignment from "./alignment-actions";
+import { TrackSwitchControllerImpl } from "./player-controller";
 
 type AlignmentReferenceAxisKey = "base" | "sync";
 
@@ -50,15 +50,15 @@ export class AlignmentTrackSwitchControllerImpl extends TrackSwitchControllerImp
 	}
 
 	public setEffectiveSoloMode(singleSoloMode: boolean): void {
-		return controllerAlignment.setEffectiveSoloMode(this, singleSoloMode);
+		controllerAlignment.setEffectiveSoloMode(this, singleSoloMode);
 	}
 
 	public toggleGlobalSync(): void {
-		return controllerAlignment.toggleGlobalSync(this);
+		controllerAlignment.toggleGlobalSync(this);
 	}
 
 	public applyGlobalSyncState(syncOn: boolean): void {
-		return controllerAlignment.applyGlobalSyncState(this, syncOn);
+		controllerAlignment.applyGlobalSyncState(this, syncOn);
 	}
 
 	public setRuntimeActiveVariant(
@@ -254,9 +254,6 @@ export class AlignmentTrackSwitchControllerImpl extends TrackSwitchControllerImp
 	}
 
 	public handleAlignmentTrackSwitch(nextActiveTrackIndex: number): void {
-		return controllerAlignment.handleAlignmentTrackSwitch(
-			this,
-			nextActiveTrackIndex,
-		);
+		controllerAlignment.handleAlignmentTrackSwitch(this, nextActiveTrackIndex);
 	}
 }

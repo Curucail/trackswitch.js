@@ -1,4 +1,5 @@
 import Papa from "papaparse";
+
 export { requestText } from "./request-text";
 
 export interface ParsedCsvRecords {
@@ -29,12 +30,8 @@ export function parseCsvRecords(
 
 	const headers = Array.isArray(parsed.meta.fields)
 		? parsed.meta.fields
-				.map(function (field) {
-					return String(field ?? "").trim();
-				})
-				.filter(function (field) {
-					return field.length > 0;
-				})
+				.map((field) => String(field ?? "").trim())
+				.filter((field) => field.length > 0)
 		: [];
 
 	if (headers.length === 0 || parsed.data.length === 0) {
@@ -51,9 +48,9 @@ function formatPapaErrors(
 	errors: Array<{ message: string; row?: number }>,
 ): string {
 	return errors
-		.map(function (error) {
+		.map((error) => {
 			const rowSuffix =
-				typeof error.row === "number" ? " (row " + error.row + ")" : "";
+				typeof error.row === "number" ? ` (row ${error.row})` : "";
 			return error.message + rowSuffix;
 		})
 		.join("; ");

@@ -1,8 +1,8 @@
+import { InteractiveTrackSwitchControllerImpl } from "./interactive-controller";
 import type {
 	InteractiveTrackSwitchController,
 	InteractiveTrackSwitchInit,
 } from "./types";
-import { InteractiveTrackSwitchControllerImpl } from "./interactive-controller";
 
 /**
  * Creates an interactive TrackSwitch alignment player.

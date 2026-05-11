@@ -1,8 +1,13 @@
+import { cloneBasicPitchFeatureSet } from "../basic-pitch";
+import {
+	DEFAULT_WORKER_URL,
+	FEATURE_RATE,
+	PYODIDE_CDN_URL,
+} from "../constants";
+import { buildUniqueAlignmentColumnMaps } from "../file-handler";
 import type {
 	AlignmentAlgorithmId,
 	AlignmentFeatureSetId,
-	BasicPitchFeatureMatrix,
-	BasicPitchFeatureSet,
 	InteractiveFile,
 	WorkerComputeMessage,
 	WorkerComputeResult,
@@ -11,13 +16,6 @@ import type {
 	WorkerFileScore,
 	WorkerResponse,
 } from "../types";
-import {
-	FEATURE_RATE,
-	PYODIDE_CDN_URL,
-	DEFAULT_WORKER_URL,
-} from "../constants";
-import { cloneBasicPitchFeatureSet } from "../basic-pitch";
-import { buildUniqueAlignmentColumnMaps } from "../file-handler";
 
 type ProgressCallback = (message: string) => void;
 
@@ -72,7 +70,7 @@ export class AlignmentWorkerBridge {
 
 			this.worker.addEventListener("message", onMessage);
 			this.worker.addEventListener("error", (event) => {
-				reject(new Error("Worker error: " + (event.message || "unknown")));
+				reject(new Error(`Worker error: ${event.message || "unknown"}`));
 			});
 
 			this.worker.postMessage({
@@ -119,22 +117,18 @@ export class AlignmentWorkerBridge {
 	): Promise<WorkerComputeResult> {
 		await this.ensureReady();
 
-		const hasMusicXml = files.some(function (f) {
-			return f.type === "musicxml";
-		});
+		const hasMusicXml = files.some((f) => f.type === "musicxml");
 		if (hasMusicXml) {
 			await this.installMusic21();
 		}
 
 		const columnMaps = buildUniqueAlignmentColumnMaps(files);
 
-		const workerFiles: WorkerFile[] = files.map(function (file): WorkerFile {
+		const workerFiles: WorkerFile[] = files.map((file): WorkerFile => {
 			if (file.type === "audio") {
 				const pcmCopy = new Float32Array(file.pcmData!);
 				const fullPcmChannels = (file.fullPcmChannels || []).map(
-					function (channelData) {
-						return new Float32Array(channelData);
-					},
+					(channelData) => new Float32Array(channelData),
 				);
 				return {
 					id: file.id,
@@ -158,10 +152,10 @@ export class AlignmentWorkerBridge {
 		});
 
 		const transferables: Transferable[] = [];
-		workerFiles.forEach(function (wf) {
+		workerFiles.forEach((wf) => {
 			if (wf.type === "audio") {
 				transferables.push(wf.pcmData.buffer);
-				wf.fullPcmChannels.forEach(function (channelData) {
+				wf.fullPcmChannels.forEach((channelData) => {
 					transferables.push(channelData.buffer);
 				});
 				if (wf.basicPitchFeatures) {

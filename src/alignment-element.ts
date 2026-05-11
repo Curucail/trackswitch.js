@@ -1,6 +1,6 @@
-import { createAlignmentTrackSwitch } from "./player/alignment-factory";
-import type { TrackSwitchController, TrackSwitchInit } from "./domain/types";
 import { TrackswitchPlayerBase } from "./default-element";
+import type { TrackSwitchController, TrackSwitchInit } from "./domain/types";
+import { createAlignmentTrackSwitch } from "./player/alignment-factory";
 
 export const TRACKSWITCH_ALIGNMENT_ELEMENT_NAME =
 	"trackswitch-alignment-player";

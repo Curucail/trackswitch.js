@@ -33,145 +33,145 @@ const KEYBOARD_SHORTCUT_HANDLERS: Record<
 	string,
 	(controller: any, event: any) => boolean
 > = {
-	" ": function (controller: any) {
+	" ": (controller: any) => {
 		controller.togglePlay();
 		return true;
 	},
-	Spacebar: function (controller: any) {
+	Spacebar: (controller: any) => {
 		controller.togglePlay();
 		return true;
 	},
-	Space: function (controller: any) {
+	Space: (controller: any) => {
 		controller.togglePlay();
 		return true;
 	},
-	Escape: function (controller: any) {
+	Escape: (controller: any) => {
 		controller.stop();
 		return true;
 	},
-	Esc: function (controller: any) {
+	Esc: (controller: any) => {
 		controller.stop();
 		return true;
 	},
-	ArrowLeft: function (controller: any, event: any) {
+	ArrowLeft: (controller: any, event: any) => {
 		controller.seekRelative(event.shiftKey ? -5 : -2);
 		return true;
 	},
-	ArrowRight: function (controller: any, event: any) {
+	ArrowRight: (controller: any, event: any) => {
 		controller.seekRelative(event.shiftKey ? 5 : 2);
 		return true;
 	},
-	ArrowUp: function (controller: any) {
+	ArrowUp: (controller: any) => {
 		if (!controller.features.globalVolume) {
 			return false;
 		}
 		controller.setVolume(controller.state.volume + 0.1);
 		return true;
 	},
-	ArrowDown: function (controller: any) {
+	ArrowDown: (controller: any) => {
 		if (!controller.features.globalVolume) {
 			return false;
 		}
 		controller.setVolume(controller.state.volume - 0.1);
 		return true;
 	},
-	Home: function (controller: any) {
+	Home: (controller: any) => {
 		controller.seekTo(0);
 		return true;
 	},
-	r: function (controller: any) {
+	r: (controller: any) => {
 		controller.dispatch({ type: "toggle-repeat" });
 		controller.updateMainControls();
 		return true;
 	},
-	R: function (controller: any) {
+	R: (controller: any) => {
 		controller.dispatch({ type: "toggle-repeat" });
 		controller.updateMainControls();
 		return true;
 	},
-	KeyR: function (controller: any) {
+	KeyR: (controller: any) => {
 		controller.dispatch({ type: "toggle-repeat" });
 		controller.updateMainControls();
 		return true;
 	},
-	a: function (controller: any) {
+	a: (controller: any) => {
 		if (!controller.features.looping) {
 			return false;
 		}
 		controller.setLoopPoint("A");
 		return true;
 	},
-	A: function (controller: any) {
+	A: (controller: any) => {
 		if (!controller.features.looping) {
 			return false;
 		}
 		controller.setLoopPoint("A");
 		return true;
 	},
-	KeyA: function (controller: any) {
+	KeyA: (controller: any) => {
 		if (!controller.features.looping) {
 			return false;
 		}
 		controller.setLoopPoint("A");
 		return true;
 	},
-	b: function (controller: any) {
+	b: (controller: any) => {
 		if (!controller.features.looping) {
 			return false;
 		}
 		controller.setLoopPoint("B");
 		return true;
 	},
-	B: function (controller: any) {
+	B: (controller: any) => {
 		if (!controller.features.looping) {
 			return false;
 		}
 		controller.setLoopPoint("B");
 		return true;
 	},
-	KeyB: function (controller: any) {
+	KeyB: (controller: any) => {
 		if (!controller.features.looping) {
 			return false;
 		}
 		controller.setLoopPoint("B");
 		return true;
 	},
-	l: function (controller: any) {
+	l: (controller: any) => {
 		if (!controller.features.looping) {
 			return false;
 		}
 		controller.toggleLoop();
 		return true;
 	},
-	L: function (controller: any) {
+	L: (controller: any) => {
 		if (!controller.features.looping) {
 			return false;
 		}
 		controller.toggleLoop();
 		return true;
 	},
-	KeyL: function (controller: any) {
+	KeyL: (controller: any) => {
 		if (!controller.features.looping) {
 			return false;
 		}
 		controller.toggleLoop();
 		return true;
 	},
-	c: function (controller: any) {
+	c: (controller: any) => {
 		if (!controller.features.looping) {
 			return false;
 		}
 		controller.clearLoop();
 		return true;
 	},
-	C: function (controller: any) {
+	C: (controller: any) => {
 		if (!controller.features.looping) {
 			return false;
 		}
 		controller.clearLoop();
 		return true;
 	},
-	KeyC: function (controller: any) {
+	KeyC: (controller: any) => {
 		if (!controller.features.looping) {
 			return false;
 		}

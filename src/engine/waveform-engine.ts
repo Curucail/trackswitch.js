@@ -1,4 +1,4 @@
-import {
+import type {
 	TrackRuntime,
 	TrackTiming,
 	WaveformSummary,
@@ -97,9 +97,7 @@ export class WaveformEngine {
 		}
 
 		const count = Math.max(1, Math.floor(peakCount));
-		const audible = runtimes.filter(function (runtime) {
-			return runtime.state.volume > 0;
-		});
+		const audible = runtimes.filter((runtime) => runtime.state.volume > 0);
 
 		if (!audible.length) {
 			return null;
@@ -108,12 +106,11 @@ export class WaveformEngine {
 		const safeTimelineDuration =
 			Number.isFinite(timelineDuration) && (timelineDuration as number) > 0
 				? (timelineDuration as number)
-				: runtimes.reduce(function (longest, runtime) {
-						return Math.max(
-							longest,
-							WaveformEngine.getRuntimeDuration(runtime),
-						);
-					}, 0);
+				: runtimes.reduce(
+						(longest, runtime) =>
+							Math.max(longest, WaveformEngine.getRuntimeDuration(runtime)),
+						0,
+					);
 
 		if (safeTimelineDuration <= 0) {
 			return null;
@@ -169,9 +166,7 @@ export class WaveformEngine {
 				}
 				return scaled;
 			})
-			.filter(function (buckets): buckets is WaveformPeakBuckets {
-				return !!buckets;
-			});
+			.filter((buckets): buckets is WaveformPeakBuckets => !!buckets);
 
 		if (!mappedBuckets.length) {
 			return null;

@@ -84,7 +84,7 @@ export function renderIconSlotHtml(
 	extraClassName = "",
 ): string {
 	const className = extraClassName
-		? "ts-icon-slot " + extraClassName
+		? `ts-icon-slot ${extraClassName}`
 		: "ts-icon-slot";
 	return (
 		'<span class="' +

@@ -1,10 +1,10 @@
+import type { PointF2DType } from "./osmd";
 import { GraphicalMeasure, PointF2D } from "./osmd";
+import type { SheetMusicEntryModel } from "./types";
 import {
 	DEFAULT_GRAPHICAL_MEASURE_CLASS_NAME,
 	TOUCH_TAP_MOVE_THRESHOLD_PX,
 } from "./types";
-import type { SheetMusicEntryModel } from "./types";
-import type { PointF2DType } from "./osmd";
 
 export function handleHostClick(
 	ctx: any,

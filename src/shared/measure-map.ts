@@ -1,4 +1,4 @@
-import { CsvNumericRow } from "./alignment";
+import type { CsvNumericRow } from "./alignment";
 
 export interface MeasureMapPoint {
 	start: number;
@@ -20,7 +20,7 @@ export function buildMeasureMapFromColumns(
 
 	if (headers.indexOf(measureColumn) < 0) {
 		throw new Error(
-			"Alignment CSV is missing configured measureColumn: " + measureColumn,
+			`Alignment CSV is missing configured measureColumn: ${measureColumn}`,
 		);
 	}
 
@@ -50,7 +50,7 @@ export function buildMeasureMapFromColumns(
 		);
 	}
 
-	points.sort(function (a, b) {
+	points.sort((a, b) => {
 		if (a.start === b.start) {
 			return a.measure - b.measure;
 		}

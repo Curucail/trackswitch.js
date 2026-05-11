@@ -3,22 +3,22 @@ import {
 	h,
 	onBeforeUnmount,
 	onMounted,
+	type PropType,
 	ref,
 	watch,
-	type PropType,
 } from "vue";
-import {
-	defineTrackswitchAlignmentElement,
-	defineTrackswitchDefaultElement,
-	TRACKSWITCH_DOM_EVENTS,
-} from "./element";
-import { defineTrackswitchInteractiveElement } from "./interactive/interactive-element";
 import type {
 	TrackSwitchController,
 	TrackSwitchEventMap,
 	TrackSwitchInit,
 } from "./domain/types";
 import type { TrackswitchDomEventName, TrackswitchPlayer } from "./element";
+import {
+	defineTrackswitchAlignmentElement,
+	defineTrackswitchDefaultElement,
+	TRACKSWITCH_DOM_EVENTS,
+} from "./element";
+import { defineTrackswitchInteractiveElement } from "./interactive/interactive-element";
 import type {
 	InteractiveTrackSwitchController,
 	InteractiveTrackSwitchInit,
@@ -76,9 +76,8 @@ function createTrackSwitchVueComponent(
 		) {
 			const elementRef = ref<TrackswitchPlayer | null>(null);
 
-			const controller = function (): TrackSwitchController | null {
-				return elementRef.value?.controller || null;
-			};
+			const controller = (): TrackSwitchController | null =>
+				elementRef.value?.controller || null;
 
 			expose({
 				get element() {
@@ -117,11 +116,11 @@ function createTrackSwitchVueComponent(
 					return;
 				}
 
-				const bind = function (
+				const bind = (
 					eventName: TrackswitchDomEventName,
 					vueEventName: keyof TrackSwitchVueEventHandlers,
-				) {
-					const listener = function (event: Event) {
+				) => {
+					const listener = (event: Event) => {
 						emit(vueEventName, (event as CustomEvent).detail);
 					};
 					element.addEventListener(eventName, listener);
@@ -137,7 +136,9 @@ function createTrackSwitchVueComponent(
 			});
 
 			onBeforeUnmount(() => {
-				listeners.forEach((unsubscribe) => unsubscribe());
+				listeners.forEach((unsubscribe) => {
+					unsubscribe();
+				});
 				listeners.length = 0;
 			});
 
@@ -186,9 +187,8 @@ export const TrackSwitchAlignmentInteractive = defineComponent({
 			| null
 		>(null);
 
-		const controller = function (): InteractiveTrackSwitchController | null {
-			return elementRef.value?.controller || null;
-		};
+		const controller = (): InteractiveTrackSwitchController | null =>
+			elementRef.value?.controller || null;
 
 		expose({
 			get element() {

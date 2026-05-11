@@ -1,68 +1,42 @@
+import { defaultFeatures, normalizeFeatures } from "./domain/options";
+import { createInitialPlayerState, playerStateReducer } from "./domain/state";
 import {
-	createAlignmentTrackSwitch,
-	createDefaultTrackSwitch,
-	createTrackSwitch,
-} from "./player/factory";
-import {
-	TrackswitchAlignmentPlayer,
-	TrackswitchPlayer,
-	TRACKSWITCH_ALIGNMENT_ELEMENT_NAME,
-	TRACKSWITCH_DEFAULT_ELEMENT_NAME,
-	TRACKSWITCH_ELEMENT_NAME,
 	defineTrackswitchAlignmentElement,
 	defineTrackswitchDefaultElement,
 	defineTrackswitchElement,
 	defineTrackswitchElements,
+	TRACKSWITCH_ALIGNMENT_ELEMENT_NAME,
+	TRACKSWITCH_DEFAULT_ELEMENT_NAME,
+	TRACKSWITCH_ELEMENT_NAME,
+	TrackswitchAlignmentPlayer,
+	TrackswitchPlayer,
 } from "./element";
+import { WaveformEngine } from "./engine/waveform-engine";
 import {
+	defineTrackswitchInteractiveElement,
 	TRACKSWITCH_ALIGNMENT_INTERACTIVE_ELEMENT_NAME,
 	TrackswitchAlignmentInteractive,
-	defineTrackswitchInteractiveElement,
 } from "./interactive/interactive-element";
 import {
 	createAlignmentInteractiveTrackSwitch,
 	createInteractiveTrackSwitch,
 } from "./interactive/interactive-factory";
-import { normalizeFeatures, defaultFeatures } from "./domain/options";
-import { createInitialPlayerState, playerStateReducer } from "./domain/state";
-import { WaveformEngine } from "./engine/waveform-engine";
+import {
+	createAlignmentTrackSwitch,
+	createDefaultTrackSwitch,
+	createTrackSwitch,
+} from "./player/factory";
 import { inferSourceMimeType } from "./shared/audio";
 import { formatSecondsToHHMMSSmmm } from "./shared/format";
 import { parsePresetIndices } from "./shared/preset";
 
-export {
-	createAlignmentInteractiveTrackSwitch,
-	createAlignmentTrackSwitch,
-	createDefaultTrackSwitch,
-	createInteractiveTrackSwitch,
-	createTrackSwitch,
-};
-export {
-	TrackswitchAlignmentPlayer,
-	TrackswitchAlignmentInteractive,
-	TrackswitchPlayer,
-	TRACKSWITCH_ALIGNMENT_ELEMENT_NAME,
-	TRACKSWITCH_ALIGNMENT_INTERACTIVE_ELEMENT_NAME,
-	TRACKSWITCH_DEFAULT_ELEMENT_NAME,
-	TRACKSWITCH_ELEMENT_NAME,
-	defineTrackswitchAlignmentElement,
-	defineTrackswitchDefaultElement,
-	defineTrackswitchElement,
-	defineTrackswitchElements,
-	defineTrackswitchInteractiveElement,
-};
-export { normalizeFeatures, defaultFeatures };
-export { createInitialPlayerState, playerStateReducer };
-export { WaveformEngine };
-export { inferSourceMimeType, formatSecondsToHHMMSSmmm, parsePresetIndices };
-
 export type {
 	AlignmentOutOfRangeMode,
-	TrackAlignmentConfig,
 	LoopMarker,
 	PlayerState,
-	TrackDefinitionAlignment,
+	TrackAlignmentConfig,
 	TrackDefinition,
+	TrackDefinitionAlignment,
 	TrackLoadedSource,
 	TrackRuntime,
 	TrackSourceDefinition,
@@ -73,27 +47,53 @@ export type {
 	TrackSwitchEventMap,
 	TrackSwitchEventName,
 	TrackSwitchFeatures,
-	TrackSwitchInit,
 	TrackSwitchImageConfig,
 	TrackSwitchImageUiElement,
+	TrackSwitchInit,
 	TrackSwitchPerTrackImageConfig,
 	TrackSwitchPerTrackImageUiElement,
+	TrackSwitchSheetMusicConfig,
+	TrackSwitchSheetMusicUiElement,
 	TrackSwitchSnapshot,
 	TrackSwitchTextAlign,
 	TrackSwitchTextConfig,
 	TrackSwitchTextUiElement,
-	TrackSwitchWarpingMatrixConfig,
-	TrackSwitchWarpingMatrixUiElement,
-	TrackSwitchSheetMusicConfig,
-	TrackSwitchSheetMusicUiElement,
 	TrackSwitchUiConfig,
 	TrackSwitchUiElement,
+	TrackSwitchWarpingMatrixConfig,
+	TrackSwitchWarpingMatrixUiElement,
 	TrackSwitchWaveformConfig,
 	TrackSwitchWaveformUiElement,
 	WaveformSource,
 } from "./domain/types";
-
 export type {
 	TrackswitchDomEventName,
 	TrackswitchPlayerElement,
 } from "./element";
+export {
+	createAlignmentInteractiveTrackSwitch,
+	createAlignmentTrackSwitch,
+	createDefaultTrackSwitch,
+	createInitialPlayerState,
+	createInteractiveTrackSwitch,
+	createTrackSwitch,
+	defaultFeatures,
+	defineTrackswitchAlignmentElement,
+	defineTrackswitchDefaultElement,
+	defineTrackswitchElement,
+	defineTrackswitchElements,
+	defineTrackswitchInteractiveElement,
+	formatSecondsToHHMMSSmmm,
+	inferSourceMimeType,
+	normalizeFeatures,
+	parsePresetIndices,
+	playerStateReducer,
+	TRACKSWITCH_ALIGNMENT_ELEMENT_NAME,
+	TRACKSWITCH_ALIGNMENT_INTERACTIVE_ELEMENT_NAME,
+	TRACKSWITCH_DEFAULT_ELEMENT_NAME,
+	TRACKSWITCH_ELEMENT_NAME,
+	TrackswitchAlignmentInteractive,
+	TrackswitchAlignmentPlayer,
+	TrackswitchPlayer,
+	WaveformEngine,
+};

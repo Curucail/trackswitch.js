@@ -55,7 +55,7 @@ export class TrackswitchAlignmentInteractive
 
 	private ensureShadowRoot(): void {
 		const root = this.shadowRoot || this.attachShadow({ mode: "open" });
-		if (this.mountRoot && this.mountRoot.isConnected) {
+		if (this.mountRoot?.isConnected) {
 			return;
 		}
 

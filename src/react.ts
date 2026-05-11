@@ -1,25 +1,25 @@
 import {
+	type CSSProperties,
 	createElement,
 	forwardRef,
+	type MutableRefObject,
+	type Ref,
 	useEffect,
 	useImperativeHandle,
 	useRef,
-	type CSSProperties,
-	type MutableRefObject,
-	type Ref,
 } from "react";
-import {
-	defineTrackswitchAlignmentElement,
-	defineTrackswitchDefaultElement,
-	TRACKSWITCH_DOM_EVENTS,
-} from "./element";
-import { defineTrackswitchInteractiveElement } from "./interactive/interactive-element";
 import type {
 	TrackSwitchController,
 	TrackSwitchEventMap,
 	TrackSwitchInit,
 } from "./domain/types";
 import type { TrackswitchDomEventName, TrackswitchPlayer } from "./element";
+import {
+	defineTrackswitchAlignmentElement,
+	defineTrackswitchDefaultElement,
+	TRACKSWITCH_DOM_EVENTS,
+} from "./element";
+import { defineTrackswitchInteractiveElement } from "./interactive/interactive-element";
 import type {
 	InteractiveTrackSwitchController,
 	InteractiveTrackSwitchInit,
@@ -68,7 +68,7 @@ function addTrackswitchListener<K extends keyof TrackSwitchEventProps>(
 		};
 	}
 
-	const listener = function (event: Event) {
+	const listener = (event: Event) => {
 		handler((event as CustomEvent).detail);
 	};
 
@@ -106,6 +106,7 @@ export function useTrackSwitchElement(
 	}, [tagName]);
 
 	useEffect(() => {
+		void configKey;
 		const element = rootRef.current;
 		if (!element) {
 			return;
@@ -142,6 +143,7 @@ export function useTrackSwitchElement(
 	}, [configKey, onLoaded, onError, onPosition, onTrackState]);
 
 	useEffect(() => {
+		void configKey;
 		const element = rootRef.current;
 		if (!element) {
 			return;
@@ -186,10 +188,10 @@ function createTrackSwitchReactComponent(
 			tagName,
 		);
 
-		useImperativeHandle(ref, () => controllerRef.current, [
-			controllerRef.current,
-			configKey,
-		]);
+		useImperativeHandle(ref, () => {
+			void configKey;
+			return controllerRef.current;
+		}, [controllerRef.current, configKey]);
 
 		return createElement(tagName, {
 			ref: rootRef,
@@ -225,6 +227,7 @@ export const TrackSwitchAlignmentInteractive = forwardRef(
 		}, []);
 
 		useEffect(() => {
+			void configKey;
 			const element = rootRef.current;
 			if (!element) {
 				return;
@@ -236,7 +239,7 @@ export const TrackSwitchAlignmentInteractive = forwardRef(
 			return () => {
 				controllerRef.current = null;
 			};
-		}, [configKey]);
+		}, [config, configKey]);
 
 		useEffect(() => {
 			const element = rootRef.current;
@@ -248,10 +251,10 @@ export const TrackSwitchAlignmentInteractive = forwardRef(
 			controllerRef.current = element.controller || null;
 		}, [config]);
 
-		useImperativeHandle(ref, () => controllerRef.current, [
-			controllerRef.current,
-			configKey,
-		]);
+		useImperativeHandle(ref, () => {
+			void configKey;
+			return controllerRef.current;
+		}, [configKey]);
 
 		return createElement("trackswitch-alignment-interactive", {
 			ref: rootRef,

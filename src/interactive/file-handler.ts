@@ -1,11 +1,11 @@
-import type { InteractiveFile, InteractiveFileType } from "./types";
 import { SAMPLE_RATE } from "./constants";
+import type { InteractiveFile, InteractiveFileType } from "./types";
 
 let idCounter = 0;
 
 function generateFileId(): string {
 	idCounter += 1;
-	return "ifile-" + idCounter + "-" + Date.now();
+	return `ifile-${idCounter}-${Date.now()}`;
 }
 
 const AUDIO_EXTENSIONS = new Set([
@@ -36,26 +36,26 @@ export function classifyFileType(file: File): InteractiveFileType | null {
 }
 
 export function readFileAsText(file: File): Promise<string> {
-	return new Promise(function (resolve, reject) {
+	return new Promise((resolve, reject) => {
 		const reader = new FileReader();
-		reader.onload = function () {
+		reader.onload = () => {
 			resolve(reader.result as string);
 		};
-		reader.onerror = function () {
-			reject(new Error("Failed to read file: " + file.name));
+		reader.onerror = () => {
+			reject(new Error(`Failed to read file: ${file.name}`));
 		};
 		reader.readAsText(file);
 	});
 }
 
 export function readFileAsArrayBuffer(file: File): Promise<ArrayBuffer> {
-	return new Promise(function (resolve, reject) {
+	return new Promise((resolve, reject) => {
 		const reader = new FileReader();
-		reader.onload = function () {
+		reader.onload = () => {
 			resolve(reader.result as ArrayBuffer);
 		};
-		reader.onerror = function () {
-			reject(new Error("Failed to read file: " + file.name));
+		reader.onerror = () => {
+			reject(new Error(`Failed to read file: ${file.name}`));
 		};
 		reader.readAsArrayBuffer(file);
 	});
@@ -133,7 +133,7 @@ export async function processFile(file: File): Promise<InteractiveFile> {
 	if (fileType === "musicxml") {
 		return processMusicXmlFile(file);
 	}
-	throw new Error("Unsupported file type: " + file.name);
+	throw new Error(`Unsupported file type: ${file.name}`);
 }
 
 export function stripExtension(filename: string): string {
@@ -148,12 +148,12 @@ export function fileNameToDisplayTitle(filename: string): string {
 
 /** Sanitize a filename into a valid CSV column name. */
 export function fileNameToColumnName(filename: string): string {
-	return "time_" + stripExtension(filename).replace(/[^a-zA-Z0-9_-]/g, "_");
+	return `time_${stripExtension(filename).replace(/[^a-zA-Z0-9_-]/g, "_")}`;
 }
 
 /** Measure column name matching the Python pipeline's naming convention. */
 export function fileNameToMeasureColumnName(filename: string): string {
-	return "measure_" + stripExtension(filename).replace(/[^a-zA-Z0-9_-]/g, "_");
+	return `measure_${stripExtension(filename).replace(/[^a-zA-Z0-9_-]/g, "_")}`;
 }
 
 function uniquifyColumnName(baseName: string, seenNames: Set<string>): string {
@@ -161,7 +161,7 @@ function uniquifyColumnName(baseName: string, seenNames: Set<string>): string {
 	let suffix = 2;
 
 	while (seenNames.has(candidate)) {
-		candidate = baseName + "_" + suffix;
+		candidate = `${baseName}_${suffix}`;
 		suffix += 1;
 	}
 
@@ -178,7 +178,7 @@ export function buildUniqueAlignmentColumnMaps(files: InteractiveFile[]): {
 	const seenTimeColumns = new Set<string>();
 	const seenMeasureColumns = new Set<string>();
 
-	files.forEach(function (file) {
+	files.forEach((file) => {
 		timeColumnByFileId[file.id] = uniquifyColumnName(
 			fileNameToColumnName(file.name),
 			seenTimeColumns,

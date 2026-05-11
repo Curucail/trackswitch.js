@@ -1,16 +1,16 @@
-import {
-	NormalizedTrackSwitchConfig,
-	TrackRuntime,
-	TrackSwitchFeatures,
-	TrackSwitchInit,
-} from "../domain/types";
 import { normalizeTrackSwitchConfig } from "../config/normalize-init";
 import { injectConfiguredUiElements } from "../config/ui-elements";
 import { normalizeFeatures } from "../domain/options";
 import { createTrackRuntime } from "../domain/runtime";
 import { createInitialPlayerState } from "../domain/state";
-import { derivePresetNames } from "../shared/preset";
+import type {
+	NormalizedTrackSwitchConfig,
+	TrackRuntime,
+	TrackSwitchFeatures,
+	TrackSwitchInit,
+} from "../domain/types";
 import { clamp } from "../shared/math";
+import { derivePresetNames } from "../shared/preset";
 import type { TrackSwitchControllerImpl } from "./player-controller";
 
 function resolveControllerFeatures(
@@ -29,32 +29,28 @@ function featuresEqual(
 	right: TrackSwitchFeatures,
 ): boolean {
 	const leftKeys = Object.keys(left) as Array<keyof TrackSwitchFeatures>;
-	return leftKeys.every(function (key) {
-		return left[key] === right[key];
-	});
+	return leftKeys.every((key) => left[key] === right[key]);
 }
 
 function createRuntimes(
 	config: NormalizedTrackSwitchConfig,
 	features: TrackSwitchFeatures,
 ): TrackRuntime[] {
-	const runtimes = config.tracks.map(function (track, index) {
-		return createTrackRuntime(track, index);
-	});
+	const runtimes = config.tracks.map((track, index) =>
+		createTrackRuntime(track, index),
+	);
 
-	const hasAnySelectedTrack = runtimes.some(function (runtime) {
-		return runtime.state.solo;
-	});
+	const hasAnySelectedTrack = runtimes.some((runtime) => runtime.state.solo);
 	if (!hasAnySelectedTrack && runtimes.length > 0) {
 		if (features.exclusiveSolo) {
 			runtimes[0].state.solo = true;
 		} else {
-			const hasExplicitSoloConfiguration = config.tracks.some(function (track) {
-				return typeof track.solo === "boolean";
-			});
+			const hasExplicitSoloConfiguration = config.tracks.some(
+				(track) => typeof track.solo === "boolean",
+			);
 
 			if (!hasExplicitSoloConfiguration) {
-				runtimes.forEach(function (runtime) {
+				runtimes.forEach((runtime) => {
 					runtime.state.solo = true;
 				});
 			}
@@ -164,7 +160,7 @@ export async function updateInit(
 					controller.waveformEngine.createSummary(runtime.baseSource.buffer);
 			}
 
-			if (runtime.syncedSource && runtime.syncedSource.buffer) {
+			if (runtime.syncedSource?.buffer) {
 				runtime.syncedSource.waveformSummary =
 					controller.waveformEngine.createSummary(runtime.syncedSource.buffer);
 			}
@@ -178,9 +174,7 @@ export async function updateInit(
 				: null;
 		});
 
-		const erroredTracks = nextRuntimes.filter(function (runtime) {
-			return runtime.errored;
-		});
+		const erroredTracks = nextRuntimes.filter((runtime) => runtime.errored);
 		if (erroredTracks.length > 0) {
 			controller.audioEngine.disconnectRuntimes(nextRuntimes);
 			throw new Error("One or more audio files failed to load.");

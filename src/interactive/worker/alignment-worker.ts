@@ -4,20 +4,21 @@
  * Loads Pyodide, installs shims for unavailable packages (numba, libfmp, etc.),
  * installs synctoolbox, and runs the alignment pipeline on demand.
  */
+
+import { SAMPLE_RATE } from "../constants";
+import { getAlignmentMethod } from "../methods/alignment-method";
 import type {
 	WorkerComputeResult,
 	WorkerMessage,
 	WorkerResponse,
 } from "../types";
 import {
-	NUMBA_SHIM,
+	ALIGNMENT_PIPELINE,
+	DTW_SPEEDUP,
 	LIBFMP_SHIM,
 	MISC_SHIMS,
-	DTW_SPEEDUP,
-	ALIGNMENT_PIPELINE,
+	NUMBA_SHIM,
 } from "./python-scripts";
-import { getAlignmentMethod } from "../methods/alignment-method";
-import { SAMPLE_RATE } from "../constants";
 
 declare const self: Worker & {
 	addEventListener: (
@@ -51,9 +52,7 @@ function postResponse(response: WorkerResponse): void {
 }
 
 function postResult(result: WorkerComputeResult): void {
-	const transferables = result.synchronizedAudio.map(function (entry) {
-		return entry.wavData;
-	});
+	const transferables = result.synchronizedAudio.map((entry) => entry.wavData);
 	self.postMessage({ type: "result", result: result }, transferables);
 }
 
@@ -66,7 +65,7 @@ async function initializePyodide(cdnUrl: string): Promise<void> {
 	// If init already happened in the background, compute starts at 0% anyway.
 	postProgress("[0%] Loading Pyodide runtime...");
 
-	importScripts(cdnUrl + "pyodide.js");
+	importScripts(`${cdnUrl}pyodide.js`);
 	pyodide = await loadPyodide({ indexURL: cdnUrl });
 
 	postProgress("[3%] Loading NumPy and SciPy...");
@@ -90,7 +89,7 @@ async function initializePyodide(cdnUrl: string): Promise<void> {
 		0,
 		self.location.href.lastIndexOf("/") + 1,
 	);
-	const wheelUrl = workerBaseUrl + "synctoolbox-1.4.2-py3-none-any.whl";
+	const wheelUrl = `${workerBaseUrl}synctoolbox-1.4.2-py3-none-any.whl`;
 	pyodide.globals.set("_wheel_url", wheelUrl);
 
 	await pyodide.runPythonAsync(`
@@ -171,9 +170,7 @@ async function computeAlignment(
 		if (file.type === "audio") {
 			audioFiles[file.id] = file.pcmData;
 			fullResolutionAudioFiles[file.id] = file.fullPcmChannels.map(
-				function (channelData) {
-					return Array.from(channelData);
-				},
+				(channelData) => Array.from(channelData),
 			);
 			audioSampleRates[file.id] = file.sampleRate;
 			if (file.basicPitchFeatures) {
@@ -290,7 +287,7 @@ audio_sample_rates = {str(fid): int(rate) for fid, rate in dict(audio_sample_rat
 						synchronizedAudioRecord as Record<string, Uint8Array | ArrayBuffer>,
 					);
 
-		synchronizedEntries.forEach(function (entry) {
+		synchronizedEntries.forEach((entry) => {
 			const fileId = String(entry[0]);
 			const rawData = entry[1] as Uint8Array | ArrayBuffer | ArrayLike<number>;
 			let wavData: ArrayBuffer;
@@ -326,38 +323,34 @@ audio_sample_rates = {str(fid): int(rate) for fid, rate in dict(audio_sample_rat
 
 // ── Message handler ──
 
-self.addEventListener(
-	"message",
-	async function (event: MessageEvent<WorkerMessage>) {
-		const message = event.data;
+self.addEventListener("message", async (event: MessageEvent<WorkerMessage>) => {
+	const message = event.data;
 
-		try {
-			switch (message.type) {
-				case "init": {
-					await initializePyodide(message.pyodideCdnUrl);
-					postResponse({ type: "ready" });
-					break;
-				}
-
-				case "install_music21": {
-					await installMusic21Impl();
-					postResponse({ type: "music21_installed" });
-					break;
-				}
-
-				case "compute": {
-					const result = await computeAlignment(message);
-					postResult(result);
-					break;
-				}
-
-				default:
-					postResponse({ type: "error", message: "Unknown message type." });
+	try {
+		switch (message.type) {
+			case "init": {
+				await initializePyodide(message.pyodideCdnUrl);
+				postResponse({ type: "ready" });
+				break;
 			}
-		} catch (error) {
-			const errorMessage =
-				error instanceof Error ? error.message : String(error);
-			postResponse({ type: "error", message: errorMessage });
+
+			case "install_music21": {
+				await installMusic21Impl();
+				postResponse({ type: "music21_installed" });
+				break;
+			}
+
+			case "compute": {
+				const result = await computeAlignment(message);
+				postResult(result);
+				break;
+			}
+
+			default:
+				postResponse({ type: "error", message: "Unknown message type." });
 		}
-	},
-);
+	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : String(error);
+		postResponse({ type: "error", message: errorMessage });
+	}
+});

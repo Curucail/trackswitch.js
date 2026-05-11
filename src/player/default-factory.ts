@@ -1,5 +1,5 @@
-import type { TrackSwitchController, TrackSwitchInit } from "../domain/types";
 import { normalizeInit } from "../config/normalize-init";
+import type { TrackSwitchController, TrackSwitchInit } from "../domain/types";
 import { TrackSwitchControllerImpl } from "./player-controller";
 
 export function createDefaultTrackSwitch(

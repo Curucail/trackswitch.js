@@ -1,10 +1,10 @@
-import { TrackSwitchFeatures } from "../domain/types";
+import type { TrackSwitchFeatures } from "../domain/types";
 import {
 	eventTargetAsElement,
 	getDeepActiveElement,
 	getOwnerWindow,
 } from "../shared/dom";
-import { ControllerPointerEvent } from "../shared/seek";
+import type { ControllerPointerEvent } from "../shared/seek";
 
 export interface InputController {
 	eventNamespace: string;
@@ -93,10 +93,10 @@ function eventToPointerEvent(event: Event): ControllerPointerEvent {
 			touches?: ArrayLike<{ pageX: number; pageY: number }>;
 			changedTouches?: ArrayLike<{ pageX: number; pageY: number }>;
 		},
-		preventDefault: function () {
+		preventDefault: () => {
 			event.preventDefault();
 		},
-		stopPropagation: function () {
+		stopPropagation: () => {
 			event.stopPropagation();
 		},
 	};
@@ -156,7 +156,7 @@ export class InputBinder {
 		options?: AddEventListenerOptions,
 	): void {
 		target.addEventListener(type, listener, options);
-		this.unbinders.push(function () {
+		this.unbinders.push(() => {
 			target.removeEventListener(type, listener, options);
 		});
 	}

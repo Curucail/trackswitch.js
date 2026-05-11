@@ -1,4 +1,4 @@
-import { TrackDefinition, TrackRuntime } from "./types";
+import type { TrackDefinition, TrackRuntime } from "./types";
 
 function clamp01(value: number): number {
 	if (!Number.isFinite(value)) {

@@ -137,19 +137,15 @@ export function coerceAlignmentSelectionForAlgorithm(
 	}
 
 	const currentIndex = ALIGNMENT_FEATURE_SET_OPTIONS.findIndex(
-		function (option) {
-			return option.id === currentFeatureSet;
-		},
+		(option) => option.id === currentFeatureSet,
 	);
 	const compatibleFeatureSets = getCompatibleFeatureSets(algorithm);
 	let nearestFeatureSet = compatibleFeatureSets[0];
 	let nearestDistance = Number.POSITIVE_INFINITY;
 
-	compatibleFeatureSets.forEach(function (featureSetId) {
+	compatibleFeatureSets.forEach((featureSetId) => {
 		const optionIndex = ALIGNMENT_FEATURE_SET_OPTIONS.findIndex(
-			function (option) {
-				return option.id === featureSetId;
-			},
+			(option) => option.id === featureSetId,
 		);
 		const distance =
 			optionIndex === -1 || currentIndex === -1
@@ -182,7 +178,6 @@ export function mapLegacyAlignmentMethod(
 				featureSet: "basic_pitch",
 				algorithm: "mrmsdtw",
 			};
-		case "mrmsdtw":
 		default:
 			return {
 				featureSet: "chroma_dlnco_synctoolbox",

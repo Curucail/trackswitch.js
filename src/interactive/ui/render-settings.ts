@@ -1,16 +1,16 @@
-import type {
-	AlignmentAlgorithmId,
-	AlignmentFeatureSetId,
-	InteractiveFile,
-} from "../types";
+import { renderIconSlotHtml } from "../../ui/icons";
 import {
 	ALIGNMENT_ALGORITHM_OPTIONS,
 	ALIGNMENT_FEATURE_SET_OPTIONS,
 	coerceAlignmentSelectionForFeatureSet,
 	isCompatibleAlignmentSelection,
 } from "../alignment-options";
-import { renderIconSlotHtml } from "../../ui/icons";
 import { classifyFileType } from "../file-handler";
+import type {
+	AlignmentAlgorithmId,
+	AlignmentFeatureSetId,
+	InteractiveFile,
+} from "../types";
 import {
 	bindAlignmentHelpTooltips,
 	buildAlignmentHelpLabelHtml,
@@ -152,37 +152,35 @@ export function buildSettingsPanelHtml(state: SettingsPanelState): string {
 function buildFeatureSetOptionsHtml(
 	selectedFeatureSet: AlignmentFeatureSetId,
 ): string {
-	return ALIGNMENT_FEATURE_SET_OPTIONS.map(function (option) {
-		return (
+	return ALIGNMENT_FEATURE_SET_OPTIONS.map(
+		(option) =>
 			'<option value="' +
 			option.id +
 			'"' +
 			(selectedFeatureSet === option.id ? " selected" : "") +
 			">" +
 			option.label +
-			"</option>"
-		);
-	}).join("");
+			"</option>",
+	).join("");
 }
 
 function buildAlgorithmOptionsHtml(
 	featureSet: AlignmentFeatureSetId,
 	selectedAlgorithm: AlignmentAlgorithmId,
 ): string {
-	return ALIGNMENT_ALGORITHM_OPTIONS.filter(function (option) {
-		return isCompatibleAlignmentSelection(featureSet, option.id);
-	})
-		.map(function (option) {
-			return (
+	return ALIGNMENT_ALGORITHM_OPTIONS.filter((option) =>
+		isCompatibleAlignmentSelection(featureSet, option.id),
+	)
+		.map(
+			(option) =>
 				'<option value="' +
 				option.id +
 				'"' +
 				(selectedAlgorithm === option.id ? " selected" : "") +
 				">" +
 				option.label +
-				"</option>"
-			);
-		})
+				"</option>",
+		)
 		.join("");
 }
 
@@ -282,7 +280,7 @@ export function bindSettingsPanelEvents(
 	};
 
 	// Reference change
-	container.addEventListener("click", function (e) {
+	container.addEventListener("click", (e) => {
 		const referenceToggle = (e.target as HTMLElement).closest(
 			".ts-settings-reference-toggle",
 		) as HTMLElement | null;
@@ -330,7 +328,7 @@ export function bindSettingsPanelEvents(
 	}
 
 	if (featureSetSelect) {
-		featureSetSelect.addEventListener("change", function () {
+		featureSetSelect.addEventListener("change", () => {
 			const nextSelection = coerceAlignmentSelectionForFeatureSet(
 				featureSetSelect.value as AlignmentFeatureSetId,
 				workingState.algorithm,
@@ -342,21 +340,21 @@ export function bindSettingsPanelEvents(
 	}
 
 	if (algorithmSelect) {
-		algorithmSelect.addEventListener("change", function () {
+		algorithmSelect.addEventListener("change", () => {
 			workingState.algorithm = algorithmSelect.value as AlignmentAlgorithmId;
 			syncCompatibilityOptions();
 		});
 	}
 
 	if (syncToggleInput) {
-		syncToggleInput.addEventListener("change", function () {
+		syncToggleInput.addEventListener("change", () => {
 			workingState.syncGenerationEnabled = syncToggleInput.checked;
 		});
 	}
 
 	if (advancedOptions) {
 		bindAdvancedOptionsAnimation(advancedOptions);
-		advancedOptions.addEventListener("toggle", function () {
+		advancedOptions.addEventListener("toggle", () => {
 			workingState.advancedOptionsExpanded = advancedOptions.open;
 		});
 	}
@@ -364,16 +362,14 @@ export function bindSettingsPanelEvents(
 	syncCompatibilityOptions();
 
 	// Remove buttons
-	container.addEventListener("click", function (e) {
+	container.addEventListener("click", (e) => {
 		const removeBtn = (e.target as HTMLElement).closest(
 			".ts-settings-remove-btn",
 		) as HTMLElement | null;
 		if (removeBtn) {
 			const fileId = removeBtn.getAttribute("data-file-id");
 			if (fileId) {
-				workingState.files = workingState.files.filter(function (f) {
-					return f.id !== fileId;
-				});
+				workingState.files = workingState.files.filter((f) => f.id !== fileId);
 				const row = removeBtn.closest("tr");
 				if (row) {
 					row.remove();
@@ -397,10 +393,10 @@ export function bindSettingsPanelEvents(
 		".ts-settings-add-files-input",
 	) as HTMLInputElement | null;
 	if (addBtn && addInput) {
-		addBtn.addEventListener("click", function () {
+		addBtn.addEventListener("click", () => {
 			addInput.click();
 		});
-		addInput.addEventListener("change", function () {
+		addInput.addEventListener("change", () => {
 			if (addInput.files && addInput.files.length > 0) {
 				const validFiles: File[] = [];
 				for (let i = 0; i < addInput.files.length; i += 1) {
@@ -420,15 +416,15 @@ export function bindSettingsPanelEvents(
 	const cancelActions = container.querySelectorAll(
 		".ts-settings-cancel-btn, .ts-settings-cancel-action",
 	);
-	cancelActions.forEach(function (el) {
-		el.addEventListener("click", function () {
+	cancelActions.forEach((el) => {
+		el.addEventListener("click", () => {
 			events.onCancel();
 		});
 	});
 
 	const backdrop = container.querySelector(".ts-settings-backdrop");
 	if (backdrop) {
-		backdrop.addEventListener("click", function () {
+		backdrop.addEventListener("click", () => {
 			events.onCancel();
 		});
 	}
@@ -436,7 +432,7 @@ export function bindSettingsPanelEvents(
 	// Apply
 	const applyBtn = container.querySelector(".ts-settings-apply-action");
 	if (applyBtn) {
-		applyBtn.addEventListener("click", function () {
+		applyBtn.addEventListener("click", () => {
 			events.onApply(workingState);
 		});
 	}
@@ -471,7 +467,7 @@ function bindAdvancedOptionsAnimation(
 	const animatedClassName = "is-opening";
 	let skipNextInitialOpenAnimation = advancedOptions.open;
 
-	advancedOptions.addEventListener("toggle", function () {
+	advancedOptions.addEventListener("toggle", () => {
 		advancedOptions.classList.remove(animatedClassName);
 
 		if (!advancedOptions.open) {
@@ -488,7 +484,7 @@ function bindAdvancedOptionsAnimation(
 		advancedOptions.classList.add(animatedClassName);
 	});
 
-	advancedOptions.addEventListener("animationend", function (event) {
+	advancedOptions.addEventListener("animationend", (event) => {
 		if (!(event.target instanceof HTMLElement)) {
 			return;
 		}
@@ -504,7 +500,7 @@ function syncReferenceSelection(
 	selectedFileId: string | null,
 ): void {
 	const toggles = container.querySelectorAll(".ts-settings-reference-toggle");
-	toggles.forEach(function (toggle) {
+	toggles.forEach((toggle) => {
 		if (!(toggle instanceof HTMLElement)) {
 			return;
 		}

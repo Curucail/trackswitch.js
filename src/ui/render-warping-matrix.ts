@@ -1,16 +1,16 @@
-import { sanitizeInlineStyle } from "../shared/dom";
 import {
 	axisBottom,
 	axisLeft,
 	axisRight,
 	line,
-	scaleLinear,
-	scaleLog,
-	select,
 	type ScaleContinuousNumeric,
 	type ScaleLinear,
 	type Selection,
+	scaleLinear,
+	scaleLog,
+	select,
 } from "d3";
+import { sanitizeInlineStyle } from "../shared/dom";
 
 type SvgSelection = Selection<SVGSVGElement, unknown, null, undefined>;
 type GroupSelection = Selection<SVGGElement, unknown, null, undefined>;
@@ -187,7 +187,7 @@ function clampTime(value: number, minimum: number, maximum: number): number {
 
 function createWarpingTempoInlineText(className: string): HTMLSpanElement {
 	const span = document.createElement("span");
-	span.className = className + " warping-tempo-text-node";
+	span.className = `${className} warping-tempo-text-node`;
 	span.setAttribute("aria-hidden", "true");
 	return span;
 }
@@ -367,10 +367,8 @@ export function updateWarpingMatrixTempoControlLabels(
 	host: any,
 ): any {
 	return function (this: any, host: any) {
-		host.tempoWindowValueNode.textContent =
-			this.getWarpingMatrixLocalTempoWindowSeconds(host).toFixed(1) + "s";
-		host.tempoSmoothingValueNode.textContent =
-			this.getWarpingMatrixLocalTempoSmoothingSeconds(host).toFixed(1) + "s";
+		host.tempoWindowValueNode.textContent = `${this.getWarpingMatrixLocalTempoWindowSeconds(host).toFixed(1)}s`;
+		host.tempoSmoothingValueNode.textContent = `${this.getWarpingMatrixLocalTempoSmoothingSeconds(host).toFixed(1)}s`;
 	}.call(ctx, host);
 }
 
@@ -417,9 +415,9 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
 				wrapper.className = "warping-matrix-wrap ts-stack-section";
 				wrapper.setAttribute(
 					"style",
-					sanitizeInlineStyle(
+					`${sanitizeInlineStyle(
 						hostElement.getAttribute("data-warping-matrix-style"),
-					) + "; display: block;",
+					)}; display: block;`,
 				);
 
 				const parent = hostElement.parentElement;
@@ -690,7 +688,7 @@ export function createWarpingMatrixPlotState(
 		};
 		const innerWidth = Math.max(1, width - margins.left - margins.right);
 		const innerHeight = Math.max(1, height - margins.top - margins.bottom);
-		const clipId = "warping-matrix-clip-" + this.warpingClipPathCounter;
+		const clipId = `warping-matrix-clip-${this.warpingClipPathCounter}`;
 		this.warpingClipPathCounter += 1;
 
 		const svg = select(plotHost)
@@ -728,8 +726,8 @@ export function createWarpingMatrixPlotState(
 
 		const plotRoot = svg
 			.append("g")
-			.attr("transform", "translate(" + margins.left + "," + margins.top + ")")
-			.attr("clip-path", "url(#" + clipId + ")");
+			.attr("transform", `translate(${margins.left},${margins.top})`)
+			.attr("clip-path", `url(#${clipId})`);
 		const pathLayer = plotRoot.append("g");
 
 		const guideDiagonal = plotRoot
@@ -782,7 +780,7 @@ export function createWarpingTempoPlotState(
 		};
 		const innerWidth = Math.max(1, width - margins.left - margins.right);
 		const innerHeight = Math.max(1, height - margins.top - margins.bottom);
-		const clipId = "warping-tempo-clip-" + this.warpingClipPathCounter;
+		const clipId = `warping-tempo-clip-${this.warpingClipPathCounter}`;
 		this.warpingClipPathCounter += 1;
 
 		const svg = select(plotHost)
@@ -828,8 +826,8 @@ export function createWarpingTempoPlotState(
 
 		const plotRoot = svg
 			.append("g")
-			.attr("transform", "translate(" + margins.left + "," + margins.top + ")")
-			.attr("clip-path", "url(#" + clipId + ")");
+			.attr("transform", `translate(${margins.left},${margins.top})`)
+			.attr("clip-path", `url(#${clipId})`);
 
 		const baseline = plotRoot
 			.append("line")
@@ -884,13 +882,13 @@ export function applyWarpingMatrixPlotDimensions(
 		plot.svg
 			.attr("width", width)
 			.attr("height", height)
-			.attr("viewBox", "0 0 " + width + " " + height);
+			.attr("viewBox", `0 0 ${width} ${height}`);
 		plot.clipRect
 			.attr("width", plot.innerWidth)
 			.attr("height", plot.innerHeight);
 		plot.plotRoot.attr(
 			"transform",
-			"translate(" + plot.margins.left + "," + plot.margins.top + ")",
+			`translate(${plot.margins.left},${plot.margins.top})`,
 		);
 		plot.title.attr("x", width / 2).attr("y", 20);
 		plot.xAxis.attr(
@@ -903,7 +901,7 @@ export function applyWarpingMatrixPlotDimensions(
 		);
 		plot.yAxis.attr(
 			"transform",
-			"translate(" + plot.margins.left + "," + plot.margins.top + ")",
+			`translate(${plot.margins.left},${plot.margins.top})`,
 		);
 		plot.xLabel
 			.attr("x", plot.margins.left + plot.innerWidth / 2)
@@ -939,13 +937,13 @@ export function applyWarpingTempoPlotDimensions(
 		plot.svg
 			.attr("width", width)
 			.attr("height", height)
-			.attr("viewBox", "0 0 " + width + " " + height);
+			.attr("viewBox", `0 0 ${width} ${height}`);
 		plot.clipRect
 			.attr("width", plot.innerWidth)
 			.attr("height", plot.innerHeight);
 		plot.plotRoot.attr(
 			"transform",
-			"translate(" + plot.margins.left + "," + plot.margins.top + ")",
+			`translate(${plot.margins.left},${plot.margins.top})`,
 		);
 		plot.title.attr("x", width / 2).attr("y", 20);
 		plot.xAxis.attr(
@@ -958,7 +956,7 @@ export function applyWarpingTempoPlotDimensions(
 		);
 		plot.yAxis.attr(
 			"transform",
-			"translate(" + plot.margins.left + "," + plot.margins.top + ")",
+			`translate(${plot.margins.left},${plot.margins.top})`,
 		);
 		plot.yAxisRight.attr(
 			"transform",
@@ -1308,21 +1306,21 @@ export function ensureWarpingLayout(ctx: any, host: any): any {
 				matrixWidthByRemainingSpace,
 			);
 
-			host.matrixPanel.style.flex = "0 0 " + matrixRenderedWidth + "px";
-			host.matrixPanel.style.width = matrixRenderedWidth + "px";
+			host.matrixPanel.style.flex = `0 0 ${matrixRenderedWidth}px`;
+			host.matrixPanel.style.width = `${matrixRenderedWidth}px`;
 			const fallbackTempoWidth = Math.max(
 				220,
 				Math.round(fallbackHostWidth - panelGap - matrixRenderedWidth),
 			);
-			host.tempoPanel.style.flex = "1 1 " + fallbackTempoWidth + "px";
-			host.tempoPanel.style.width = fallbackTempoWidth + "px";
+			host.tempoPanel.style.flex = `1 1 ${fallbackTempoWidth}px`;
+			host.tempoPanel.style.width = `${fallbackTempoWidth}px`;
 			tempoRenderedWidth = Math.max(
 				220,
 				Math.round(host.tempoPanel.clientWidth || fallbackTempoWidth),
 			);
 		}
-		host.matrixPanel.style.height = renderedHeight + "px";
-		host.tempoPanel.style.height = renderedHeight + "px";
+		host.matrixPanel.style.height = `${renderedHeight}px`;
+		host.tempoPanel.style.height = `${renderedHeight}px`;
 
 		const measuredMatrixPlotWidth = Math.max(
 			1,
@@ -1527,8 +1525,7 @@ export function applyWarpingMatrixContext(
 
 		const localTempoSmoothingSeconds =
 			this.getWarpingMatrixLocalTempoSmoothingSeconds(host);
-		const tempoDataCacheKey =
-			matrixDataCacheKey + "#s" + Math.round(localTempoSmoothingSeconds * 1000);
+		const tempoDataCacheKey = `${matrixDataCacheKey}#s${Math.round(localTempoSmoothingSeconds * 1000)}`;
 		if (host.tempoDataCacheKey !== tempoDataCacheKey) {
 			host.tempoDataCache = this.buildWarpingTempoData(
 				host.matrixDataCache,
@@ -1552,7 +1549,7 @@ export function applyWarpingMatrixContext(
 
 export function updateWarpingMatrix(ctx: any, host: any, context: any): any {
 	return function (this: any, host: any, context: any) {
-		if (!context || !context.enabled) {
+		if (!context?.enabled) {
 			host.wrapper.style.display = "none";
 			return;
 		}
@@ -1602,12 +1599,12 @@ export function renderWarpingMatrixPathPlot(
 		);
 		plot.yAxis.attr(
 			"transform",
-			"translate(" + plot.margins.left + "," + plot.margins.top + ")",
+			`translate(${plot.margins.left},${plot.margins.top})`,
 		);
 		plot.xLabel.attr("x", plot.margins.left + squareSize / 2);
 		plot.yLabel.attr(
 			"transform",
-			"translate(14," + (plot.margins.top + squareSize / 2) + ") rotate(-90)",
+			`translate(14,${plot.margins.top + squareSize / 2}) rotate(-90)`,
 		);
 
 		const xTickCount = Math.max(2, Math.round(squareSize / 90));
@@ -1806,7 +1803,7 @@ export function updateWarpingMatrixPlaybackState(
 	context: any,
 ): any {
 	return function (this: any, host: any, context: any) {
-		if (!context || !context.enabled) {
+		if (!context?.enabled) {
 			host.wrapper.style.display = "none";
 			return;
 		}

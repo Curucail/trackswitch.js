@@ -1,4 +1,4 @@
-import { AlignmentOutOfRangeMode } from "../domain/types";
+import type { AlignmentOutOfRangeMode } from "../domain/types";
 import { parseCsvRecords } from "./csv";
 import { requestText } from "./request-text";
 
@@ -21,9 +21,7 @@ export interface TimeMappingSeries {
 }
 
 export function loadNumericCsv(url: string): Promise<ParsedNumericCsv> {
-	return requestText(url, "CSV source").then(function (text) {
-		return parseNumericCsv(text);
-	});
+	return requestText(url, "CSV source").then((text) => parseNumericCsv(text));
 }
 
 export function parseNumericCsv(csvText: string): ParsedNumericCsv {
@@ -72,21 +70,17 @@ export function createTimeMappingSeries(
 	}
 
 	const normalized = points
-		.map(function (point) {
-			return {
-				x: Number(point.x),
-				y: Number(point.y),
-			};
-		})
-		.filter(function (point) {
-			return Number.isFinite(point.x) && Number.isFinite(point.y);
-		});
+		.map((point) => ({
+			x: Number(point.x),
+			y: Number(point.y),
+		}))
+		.filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
 
 	if (normalized.length === 0) {
 		throw new Error("Time mapping series requires finite numeric points.");
 	}
 
-	normalized.sort(function (a, b) {
+	normalized.sort((a, b) => {
 		if (a.x === b.x) {
 			return a.y - b.y;
 		}
@@ -105,7 +99,7 @@ export function buildColumnTimeMapping(
 ): TimeMappingSeries {
 	const points: TimeMappingPoint[] = [];
 
-	rows.forEach(function (row) {
+	rows.forEach((row) => {
 		const x = Number(row[fromColumn]);
 		const y = Number(row[toColumn]);
 		if (!Number.isFinite(x) || !Number.isFinite(y)) {

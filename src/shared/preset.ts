@@ -1,4 +1,4 @@
-import { TrackDefinition, TrackSwitchConfig } from "../domain/types";
+import type { TrackDefinition, TrackSwitchConfig } from "../domain/types";
 
 export function parseStrictNonNegativeInt(value: string): number {
 	return /^\d+$/.test(value) ? Number(value) : NaN;
@@ -11,12 +11,8 @@ export function parsePresetIndices(presetsAttr: string | undefined): number[] {
 
 	return presetsAttr
 		.split(",")
-		.map(function (preset) {
-			return parseStrictNonNegativeInt(preset.trim());
-		})
-		.filter(function (preset) {
-			return Number.isFinite(preset) && preset >= 0;
-		});
+		.map((preset) => parseStrictNonNegativeInt(preset.trim()))
+		.filter((preset) => Number.isFinite(preset) && preset >= 0);
 }
 
 export function derivePresetNames(
@@ -24,8 +20,8 @@ export function derivePresetNames(
 ): string[] {
 	let maxPresetIndex = -1;
 
-	config.tracks.forEach(function (track: TrackDefinition) {
-		(track.presets ?? []).forEach(function (index: number) {
+	config.tracks.forEach((track: TrackDefinition) => {
+		(track.presets ?? []).forEach((index: number) => {
 			if (index > maxPresetIndex) {
 				maxPresetIndex = index;
 			}
@@ -33,11 +29,12 @@ export function derivePresetNames(
 	});
 
 	const presetCount = Math.max(0, maxPresetIndex + 1);
-	const providedNames = (config.presetNames ?? []).map(function (name) {
-		return String(name).trim();
-	});
+	const providedNames = (config.presetNames ?? []).map((name) =>
+		String(name).trim(),
+	);
 
-	return Array.from({ length: presetCount }, function (_, index) {
-		return providedNames[index] || "Preset " + index;
-	});
+	return Array.from(
+		{ length: presetCount },
+		(_, index) => providedNames[index] || `Preset ${index}`,
+	);
 }

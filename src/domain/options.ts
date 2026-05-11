@@ -1,4 +1,4 @@
-import { TrackSwitchFeatures } from "./types";
+import type { TrackSwitchFeatures } from "./types";
 
 export const defaultFeatures: Readonly<TrackSwitchFeatures> = {
 	exclusiveSolo: false,
@@ -34,7 +34,7 @@ export function normalizeFeatures(
 	}
 
 	if (features) {
-		Object.keys(features).forEach(function (featureKey) {
+		Object.keys(features).forEach((featureKey) => {
 			if (!featureKeys.has(featureKey as keyof TrackSwitchFeatures)) {
 				throw new Error(
 					"Invalid feature key: " +

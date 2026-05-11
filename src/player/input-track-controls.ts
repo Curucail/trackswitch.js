@@ -9,18 +9,15 @@ export function toggleSoloFromPointerEvent(controller: any, event: any): void {
 	if (
 		event.shiftKey &&
 		!controller.features.exclusiveSolo &&
-		controller.runtimes[index] &&
-		controller.runtimes[index].state.solo
+		controller.runtimes[index]?.state.solo
 	) {
-		const selectedCount = controller.runtimes.reduce(function (
-			count: number,
-			runtime: any,
-		) {
-			return count + (runtime.state.solo ? 1 : 0);
-		}, 0);
+		const selectedCount = controller.runtimes.reduce(
+			(count: number, runtime: any) => count + (runtime.state.solo ? 1 : 0),
+			0,
+		);
 
 		if (selectedCount === 1) {
-			controller.runtimes.forEach(function (runtime: any) {
+			controller.runtimes.forEach((runtime: any) => {
 				runtime.state.solo = true;
 			});
 			controller.applyTrackProperties();

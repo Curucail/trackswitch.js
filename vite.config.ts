@@ -182,7 +182,7 @@ export default defineConfig(({ command, mode }) => {
 	const buildTarget = mode === "production" ? "browser" : mode;
 
 	if (!Object.hasOwn(buildTargets, buildTarget)) {
-		throw new Error("Unknown Vite build mode: " + buildTarget);
+		throw new Error(`Unknown Vite build mode: ${buildTarget}`);
 	}
 
 	return buildTargets[buildTarget as keyof typeof buildTargets];

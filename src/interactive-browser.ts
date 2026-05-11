@@ -1,12 +1,12 @@
 import {
+	defineTrackswitchInteractiveElement,
+	TRACKSWITCH_ALIGNMENT_INTERACTIVE_ELEMENT_NAME,
+	TrackswitchAlignmentInteractive,
+} from "./interactive/interactive-element";
+import {
 	createAlignmentInteractiveTrackSwitch,
 	createInteractiveTrackSwitch,
 } from "./interactive/interactive-factory";
-import {
-	TRACKSWITCH_ALIGNMENT_INTERACTIVE_ELEMENT_NAME,
-	TrackswitchAlignmentInteractive,
-	defineTrackswitchInteractiveElement,
-} from "./interactive/interactive-element";
 
 defineTrackswitchInteractiveElement();
 
@@ -29,9 +29,9 @@ if (typeof window !== "undefined") {
 }
 
 export {
-	TRACKSWITCH_ALIGNMENT_INTERACTIVE_ELEMENT_NAME,
-	TrackswitchAlignmentInteractive,
 	createAlignmentInteractiveTrackSwitch,
 	createInteractiveTrackSwitch,
 	defineTrackswitchInteractiveElement,
+	TRACKSWITCH_ALIGNMENT_INTERACTIVE_ELEMENT_NAME,
+	TrackswitchAlignmentInteractive,
 };

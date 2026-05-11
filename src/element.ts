@@ -1,29 +1,29 @@
 export {
-	TRACKSWITCH_DEFAULT_ELEMENT_NAME,
-	TRACKSWITCH_ELEMENT_NAME,
-	TRACKSWITCH_DOM_EVENTS,
-	TrackswitchPlayer,
-	defineTrackswitchDefaultElement,
-	defineTrackswitchElement,
-} from "./default-element";
+	defineTrackswitchAlignmentElement,
+	TRACKSWITCH_ALIGNMENT_ELEMENT_NAME,
+	TrackswitchAlignmentPlayer,
+} from "./alignment-element";
 export type {
 	TrackswitchDomEventName,
 	TrackswitchPlayerElement,
 } from "./default-element";
 export {
-	TRACKSWITCH_ALIGNMENT_ELEMENT_NAME,
-	TrackswitchAlignmentPlayer,
-	defineTrackswitchAlignmentElement,
-} from "./alignment-element";
+	defineTrackswitchDefaultElement,
+	defineTrackswitchElement,
+	TRACKSWITCH_DEFAULT_ELEMENT_NAME,
+	TRACKSWITCH_DOM_EVENTS,
+	TRACKSWITCH_ELEMENT_NAME,
+	TrackswitchPlayer,
+} from "./default-element";
 
 import {
-	TrackswitchPlayer,
-	defineTrackswitchDefaultElement,
-} from "./default-element";
-import {
-	TrackswitchAlignmentPlayer,
 	defineTrackswitchAlignmentElement,
+	type TrackswitchAlignmentPlayer,
 } from "./alignment-element";
+import {
+	defineTrackswitchDefaultElement,
+	type TrackswitchPlayer,
+} from "./default-element";
 
 export function defineTrackswitchElements(
 	registry: CustomElementRegistry = customElements,

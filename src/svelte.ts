@@ -1,15 +1,15 @@
-import {
-	defineTrackswitchAlignmentElement,
-	defineTrackswitchDefaultElement,
-	TRACKSWITCH_DOM_EVENTS,
-} from "./element";
-import { defineTrackswitchInteractiveElement } from "./interactive/interactive-element";
 import type {
 	TrackSwitchController,
 	TrackSwitchEventMap,
 	TrackSwitchInit,
 } from "./domain/types";
 import type { TrackswitchDomEventName, TrackswitchPlayer } from "./element";
+import {
+	defineTrackswitchAlignmentElement,
+	defineTrackswitchDefaultElement,
+	TRACKSWITCH_DOM_EVENTS,
+} from "./element";
+import { defineTrackswitchInteractiveElement } from "./interactive/interactive-element";
 import type {
 	InteractiveTrackSwitchController,
 	InteractiveTrackSwitchInit,
@@ -44,7 +44,7 @@ function bindEvent(
 	eventName: TrackswitchDomEventName,
 	getHandler: () => ((payload: any) => void) | undefined,
 ): () => void {
-	const listener = function (event: Event) {
+	const listener = (event: Event) => {
 		getHandler()?.((event as CustomEvent).detail);
 	};
 
@@ -105,7 +105,9 @@ export function useTrackswitch(
 			node.config = nextOptions.config;
 		},
 		destroy() {
-			unsubscribers.forEach((unsubscribe) => unsubscribe());
+			unsubscribers.forEach((unsubscribe) => {
+				unsubscribe();
+			});
 		},
 	};
 }

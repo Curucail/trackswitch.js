@@ -6,12 +6,12 @@ export function formatSecondsToHHMMSSmmm(seconds: number): string {
 	const sec = totalSeconds % 60;
 	const mil = totalMilliseconds % 1000;
 
-	const hh = h < 10 ? "0" + h : String(h);
-	const mm = m < 10 ? "0" + m : String(m);
-	const ss = sec < 10 ? "0" + sec : String(sec);
-	const mmm = mil < 10 ? "00" + mil : mil < 100 ? "0" + mil : String(mil);
+	const hh = h < 10 ? `0${h}` : String(h);
+	const mm = m < 10 ? `0${m}` : String(m);
+	const ss = sec < 10 ? `0${sec}` : String(sec);
+	const mmm = mil < 10 ? `00${mil}` : mil < 100 ? `0${mil}` : String(mil);
 
-	return hh + ":" + mm + ":" + ss + ":" + mmm;
+	return `${hh}:${mm}:${ss}:${mmm}`;
 }
 
 export function formatBytesToHumanReadable(bytes: number): string {
@@ -20,7 +20,7 @@ export function formatBytesToHumanReadable(bytes: number): string {
 	}
 
 	if (bytes < 1024) {
-		return Math.round(bytes) + " B";
+		return `${Math.round(bytes)} B`;
 	}
 
 	const units = ["KB", "MB", "GB", "TB"];
@@ -33,5 +33,5 @@ export function formatBytesToHumanReadable(bytes: number): string {
 	}
 
 	const precision = value >= 100 ? 0 : value >= 10 ? 1 : 2;
-	return value.toFixed(precision) + " " + units[unitIndex];
+	return `${value.toFixed(precision)} ${units[unitIndex]}`;
 }

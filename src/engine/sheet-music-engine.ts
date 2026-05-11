@@ -1,4 +1,10 @@
 import {
+	moveCursorToMeasure,
+	resolveAvailableMeasure,
+	resolveReferenceTimeForMeasure,
+	updatePosition as updateCursorPosition,
+} from "./sheet-music/cursor-sync";
+import {
 	applyConfiguredRenderScale,
 	disposeEntry,
 	initializeEntry,
@@ -7,12 +13,6 @@ import {
 	refreshCursorElement,
 	shouldRerenderOnResize,
 } from "./sheet-music/entry-lifecycle";
-import {
-	moveCursorToMeasure,
-	resolveAvailableMeasure,
-	resolveReferenceTimeForMeasure,
-	updatePosition as updateCursorPosition,
-} from "./sheet-music/cursor-sync";
 import {
 	handleHostClick,
 	handleHostTouch,
@@ -24,15 +24,15 @@ import {
 	ensureCurrentMeasureVisible,
 } from "./sheet-music/scrolling";
 import { loadProjectedTempoMaps } from "./sheet-music/tempo-map";
+import type {
+	SheetMusicEntryModel,
+	SheetMusicHostConfig,
+} from "./sheet-music/types";
 import {
 	DEFAULT_CURSOR_COLOR,
 	sanitizeCursorAlpha,
 	sanitizePlaybackPosition,
 	sanitizeRenderScale,
-} from "./sheet-music/types";
-import type {
-	SheetMusicEntryModel,
-	SheetMusicHostConfig,
 } from "./sheet-music/types";
 
 export type { SheetMusicHostConfig } from "./sheet-music/types";

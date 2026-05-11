@@ -1,11 +1,11 @@
 import type { TrackSwitchInit } from "../src/index";
+import type { InteractiveTrackSwitchInit } from "../src/interactive";
 import {
 	TrackSwitchAlignmentInteractive,
-	TrackSwitchPlayer,
 	type TrackSwitchInteractiveProps,
+	TrackSwitchPlayer,
 	type TrackSwitchPlayerProps,
 } from "../src/react";
-import type { InteractiveTrackSwitchInit } from "../src/interactive";
 
 const defaultInit: TrackSwitchInit = {
 	ui: [
@@ -66,6 +66,3 @@ void TrackSwitchAlignmentInteractive({ config: interactiveConfig });
 
 // @ts-expect-error React interactive props use config, not init.
 void TrackSwitchAlignmentInteractive({ init: interactiveConfig });
-
-// @ts-expect-error TrackSwitchMode is no longer exported from the public API.
-import type { TrackSwitchMode } from "../src/index";

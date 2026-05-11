@@ -1,15 +1,15 @@
-import type {
-	AlignmentAlgorithmId,
-	AlignmentFeatureSetId,
-	InteractiveFile,
-} from "../types";
+import { renderIconSlotHtml } from "../../ui/icons";
 import {
 	ALIGNMENT_ALGORITHM_OPTIONS,
 	ALIGNMENT_FEATURE_SET_OPTIONS,
 	isCompatibleAlignmentSelection,
 } from "../alignment-options";
-import { renderIconSlotHtml } from "../../ui/icons";
 import { classifyFileType } from "../file-handler";
+import type {
+	AlignmentAlgorithmId,
+	AlignmentFeatureSetId,
+	InteractiveFile,
+} from "../types";
 import {
 	bindAlignmentHelpTooltips,
 	buildAlignmentHelpLabelHtml,
@@ -275,7 +275,7 @@ export function bindDropZoneEvents(
 	}
 
 	if (dropZone && fileInput) {
-		dropZone.addEventListener("click", function (e) {
+		dropZone.addEventListener("click", (e) => {
 			if ((e.target as HTMLElement).closest(".ts-file-remove-btn")) {
 				return;
 			}
@@ -286,7 +286,7 @@ export function bindDropZoneEvents(
 	if (fileInput) {
 		container.addEventListener(
 			"dragenter",
-			function (e) {
+			(e) => {
 				e.preventDefault();
 				e.stopPropagation();
 				dragDepth += 1;
@@ -297,7 +297,7 @@ export function bindDropZoneEvents(
 
 		container.addEventListener(
 			"dragover",
-			function (e) {
+			(e) => {
 				e.preventDefault();
 				e.stopPropagation();
 				setDragOverState(true);
@@ -307,7 +307,7 @@ export function bindDropZoneEvents(
 
 		container.addEventListener(
 			"dragleave",
-			function (e) {
+			(e) => {
 				e.preventDefault();
 				e.stopPropagation();
 				dragDepth = Math.max(0, dragDepth - 1);
@@ -320,7 +320,7 @@ export function bindDropZoneEvents(
 
 		container.addEventListener(
 			"drop",
-			function (e) {
+			(e) => {
 				e.preventDefault();
 				e.stopPropagation();
 				dragDepth = 0;
@@ -335,7 +335,7 @@ export function bindDropZoneEvents(
 			true,
 		);
 
-		fileInput.addEventListener("change", function () {
+		fileInput.addEventListener("change", () => {
 			if (fileInput.files && fileInput.files.length > 0) {
 				const validFiles = filterValidFiles(fileInput.files);
 				if (validFiles.length > 0) {
@@ -347,7 +347,7 @@ export function bindDropZoneEvents(
 	}
 
 	// Reference buttons
-	container.addEventListener("click", function (e) {
+	container.addEventListener("click", (e) => {
 		const referenceToggle = (e.target as HTMLElement).closest(
 			".ts-reference-toggle",
 		) as HTMLElement | null;
@@ -360,7 +360,7 @@ export function bindDropZoneEvents(
 	});
 
 	// Remove buttons
-	container.addEventListener("click", function (e) {
+	container.addEventListener("click", (e) => {
 		const removeBtn = (e.target as HTMLElement).closest(
 			".ts-file-remove-btn",
 		) as HTMLElement | null;
@@ -377,7 +377,7 @@ export function bindDropZoneEvents(
 		".ts-feature-set-select",
 	) as HTMLSelectElement | null;
 	if (featureSetSelect) {
-		featureSetSelect.addEventListener("change", function () {
+		featureSetSelect.addEventListener("change", () => {
 			events.onFeatureSetChanged(
 				featureSetSelect.value as AlignmentFeatureSetId,
 			);
@@ -388,7 +388,7 @@ export function bindDropZoneEvents(
 		".ts-algorithm-select",
 	) as HTMLSelectElement | null;
 	if (algorithmSelect) {
-		algorithmSelect.addEventListener("change", function () {
+		algorithmSelect.addEventListener("change", () => {
 			events.onAlgorithmChanged(algorithmSelect.value as AlignmentAlgorithmId);
 		});
 	}
@@ -398,7 +398,7 @@ export function bindDropZoneEvents(
 	) as HTMLDetailsElement | null;
 	if (advancedOptions) {
 		bindAdvancedOptionsAnimation(advancedOptions);
-		advancedOptions.addEventListener("toggle", function () {
+		advancedOptions.addEventListener("toggle", () => {
 			events.onAdvancedOptionsChanged(advancedOptions.open);
 		});
 	}
@@ -407,7 +407,7 @@ export function bindDropZoneEvents(
 		".ts-sync-toggle-input",
 	) as HTMLInputElement | null;
 	if (syncToggleInput) {
-		syncToggleInput.addEventListener("change", function () {
+		syncToggleInput.addEventListener("change", () => {
 			events.onSyncGenerationChanged(syncToggleInput.checked);
 		});
 	}
@@ -416,7 +416,7 @@ export function bindDropZoneEvents(
 		".ts-alignment-csv-input",
 	) as HTMLInputElement | null;
 	if (alignmentCsvInput) {
-		alignmentCsvInput.addEventListener("change", function () {
+		alignmentCsvInput.addEventListener("change", () => {
 			const selectedFile =
 				alignmentCsvInput.files && alignmentCsvInput.files.length > 0
 					? alignmentCsvInput.files[0]
@@ -428,7 +428,7 @@ export function bindDropZoneEvents(
 		});
 	}
 
-	container.addEventListener("click", function (e) {
+	container.addEventListener("click", (e) => {
 		const btn = (e.target as HTMLElement).closest(
 			".ts-upload-alignment-btn",
 		) as HTMLButtonElement | null;
@@ -438,7 +438,7 @@ export function bindDropZoneEvents(
 	});
 
 	// Compute button
-	container.addEventListener("click", function (e) {
+	container.addEventListener("click", (e) => {
 		const btn = (e.target as HTMLElement).closest(
 			".ts-compute-btn",
 		) as HTMLButtonElement | null;
@@ -447,7 +447,7 @@ export function bindDropZoneEvents(
 		}
 	});
 
-	container.addEventListener("click", function (e) {
+	container.addEventListener("click", (e) => {
 		const btn = (e.target as HTMLElement).closest(
 			".ts-cancel-btn",
 		) as HTMLButtonElement | null;
@@ -502,33 +502,29 @@ function buildAdvancedOptionsHtml(
 	canImportCsv: boolean,
 	expanded: boolean,
 ): string {
-	const featureOptions = ALIGNMENT_FEATURE_SET_OPTIONS.map(function (option) {
-		return (
+	const featureOptions = ALIGNMENT_FEATURE_SET_OPTIONS.map(
+		(option) =>
 			'<option value="' +
 			option.id +
 			'"' +
 			(featureSet === option.id ? " selected" : "") +
 			">" +
 			option.label +
-			"</option>"
-		);
-	}).join("");
-	const algorithmOptions = ALIGNMENT_ALGORITHM_OPTIONS.filter(
-		function (option) {
-			return isCompatibleAlignmentSelection(featureSet, option.id);
-		},
+			"</option>",
+	).join("");
+	const algorithmOptions = ALIGNMENT_ALGORITHM_OPTIONS.filter((option) =>
+		isCompatibleAlignmentSelection(featureSet, option.id),
 	)
-		.map(function (option) {
-			return (
+		.map(
+			(option) =>
 				'<option value="' +
 				option.id +
 				'"' +
 				(algorithm === option.id ? " selected" : "") +
 				">" +
 				option.label +
-				"</option>"
-			);
-		})
+				"</option>",
+		)
 		.join("");
 
 	return (

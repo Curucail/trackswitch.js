@@ -1,4 +1,4 @@
-import {
+import type {
 	TrackDefinitionAlignment,
 	TrackSourceDefinition,
 	TrackSwitchImageConfig,
@@ -6,11 +6,11 @@ import {
 	TrackSwitchSheetMusicConfig,
 	TrackSwitchTextAlign,
 	TrackSwitchTextConfig,
+	TrackSwitchTrackGroupUiElement,
 	TrackSwitchUiConfig,
 	TrackSwitchUiElement,
-	TrackSwitchWaveformConfig,
-	TrackSwitchTrackGroupUiElement,
 	TrackSwitchWarpingMatrixConfig,
+	TrackSwitchWaveformConfig,
 	WaveformPlaybackFollowMode,
 } from "../domain/types";
 import { clampPercent } from "../shared/math";
@@ -349,9 +349,9 @@ function normalizeTrackAlignmentConfig(
 	return {
 		...alignment,
 		synchronizedSources: Array.isArray(alignment.synchronizedSources)
-			? alignment.synchronizedSources.map(function (source) {
-					return normalizeSourceConfig(source);
-				})
+			? alignment.synchronizedSources.map((source) =>
+					normalizeSourceConfig(source),
+				)
 			: alignment.synchronizedSources,
 	};
 }
@@ -360,16 +360,14 @@ function normalizeTrackGroupConfig<T extends TrackSwitchTrackGroupUiElement>(
 	group: T,
 ): T {
 	const normalizedTracks = Array.isArray(group.trackGroup)
-		? group.trackGroup.map(function (track) {
+		? group.trackGroup.map((track) => {
 				const trackRecord = toConfigRecord(track, "track");
 				assertAllowedKeys(trackRecord, trackAllowedKeys, "track");
 
 				return {
 					...track,
 					sources: Array.isArray(track.sources)
-						? track.sources.map(function (source) {
-								return normalizeSourceConfig(source);
-							})
+						? track.sources.map((source) => normalizeSourceConfig(source))
 						: track.sources,
 					alignment: normalizeTrackAlignmentConfig(track.alignment),
 				};
@@ -394,9 +392,9 @@ export function normalizeUiElement(
 
 	const allowedElementKeys = uiAllowedKeysByType[elementType];
 	if (!allowedElementKeys) {
-		throw new Error("Invalid ui element type: " + elementType);
+		throw new Error(`Invalid ui element type: ${elementType}`);
 	}
-	assertAllowedKeys(elementRecord, allowedElementKeys, "ui." + elementType);
+	assertAllowedKeys(elementRecord, allowedElementKeys, `ui.${elementType}`);
 
 	if (element.type === "waveform") {
 		return normalizeWaveformConfig(element);
@@ -432,7 +430,7 @@ export function normalizeUiElement(
 		return element;
 	}
 
-	throw new Error("Invalid ui element type: " + elementType);
+	throw new Error(`Invalid ui element type: ${elementType}`);
 }
 
 function injectWarpingMatrix(
@@ -677,7 +675,7 @@ export function injectConfiguredUiElements(
 	}
 
 	let trackGroupIndex = 0;
-	uiElements.forEach(function (entry) {
+	uiElements.forEach((entry) => {
 		if (entry.type === "trackGroup") {
 			injectTrackGroup(root, trackGroupIndex);
 			trackGroupIndex += 1;
@@ -715,7 +713,7 @@ export function injectConfiguredUiElements(
 		}
 
 		throw new Error(
-			"Invalid ui element type: " + String((entry as { type?: unknown }).type),
+			`Invalid ui element type: ${String((entry as { type?: unknown }).type)}`,
 		);
 	});
 }

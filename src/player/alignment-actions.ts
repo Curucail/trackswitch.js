@@ -1,20 +1,20 @@
-import { TrackRuntime } from "../domain/types";
-import { clamp } from "../shared/math";
-import { WarpingMatrixTrackSeries } from "../ui/view-renderer";
+import type { TrackRuntime } from "../domain/types";
 import {
+	buildColumnTimeMapping,
 	loadNumericCsv,
 	mapTime,
-	ParsedNumericCsv,
+	type ParsedNumericCsv,
 	resolveAlignmentOutOfRangeMode,
-	buildColumnTimeMapping,
 } from "../shared/alignment";
+import { clamp } from "../shared/math";
+import type { WarpingMatrixTrackSeries } from "../ui/view-renderer";
 import {
-	AlignmentReferenceAxisKey,
-	TrackAlignmentConverter,
+	type AlignmentReferenceAxisKey,
 	buildAlignmentAxisContext,
 	buildWarpingSeries,
 	getActiveAlignmentAxisContext,
 	getAlignmentAxisContext,
+	type TrackAlignmentConverter,
 } from "./alignment-context";
 
 export function isAlignmentMode(ctx: any): any {
@@ -48,7 +48,7 @@ export function setEffectiveSoloMode(ctx: any, singleSoloMode: any): any {
 		const previousSoloIndex = this.getActiveSoloTrackIndex();
 		const targetSoloIndex = previousSoloIndex >= 0 ? previousSoloIndex : 0;
 
-		this.runtimes.forEach(function (runtime: TrackRuntime, index: number) {
+		this.runtimes.forEach((runtime: TrackRuntime, index: number) => {
 			runtime.state.solo = index === targetSoloIndex;
 		});
 	}.call(ctx, singleSoloMode);
@@ -147,7 +147,7 @@ export function applyGlobalSyncState(ctx: any, syncOn: any): any {
 					: fallbackIndex;
 
 			if (restoreIndex >= 0) {
-				this.runtimes.forEach(function (runtime: TrackRuntime, index: number) {
+				this.runtimes.forEach((runtime: TrackRuntime, index: number) => {
 					runtime.state.solo = index === restoreIndex;
 				});
 			}
@@ -197,7 +197,7 @@ export function setRuntimeActiveVariant(
 	return function (this: any, runtime: any, variant: any) {
 		const source =
 			variant === "synced" ? runtime.syncedSource : runtime.baseSource;
-		if (!source || !source.buffer) {
+		if (!source?.buffer) {
 			return false;
 		}
 
@@ -281,7 +281,7 @@ export function buildAlignmentContext(ctx: any): any {
 			return "Alignment configuration requires alignment.referenceTimeColumn.";
 		}
 
-		let parsedCsv;
+		let parsedCsv: ParsedNumericCsv;
 		try {
 			parsedCsv = await this.loadAlignmentCsv();
 		} catch (error) {
@@ -300,7 +300,7 @@ export function buildAlignmentContext(ctx: any): any {
 
 		for (const [, column] of mappingByTrack) {
 			if (!availableColumns.has(column)) {
-				return "Alignment CSV is missing configured column: " + column;
+				return `Alignment CSV is missing configured column: ${column}`;
 			}
 		}
 
@@ -540,9 +540,7 @@ export function getAudibleTrackIndexesForWarpingMatrix(ctx: any): any {
 			return selected;
 		}
 
-		return this.runtimes.map(function (_: TrackRuntime, index: number) {
-			return index;
-		});
+		return this.runtimes.map((_: TrackRuntime, index: number) => index);
 	}.call(ctx);
 }
 
@@ -584,7 +582,7 @@ export function resolveReferenceDuration(
 	return function (this: any, rows: any, referenceTimeColumn: any) {
 		let maxReference = Number.NEGATIVE_INFINITY;
 
-		rows.forEach(function (row: Record<string, unknown>) {
+		rows.forEach((row: Record<string, unknown>) => {
 			const value = Number(row[referenceTimeColumn]);
 			if (Number.isFinite(value) && value > maxReference) {
 				maxReference = value;

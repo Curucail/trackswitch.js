@@ -1,4 +1,4 @@
-import {
+import type {
 	AudioDownloadSizeInfo,
 	TrackRuntime,
 	TrackSourceDefinition,
@@ -150,8 +150,7 @@ export class AudioEngine {
 			audioContextHost.AudioContext || audioContextHost.webkitAudioContext;
 
 		return !!(
-			AudioContextConstructor &&
-			AudioContextConstructor.prototype &&
+			AudioContextConstructor?.prototype &&
 			typeof AudioContextConstructor.prototype.createStereoPanner === "function"
 		);
 	}
@@ -174,9 +173,7 @@ export class AudioEngine {
 				maybePromise &&
 				typeof (maybePromise as Promise<void>).then === "function"
 			) {
-				return (maybePromise as Promise<void>)
-					.then(function () {})
-					.catch(function () {});
+				return (maybePromise as Promise<void>).then(() => {}).catch(() => {});
 			}
 		} catch (_error) {
 			// ignore
@@ -245,7 +242,7 @@ export class AudioEngine {
 				"data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQIAAAAAAA==";
 
 			const playPromise = unlockAudio.play();
-			const cleanup = function () {
+			const cleanup = () => {
 				unlockAudio.pause();
 				unlockAudio.removeAttribute("src");
 				unlockAudio.load();
@@ -254,8 +251,8 @@ export class AudioEngine {
 			if (playPromise && typeof playPromise.then === "function") {
 				let timeoutId: ReturnType<typeof setTimeout> | null = null;
 				const playAttempt = (playPromise as Promise<void>)
-					.then(function () {})
-					.catch(function () {});
+					.then(() => {})
+					.catch(() => {});
 				const timeoutPromise = new Promise<void>((resolve) => {
 					timeoutId = setTimeout(resolve, RESUME_WAIT_TIMEOUT_MS);
 				});
@@ -277,7 +274,7 @@ export class AudioEngine {
 
 	async loadTracks(runtimes: TrackRuntime[]): Promise<void> {
 		if (!this.canUseAudioGraph()) {
-			runtimes.forEach(function (runtime) {
+			runtimes.forEach((runtime) => {
 				runtime.successful = false;
 				runtime.errored = true;
 			});
@@ -293,7 +290,7 @@ export class AudioEngine {
 			}),
 		);
 
-		results.forEach(function (result, index) {
+		results.forEach((result, index) => {
 			runtimes[index].errored = !result.success;
 			runtimes[index].successful = result.success;
 		});
@@ -318,7 +315,7 @@ export class AudioEngine {
 		let totalBytes = 0;
 		let resolvedSourceCount = 0;
 
-		probeResults.forEach(function (result) {
+		probeResults.forEach((result) => {
 			if (
 				!Number.isFinite(result.bytes) ||
 				result.bytes === null ||
@@ -464,7 +461,7 @@ export class AudioEngine {
 	): Promise<LoadSourceSelectionResult> {
 		for (let sourceIndex = 0; sourceIndex < sources.length; sourceIndex += 1) {
 			const source = sources[sourceIndex];
-			if (!source || !source.src) {
+			if (!source?.src) {
 				continue;
 			}
 
@@ -473,10 +470,7 @@ export class AudioEngine {
 				source.type,
 				MIME_TYPE_TABLE,
 			);
-			const canPlay = !!(
-				audioElement.canPlayType &&
-				audioElement.canPlayType(mime).replace(/no/, "")
-			);
+			const canPlay = !!audioElement.canPlayType?.(mime).replace(/no/, "");
 			if (!canPlay) {
 				continue;
 			}
@@ -494,9 +488,7 @@ export class AudioEngine {
 					},
 					error: null,
 				};
-			} catch (_error) {
-				continue;
-			}
+			} catch (_error) {}
 		}
 
 		return {
@@ -536,7 +528,7 @@ export class AudioEngine {
 	): TrackSourceDefinition[] {
 		const audioElement = document.createElement("audio");
 		return sources.filter((source) => {
-			if (!source || !source.src) {
+			if (!source?.src) {
 				return false;
 			}
 
@@ -545,10 +537,7 @@ export class AudioEngine {
 				source.type,
 				MIME_TYPE_TABLE,
 			);
-			return !!(
-				audioElement.canPlayType &&
-				audioElement.canPlayType(mime).replace(/no/, "")
-			);
+			return !!audioElement.canPlayType?.(mime).replace(/no/, "");
 		});
 	}
 
@@ -557,7 +546,7 @@ export class AudioEngine {
 			const request = new XMLHttpRequest();
 			request.open("HEAD", url, true);
 
-			request.onreadystatechange = function () {
+			request.onreadystatechange = () => {
 				if (request.readyState !== 4) {
 					return;
 				}
@@ -574,7 +563,7 @@ export class AudioEngine {
 				resolve({ bytes: null });
 			};
 
-			request.onerror = function () {
+			request.onerror = () => {
 				resolve({ bytes: null });
 			};
 
@@ -587,12 +576,12 @@ export class AudioEngine {
 	}
 
 	private requestArrayBuffer(url: string): Promise<ArrayBuffer> {
-		return new Promise(function (resolve, reject) {
+		return new Promise((resolve, reject) => {
 			const request = new XMLHttpRequest();
 			request.open("GET", url, true);
 			request.responseType = "arraybuffer";
 
-			request.onreadystatechange = function () {
+			request.onreadystatechange = () => {
 				if (request.readyState !== 4) {
 					return;
 				}
@@ -600,13 +589,13 @@ export class AudioEngine {
 				if (request.status >= 200 && request.status < 300 && request.response) {
 					resolve(request.response);
 				} else {
-					reject(new Error("Failed to request audio source: " + url));
+					reject(new Error(`Failed to request audio source: ${url}`));
 				}
 			};
 
-			request.onerror = function () {
+			request.onerror = () => {
 				reject(
-					new Error("Network error while requesting audio source: " + url),
+					new Error(`Network error while requesting audio source: ${url}`),
 				);
 			};
 
@@ -622,7 +611,7 @@ export class AudioEngine {
 		return new Promise((resolve, reject) => {
 			let settled = false;
 
-			const onSuccess = function (decoded: AudioBuffer) {
+			const onSuccess = (decoded: AudioBuffer) => {
 				if (settled) {
 					return;
 				}
@@ -630,7 +619,7 @@ export class AudioEngine {
 				resolve(decoded);
 			};
 
-			const onFailure = function (error: unknown) {
+			const onFailure = (error: unknown) => {
 				if (settled) {
 					return;
 				}
@@ -676,9 +665,7 @@ export class AudioEngine {
 		runtimes: TrackRuntime[],
 		noSoloFallbackGate?: number,
 	): void {
-		const anySolos = runtimes.some(function (runtime) {
-			return runtime.state.solo;
-		});
+		const anySolos = runtimes.some((runtime) => runtime.state.solo);
 		const resolvedNoSoloFallbackGate =
 			typeof noSoloFallbackGate === "number"
 				? clamp01(noSoloFallbackGate)
@@ -686,7 +673,7 @@ export class AudioEngine {
 					? 1
 					: 0;
 
-		runtimes.forEach(function (runtime) {
+		runtimes.forEach((runtime) => {
 			if (!runtime.gainNode) {
 				return;
 			}
@@ -818,7 +805,7 @@ export class AudioEngine {
 
 	stop(runtimes: TrackRuntime[]): void {
 		if (!this.context || !this.gainNodeMaster || !this.canUseAudioGraph()) {
-			runtimes.forEach(function (runtime) {
+			runtimes.forEach((runtime) => {
 				runtime.activeSource = null;
 			});
 			return;
@@ -837,7 +824,7 @@ export class AudioEngine {
 	}
 
 	disconnectRuntimes(runtimes: TrackRuntime[]): void {
-		runtimes.forEach(function (runtime) {
+		runtimes.forEach((runtime) => {
 			try {
 				runtime.activeSource?.disconnect();
 			} catch (_error) {

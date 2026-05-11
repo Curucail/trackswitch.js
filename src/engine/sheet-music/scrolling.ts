@@ -1,5 +1,5 @@
-import { clampNumber } from "./types";
 import type { SheetMusicEntryModel } from "./types";
+import { clampNumber } from "./types";
 
 export function ensureCurrentMeasureVisible(
 	ctx: any,
