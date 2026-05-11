@@ -2,8 +2,6 @@ import { resolve } from 'node:path';
 import { defineConfig, type Plugin, type UserConfig } from 'vite';
 
 const rootDir = __dirname;
-const buildTarget = process.env.TRACKSWITCH_BUILD_TARGET || 'browser';
-
 const banner = [
     '/*!',
     ' * trackswitch.js (https://github.com/audiolabs/trackswitch.js)',
@@ -176,13 +174,15 @@ const buildTargets = {
     },
 } satisfies Record<string, UserConfig>;
 
-export default defineConfig(({ command }) => {
+export default defineConfig(({ command, mode }) => {
     if (command === 'serve') {
         return devConfig;
     }
 
+    const buildTarget = mode === 'production' ? 'browser' : mode;
+
     if (!Object.hasOwn(buildTargets, buildTarget)) {
-        throw new Error('Unknown TRACKSWITCH_BUILD_TARGET: ' + buildTarget);
+        throw new Error('Unknown Vite build mode: ' + buildTarget);
     }
 
     return buildTargets[buildTarget as keyof typeof buildTargets];
