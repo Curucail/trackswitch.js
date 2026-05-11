@@ -42,7 +42,7 @@ export class AlignmentWorkerBridge {
 
         this.initPromise = new Promise((resolve, reject) => {
             try {
-                this.worker = new Worker(this.workerUrl);
+                this.worker = new Worker(this.workerUrl, { type: 'module' });
             } catch (_e) {
                 reject(new Error('Failed to create alignment worker. Ensure the worker script is available at: ' + this.workerUrl));
                 return;

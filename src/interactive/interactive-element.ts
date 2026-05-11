@@ -1,11 +1,11 @@
 import stylesheetText from '../../css/trackswitch.css?inline';
+import { loadElementConfig } from '../config/element-config';
 import { createAlignmentInteractiveTrackSwitch } from './interactive-factory';
 import type { InteractiveTrackSwitchController, InteractiveTrackSwitchInit } from './types';
 
 export const TRACKSWITCH_ALIGNMENT_INTERACTIVE_ELEMENT_NAME = 'trackswitch-alignment-interactive';
 
 export interface TrackswitchAlignmentInteractiveElement extends HTMLElement {
-    init: InteractiveTrackSwitchInit | undefined;
     config: InteractiveTrackSwitchInit | undefined;
     readonly controller: InteractiveTrackSwitchController | null;
 }
@@ -13,25 +13,19 @@ export interface TrackswitchAlignmentInteractiveElement extends HTMLElement {
 export class TrackswitchAlignmentInteractive
     extends HTMLElement
     implements TrackswitchAlignmentInteractiveElement {
-    private currentInit: InteractiveTrackSwitchInit | undefined;
+    private currentConfig: InteractiveTrackSwitchInit | undefined;
     private currentController: InteractiveTrackSwitchController | null = null;
     private mountRoot: HTMLDivElement | null = null;
-
-    get init(): InteractiveTrackSwitchInit | undefined {
-        return this.currentInit;
-    }
-
-    set init(nextInit: InteractiveTrackSwitchInit | undefined) {
-        this.currentInit = nextInit;
-        this.applyCurrentInit();
-    }
+    private configLoadGeneration = 0;
 
     get config(): InteractiveTrackSwitchInit | undefined {
-        return this.init;
+        return this.currentConfig;
     }
 
     set config(nextConfig: InteractiveTrackSwitchInit | undefined) {
-        this.init = nextConfig;
+        this.configLoadGeneration += 1;
+        this.currentConfig = nextConfig;
+        this.applyCurrentConfig();
     }
 
     get controller(): InteractiveTrackSwitchController | null {
@@ -40,10 +34,16 @@ export class TrackswitchAlignmentInteractive
 
     connectedCallback(): void {
         this.ensureShadowRoot();
-        this.applyCurrentInit();
+        if (this.currentConfig) {
+            this.applyCurrentConfig();
+            return;
+        }
+
+        void this.loadDeclarativeConfig();
     }
 
     disconnectedCallback(): void {
+        this.configLoadGeneration += 1;
         this.destroyController();
         this.mountRoot?.replaceChildren();
     }
@@ -64,8 +64,28 @@ export class TrackswitchAlignmentInteractive
         this.mountRoot = mountRoot;
     }
 
-    private applyCurrentInit(): void {
-        if (!this.isConnected) {
+    private async loadDeclarativeConfig(): Promise<void> {
+        const generation = ++this.configLoadGeneration;
+
+        try {
+            const nextConfig = await loadElementConfig(this, (rawConfig) => rawConfig as InteractiveTrackSwitchInit);
+            if (!this.isConnected || this.configLoadGeneration !== generation || !nextConfig) {
+                return;
+            }
+
+            this.currentConfig = nextConfig;
+            this.applyCurrentConfig();
+        } catch (error) {
+            if (!this.isConnected || this.configLoadGeneration !== generation) {
+                return;
+            }
+
+            this.dispatchConfigError(error);
+        }
+    }
+
+    private applyCurrentConfig(): void {
+        if (!this.isConnected || !this.currentConfig) {
             return;
         }
 
@@ -78,9 +98,19 @@ export class TrackswitchAlignmentInteractive
         this.destroyController();
         this.mountRoot.replaceChildren();
 
-        const controller = createAlignmentInteractiveTrackSwitch(this.mountRoot, this.currentInit || {});
+        const controller = createAlignmentInteractiveTrackSwitch(this.mountRoot, this.currentConfig);
         this.currentController = controller;
         controller.initialize();
+    }
+
+    private dispatchConfigError(error: unknown): void {
+        this.dispatchEvent(new CustomEvent('trackswitch-error', {
+            detail: {
+                message: error instanceof Error ? error.message : 'Unexpected error while loading TrackSwitch config.',
+            },
+            bubbles: true,
+            composed: true,
+        }));
     }
 
     private destroyController(): void {

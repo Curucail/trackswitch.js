@@ -1,4 +1,5 @@
 import stylesheetText from '../css/trackswitch.css?inline';
+import { loadElementConfig } from './config/element-config';
 import { createDefaultTrackSwitch } from './player/default-factory';
 import type {
     TrackSwitchController,
@@ -14,7 +15,6 @@ export type TrackswitchDomEventName =
     | 'trackswitch-track-state';
 
 export interface TrackswitchPlayerElement extends HTMLElement {
-    init: TrackSwitchInit | undefined;
     config: TrackSwitchInit | undefined;
     readonly controller: TrackSwitchController | null;
 }
@@ -42,28 +42,22 @@ export function dispatchTrackSwitchEvent<K extends TrackSwitchEventName>(
 }
 
 export abstract class TrackswitchPlayerBase extends HTMLElement implements TrackswitchPlayerElement {
-    private currentInit: TrackSwitchInit | undefined;
+    private currentConfig: TrackSwitchInit | undefined;
     private currentController: TrackSwitchController | null = null;
     private mountRoot: HTMLDivElement | null = null;
     private unsubscribeHandlers: Array<() => void> = [];
     private loadGeneration = 0;
+    private configLoadGeneration = 0;
     private controllerLoadPromise: Promise<void> | null = null;
 
-    get init(): TrackSwitchInit | undefined {
-        return this.currentInit;
-    }
-
-    set init(nextInit: TrackSwitchInit | undefined) {
-        this.currentInit = nextInit;
-        void this.applyCurrentInit();
-    }
-
     get config(): TrackSwitchInit | undefined {
-        return this.init;
+        return this.currentConfig;
     }
 
     set config(nextConfig: TrackSwitchInit | undefined) {
-        this.init = nextConfig;
+        this.configLoadGeneration += 1;
+        this.currentConfig = nextConfig;
+        void this.applyCurrentConfig();
     }
 
     get controller(): TrackSwitchController | null {
@@ -74,10 +68,16 @@ export abstract class TrackswitchPlayerBase extends HTMLElement implements Track
 
     connectedCallback(): void {
         this.ensureShadowRoot();
-        void this.applyCurrentInit();
+        if (this.currentConfig) {
+            void this.applyCurrentConfig();
+            return;
+        }
+
+        void this.loadDeclarativeConfig();
     }
 
     disconnectedCallback(): void {
+        this.configLoadGeneration += 1;
         this.destroyController();
         this.mountRoot?.replaceChildren();
     }
@@ -98,8 +98,30 @@ export abstract class TrackswitchPlayerBase extends HTMLElement implements Track
         this.mountRoot = mountRoot;
     }
 
-    private async applyCurrentInit(): Promise<void> {
-        if (!this.isConnected || !this.currentInit) {
+    private async loadDeclarativeConfig(): Promise<void> {
+        const generation = ++this.configLoadGeneration;
+
+        try {
+            const nextConfig = await loadElementConfig(this, (rawConfig) => rawConfig as TrackSwitchInit);
+            if (!this.isConnected || this.configLoadGeneration !== generation || !nextConfig) {
+                return;
+            }
+
+            this.currentConfig = nextConfig;
+            await this.applyCurrentConfig();
+        } catch (error) {
+            if (!this.isConnected || this.configLoadGeneration !== generation) {
+                return;
+            }
+
+            dispatchTrackSwitchEvent(this, 'error', {
+                message: error instanceof Error ? error.message : 'Unexpected error while loading TrackSwitch config.',
+            });
+        }
+    }
+
+    private async applyCurrentConfig(): Promise<void> {
+        if (!this.isConnected || !this.currentConfig) {
             return;
         }
 
@@ -116,13 +138,13 @@ export abstract class TrackswitchPlayerBase extends HTMLElement implements Track
                 if (this.controllerLoadPromise) {
                     await this.controllerLoadPromise;
                 }
-                if (!this.isConnected || this.currentController !== controller || !this.currentInit) {
+                if (!this.isConnected || this.currentController !== controller || !this.currentConfig) {
                     return;
                 }
-                await controller.updateInit(this.currentInit);
+                await controller.updateInit(this.currentConfig);
                 return;
             } catch (_error) {
-                if (!this.isConnected || !this.currentInit) {
+                if (!this.isConnected || !this.currentConfig) {
                     return;
                 }
                 this.destroyController();
@@ -130,7 +152,7 @@ export abstract class TrackswitchPlayerBase extends HTMLElement implements Track
         }
 
         try {
-            this.mountController(this.currentInit);
+            this.mountController(this.currentConfig);
         } catch (error) {
             dispatchTrackSwitchEvent(this, 'error', {
                 message: error instanceof Error ? error.message : 'Unexpected error while mounting TrackSwitch.',

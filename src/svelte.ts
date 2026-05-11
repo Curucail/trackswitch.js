@@ -11,7 +11,7 @@ import type { InteractiveTrackSwitchController, InteractiveTrackSwitchInit } fro
 export type TrackswitchSvelteVariant = 'default' | 'alignment' | 'alignment-interactive';
 
 export interface TrackswitchSvelteOptions {
-    init: TrackSwitchInit | InteractiveTrackSwitchInit;
+    config: TrackSwitchInit | InteractiveTrackSwitchInit;
     variant?: TrackswitchSvelteVariant;
     onLoaded?: (payload: TrackSwitchEventMap['loaded']) => void;
     onError?: (payload: TrackSwitchEventMap['error']) => void;
@@ -25,7 +25,7 @@ export interface TrackswitchSvelteAction {
 }
 
 type TrackswitchSvelteElement = HTMLElement & {
-    init?: TrackSwitchInit | InteractiveTrackSwitchInit;
+    config?: TrackSwitchInit | InteractiveTrackSwitchInit;
     controller?: TrackSwitchController | InteractiveTrackSwitchController | null;
 };
 
@@ -65,7 +65,7 @@ export function useTrackswitch(
     defineElementForVariant(options.variant);
 
     let currentOptions = options;
-    node.init = currentOptions.init;
+    node.config = currentOptions.config;
 
     const unsubscribers = [
         bindEvent(node, TRACKSWITCH_DOM_EVENTS.loaded, () => currentOptions.onLoaded),
@@ -78,7 +78,7 @@ export function useTrackswitch(
         update(nextOptions: TrackswitchSvelteOptions) {
             defineElementForVariant(nextOptions.variant);
             currentOptions = nextOptions;
-            node.init = nextOptions.init;
+            node.config = nextOptions.config;
         },
         destroy() {
             unsubscribers.forEach((unsubscribe) => unsubscribe());

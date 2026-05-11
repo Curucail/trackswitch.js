@@ -46,18 +46,17 @@
         <a href="https://pyodide.org">Pyodide</a>.
     </p>
 
-    <trackswitch-alignment-interactive id="player" style="display: block; width: 100%;"></trackswitch-alignment-interactive>
+    <trackswitch-alignment-interactive id="player" style="display: block; width: 100%;">
+        <script type="application/json">
+            {
+                "workerUrl": "../../src/interactive/worker/alignment-worker.ts",
+                "featureSet": "chroma_dlnco_synctoolbox",
+                "algorithm": "mrmsdtw"
+            }
+        </script>
+    </trackswitch-alignment-interactive>
 
-    <script src="../../dist/js/trackswitch-alignment-interactive.js"></script>
-    <script type="text/javascript">
-        document.addEventListener('DOMContentLoaded', function () {
-            document.getElementById('player').init = {
-                workerUrl: '../../dist/js/trackswitch-alignment-worker.js',
-                featureSet: 'chroma_dlnco_synctoolbox',
-                algorithm: 'mrmsdtw',
-            };
-        });
-    </script>
+    <script type="module" src="../../src/interactive-browser.ts"></script>
 </body>
 
 </html>

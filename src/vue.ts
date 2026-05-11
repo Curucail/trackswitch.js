@@ -33,7 +33,7 @@ function createTrackSwitchVueComponent(
     return defineComponent({
         name: componentName,
         props: {
-            init: {
+            config: {
                 type: Object as PropType<TrackSwitchInit>,
                 required: true,
             },
@@ -45,7 +45,7 @@ function createTrackSwitchVueComponent(
             trackState: (_payload: TrackSwitchEventMap['trackState']) => true,
         } satisfies TrackSwitchVueEventHandlers,
         setup(
-            props: { init: TrackSwitchInit },
+            props: { config: TrackSwitchInit },
             {
                 emit,
                 expose,
@@ -78,15 +78,15 @@ function createTrackSwitchVueComponent(
                     defineTrackswitchDefaultElement();
                 }
                 if (elementRef.value) {
-                    elementRef.value.init = props.init;
+                    elementRef.value.config = props.config;
                 }
             });
 
             watch(
-                () => props.init,
-                (nextInit) => {
+                () => props.config,
+                (nextConfig) => {
                     if (elementRef.value) {
-                        elementRef.value.init = nextInit;
+                        elementRef.value.config = nextConfig;
                     }
                 },
                 { deep: false }
@@ -142,13 +142,13 @@ export const TrackSwitchAlignmentPlayer = createTrackSwitchVueComponent(
 export const TrackSwitchAlignmentInteractive = defineComponent({
     name: 'TrackSwitchAlignmentInteractive',
     props: {
-        init: {
+        config: {
             type: Object as PropType<InteractiveTrackSwitchInit>,
             required: false,
         },
     },
     setup(
-        props: { init?: InteractiveTrackSwitchInit },
+        props: { config?: InteractiveTrackSwitchInit },
         {
             expose,
             attrs,
@@ -158,7 +158,7 @@ export const TrackSwitchAlignmentInteractive = defineComponent({
         }
     ) {
         const elementRef = ref<(HTMLElement & {
-            init?: InteractiveTrackSwitchInit;
+            config?: InteractiveTrackSwitchInit;
             controller?: InteractiveTrackSwitchController | null;
         }) | null>(null);
 
@@ -178,15 +178,15 @@ export const TrackSwitchAlignmentInteractive = defineComponent({
         onMounted(() => {
             defineTrackswitchInteractiveElement();
             if (elementRef.value) {
-                elementRef.value.init = props.init || {};
+                elementRef.value.config = props.config || {};
             }
         });
 
         watch(
-            () => props.init,
-            (nextInit) => {
+            () => props.config,
+            (nextConfig) => {
                 if (elementRef.value) {
-                    elementRef.value.init = nextInit || {};
+                    elementRef.value.config = nextConfig || {};
                 }
             },
             { deep: false }

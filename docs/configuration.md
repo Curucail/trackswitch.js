@@ -38,7 +38,7 @@ permalink: /documentation.html
 ```ts
 import { defineTrackswitchDefaultElement, type TrackSwitchInit } from 'trackswitch';
 
-const init: TrackSwitchInit = {
+const config: TrackSwitchInit = {
   ui: [
     {
       type: 'trackGroup',
@@ -53,7 +53,7 @@ const init: TrackSwitchInit = {
 };
 
 defineTrackswitchDefaultElement();
-document.querySelector('trackswitch-player')!.init = init;
+document.querySelector('trackswitch-player')!.config = config;
 ```
 
 ### In React {#in-react}
@@ -63,7 +63,7 @@ import { useMemo } from 'react';
 import { TrackSwitchPlayer, type TrackSwitchInit } from 'trackswitch/react';
 
 export function ExamplePlayer() {
-  const init = useMemo<TrackSwitchInit>(() => {
+  const config = useMemo<TrackSwitchInit>(() => {
     return {
       ui: [
         {
@@ -79,7 +79,7 @@ export function ExamplePlayer() {
     };
   }, []);
 
-  return <TrackSwitchPlayer init={init} className="trackswitch-host" />;
+  return <TrackSwitchPlayer config={config} className="trackswitch-host" />;
 }
 ```
 
@@ -92,25 +92,31 @@ Use the React entrypoint only in client components. The player itself needs the 
 ```html
 <script src="dist/js/trackswitch-player.js"></script>
 
-<trackswitch-player id="player"></trackswitch-player>
+<trackswitch-player>
+  <script type="application/json">
+    {
+      "ui": [
+        {
+          "type": "trackGroup",
+          "trackGroup": [
+            {
+              "title": "Track 1",
+              "sources": [{ "src": "track1.mp3", "type": "audio/mpeg" }]
+            }
+          ]
+        }
+      ]
+    }
+  </script>
+</trackswitch-player>
+```
 
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-  document.getElementById('player').init = {
-    ui: [
-      {
-        type: 'trackGroup',
-        trackGroup: [
-          {
-            title: 'Track 1',
-            sources: [{ src: 'track1.mp3', type: 'audio/mpeg' }],
-          },
-        ],
-      },
-    ],
-  };
-});
-</script>
+You can also load the same JSON from a separate file:
+
+```html
+<script src="dist/js/trackswitch-player.js"></script>
+
+<trackswitch-player config-src="player.json"></trackswitch-player>
 ```
 
 ## Full Options Reference {#full-options-reference}

@@ -26,93 +26,91 @@
 
 <body>
     <a class="back-link" href="/examples/">Back to examples</a>
-    <trackswitch-alignment-player id="player" style="display: block; width: 50%; margin: 0 auto;"></trackswitch-alignment-player>
-
-    <script src="../../dist/js/trackswitch-alignment-player.js"></script>
-
-    <script type="text/javascript">
-        document.addEventListener('DOMContentLoaded', function () {
-            document.getElementById('player').init = {
-                ui: [
+    <trackswitch-alignment-player id="player" style="display: block; width: 50%; margin: 0 auto;">
+        <script type="application/json">
+            {
+                "ui": [
                     {
-                        type: 'sheetMusic',
-                        src: 'data/Schubert_D911-03.xml',
-                        measureColumn: 'measure',
-                        maxHeight: 370,
-                        maxWidth: 1000,
-                        renderScale: 0.7,
-                        followPlayback: true,
-                        cursorColor: '#999999',
-                        cursorAlpha: 0.4,
+                        "type": "sheetMusic",
+                        "src": "data/Schubert_D911-03.xml",
+                        "measureColumn": "measure",
+                        "maxHeight": 370,
+                        "maxWidth": 1000,
+                        "renderScale": 0.7,
+                        "followPlayback": true,
+                        "cursorColor": "#999999",
+                        "cursorAlpha": 0.4
                     },
                     {
-                        type: 'waveform',
-                        waveformSource: 0,
-                        waveformBarWidth: 1,
-                        height: 100,
-                        timer: true,
-                        alignedPlayhead: true,
-                        showAlignmentPoints: false,
+                        "type": "waveform",
+                        "waveformSource": 0,
+                        "waveformBarWidth": 1,
+                        "height": 100,
+                        "timer": true,
+                        "alignedPlayhead": true,
+                        "showAlignmentPoints": false
                     },
                     {
-                        type: 'waveform',
-                        waveformSource: 1,
-                        waveformBarWidth: 1,
-                        height: 100,
-                        timer: true,
-                        alignedPlayhead: true,
-                        showAlignmentPoints: false,
+                        "type": "waveform",
+                        "waveformSource": 1,
+                        "waveformBarWidth": 1,
+                        "height": 100,
+                        "timer": true,
+                        "alignedPlayhead": true,
+                        "showAlignmentPoints": false
                     },
                     {
-                        type: 'warpingMatrix',
-                        height: 200,
-                        bpm: null,
+                        "type": "warpingMatrix",
+                        "height": 200,
+                        "bpm": null
                     },
                     {
-                        type: 'trackGroup',
-                        trackGroup: [
+                        "type": "trackGroup",
+                        "trackGroup": [
                             {
-                                title: 'Schubert: Winterreise, D. 911: No. 3 - HU33',
-                                sources: [{ src: 'data/Schubert_D911-03_HU33.wav' }],
-                                alignment: {
-                                    synchronizedSources: [{ src: 'data/Schubert_D911-03_HU33.wav' }],
-                                    column: 'time_HU33',
+                                "title": "Schubert: Winterreise, D. 911: No. 3 - HU33",
+                                "sources": [{ "src": "data/Schubert_D911-03_HU33.wav" }],
+                                "alignment": {
+                                    "synchronizedSources": [{ "src": "data/Schubert_D911-03_HU33.wav" }],
+                                    "column": "time_HU33"
                                 }
                             },
                             {
-                                title: 'Schubert: Winterreise, D. 911: No. 3 - SC06',
-                                sources: [{ src: 'data/Schubert_D911-03_SC06.wav'}],
-                                alignment: {
-                                    synchronizedSources: [{ src: 'data/Schubert_D911-03_SC06_syncronized.wav' }],
-                                    column: 'time_SC06',
+                                "title": "Schubert: Winterreise, D. 911: No. 3 - SC06",
+                                "sources": [{ "src": "data/Schubert_D911-03_SC06.wav" }],
+                                "alignment": {
+                                    "synchronizedSources": [{ "src": "data/Schubert_D911-03_SC06_syncronized.wav" }],
+                                    "column": "time_SC06"
                                 }
-                            },
-                        ],
-                    },
+                            }
+                        ]
+                    }
                 ],
-                alignment: {
-                    csv: 'data/alignment.csv',
-                    referenceTimeColumn: 'time_HU33',
-                    referenceTimeColumnSync: 'time_HU33',
-                    outOfRange: 'clamp',
+                "alignment": {
+                    "csv": "data/alignment.csv",
+                    "referenceTimeColumn": "time_HU33",
+                    "referenceTimeColumnSync": "time_HU33",
+                    "outOfRange": "clamp"
                 },
-                features: {
-                    repeat: false,
-                    timer: true,
-                    trackMixControls: true,
-                    seekBar: true,
-                    keyboard: true,
-                    globalVolume: true,
-                    looping: true,
-                    presets: false,
-                    customizablePanelOrder: false,
-                    tabView: false,
-                    iosAudioUnlock: true,
-                    muteOtherPlayerInstances: true,
-                },
-            };
-        });
-    </script>
+                "features": {
+                    "repeat": false,
+                    "timer": true,
+                    "trackMixControls": true,
+                    "seekBar": true,
+                    "keyboard": true,
+                    "globalVolume": true,
+                    "looping": true,
+                    "presets": false,
+                    "customizablePanelOrder": false,
+                    "tabView": false,
+                    "iosAudioUnlock": true,
+                    "muteOtherPlayerInstances": true
+                }
+            }
+        </script>
+    </trackswitch-alignment-player>
+
+    <script type="module" src="../../src/alignment-browser.ts"></script>
 </body>
 
 </html>
