@@ -26,6 +26,9 @@
 .trackswitch li.track.tabs {
 	display: inline-flex;
 	align-items: center;
+	width: max-content;
+	max-width: 100%;
+	min-width: min(100%, 13rem);
 	padding-right: 12px;
 	border: 1px solid var(--ts-color-border-mid);
 }
@@ -207,6 +210,12 @@
 	cursor: default;
 }
 
+.trackswitch li.track.tabs .track-title {
+	flex: 0 1 auto;
+	min-width: 7ch;
+	max-width: 18ch;
+}
+
 .trackswitch li.track .track-mix-controls {
 	margin-left: auto;
 	display: flex;
@@ -214,6 +223,11 @@
 	flex: 0 0 auto;
 	gap: var(--ts-track-mix-gap);
 	padding-left: var(--ts-track-mix-padding);
+}
+
+.trackswitch li.track.tabs .track-mix-controls {
+	margin-left: var(--ts-track-mix-gap);
+	padding-left: 0;
 }
 
 .trackswitch li.track .track-volume-control,
