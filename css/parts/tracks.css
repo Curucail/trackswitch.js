@@ -6,6 +6,11 @@
 	container-name: ts-tracks;
 }
 
+.trackswitch ul.track_list:has(> li.track.tabs) {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 23rem), 1fr));
+}
+
 .trackswitch li.track {
 	--ts-track-row-bg: var(--ts-color-text-muted);
 	background-color: var(--ts-track-row-bg);
@@ -26,10 +31,11 @@
 .trackswitch li.track.tabs {
 	display: inline-flex;
 	align-items: center;
-	width: max-content;
+	gap: 8px;
+	width: 100%;
 	max-width: 100%;
-	min-width: min(100%, 13rem);
-	padding-right: 12px;
+	min-width: 0;
+	padding-inline: 8px 12px;
 	border: 1px solid var(--ts-color-border-mid);
 }
 
@@ -73,6 +79,15 @@
 	transform: translateY(-50%);
 	inset-inline-start: var(--ts-track-padding-inline);
 	padding-left: 0;
+}
+
+.trackswitch li.track.tabs ul.control {
+	position: static;
+	transform: none;
+	inset-block-start: auto;
+	inset-inline-start: auto;
+	order: -1;
+	flex: 0 0 auto;
 }
 
 .trackswitch li.track ul.control li {
@@ -226,7 +241,7 @@
 }
 
 .trackswitch li.track.tabs .track-mix-controls {
-	margin-left: var(--ts-track-mix-gap);
+	margin-left: 6px;
 	padding-left: 0;
 }
 
@@ -234,6 +249,11 @@
 .trackswitch li.track .track-pan-control {
 	display: flex;
 	align-items: center;
+}
+
+.trackswitch li.track.tabs .track-volume-control,
+.trackswitch li.track.tabs .track-pan-control {
+	flex: 0 0 auto;
 }
 
 .trackswitch li.track .track-volume-icon {
@@ -256,8 +276,19 @@
 	min-width: 24px;
 }
 
+.trackswitch li.track.tabs .track-pan-label {
+	flex: 0 0 2.4em;
+	min-width: 2.4em;
+	text-align: center;
+}
+
 .trackswitch li.track .mix-slider {
 	--ts-slider-track-color: var(--ts-color-border-mid);
+}
+
+.trackswitch li.track.tabs .mix-slider {
+	flex: 0 0 72px;
+	width: 72px;
 }
 
 .trackswitch li.track .mix-slider:disabled {
