@@ -135,27 +135,12 @@
 		text-align: right;
 	}
 
-	/* In sync+loop layouts without volume/preset, keep timer top-right,
-	   then spread SYNC left and loop controls right on the next row. */
+	/* In sync+loop layouts without presets, pin loop controls left and SYNC right. */
 	.trackswitch .main-control
 		ul.control:has(> .sync-after-loop):has(> .loop-group):not(
-			:has(> .volume, > .preset-selector-wrap)
+			:has(> .preset-selector-wrap)
 		)
-		> .timing {
-		order: 20;
-		grid-column: 2;
-		justify-self: end;
-		margin-left: auto;
-		text-align: right;
-	}
-
-	.trackswitch
-		.main-control
-		ul.control:has(> .sync-after-loop):has(> .loop-group):not(
-			:has(> .volume, > .preset-selector-wrap)
-		)
-		> .sync-after-loop {
-		order: 40;
+		> .loop-group {
 		grid-column: 1;
 		justify-self: start;
 		margin: 0;
@@ -164,11 +149,12 @@
 	.trackswitch
 		.main-control
 		ul.control:has(> .sync-after-loop):has(> .loop-group):not(
-			:has(> .volume, > .preset-selector-wrap)
+			:has(> .preset-selector-wrap)
 		)
-		> .loop-group {
+		> .sync-after-loop {
 		grid-column: 2;
 		justify-self: end;
+		margin: 0;
 	}
 
 	.trackswitch .main-control .timing {
