@@ -52,6 +52,22 @@ function createRuntimes(
 	return runtimes;
 }
 
+function configsMatch(left: unknown, right: unknown): boolean {
+	return JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
+}
+
+function canReuseLoadedRuntimes(
+	controller: TrackSwitchControllerImpl,
+	config: NormalizedTrackSwitchConfig,
+): boolean {
+	return (
+		configsMatch(
+			controller.runtimes.map((runtime) => runtime.definition),
+			config.tracks,
+		) && configsMatch(controller.alignmentConfig, config.alignment)
+	);
+}
+
 function applyFeatures(
 	target: TrackSwitchFeatures,
 	source: TrackSwitchFeatures,
@@ -81,6 +97,80 @@ function resetTransientInteractionState(
 	controller.pendingWaveformTouchSeek = null;
 	controller.waveformMinimapDragState = null;
 	controller.shortcutHelpOpen = false;
+}
+
+async function applyRuntimePreservingConfig(
+	controller: TrackSwitchControllerImpl,
+	config: NormalizedTrackSwitchConfig,
+	features: TrackSwitchFeatures,
+): Promise<void> {
+	const wasPlaying = controller.state.playing;
+	const previousPosition = wasPlaying
+		? controller.currentPlaybackReferencePosition()
+		: controller.state.position;
+
+	if (wasPlaying) {
+		controller.stopAudio();
+	}
+
+	resetTransientInteractionState(controller);
+	controller.sheetMusicEngine.destroy();
+	controller.renderer.destroy();
+	controller.inputBinder.unbind();
+	applyFeatures(controller.features, features);
+
+	injectConfiguredUiElements(controller.root, config.ui);
+
+	const presetNames = controller.features.presets
+		? derivePresetNames(config)
+		: [];
+	controller.renderer.updateConfig(presetNames, config.trackGroups);
+	controller.presetCount = presetNames.length;
+	controller.effectiveSingleSoloMode = controller.isAlignmentMode()
+		? true
+		: controller.features.exclusiveSolo;
+
+	controller.renderer.initialize(controller.runtimes);
+	controller.renderer.hideOverlayOnLoaded();
+	controller.inputBinder.bind();
+	controller.longestDuration = controller.findLongestDuration();
+
+	if (controller.isAlignmentMode()) {
+		const alignmentContext = controller.alignmentContext as {
+			baseAxis: { referenceDuration: number };
+		} | null;
+		if (alignmentContext) {
+			controller.longestDuration = alignmentContext.baseAxis.referenceDuration;
+		}
+		controller.setEffectiveSoloMode(true);
+	} else if (controller.features.exclusiveSolo) {
+		controller.setEffectiveSoloMode(true);
+	}
+
+	await controller.initializeSheetMusic();
+
+	controller.state.position = clamp(
+		previousPosition,
+		0,
+		controller.longestDuration,
+	);
+	controller.audioEngine.setMasterVolume(controller.state.volume);
+
+	if (controller.presetCount > 0) {
+		controller.applyPreset(0);
+	} else {
+		controller.applyTrackProperties();
+	}
+
+	if (wasPlaying) {
+		controller.startAudio(controller.state.position);
+		controller.dispatch({ type: "set-playing", playing: true });
+	}
+
+	controller.updateMainControls();
+	controller.emit("loaded", {
+		longestDuration: controller.longestDuration,
+	});
 }
 
 function getHotReloadErrorMessage(error: unknown): string {
@@ -145,6 +235,11 @@ export async function updateConfig(
 			variant: controller.variant,
 		});
 		const nextFeatures = resolveControllerFeatures(nextConfig);
+
+		if (canReuseLoadedRuntimes(controller, nextConfig)) {
+			await applyRuntimePreservingConfig(controller, nextConfig, nextFeatures);
+			return;
+		}
 
 		const nextRuntimes = createRuntimes(nextConfig, nextFeatures);
 		stagedRuntimes = nextRuntimes;
