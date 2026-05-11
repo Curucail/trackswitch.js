@@ -659,22 +659,14 @@
 		}
 
 		function renderInteractiveQuickstartSnippet() {
-			var snippetLines = [
-				'<link rel="stylesheet" href="dist/css/trackswitch.min.css" />',
-				'<script src="dist/js/trackswitch-alignment-interactive.js"></script>',
-				"",
-				'<trackswitch-alignment-interactive id="player"></trackswitch-alignment-interactive>',
-				"",
-				"<script>",
-				"document.addEventListener('DOMContentLoaded', function () {",
-				"  document.getElementById('player').init = {",
-				"    workerUrl: 'dist/js/trackswitch-alignment-worker.js',",
-				"    algorithm: 'mrmsdtw',",
-				"  };",
-				"});",
-				"</script>",
-			];
-			var snippetText = snippetLines.join("\n");
+			var snippetText = renderDeclarativeElementSnippet(
+				"dist/js/trackswitch-alignment-interactive.js",
+				"trackswitch-alignment-interactive",
+				{
+					workerUrl: "dist/js/trackswitch-alignment-worker.js",
+					algorithm: "mrmsdtw",
+				},
+			);
 			quickstartText = snippetText;
 			if (!quickstartElement) {
 				return;
@@ -684,90 +676,76 @@
 		}
 
 		function renderDefaultQuickstartSnippet(model) {
-			var snippetLines;
+			var config;
+			var trackGroup;
+			var uiConfig = [];
 			var snippetText;
-			var waveformFollowSnippet =
-				model.waveformPlaybackFollowMode !== "off"
-					? ", playbackFollowMode: '" + model.waveformPlaybackFollowMode + "'"
-					: "";
-
-			snippetLines = [
-				'<script src="dist/js/trackswitch-player.js"></script>',
-				"",
-				'<trackswitch-player id="player"></trackswitch-player>',
-				"",
-				"<script>",
-				"document.addEventListener('DOMContentLoaded', function () {",
-				"  document.getElementById('player').init = {",
-				"    presetNames: ['All Tracks', 'Violins & Synths', 'Drums & Bass', 'Drums Only'],",
-				"    ui: [",
-			];
 
 			if (model.customImage) {
-				snippetLines.push(
-					"      { type: 'image', src: 'cover.png', seekable: " +
-						Boolean(model.seekableImage) +
-						", style: 'margin: 12px auto;' },",
-				);
+				uiConfig.push({
+					type: "image",
+					src: "cover.png",
+					seekable: Boolean(model.seekableImage),
+					style: "margin: 12px auto;",
+				});
 			}
 
 			if (model.trackImageBySolo) {
-				snippetLines.push("      { type: 'perTrackImage', seekable: true },");
+				uiConfig.push({ type: "perTrackImage", seekable: true });
 			}
 
 			if (model.text) {
-				snippetLines.push(
-					"      { type: 'text', text: 'Choose which parts of the arrangement you want to hear.', bold: true, fontSize: 18 },",
-				);
+				uiConfig.push({
+					type: "text",
+					text: "Choose which parts of the arrangement you want to hear.",
+					bold: true,
+					fontSize: 18,
+				});
 			}
 
 			if (model.waveform) {
-				snippetLines.push(
-					"      { type: 'waveform', height: 150" +
-						waveformFollowSnippet +
-						" },",
-				);
+				var waveformConfig = {
+					type: "waveform",
+					height: 150,
+				};
+				if (model.waveformPlaybackFollowMode !== "off") {
+					waveformConfig.playbackFollowMode =
+						model.waveformPlaybackFollowMode;
+				}
+				uiConfig.push(waveformConfig);
 			}
 
-			snippetLines.push(
-				"      {",
-				"        type: 'trackGroup',",
-				"        trackGroup: [",
-				"          { title: 'Violins', presets: [0, 1], image: 'violins.png', sources: [{ src: 'violins.mp3' }] },",
-				"          { title: 'Synths', presets: [0, 1], image: 'synth.png', sources: [{ src: 'synth.mp3' }] },",
-				"          { title: 'Bass', presets: [0, 2], image: 'bass.png', sources: [{ src: 'bass.mp3' }] },",
-				"          { title: 'Drums', presets: [0, 2, 3], image: 'drums.png', sources: [{ src: 'drums.mp3' }] },",
-				"        ],",
-				"      },",
+			trackGroup = createBaseTracks("").map(function (track) {
+				var normalizedTrack = Object.assign({}, track);
+				normalizedTrack.sources = track.sources.map(function (source) {
+					return { src: source.src.replace(/^\//, "") };
+				});
+				if (normalizedTrack.image) {
+					normalizedTrack.image = normalizedTrack.image.replace(/^\//, "");
+				}
+				return normalizedTrack;
+			});
+			uiConfig.push({
+				type: "trackGroup",
+				trackGroup: trackGroup,
+			});
+
+			config = {
+				presetNames: [
+					"All Tracks",
+					"Violins & Synths",
+					"Drums & Bass",
+					"Drums Only",
+				],
+				ui: uiConfig,
+				features: buildSnippetFeatures(model),
+			};
+
+			snippetText = renderDeclarativeElementSnippet(
+				"dist/js/trackswitch-player.js",
+				"trackswitch-player",
+				config,
 			);
-
-			snippetLines = snippetLines.concat([
-				"    ],",
-				"    features: {",
-				"      looping: " + Boolean(model.looping) + ",",
-				"      repeat: " + Boolean(model.repeatEnabled) + ",",
-				"      globalVolume: " + Boolean(model.globalVolume) + ",",
-				"      muteOtherPlayerInstances: " +
-					Boolean(model.muteOtherPlayerInstances) +
-					",",
-				"      trackMixControls: " + Boolean(model.trackMixControls) + ",",
-				"      customizablePanelOrder: " +
-					Boolean(model.customizablePanelOrder) +
-					",",
-				"      presets: " + Boolean(model.presets) + ",",
-				"      seekBar: " + Boolean(model.seekBar) + ",",
-				"      timer: " + Boolean(model.timer) + ",",
-				"      keyboard: " + Boolean(model.keyboard) + ",",
-				"      exclusiveSolo: " + Boolean(model.exclusiveSolo) + ",",
-				"      tabView: " + Boolean(model.tabView) + ",",
-				"      iosAudioUnlock: " + Boolean(model.iosAudioUnlock) + ",",
-				"    },",
-				"  };",
-				"});",
-				"</script>",
-			]);
-
-			snippetText = snippetLines.join("\n");
 			quickstartText = snippetText;
 			if (!quickstartElement) {
 				return;
@@ -777,144 +755,147 @@
 		}
 
 		function renderAlignmentQuickstartSnippet(model) {
-			var snippetLines;
+			var config;
+			var uiConfig = [];
+			var trackGroup;
 			var snippetText;
-			var waveformFollowSnippet =
-				model.waveformPlaybackFollowMode !== "off"
-					? ", playbackFollowMode: '" + model.waveformPlaybackFollowMode + "'"
-					: "";
-
-			snippetLines = [
-				'<script src="dist/js/trackswitch-alignment-player.js"></script>',
-				"",
-				'<trackswitch-alignment-player id="player"></trackswitch-alignment-player>',
-				"",
-				"<script>",
-				"document.addEventListener('DOMContentLoaded', function () {",
-				"  document.getElementById('player').init = {",
-				"    alignment: {",
-				"      csv: 'alignment.csv',",
-				"      referenceTimeColumn: 'time_score',",
-				"      referenceTimeColumnSync: 'time_HU33',",
-				"      outOfRange: 'clamp',",
-				"    },",
-				"    ui: [",
-			];
 
 			if (model.sheetNotePreview) {
-				snippetLines.push(
-					"      {",
-					"        type: 'sheetMusic',",
-					"        src: 'Schubert_D911-03.xml',",
-					"        measureColumn: 'measure',",
-					"        maxHeight: 370,",
-					"        renderScale: 0.65,",
-					"        followPlayback: true,",
-					"        cursorColor: '#999999',",
-					"        cursorAlpha: 0.4,",
-					"        style: 'margin: 0px;',",
-					"      },",
-				);
+				uiConfig.push({
+					type: "sheetMusic",
+					src: "Schubert_D911-03.xml",
+					measureColumn: "measure",
+					maxHeight: 370,
+					renderScale: 0.65,
+					followPlayback: true,
+					cursorColor: "#999999",
+					cursorAlpha: 0.4,
+					style: "margin: 0px;",
+				});
 			}
 
 			if (model.text) {
-				snippetLines.push(
-					"      { type: 'text', text: 'Compare aligned performances on the shared score timeline.', bold: true, fontSize: 18 },",
-				);
+				uiConfig.push({
+					type: "text",
+					text: "Compare aligned performances on the shared score timeline.",
+					bold: true,
+					fontSize: 18,
+				});
 			}
 
 			if (model.waveform) {
-				var alignedPlayheadSnippet = model.alignedPlayhead
-					? ", alignedPlayhead: true"
-					: "";
-				var showAlignmentPointsSnippet = model.showAlignmentPoints
-					? ", showAlignmentPoints: true"
-					: "";
-				snippetLines.push(
-					"      { type: 'waveform', height: 100, waveformSource: 0" +
-						waveformFollowSnippet +
-						alignedPlayheadSnippet +
-						showAlignmentPointsSnippet +
-						" },",
-				);
-				snippetLines.push(
-					"      { type: 'waveform', height: 100, waveformSource: 1" +
-						waveformFollowSnippet +
-						alignedPlayheadSnippet +
-						showAlignmentPointsSnippet +
-						" },",
-				);
+				var waveformOne = { type: "waveform", height: 100, waveformSource: 0 };
+				var waveformTwo = { type: "waveform", height: 100, waveformSource: 1 };
+				if (model.waveformPlaybackFollowMode !== "off") {
+					waveformOne.playbackFollowMode = model.waveformPlaybackFollowMode;
+					waveformTwo.playbackFollowMode = model.waveformPlaybackFollowMode;
+				}
+				if (model.alignedPlayhead) {
+					waveformOne.alignedPlayhead = true;
+					waveformTwo.alignedPlayhead = true;
+				}
+				if (model.showAlignmentPoints) {
+					waveformOne.showAlignmentPoints = true;
+					waveformTwo.showAlignmentPoints = true;
+				}
+				uiConfig.push(waveformOne);
+				uiConfig.push(waveformTwo);
 			}
 
 			if (model.warpingMatrix) {
-				snippetLines.push(
-					"      { type: 'warpingMatrix', height: 200, bpm: " +
-						(model.sheetMusic ? "'infer_score'" : "null") +
-						" },",
-				);
+				uiConfig.push({
+					type: "warpingMatrix",
+					height: 200,
+					bpm: model.sheetNotePreview ? "infer_score" : null,
+				});
 			}
 
 			if (model.trackImageBySolo) {
-				snippetLines.push("      { type: 'perTrackImage', seekable: true },");
+				uiConfig.push({ type: "perTrackImage", seekable: true });
 			}
 
-			snippetLines.push(
-				"      {",
-				"        type: 'trackGroup',",
-				"        trackGroup: [",
-				"          {",
-				"            title: 'SC06',",
-				"            sources: [{ src: 'Schubert_D911-03_SC06.wav' }],",
-				"            alignment: {",
-				"              column: 'time_HU33',",
-				"              synchronizedSources: [{ src: 'Schubert_D911-03_SC06_syncronized.wav' }],",
-				"            },",
-				"          },",
-				"          {",
-				"            title: 'HU33',",
-				"            sources: [{ src: 'Schubert_D911-03_HU33.wav' }],",
-				"            alignment: {",
-				"              column: 'time_SC06',",
-				"              synchronizedSources: [{ src: 'Schubert_D911-03_HU33.wav' }],",
-				"            },",
-				"          },",
-				"        ],",
-				"      },",
+			trackGroup = [
+				{
+					title: "SC06",
+					sources: [{ src: "Schubert_D911-03_SC06.wav" }],
+					alignment: {
+						column: "time_HU33",
+						synchronizedSources: [
+							{ src: "Schubert_D911-03_SC06_syncronized.wav" },
+						],
+					},
+				},
+				{
+					title: "HU33",
+					sources: [{ src: "Schubert_D911-03_HU33.wav" }],
+					alignment: {
+						column: "time_SC06",
+						synchronizedSources: [{ src: "Schubert_D911-03_HU33.wav" }],
+					},
+				},
+			];
+			uiConfig.push({
+				type: "trackGroup",
+				trackGroup: trackGroup,
+			});
+
+			config = {
+				alignment: {
+					csv: "alignment.csv",
+					referenceTimeColumn: "time_score",
+					referenceTimeColumnSync: "time_HU33",
+					outOfRange: "clamp",
+				},
+				ui: uiConfig,
+				features: buildSnippetFeatures(model),
+			};
+
+			snippetText = renderDeclarativeElementSnippet(
+				"dist/js/trackswitch-alignment-player.js",
+				"trackswitch-alignment-player",
+				config,
 			);
-
-			snippetLines = snippetLines.concat([
-				"    ],",
-				"    features: {",
-				"      looping: " + Boolean(model.looping) + ",",
-				"      repeat: " + Boolean(model.repeatEnabled) + ",",
-				"      globalVolume: " + Boolean(model.globalVolume) + ",",
-				"      muteOtherPlayerInstances: " +
-					Boolean(model.muteOtherPlayerInstances) +
-					",",
-				"      trackMixControls: " + Boolean(model.trackMixControls) + ",",
-				"      customizablePanelOrder: " +
-					Boolean(model.customizablePanelOrder) +
-					",",
-				"      presets: " + Boolean(model.presets) + ",",
-				"      seekBar: " + Boolean(model.seekBar) + ",",
-				"      timer: " + Boolean(model.timer) + ",",
-				"      keyboard: " + Boolean(model.keyboard) + ",",
-				"      exclusiveSolo: " + Boolean(model.exclusiveSolo) + ",",
-				"      tabView: " + Boolean(model.tabView) + ",",
-				"      iosAudioUnlock: " + Boolean(model.iosAudioUnlock) + ",",
-				"    },",
-				"  };",
-				"});",
-				"</script>",
-			]);
-
-			snippetText = snippetLines.join("\n");
 			quickstartText = snippetText;
 			if (!quickstartElement) {
 				return;
 			}
 			quickstartElement.innerHTML = highlightSnippet(snippetText);
 			quickstartElement.className = "language-html";
+		}
+
+		function buildSnippetFeatures(model) {
+			return {
+				looping: Boolean(model.looping),
+				repeat: Boolean(model.repeatEnabled),
+				globalVolume: Boolean(model.globalVolume),
+				muteOtherPlayerInstances: Boolean(model.muteOtherPlayerInstances),
+				trackMixControls: Boolean(model.trackMixControls),
+				customizablePanelOrder: Boolean(model.customizablePanelOrder),
+				presets: Boolean(model.presets),
+				seekBar: Boolean(model.seekBar),
+				timer: Boolean(model.timer),
+				keyboard: Boolean(model.keyboard),
+				exclusiveSolo: Boolean(model.exclusiveSolo),
+				tabView: Boolean(model.tabView),
+				iosAudioUnlock: Boolean(model.iosAudioUnlock),
+			};
+		}
+
+		function renderDeclarativeElementSnippet(scriptSrc, tagName, config) {
+			return [
+				'<script src="' + scriptSrc + '"></script>',
+				"",
+				"<" + tagName + ' id="player">',
+				'  <script type="application/json">',
+				JSON.stringify(config, null, 2)
+					.split("\n")
+					.map(function (line) {
+						return "  " + line;
+					})
+					.join("\n"),
+				"  </script>",
+				"</" + tagName + ">",
+			].join("\n");
 		}
 
 		function applyModeModel(mode) {
