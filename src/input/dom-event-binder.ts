@@ -133,14 +133,14 @@ export class InputBinder {
 		);
 	}
 
-	private blurFocusedManagedControl(): void {
+	private blurFocusedManagedControl(requireWithinRoot = true): void {
 		const activeElement = getDeepActiveElement(this.root);
 		if (!(activeElement instanceof HTMLElement)) {
 			return;
 		}
 
 		if (
-			!this.root.contains(activeElement) ||
+			(requireWithinRoot && !this.root.contains(activeElement)) ||
 			!this.isManagedFormControl(activeElement)
 		) {
 			return;
@@ -290,7 +290,7 @@ export class InputBinder {
 		const activateKeyboard = (event: Event) => {
 			this.controller.setKeyboardActive();
 			if (!this.isManagedFormControl(event.target)) {
-				this.blurFocusedManagedControl();
+				this.blurFocusedManagedControl(false);
 			}
 		};
 		const keyboardActivationOptions = {
