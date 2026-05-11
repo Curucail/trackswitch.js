@@ -99,7 +99,36 @@ function resetTransientInteractionState(
 	controller.shortcutHelpOpen = false;
 }
 
-async function applyRuntimePreservingConfig(
+function restoreAudioPreservingState(
+	controller: TrackSwitchControllerImpl,
+	previousPosition: number,
+	wasPlaying: boolean,
+): void {
+	controller.state.position = clamp(
+		previousPosition,
+		0,
+		controller.longestDuration,
+	);
+	controller.audioEngine.setMasterVolume(controller.state.volume);
+
+	if (controller.presetCount > 0) {
+		controller.applyPreset(0);
+	} else {
+		controller.applyTrackProperties();
+	}
+
+	if (wasPlaying) {
+		controller.startAudio(controller.state.position);
+		controller.dispatch({ type: "set-playing", playing: true });
+	}
+
+	controller.updateMainControls();
+	controller.emit("loaded", {
+		longestDuration: controller.longestDuration,
+	});
+}
+
+async function applyAudioPreservingConfig(
 	controller: TrackSwitchControllerImpl,
 	config: NormalizedTrackSwitchConfig,
 	features: TrackSwitchFeatures,
@@ -147,30 +176,9 @@ async function applyRuntimePreservingConfig(
 		controller.setEffectiveSoloMode(true);
 	}
 
+	restoreAudioPreservingState(controller, previousPosition, wasPlaying);
 	await controller.initializeSheetMusic();
-
-	controller.state.position = clamp(
-		previousPosition,
-		0,
-		controller.longestDuration,
-	);
-	controller.audioEngine.setMasterVolume(controller.state.volume);
-
-	if (controller.presetCount > 0) {
-		controller.applyPreset(0);
-	} else {
-		controller.applyTrackProperties();
-	}
-
-	if (wasPlaying) {
-		controller.startAudio(controller.state.position);
-		controller.dispatch({ type: "set-playing", playing: true });
-	}
-
 	controller.updateMainControls();
-	controller.emit("loaded", {
-		longestDuration: controller.longestDuration,
-	});
 }
 
 function getHotReloadErrorMessage(error: unknown): string {
@@ -214,7 +222,7 @@ async function buildStagedAlignmentContext(
 	}
 }
 
-export async function updateConfig(
+async function updateConfigNow(
 	controller: TrackSwitchControllerImpl,
 	nextInit: TrackSwitchInit,
 ): Promise<void> {
@@ -237,7 +245,7 @@ export async function updateConfig(
 		const nextFeatures = resolveControllerFeatures(nextConfig);
 
 		if (canReuseLoadedRuntimes(controller, nextConfig)) {
-			await applyRuntimePreservingConfig(controller, nextConfig, nextFeatures);
+			await applyAudioPreservingConfig(controller, nextConfig, nextFeatures);
 			return;
 		}
 
@@ -393,5 +401,33 @@ export async function updateConfig(
 		const message = getHotReloadErrorMessage(error);
 		controller.emit("error", { message });
 		throw error instanceof Error ? error : new Error(message);
+	}
+}
+
+const configUpdateQueues = new WeakMap<
+	TrackSwitchControllerImpl,
+	Promise<void>
+>();
+
+export async function updateConfig(
+	controller: TrackSwitchControllerImpl,
+	nextInit: TrackSwitchInit,
+): Promise<void> {
+	const previousUpdate =
+		configUpdateQueues.get(controller) || Promise.resolve();
+	const nextUpdate = previousUpdate
+		.catch(() => {
+			// Keep later config updates from being blocked by an earlier failure.
+		})
+		.then(() => updateConfigNow(controller, nextInit));
+
+	configUpdateQueues.set(controller, nextUpdate);
+
+	try {
+		await nextUpdate;
+	} finally {
+		if (configUpdateQueues.get(controller) === nextUpdate) {
+			configUpdateQueues.delete(controller);
+		}
 	}
 }

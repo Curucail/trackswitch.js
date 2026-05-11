@@ -1,5 +1,5 @@
-import stylesheetText from "../../css/trackswitch.css?inline";
 import { loadElementConfig } from "../config/element-config";
+import stylesheetText from "../css/trackswitch.css?inline";
 import { createAlignmentInteractiveTrackSwitch } from "./interactive-factory";
 import type {
 	InteractiveTrackSwitchController,
