@@ -37,8 +37,8 @@ export const docsAssets = [
 		docs: "docs/js/trackswitch-alignment-interactive.js",
 	},
 	{
-		source: "dist/js/trackswitch-alignment-worker.js",
-		docs: "docs/js/trackswitch-alignment-worker.js",
+		source: "dist/js/trackswitch-interactive-worker.js",
+		docs: "docs/js/trackswitch-interactive-worker.js",
 	},
 	...pythonRuntimeAssets.map(({ dist, docs }) => ({
 		source: dist,

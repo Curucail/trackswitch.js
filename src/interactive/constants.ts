@@ -8,4 +8,4 @@ export const SAMPLE_RATE = 22050;
 export const PYODIDE_CDN_URL = "https://cdn.jsdelivr.net/pyodide/v0.29.3/full/";
 
 /** Default alignment worker script path (relative). */
-export const DEFAULT_WORKER_URL = "trackswitch-alignment-worker.js";
+export const DEFAULT_WORKER_URL = "trackswitch-interactive-worker.js";

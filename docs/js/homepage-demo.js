@@ -223,7 +223,7 @@
 			playerRoot.getAttribute("data-ts-alignment-base") || "assets/alignment";
 		interactiveWorkerPath =
 			playerRoot.getAttribute("data-ts-interactive-worker") ||
-			"js/trackswitch-alignment-worker.js";
+			"js/trackswitch-interactive-worker.js";
 
 		modeButtons = Array.prototype.slice.call(
 			controlsRoot.querySelectorAll("[data-ts-mode-button]"),
@@ -669,7 +669,7 @@
 				"dist/js/trackswitch-alignment-interactive.js",
 				"trackswitch-alignment-interactive",
 				{
-					workerUrl: "dist/js/trackswitch-alignment-worker.js",
+					workerUrl: "dist/js/trackswitch-interactive-worker.js",
 					algorithm: "mrmsdtw",
 				},
 			);

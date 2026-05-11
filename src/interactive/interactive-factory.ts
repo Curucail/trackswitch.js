@@ -21,7 +21,7 @@ import type {
  *
  * const player = createAlignmentInteractiveTrackSwitch(
  *   document.getElementById('player')!,
- *   { workerUrl: './trackswitch-alignment-worker.js' }
+ *   { workerUrl: './trackswitch-interactive-worker.js' }
  * );
  * player.initialize();
  * ```

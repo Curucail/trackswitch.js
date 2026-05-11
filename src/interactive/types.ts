@@ -76,7 +76,7 @@ export interface InteractiveState {
 }
 
 export interface InteractiveTrackSwitchInit {
-	/** URL to the alignment worker script. Defaults to relative `trackswitch-alignment-worker.js`. */
+	/** URL to the alignment worker script. Defaults to relative `trackswitch-interactive-worker.js`. */
 	workerUrl?: string;
 	/** Pyodide CDN index URL override. */
 	pyodideCdnUrl?: string;

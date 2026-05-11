@@ -123,7 +123,7 @@ const buildTargets = {
 				entry: resolve(rootDir, "src/interactive/worker/alignment-worker.ts"),
 				name: "TrackSwitchAlignmentWorker",
 				formats: ["iife"],
-				fileName: () => "trackswitch-alignment-worker.js",
+				fileName: () => "trackswitch-interactive-worker.js",
 			},
 			rollupOptions: {
 				output: iifeOutput,

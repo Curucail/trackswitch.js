@@ -14,6 +14,7 @@ docs/js/trackswitch-player.js
 docs/js/trackswitch-alignment-player.js
 docs/js/trackswitch-alignment-interactive.js
 docs/js/trackswitch-alignment-worker.js
+docs/js/trackswitch-interactive-worker.js
 docs/js/synctoolbox-*.whl
 docs/js/libtsm-*.whl
 docs/js/basic-pitch/

@@ -48,7 +48,7 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
           id="ts-showcase-player"
           data-ts-default-base="{{ '/assets/multitracks' | relative_url }}"
           data-ts-alignment-base="{{ '/assets/alignment' | relative_url }}"
-          data-ts-interactive-worker="{{ '/js/trackswitch-alignment-worker.js' | relative_url }}"
+          data-ts-interactive-worker="{{ '/js/trackswitch-interactive-worker.js' | relative_url }}"
         ></div>
       </div>
     </div>
