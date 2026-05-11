@@ -235,8 +235,8 @@ export class TrackSwitchControllerImpl
 		return controllerPlayback.load(this);
 	}
 
-	async updateInit(nextInit: TrackSwitchInit): Promise<void> {
-		return controllerHotReload.updateInit(this, nextInit);
+	async updateConfig(nextConfig: TrackSwitchInit): Promise<void> {
+		return controllerHotReload.updateConfig(this, nextConfig);
 	}
 
 	destroy(): void {

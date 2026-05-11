@@ -166,7 +166,7 @@ export abstract class TrackswitchPlayerBase
 				) {
 					return;
 				}
-				await controller.updateInit(this.currentConfig);
+				await controller.updateConfig(this.currentConfig);
 				return;
 			} catch (_error) {
 				if (!this.isConnected || !this.currentConfig) {

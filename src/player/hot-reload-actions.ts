@@ -24,14 +24,6 @@ function resolveControllerFeatures(
 	return features;
 }
 
-function featuresEqual(
-	left: TrackSwitchFeatures,
-	right: TrackSwitchFeatures,
-): boolean {
-	const leftKeys = Object.keys(left) as Array<keyof TrackSwitchFeatures>;
-	return leftKeys.every((key) => left[key] === right[key]);
-}
-
 function createRuntimes(
 	config: NormalizedTrackSwitchConfig,
 	features: TrackSwitchFeatures,
@@ -58,6 +50,15 @@ function createRuntimes(
 	}
 
 	return runtimes;
+}
+
+function applyFeatures(
+	target: TrackSwitchFeatures,
+	source: TrackSwitchFeatures,
+): void {
+	(Object.keys(source) as Array<keyof TrackSwitchFeatures>).forEach((key) => {
+		target[key] = source[key];
+	});
 }
 
 function resetTransientInteractionState(
@@ -123,7 +124,7 @@ async function buildStagedAlignmentContext(
 	}
 }
 
-export async function updateInit(
+export async function updateConfig(
 	controller: TrackSwitchControllerImpl,
 	nextInit: TrackSwitchInit,
 ): Promise<void> {
@@ -144,13 +145,8 @@ export async function updateInit(
 			variant: controller.variant,
 		});
 		const nextFeatures = resolveControllerFeatures(nextConfig);
-		if (!featuresEqual(controller.features, nextFeatures)) {
-			throw new Error(
-				"TrackSwitch hot reload does not support changing features; recreate the player instead.",
-			);
-		}
 
-		const nextRuntimes = createRuntimes(nextConfig, controller.features);
+		const nextRuntimes = createRuntimes(nextConfig, nextFeatures);
 		stagedRuntimes = nextRuntimes;
 		await controller.audioEngine.loadTracks(nextRuntimes);
 
@@ -202,6 +198,8 @@ export async function updateInit(
 		resetTransientInteractionState(controller);
 		controller.sheetMusicEngine.destroy();
 		controller.renderer.destroy();
+		controller.inputBinder.unbind();
+		applyFeatures(controller.features, nextFeatures);
 
 		injectConfiguredUiElements(controller.root, nextConfig.ui);
 
@@ -231,6 +229,7 @@ export async function updateInit(
 
 		controller.renderer.initialize(controller.runtimes);
 		controller.renderer.hideOverlayOnLoaded();
+		controller.inputBinder.bind();
 		controller.longestDuration = controller.findLongestDuration();
 
 		if (controller.isAlignmentMode()) {

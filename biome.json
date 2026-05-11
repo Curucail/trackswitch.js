@@ -1,6 +1,12 @@
 {
 	"$schema": "https://biomejs.dev/schemas/2.4.15/schema.json",
 	"files": {
-		"includes": ["**", "!!dist", "!!docs/js", "!!docs/_layouts"]
+		"includes": [
+			"**",
+			"!!dist",
+			"!!docs/js",
+			"!!docs/css/trackswitch.min.css",
+			"!!docs/_layouts"
+		]
 	}
 }

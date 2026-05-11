@@ -901,6 +901,12 @@ kbd {
 	font-weight: 600;
 }
 
+.ts-showcase__snippet-panel .ts-code-number,
+.ts-showcase__snippet-panel .ts-code-null {
+	color: var(--ts-doc-color-accent);
+	font-weight: 600;
+}
+
 .ts-showcase.is-snippet-preview-visible .ts-showcase__snippet-panel {
 	opacity: 1;
 	visibility: visible;

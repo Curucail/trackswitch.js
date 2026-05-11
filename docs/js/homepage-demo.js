@@ -193,6 +193,7 @@
 		var currentMode = MODE_DEFAULT;
 		var modelByMode;
 		var controller = null;
+		var controllerMode = null;
 		var rebuildDebounceTimer = null;
 		var rebuildToken = 0;
 		var quickstartText = "";
@@ -925,13 +926,23 @@
 		}
 
 		function highlightSnippet(source) {
-			var escaped = escapeHtml(source);
+			return source
+				.split("\n")
+				.map(function (line) {
+					var escaped = escapeHtml(line);
+					return /^\s*&lt;/.test(escaped)
+						? highlightHtmlLine(escaped)
+						: highlightJsonLine(escaped);
+				})
+				.join("\n");
+		}
 
-			escaped = escaped.replace(
+		function highlightHtmlLine(escapedLine) {
+			return escapedLine.replace(
 				/(&lt;\/?)([a-zA-Z0-9-]+)([^&]*?)(\/?&gt;)/g,
 				function (_, open, tag, attrs, close) {
 					var highlightedAttrs = attrs.replace(
-						/([a-zA-Z-:]+)(=)(&quot;[^"]*&quot;|'[^']*')/g,
+						/([a-zA-Z-:]+)(=)("[^"]*"|'[^']*')/g,
 						'<span class="ts-code-attr">$1</span>$2<span class="ts-code-string">$3</span>',
 					);
 					return (
@@ -944,25 +955,45 @@
 					);
 				},
 			);
+		}
 
-			escaped = escaped.replace(
-				/(&quot;[^"]*&quot;|'[^']*')/g,
-				'<span class="ts-code-string">$1</span>',
+		function highlightJsonLine(escapedLine) {
+			var placeholders = [];
+			var highlighted = escapedLine;
+			var stash = function (html) {
+				var token = "\ue000" + String.fromCharCode(0xe100 + placeholders.length);
+				placeholders.push(html);
+				return token;
+			};
+
+			highlighted = highlighted.replace(
+				/("(?:\\.|[^"\\])*")(\s*:)/g,
+				function (_, key, suffix) {
+					return stash('<span class="ts-code-key">' + key + "</span>") + suffix;
+				},
 			);
-			escaped = escaped.replace(
+			highlighted = highlighted.replace(
+				/"(?:\\.|[^"\\])*"/g,
+				function (value) {
+					return stash('<span class="ts-code-string">' + value + "</span>");
+				},
+			);
+			highlighted = highlighted.replace(
 				/\b(true|false)\b/g,
 				'<span class="ts-code-bool">$1</span>',
 			);
-			escaped = escaped.replace(
-				/\b(document|TrackSwitch|function|addEventListener|getElementById|createDefaultTrackSwitch|createAlignmentTrackSwitch|createAlignmentInteractiveTrackSwitch|createInteractiveTrackSwitch)\b/g,
-				'<span class="ts-code-keyword">$1</span>',
+			highlighted = highlighted.replace(
+				/\bnull\b/g,
+				'<span class="ts-code-null">null</span>',
 			);
-			escaped = escaped.replace(
-				/\b([a-zA-Z_$][a-zA-Z0-9_$]*)\b(?=\s*:)/g,
-				'<span class="ts-code-key">$1</span>',
+			highlighted = highlighted.replace(
+				/(-?\b\d+(?:\.\d+)?\b)/g,
+				'<span class="ts-code-number">$1</span>',
 			);
 
-			return escaped;
+			return highlighted.replace(/\ue000([\ue100-\ue1ff])/g, function (_, code) {
+				return placeholders[code.charCodeAt(0) - 0xe100];
+			});
 		}
 
 		function copyTextToClipboard(value) {
@@ -1231,10 +1262,7 @@
 			}
 		}
 
-		function rebuildPlayer(options) {
-			var preserveState = !options || options.preserveState !== false;
-			var model = normalizeAndSyncControls();
-			var snapshot = preserveState ? snapshotControllerState(controller) : null;
+		function createPlayer(model, snapshot) {
 			var currentToken;
 			var loadPromise;
 
@@ -1249,6 +1277,7 @@
 						playerRoot,
 						buildInitFromModel(model),
 					);
+				controllerMode = currentMode;
 				controller.initialize();
 				scheduleGuideArrowUpdate();
 				return;
@@ -1265,6 +1294,7 @@
 					buildInitFromModel(model),
 				);
 			}
+			controllerMode = currentMode;
 			controller.setRepeat(Boolean(model.repeatEnabled));
 			scheduleGuideArrowUpdate();
 
@@ -1289,6 +1319,54 @@
 					if (currentToken !== rebuildToken) {
 						return;
 					}
+				});
+		}
+
+		function canHotReloadPlayer() {
+			return (
+				controller &&
+				controllerMode === currentMode &&
+				!isInteractiveMode(currentMode) &&
+				typeof controller.updateConfig === "function"
+			);
+		}
+
+		function rebuildPlayer(options) {
+			var preserveState = !options || options.preserveState !== false;
+			var hotReload = preserveState && (!options || options.hotReload !== false);
+			var model = normalizeAndSyncControls();
+			var snapshot = preserveState ? snapshotControllerState(controller) : null;
+			var currentToken;
+			var updatePromise;
+
+			if (!hotReload || !canHotReloadPlayer()) {
+				createPlayer(model, snapshot);
+				return;
+			}
+
+			currentToken = rebuildToken + 1;
+			rebuildToken = currentToken;
+			updatePromise = controller.updateConfig(buildInitFromModel(model));
+
+			if (!updatePromise || typeof updatePromise.then !== "function") {
+				controller.setRepeat(Boolean(model.repeatEnabled));
+				scheduleGuideArrowUpdate();
+				return;
+			}
+
+			updatePromise
+				.then(function () {
+					if (currentToken !== rebuildToken) {
+						return;
+					}
+					controller.setRepeat(Boolean(model.repeatEnabled));
+					scheduleGuideArrowUpdate();
+				})
+				.catch(function () {
+					if (currentToken !== rebuildToken) {
+						return;
+					}
+					createPlayer(model, snapshot);
 				});
 		}
 
