@@ -1,19 +1,23 @@
 .trackswitch.trackswitch {
 	--ts-control-size-xs: 16px;
-	--ts-control-size-sm: 22px;
+	--ts-control-size-sm: 28px;
 	--ts-control-size-md: 24px;
 	--ts-control-size-lg: 28px;
-	--ts-preset-selector-height: 24px;
+	--ts-preset-selector-height: 22px;
 	--ts-control-gap-sm: 6px;
 	--ts-control-gap-md: 10px;
 	--ts-control-gap-lg: 16px;
 
-	--ts-main-control-height: 28px;
-	--ts-main-control-row-height: var(--ts-main-seek-hit-height);
-	--ts-main-control-padding-block: 4px;
+	--ts-main-control-height: 24px;
+	--ts-main-control-row-height: max(
+		var(--ts-main-seek-hit-height),
+		var(--ts-control-size-sm)
+	);
+	--ts-main-control-padding-block-start: 4px;
+	--ts-main-control-padding-block-end: 4px;
 	--ts-main-control-padding-inline: 12px;
-	--ts-main-control-gap-row: 6px;
-	--ts-main-control-gap-column: 16px;
+	--ts-main-control-row-gap: 8px;
+	--ts-main-control-column-gap: 14px;
 
 	--ts-track-min-height: 32px;
 	--ts-track-padding-block: 8px;
@@ -24,10 +28,10 @@
 	--ts-track-mix-padding: 14px;
 
 	--ts-seekbar-height: 6px;
-	--ts-main-seek-hit-height: 28px;
+	--ts-main-seek-hit-height: 20px;
 	--ts-main-seekhead-width: 5px;
 	--ts-main-seekhead-half-width: 2.5px;
-	--ts-main-seekhead-height: 22px;
+	--ts-main-seekhead-height: 20px;
 	--ts-seek-marker-hit-width: 10px;
 	--ts-seek-marker-line-width: 2px;
 	--ts-seek-marker-dash: 6px;
