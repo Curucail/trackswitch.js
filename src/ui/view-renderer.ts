@@ -13,6 +13,7 @@ import type {
 	WaveformEngine,
 } from "../engine/waveform-engine";
 import * as viewRendererCore from "./render-layout";
+import * as viewRendererSeek from "./render-seek";
 import * as viewRendererWaveform from "./render-waveforms";
 
 type SvgSelection = Selection<SVGSVGElement, unknown, null, undefined>;
@@ -954,12 +955,16 @@ export class ViewRenderer {
 		duration: number,
 		loop: { pointA: number | null; pointB: number | null; enabled: boolean },
 	): void {
-		viewRendererWaveform.updateSeekWrapVisuals(
-			this,
+		if (!(seekWrap instanceof HTMLElement)) {
+			return;
+		}
+
+		viewRendererSeek.updateSeekWrapVisuals(
 			seekWrap,
 			position,
 			duration,
 			loop,
+			this.features.looping,
 		);
 	}
 

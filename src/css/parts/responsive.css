@@ -237,12 +237,8 @@
 }
 
 @media (max-width: 767px) {
-	.trackswitch .main-control .control li.button .ts-icon-slot {
-		font-size: 20px;
-	}
-
-	.trackswitch .main-control .playback-group > .playback-controls {
-		gap: 16px;
+	.trackswitch.trackswitch {
+		--ts-main-control-playback-gap: 16px;
 	}
 
 	.trackswitch .main-control .sync-global {
@@ -296,10 +292,9 @@
 }
 
 @media (max-width: 500px) {
-	.trackswitch .main-control .playback-group > .playback-controls {
-		gap: 20px;
+	.trackswitch.trackswitch {
+		--ts-main-control-playback-gap: 20px;
 	}
-
 }
 
 @media (max-width: 767px) {

@@ -75,11 +75,23 @@
 .trackswitch .main-control .playback-group > .playback-controls {
 	display: flex;
 	align-items: center;
-	gap: var(--ts-control-gap-md);
+	gap: var(--ts-main-control-playback-gap);
 }
 
 .trackswitch .main-control .playback-group > .playback-controls > li.button {
+	width: var(--ts-main-control-icon-size);
+	height: var(--ts-main-control-icon-size);
 	margin: 0;
+}
+
+.trackswitch
+	.main-control
+	.playback-group
+	> .playback-controls
+	> li.button
+	.ts-icon-slot,
+.trackswitch .main-control .settings-button .ts-icon-slot {
+	font-size: var(--ts-main-control-icon-size);
 }
 
 .trackswitch
@@ -93,9 +105,12 @@
 
 /* Generic button styles within main-control */
 .trackswitch .main-control .button {
-	width: var(--ts-main-control-button-size);
-	height: var(--ts-main-control-button-size);
 	cursor: pointer;
+}
+
+.trackswitch .main-control .settings-button {
+	width: var(--ts-main-control-icon-size);
+	height: var(--ts-main-control-icon-size);
 }
 
 .trackswitch .main-control .sync-global {
