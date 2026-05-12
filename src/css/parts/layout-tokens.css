@@ -13,7 +13,7 @@
 	--ts-main-control-padding-inline: 12px;
 	--ts-main-control-row-gap: 8px;
 	--ts-main-control-column-gap: 14px;
-	--ts-main-control-playback-gap: 14px;
+	--ts-main-control-playback-gap: 10px;
 
 	--ts-track-min-height: 32px;
 	--ts-track-padding-block: 8px;

@@ -94,15 +94,6 @@
 	font-size: var(--ts-main-control-icon-size);
 }
 
-.trackswitch
-	.main-control
-	.playback-group
-	> .playback-controls
-	> li.repeat
-	.ts-icon-svg {
-	transform: scale(0.9);
-}
-
 /* Generic button styles within main-control */
 .trackswitch .main-control .button {
 	cursor: pointer;
