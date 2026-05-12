@@ -54,12 +54,11 @@ function setMainSeekbarPlayheadPosition(
 ): void {
 	const seekheadWidth = seekhead.offsetWidth;
 	const seekbarWidth = seekbar.clientWidth;
-	const scaledSeekheadCenter =
-		seekheadWidth / 2 + seekRatio * (seekbarWidth - seekheadWidth);
+	const scaledSeekheadLeft = seekRatio * (seekbarWidth - seekheadWidth);
 
 	seekbar.style.setProperty(
 		"--ts-playhead-position",
-		`${scaledSeekheadCenter}px`,
+		`${scaledSeekheadLeft}px`,
 	);
 }
 

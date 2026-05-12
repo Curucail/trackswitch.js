@@ -158,6 +158,7 @@
 
 .trackswitch .main-control .seekwrap .seekbar .seekhead {
 	background-color: var(--ts-color-accent);
+	transform: none;
 	width: var(--ts-main-seekhead-width);
 	height: var(--ts-main-seekhead-height);
 	top: calc((var(--ts-seekbar-height) - var(--ts-main-seekhead-height)) / 2);

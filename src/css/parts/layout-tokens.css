@@ -1,6 +1,6 @@
 .trackswitch.trackswitch {
 	--ts-main-control-icon-size: 14px;
-	--ts-main-control-large-button-size: 24px;
+	--ts-main-control-large-button-size: 20px;
 	--ts-preset-selector-height: 24px;
 
 	--ts-main-control-height: 24px;
@@ -8,8 +8,8 @@
 		var(--ts-main-seek-hit-height),
 		var(--ts-main-control-large-button-size)
 	);
-	--ts-main-control-padding-block-start: 6px;
-	--ts-main-control-padding-block-end: 4px;
+	--ts-main-control-padding-block-start: 8px;
+	--ts-main-control-padding-block-end: 8px;
 	--ts-main-control-padding-inline: 12px;
 	--ts-main-control-row-gap: 8px;
 	--ts-main-control-column-gap: 14px;
