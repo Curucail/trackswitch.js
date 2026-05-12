@@ -40,17 +40,8 @@
 	display: block;
 }
 
-.trackswitch .waveform-wrap .waveform-surface svg.waveform-tile {
+.trackswitch .waveform-wrap .waveform-surface canvas.waveform-tile {
 	overflow: hidden;
-}
-
-.trackswitch .waveform-wrap .waveform-surface svg.waveform-tile path,
-.trackswitch .waveform-wrap .waveform-zoom .waveform-zoom-svg path {
-	fill: none;
-	stroke: var(--waveform-color);
-	stroke-linecap: butt;
-	shape-rendering: crispEdges;
-	vector-effect: non-scaling-stroke;
 }
 
 .trackswitch .waveform-wrap .waveform-overlay {
@@ -94,22 +85,11 @@
 .trackswitch .waveform-wrap .seekwrap .seekhead-ref-hooks {
 	position: absolute;
 	inset: 0;
+	width: 100%;
+	height: 100%;
 	overflow: visible;
 	pointer-events: none;
 	z-index: 4;
-}
-
-.trackswitch .waveform-wrap .seekwrap .seekhead-ref-hooks path {
-	fill: none;
-	stroke: var(--seekhead-ref-color);
-	stroke-width: 2px;
-}
-
-.trackswitch .waveform-wrap .seekwrap .alignment-points-group path {
-	fill: none;
-	stroke: var(--alignment-points-color);
-	stroke-width: 1px;
-	stroke-dasharray: 1 1;
 }
 
 .trackswitch .waveform-wrap .seekwrap.aligned-playhead .seekhead {
@@ -166,7 +146,7 @@
 	cursor: grabbing;
 }
 
-.trackswitch .waveform-wrap .waveform-zoom .waveform-zoom-svg {
+.trackswitch .waveform-wrap .waveform-zoom .waveform-zoom-canvas {
 	display: block;
 	width: 100%;
 	height: 100%;

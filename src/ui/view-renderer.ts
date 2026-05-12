@@ -83,16 +83,14 @@ interface WaveformSeekSurfaceMetadata {
 	timingNode: HTMLElement | null;
 	zoomNode: HTMLElement;
 	zoomMinimapNode: HTMLElement;
-	zoomSvg: SVGSVGElement;
-	zoomPath: SVGPathElement;
+	zoomCanvas: HTMLCanvasElement;
 	zoomViewportNode: HTMLElement;
-	zoomSvgLastDrawKey: string | null;
+	zoomCanvasLastDrawKey: string | null;
 	waveformColor: string | null;
 	tiles: Map<
 		number,
 		{
-			svg: SVGSVGElement;
-			path: SVGPathElement;
+			canvas: HTMLCanvasElement;
 			lastDrawKey: string | null;
 		}
 	>;
@@ -107,7 +105,10 @@ interface WaveformSeekSurfaceMetadata {
 	>;
 	tilePeakCacheOrder: string[];
 	alignedPlayhead: boolean;
-	refHooksPath: SVGPathElement | null;
+	refHooksCanvas: HTMLCanvasElement | null;
+	showAlignmentPoints: boolean;
+	alignmentPointsLastW: number;
+	alignmentPointsLastH: number;
 }
 
 interface LatestWaveformRenderInput {
@@ -676,13 +677,11 @@ export class ViewRenderer {
 			tileCssWidth: number;
 			tileCssHeight: number;
 			surfaceWidth: number;
-			svg: SVGSVGElement;
-			path: SVGPathElement;
+			canvas: HTMLCanvasElement;
 			renderBarWidth: number;
 			isNew: boolean;
 			record: {
-				svg: SVGSVGElement;
-				path: SVGPathElement;
+				canvas: HTMLCanvasElement;
 				lastDrawKey: string | null;
 			};
 		}) => void,

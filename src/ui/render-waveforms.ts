@@ -34,16 +34,14 @@ interface WaveformSeekSurfaceMetadata {
 	timingNode: HTMLElement | null;
 	zoomNode: HTMLElement;
 	zoomMinimapNode: HTMLElement;
-	zoomSvg: SVGSVGElement;
-	zoomPath: SVGPathElement;
+	zoomCanvas: HTMLCanvasElement;
 	zoomViewportNode: HTMLElement;
-	zoomSvgLastDrawKey: string | null;
+	zoomCanvasLastDrawKey: string | null;
 	waveformColor: string | null;
 	tiles: Map<
 		number,
 		{
-			svg: SVGSVGElement;
-			path: SVGPathElement;
+			canvas: HTMLCanvasElement;
 			lastDrawKey: string | null;
 		}
 	>;
@@ -52,10 +50,8 @@ interface WaveformSeekSurfaceMetadata {
 	tilePeakCache: Map<string, WaveformPeakBuckets>;
 	tilePeakCacheOrder: string[];
 	alignedPlayhead: boolean;
-	refHooksPath: SVGPathElement | null;
+	refHooksCanvas: HTMLCanvasElement | null;
 	showAlignmentPoints: boolean;
-	alignmentPointsGroup: SVGGElement | null;
-	alignmentPointsPaths: SVGPathElement[];
 	alignmentPointsLastW: number;
 	alignmentPointsLastH: number;
 }
@@ -64,7 +60,6 @@ const MIN_WAVEFORM_ZOOM = 1;
 const DEFAULT_MAX_WAVEFORM_ZOOM_SECONDS = 5;
 const WAVEFORM_TILE_WIDTH_PX = 1024;
 const WAVEFORM_TILE_PEAK_CACHE_LIMIT = 64;
-const SVG_NS = "http://www.w3.org/2000/svg";
 function buildSeekWrap(leftPercent: number, rightPercent: number): string {
 	return (
 		'<div class="seekwrap" style="left: ' +
@@ -76,9 +71,7 @@ function buildSeekWrap(leftPercent: number, rightPercent: number): string {
 		'<div class="loop-marker marker-a"></div>' +
 		'<div class="loop-marker marker-b"></div>' +
 		'<div class="seekhead"></div>' +
-		'<svg class="seekhead-ref-hooks" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">' +
-		'<g class="alignment-points-group"></g>' +
-		"</svg>" +
+		'<canvas class="seekhead-ref-hooks"></canvas>' +
 		"</div>"
 	);
 }
@@ -183,24 +176,6 @@ function parseWaveformShowAlignmentPointsEnabled(
 	}
 
 	return value.trim().toLowerCase() === "true";
-}
-
-function ensureAlignmentPointPaths(
-	group: SVGGElement,
-	paths: SVGPathElement[],
-	count: number,
-): void {
-	while (paths.length < count) {
-		const p = document.createElementNS(
-			"http://www.w3.org/2000/svg",
-			"path",
-		) as SVGPathElement;
-		group.appendChild(p);
-		paths.push(p);
-	}
-	for (let i = 0; i < paths.length; i++) {
-		paths[i].style.display = i < count ? "" : "none";
-	}
 }
 
 function parseWaveformMaxZoom(value: string | null): number {
@@ -309,15 +284,53 @@ function setCachedWaveformTilePeaks(
 	}
 }
 
-function buildWaveformSvgPath(
-	buckets: WaveformPeakBuckets | null,
+function resizeCanvasForCssSize(
+	canvas: HTMLCanvasElement,
 	width: number,
 	height: number,
+): CanvasRenderingContext2D | null {
+	const cssWidth = Math.max(1, Math.round(width));
+	const cssHeight = Math.max(1, Math.round(height));
+	const pixelRatio = Math.max(1, window.devicePixelRatio || 1);
+	const pixelWidth = Math.max(1, Math.round(cssWidth * pixelRatio));
+	const pixelHeight = Math.max(1, Math.round(cssHeight * pixelRatio));
+
+	if (canvas.width !== pixelWidth) {
+		canvas.width = pixelWidth;
+	}
+	if (canvas.height !== pixelHeight) {
+		canvas.height = pixelHeight;
+	}
+
+	const context = canvas.getContext("2d");
+	if (!context) {
+		return null;
+	}
+
+	context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+	context.clearRect(0, 0, cssWidth, cssHeight);
+	return context;
+}
+
+function renderWaveformCanvas(
+	canvas: HTMLCanvasElement,
+	width: number,
+	height: number,
+	buckets: WaveformPeakBuckets | null,
 	barWidth: number,
+	color: string,
 	normalizationPeak?: number,
-): string {
-	if (!buckets || buckets.maxes.length === 0 || width <= 0 || height <= 0) {
-		return "";
+	alpha = 1,
+): void {
+	const context = resizeCanvasForCssSize(canvas, width, height);
+	if (
+		!context ||
+		!buckets ||
+		buckets.maxes.length === 0 ||
+		width <= 0 ||
+		height <= 0
+	) {
+		return;
 	}
 
 	let maxPeak =
@@ -331,7 +344,12 @@ function buildWaveformSvgPath(
 	const centerY = Math.round(height / 2);
 	const scale = (height * 0.475) / maxPeak;
 	const snappedBarWidth = Math.max(1, Math.round(barWidth));
-	const commands: string[] = [];
+	context.save();
+	context.globalAlpha = alpha;
+	context.strokeStyle = color;
+	context.lineWidth = snappedBarWidth;
+	context.lineCap = "butt";
+	context.beginPath();
 
 	for (let index = 0; index < buckets.maxes.length; index += 1) {
 		const x = Math.round(index * snappedBarWidth + snappedBarWidth / 2);
@@ -348,24 +366,39 @@ function buildWaveformSvgPath(
 			y2 = clampTime(centerY + 0.5, 0, height);
 		}
 
-		commands.push(`M${x} ${Math.round(y1)}V${Math.round(y2)}`);
+		context.moveTo(x, Math.round(y1));
+		context.lineTo(x, Math.round(y2));
 	}
 
-	return commands.join("");
+	context.stroke();
+	context.restore();
 }
 
-function buildPlaceholderSvgPath(
+function renderPlaceholderCanvas(
+	canvas: HTMLCanvasElement,
 	width: number,
 	height: number,
 	barWidth: number,
-): string {
+	color: string,
+	alpha: number,
+): void {
+	const context = resizeCanvasForCssSize(canvas, width, height);
 	if (width <= 0 || height <= 0) {
-		return "";
+		return;
 	}
 
 	const snappedBarWidth = Math.max(1, Math.round(barWidth));
 	const bars = Math.max(1, Math.floor(width / snappedBarWidth));
-	const commands: string[] = [];
+	if (!context) {
+		return;
+	}
+
+	context.save();
+	context.globalAlpha = alpha;
+	context.strokeStyle = color;
+	context.lineWidth = snappedBarWidth;
+	context.lineCap = "butt";
+	context.beginPath();
 
 	for (let x = 0; x < bars; x += 1) {
 		const waveA = Math.sin(x * 0.21);
@@ -373,43 +406,21 @@ function buildPlaceholderSvgPath(
 		const amplitude = 0.25 + 0.75 * (Math.abs(waveA + waveB) / 2);
 		const barHeight = Math.max(1, Math.round(amplitude * height * 0.7));
 		const y = Math.round((height - barHeight) / 2);
-		const pathX = Math.round(x * snappedBarWidth + snappedBarWidth / 2);
-		commands.push(`M${pathX} ${y}V${y + barHeight}`);
+		const barX = Math.round(x * snappedBarWidth + snappedBarWidth / 2);
+		context.moveTo(barX, y);
+		context.lineTo(barX, y + barHeight);
 	}
 
-	return commands.join("");
+	context.stroke();
+	context.restore();
 }
 
-function renderWaveformSvgPath(
-	svg: SVGSVGElement,
-	path: SVGPathElement,
+function clearCanvas(
+	canvas: HTMLCanvasElement,
 	width: number,
 	height: number,
-	buckets: WaveformPeakBuckets | null,
-	barWidth: number,
-	normalizationPeak?: number,
 ): void {
-	svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
-	path.setAttribute("stroke-width", String(Math.max(1, Math.round(barWidth))));
-	path.setAttribute(
-		"d",
-		buildWaveformSvgPath(buckets, width, height, barWidth, normalizationPeak),
-	);
-	path.style.opacity = "";
-}
-
-function renderPlaceholderSvgPath(
-	svg: SVGSVGElement,
-	path: SVGPathElement,
-	width: number,
-	height: number,
-	barWidth: number,
-	alpha: number,
-): void {
-	svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
-	path.setAttribute("stroke-width", String(Math.max(1, Math.round(barWidth))));
-	path.setAttribute("d", buildPlaceholderSvgPath(width, height, barWidth));
-	path.style.opacity = String(alpha);
+	resizeCanvasForCssSize(canvas, width, height);
 }
 
 function getWaveformSurfaceWidth(
@@ -730,32 +741,18 @@ export function wrapWaveformCanvases(ctx: any): any {
 				const timingNode = timerEnabled
 					? this.createWaveformTimingNode(overlay)
 					: null;
-				const refHooksSvgEl = seekWrap.querySelector(".seekhead-ref-hooks");
-				let refHooksPath: SVGPathElement | null = null;
-				let alignmentPointsGroup: SVGGElement | null = null;
-				if (refHooksSvgEl instanceof SVGSVGElement) {
-					alignmentPointsGroup = refHooksSvgEl.querySelector(
-						".alignment-points-group",
-					) as SVGGElement | null;
-					refHooksPath = document.createElementNS(
-						"http://www.w3.org/2000/svg",
-						"path",
-					) as SVGPathElement;
-					refHooksSvgEl.appendChild(refHooksPath);
-				}
+				const refHooksCanvas = seekWrap.querySelector(".seekhead-ref-hooks");
 				const zoomNode = this.createWaveformZoomNode(overlay);
 				const zoomMinimapNode = zoomNode.querySelector(
 					".waveform-zoom-minimap",
 				);
-				const zoomSvg = zoomNode.querySelector(".waveform-zoom-svg");
-				const zoomPath = zoomNode.querySelector(".waveform-zoom-path");
+				const zoomCanvas = zoomNode.querySelector(".waveform-zoom-canvas");
 				const zoomViewportNode = zoomNode.querySelector(
 					".waveform-zoom-viewport",
 				);
 				if (
 					!(zoomMinimapNode instanceof HTMLElement) ||
-					!(zoomSvg instanceof SVGSVGElement) ||
-					!(zoomPath instanceof SVGPathElement) ||
+					!(zoomCanvas instanceof HTMLCanvasElement) ||
 					!(zoomViewportNode instanceof HTMLElement)
 				) {
 					return;
@@ -780,16 +777,14 @@ export function wrapWaveformCanvases(ctx: any): any {
 					timingNode: timingNode,
 					zoomNode: zoomNode,
 					zoomMinimapNode: zoomMinimapNode,
-					zoomSvg: zoomSvg,
-					zoomPath: zoomPath,
+					zoomCanvas: zoomCanvas,
 					zoomViewportNode: zoomViewportNode,
-					zoomSvgLastDrawKey: null,
+					zoomCanvasLastDrawKey: null,
 					waveformColor: null,
 					tiles: new Map<
 						number,
 						{
-							svg: SVGSVGElement;
-							path: SVGPathElement;
+							canvas: HTMLCanvasElement;
 							lastDrawKey: string | null;
 						}
 					>(),
@@ -798,10 +793,9 @@ export function wrapWaveformCanvases(ctx: any): any {
 					tilePeakCache: new Map<string, WaveformPeakBuckets>(),
 					tilePeakCacheOrder: [],
 					alignedPlayhead: alignedPlayhead,
-					refHooksPath: refHooksPath,
+					refHooksCanvas:
+						refHooksCanvas instanceof HTMLCanvasElement ? refHooksCanvas : null,
 					showAlignmentPoints: showAlignmentPoints,
-					alignmentPointsGroup: alignmentPointsGroup,
-					alignmentPointsPaths: [],
 					alignmentPointsLastW: -1,
 					alignmentPointsLastH: -1,
 				});
@@ -839,11 +833,7 @@ export function createWaveformZoomNode(ctx: any, overlay: any): any {
 		zoom.innerHTML =
 			'<span class="waveform-zoom-label">Zoom</span>' +
 			'<div class="waveform-zoom-minimap">' +
-			'<svg class="waveform waveform-zoom-svg" xmlns="' +
-			SVG_NS +
-			'" preserveAspectRatio="none">' +
-			'<path class="waveform-zoom-path"></path>' +
-			"</svg>" +
+			'<canvas class="waveform waveform-zoom-canvas"></canvas>' +
 			'<div class="waveform-zoom-viewport"></div>' +
 			"</div>";
 		zoom.style.display = "none";
@@ -927,32 +917,23 @@ export function forEachVisibleWaveformTile(
 			let tileRecord = surfaceMetadata.tiles.get(tileIndex);
 			let isNew = false;
 			if (!tileRecord) {
-				const tileSvg = document.createElementNS(
-					SVG_NS,
-					"svg",
-				) as SVGSVGElement;
-				const tilePath = document.createElementNS(
-					SVG_NS,
-					"path",
-				) as SVGPathElement;
-				tileSvg.classList.add("waveform", "waveform-tile");
-				tileSvg.setAttribute("preserveAspectRatio", "none");
-				tileSvg.appendChild(tilePath);
-				surfaceMetadata.tileLayer.appendChild(tileSvg);
-				tileRecord = { svg: tileSvg, path: tilePath, lastDrawKey: null };
+				const tileCanvas = document.createElement("canvas");
+				tileCanvas.classList.add("waveform", "waveform-tile");
+				surfaceMetadata.tileLayer.appendChild(tileCanvas);
+				tileRecord = { canvas: tileCanvas, lastDrawKey: null };
 				surfaceMetadata.tiles.set(tileIndex, tileRecord);
 				isNew = true;
 			}
 
-			const tileSvg = tileRecord.svg;
+			const tileCanvas = tileRecord.canvas;
 			const tileCssHeight = Math.max(
 				1,
 				Math.round(surfaceMetadata.originalHeight),
 			);
 
-			tileSvg.style.left = `${tileStartPx}px`;
-			tileSvg.style.width = `${tileCssWidth}px`;
-			tileSvg.style.height = `${tileCssHeight}px`;
+			tileCanvas.style.left = `${tileStartPx}px`;
+			tileCanvas.style.width = `${tileCssWidth}px`;
+			tileCanvas.style.height = `${tileCssHeight}px`;
 
 			const renderBarWidth = Math.max(1, Math.round(surfaceMetadata.barWidth));
 			callback({
@@ -961,8 +942,7 @@ export function forEachVisibleWaveformTile(
 				tileCssWidth,
 				tileCssHeight,
 				surfaceWidth,
-				svg: tileSvg,
-				path: tileRecord.path,
+				canvas: tileCanvas,
 				renderBarWidth,
 				isNew,
 				record: tileRecord,
@@ -1171,19 +1151,23 @@ function renderWaveformMinimap(
 		1,
 		Math.round(surfaceMetadata.zoomMinimapNode.clientHeight),
 	);
-	const svg = surfaceMetadata.zoomSvg;
-	const path = surfaceMetadata.zoomPath;
+	const canvas = surfaceMetadata.zoomCanvas;
 
-	const drawKey = [normalizationCacheKey, "minimap", cssWidth, cssHeight].join(
-		"#",
-	);
-	if (surfaceMetadata.zoomSvgLastDrawKey === drawKey) {
+	const drawKey = [
+		normalizationCacheKey,
+		"minimap",
+		cssWidth,
+		cssHeight,
+		waveformColor,
+		Math.max(1, window.devicePixelRatio || 1),
+	].join("#");
+	if (surfaceMetadata.zoomCanvasLastDrawKey === drawKey) {
 		return;
 	}
 
 	if (fullDuration <= 0) {
-		renderPlaceholderSvgPath(svg, path, cssWidth, cssHeight, 1, 0.2);
-		surfaceMetadata.zoomSvgLastDrawKey = drawKey;
+		renderPlaceholderCanvas(canvas, cssWidth, cssHeight, 1, waveformColor, 0.2);
+		surfaceMetadata.zoomCanvasLastDrawKey = drawKey;
 		return;
 	}
 
@@ -1198,21 +1182,21 @@ function renderWaveformMinimap(
 		ignoreTrackPadding,
 	);
 	if (!mixed) {
-		renderPlaceholderSvgPath(svg, path, cssWidth, cssHeight, 1, 0.2);
-		surfaceMetadata.zoomSvgLastDrawKey = drawKey;
+		renderPlaceholderCanvas(canvas, cssWidth, cssHeight, 1, waveformColor, 0.2);
+		surfaceMetadata.zoomCanvasLastDrawKey = drawKey;
 		return;
 	}
 
-	renderWaveformSvgPath(
-		svg,
-		path,
+	renderWaveformCanvas(
+		canvas,
 		cssWidth,
 		cssHeight,
 		mixed,
 		1,
+		waveformColor,
 		normalizationPeak,
 	);
-	surfaceMetadata.zoomSvgLastDrawKey = drawKey;
+	surfaceMetadata.zoomCanvasLastDrawKey = drawKey;
 }
 
 export function findWaveformSurface(ctx: any, seekWrap: any): any {
@@ -1387,18 +1371,17 @@ export function drawDummyWaveforms(ctx: any, waveformEngine: any): any {
 			this.forEachVisibleWaveformTile(
 				surfaceMetadata,
 				(tile: {
-					svg: SVGSVGElement;
-					path: SVGPathElement;
+					canvas: HTMLCanvasElement;
 					tileCssWidth: number;
 					tileCssHeight: number;
 					renderBarWidth: number;
 				}) => {
-					renderPlaceholderSvgPath(
-						tile.svg,
-						tile.path,
+					renderPlaceholderCanvas(
+						tile.canvas,
 						tile.tileCssWidth,
 						tile.tileCssHeight,
 						tile.renderBarWidth,
+						surfaceMetadata.waveformColor,
 						0.3,
 					);
 				},
@@ -1585,8 +1568,7 @@ export function renderWaveformsInternal(
 					tileCssWidth: number;
 					tileCssHeight: number;
 					surfaceWidth: number;
-					svg: SVGSVGElement;
-					path: SVGPathElement;
+					canvas: HTMLCanvasElement;
 					renderBarWidth: number;
 					isNew: boolean;
 					record: { lastDrawKey: string | null };
@@ -1597,6 +1579,8 @@ export function renderWaveformsInternal(
 						Math.round(tile.tileCssWidth),
 						Math.round(tile.tileCssHeight),
 						tile.renderBarWidth,
+						surfaceMetadata.waveformColor,
+						Math.max(1, window.devicePixelRatio || 1),
 					].join("#");
 
 					if (
@@ -1612,12 +1596,12 @@ export function renderWaveformsInternal(
 						Math.floor(tile.tileCssWidth / tile.renderBarWidth),
 					);
 					if (fullDuration <= 0) {
-						renderPlaceholderSvgPath(
-							tile.svg,
-							tile.path,
+						renderPlaceholderCanvas(
+							tile.canvas,
 							tile.tileCssWidth,
 							tile.tileCssHeight,
 							tile.renderBarWidth,
+							surfaceMetadata.waveformColor,
 							0.3,
 						);
 						tile.record.lastDrawKey = tileDrawKey;
@@ -1629,12 +1613,12 @@ export function renderWaveformsInternal(
 					const tileDuration =
 						fullDuration * (tile.tileCssWidth / tile.surfaceWidth);
 					if (!Number.isFinite(tileDuration) || tileDuration <= 0) {
-						renderPlaceholderSvgPath(
-							tile.svg,
-							tile.path,
+						renderPlaceholderCanvas(
+							tile.canvas,
 							tile.tileCssWidth,
 							tile.tileCssHeight,
 							tile.renderBarWidth,
+							surfaceMetadata.waveformColor,
 							0.3,
 						);
 						tile.record.lastDrawKey = tileDrawKey;
@@ -1665,25 +1649,25 @@ export function renderWaveformsInternal(
 					}
 
 					if (!mixed) {
-						renderPlaceholderSvgPath(
-							tile.svg,
-							tile.path,
+						renderPlaceholderCanvas(
+							tile.canvas,
 							tile.tileCssWidth,
 							tile.tileCssHeight,
 							tile.renderBarWidth,
+							surfaceMetadata.waveformColor,
 							0.3,
 						);
 						tile.record.lastDrawKey = tileDrawKey;
 						return;
 					}
 
-					renderWaveformSvgPath(
-						tile.svg,
-						tile.path,
+					renderWaveformCanvas(
+						tile.canvas,
 						tile.tileCssWidth,
 						tile.tileCssHeight,
 						mixed,
 						tile.renderBarWidth,
+						surfaceMetadata.waveformColor,
 						normalizationPeak,
 					);
 					tile.record.lastDrawKey = tileDrawKey;
@@ -1737,6 +1721,71 @@ export function resolveWaveformTrackIndex(
 	}.call(ctx, runtimes, waveformSource);
 }
 
+function drawWaveformAlignmentOverlay(
+	surface: WaveformSeekSurfaceMetadata,
+	width: number,
+	height: number,
+	refSegments: Array<{ refPx: number; localPx: number }> = [],
+	alignmentSegments: Array<{ refPx: number; trackPx: number }> = [],
+): void {
+	if (!surface.refHooksCanvas) {
+		return;
+	}
+
+	const context = resizeCanvasForCssSize(surface.refHooksCanvas, width, height);
+	if (!context || width <= 0 || height <= 0) {
+		return;
+	}
+
+	const computedStyle = getComputedStyle(surface.seekWrap);
+	const vertExtentRaw = parseFloat(
+		computedStyle.getPropertyValue("--seekhead-vertical-extent").trim(),
+	);
+	const vertExtent = Number.isFinite(vertExtentRaw)
+		? Math.max(0, Math.min(0.5, vertExtentRaw))
+		: 0.35;
+	const segTop = height * (0.5 - vertExtent);
+	const segBot = height * (0.5 + vertExtent);
+
+	if (alignmentSegments.length > 0) {
+		context.save();
+		context.strokeStyle =
+			computedStyle.getPropertyValue("--alignment-points-color").trim() ||
+			"rgba(128, 128, 128, 0.5)";
+		context.lineWidth = 1;
+		context.setLineDash([1, 1]);
+		context.beginPath();
+		for (let index = 0; index < alignmentSegments.length; index += 1) {
+			const segment = alignmentSegments[index];
+			context.moveTo(segment.refPx, 0);
+			context.lineTo(segment.trackPx, segTop);
+			context.lineTo(segment.trackPx, segBot);
+			context.lineTo(segment.refPx, height);
+		}
+		context.stroke();
+		context.restore();
+	}
+
+	if (refSegments.length > 0) {
+		context.save();
+		context.strokeStyle =
+			computedStyle.getPropertyValue("--seekhead-ref-color").trim() ||
+			"#383838";
+		context.lineWidth = 2;
+		context.setLineDash([]);
+		context.beginPath();
+		for (let index = 0; index < refSegments.length; index += 1) {
+			const segment = refSegments[index];
+			context.moveTo(segment.refPx, 0);
+			context.lineTo(segment.localPx, segTop);
+			context.lineTo(segment.localPx, segBot);
+			context.lineTo(segment.refPx, height);
+		}
+		context.stroke();
+		context.restore();
+	}
+}
+
 export function updateWaveformZoomIndicators(ctx: any): any {
 	return function (this: any) {
 		this.waveformSeekSurfaces.forEach(
@@ -1763,14 +1812,15 @@ export function applyFixedWaveformLocalSeekVisuals(
 			this.waveformSeekSurfaces.forEach(
 				(surface: WaveformSeekSurfaceMetadata) => {
 					surface.seekWrap.classList.remove("aligned-playhead");
-					if (surface.refHooksPath) surface.refHooksPath.setAttribute("d", "");
-					if (surface.alignmentPointsGroup) {
-						ensureAlignmentPointPaths(
-							surface.alignmentPointsGroup,
-							surface.alignmentPointsPaths,
-							0,
+					if (surface.refHooksCanvas) {
+						clearCanvas(
+							surface.refHooksCanvas,
+							surface.seekWrap.offsetWidth,
+							surface.seekWrap.offsetHeight,
 						);
 					}
+					surface.alignmentPointsLastW = -1;
+					surface.alignmentPointsLastH = -1;
 				},
 			);
 			return;
@@ -1789,6 +1839,14 @@ export function applyFixedWaveformLocalSeekVisuals(
 						? surface.waveformSource
 						: null;
 				if (trackIndex === null) {
+					surface.seekWrap.classList.remove("aligned-playhead");
+					if (surface.refHooksCanvas) {
+						clearCanvas(
+							surface.refHooksCanvas,
+							surface.seekWrap.offsetWidth,
+							surface.seekWrap.offsetHeight,
+						);
+					}
 					return;
 				}
 
@@ -1796,6 +1854,14 @@ export function applyFixedWaveformLocalSeekVisuals(
 					waveformTimelineContext.getTrackDuration(trackIndex),
 				);
 				if (trackDuration <= 0) {
+					surface.seekWrap.classList.remove("aligned-playhead");
+					if (surface.refHooksCanvas) {
+						clearCanvas(
+							surface.refHooksCanvas,
+							surface.seekWrap.offsetWidth,
+							surface.seekWrap.offsetHeight,
+						);
+					}
 					return;
 				}
 
@@ -1857,87 +1923,53 @@ export function applyFixedWaveformLocalSeekVisuals(
 				);
 
 				const needsDimensions =
-					(surface.refHooksPath &&
+					(surface.refHooksCanvas &&
 						surface.alignedPlayhead &&
 						seekDuration > 0) ||
-					(surface.alignmentPointsGroup &&
+					(surface.refHooksCanvas &&
 						surface.showAlignmentPoints &&
 						seekDuration > 0);
 				const w = needsDimensions ? surface.seekWrap.offsetWidth : 0;
 				const h = needsDimensions ? surface.seekWrap.offsetHeight : 0;
 
-				if (surface.refHooksPath) {
-					if (surface.alignedPlayhead && seekDuration > 0) {
-						surface.seekWrap.classList.add("aligned-playhead");
-						const localPx = (localPosition / seekDuration) * w;
-						const refPx = (state.position / seekDuration) * w;
-						const vertExtentRaw = parseFloat(
-							getComputedStyle(surface.seekWrap)
-								.getPropertyValue("--seekhead-vertical-extent")
-								.trim(),
-						);
-						const vertExtent = Number.isFinite(vertExtentRaw)
-							? Math.max(0, Math.min(0.5, vertExtentRaw))
-							: 0.35;
-						const segTop = h * (0.5 - vertExtent);
-						const segBot = h * (0.5 + vertExtent);
-						surface.refHooksPath.setAttribute(
-							"d",
-							`M ${refPx} 0 L ${localPx} ${segTop} L ${localPx} ${segBot} L ${refPx} ${h}`,
-						);
-					} else {
-						surface.seekWrap.classList.remove("aligned-playhead");
-						surface.refHooksPath.setAttribute("d", "");
-					}
+				const refSegments: Array<{ refPx: number; localPx: number }> = [];
+				const alignmentSegments: Array<{ refPx: number; trackPx: number }> = [];
+
+				if (surface.alignedPlayhead && seekDuration > 0) {
+					surface.seekWrap.classList.add("aligned-playhead");
+					refSegments.push({
+						localPx: (localPosition / seekDuration) * w,
+						refPx: (state.position / seekDuration) * w,
+					});
+				} else {
+					surface.seekWrap.classList.remove("aligned-playhead");
 				}
 
-				if (surface.alignmentPointsGroup) {
-					if (surface.showAlignmentPoints && seekDuration > 0) {
-						const points =
-							waveformTimelineContext.getTrackAlignmentPoints(trackIndex);
-						if (
-							w !== surface.alignmentPointsLastW ||
-							h !== surface.alignmentPointsLastH
-						) {
-							const vertExtentRaw = parseFloat(
-								getComputedStyle(surface.seekWrap)
-									.getPropertyValue("--seekhead-vertical-extent")
-									.trim(),
-							);
-							const vertExtent = Number.isFinite(vertExtentRaw)
-								? Math.max(0, Math.min(0.5, vertExtentRaw))
-								: 0.35;
-							const segTop = h * (0.5 - vertExtent);
-							const segBot = h * (0.5 + vertExtent);
-
-							ensureAlignmentPointPaths(
-								surface.alignmentPointsGroup,
-								surface.alignmentPointsPaths,
-								points.length,
-							);
-
-							for (let pi = 0; pi < points.length; pi++) {
-								const pt = points[pi];
-								const trackPx = (pt.trackTime / seekDuration) * w;
-								const refPx = (pt.referenceTime / seekDuration) * w;
-								surface.alignmentPointsPaths[pi].setAttribute(
-									"d",
-									`M ${refPx} 0 L ${trackPx} ${segTop} L ${trackPx} ${segBot} L ${refPx} ${h}`,
-								);
-							}
-
-							surface.alignmentPointsLastW = w;
-							surface.alignmentPointsLastH = h;
-						}
-					} else {
-						ensureAlignmentPointPaths(
-							surface.alignmentPointsGroup,
-							surface.alignmentPointsPaths,
-							0,
-						);
-						surface.alignmentPointsLastW = -1;
-						surface.alignmentPointsLastH = -1;
+				if (surface.showAlignmentPoints && seekDuration > 0) {
+					const points =
+						waveformTimelineContext.getTrackAlignmentPoints(trackIndex);
+					for (let pi = 0; pi < points.length; pi++) {
+						const pt = points[pi];
+						alignmentSegments.push({
+							trackPx: (pt.trackTime / seekDuration) * w,
+							refPx: (pt.referenceTime / seekDuration) * w,
+						});
 					}
+					surface.alignmentPointsLastW = w;
+					surface.alignmentPointsLastH = h;
+				} else {
+					surface.alignmentPointsLastW = -1;
+					surface.alignmentPointsLastH = -1;
+				}
+
+				if (surface.refHooksCanvas) {
+					drawWaveformAlignmentOverlay(
+						surface,
+						Math.max(1, w),
+						Math.max(1, h),
+						refSegments,
+						alignmentSegments,
+					);
 				}
 			},
 		);
