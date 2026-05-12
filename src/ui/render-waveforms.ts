@@ -346,31 +346,31 @@ function renderWaveformCanvas(
 	const snappedBarWidth = Math.max(1, Math.round(barWidth));
 	context.save();
 	context.globalAlpha = alpha;
-	context.strokeStyle = color;
-	context.lineWidth = snappedBarWidth;
-	context.lineCap = "butt";
-	context.beginPath();
+	context.fillStyle = color;
 
 	for (let index = 0; index < buckets.maxes.length; index += 1) {
-		const x = Math.round(index * snappedBarWidth + snappedBarWidth / 2);
-		if (x > width) {
+		const x = Math.round(index * snappedBarWidth);
+		if (x >= width) {
 			break;
 		}
 
 		const top = Math.round(centerY - buckets.maxes[index] * scale);
 		const bottom = Math.round(centerY - buckets.mins[index] * scale);
-		let y1 = clampTime(Math.min(top, bottom), 0, height);
-		let y2 = clampTime(Math.max(top, bottom), 0, height);
-		if (Math.abs(y2 - y1) < 1) {
-			y1 = clampTime(centerY - 0.5, 0, height);
-			y2 = clampTime(centerY + 0.5, 0, height);
+		let y1 = Math.round(clampTime(Math.min(top, bottom), 0, height));
+		let y2 = Math.round(clampTime(Math.max(top, bottom), 0, height));
+		if (y2 <= y1) {
+			y1 = clampTime(centerY, 0, Math.max(0, height - 1));
+			y2 = y1 + 1;
 		}
 
-		context.moveTo(x, Math.round(y1));
-		context.lineTo(x, Math.round(y2));
+		context.fillRect(
+			x,
+			y1,
+			Math.min(snappedBarWidth, Math.max(1, width - x)),
+			Math.max(1, y2 - y1),
+		);
 	}
 
-	context.stroke();
 	context.restore();
 }
 
@@ -395,10 +395,7 @@ function renderPlaceholderCanvas(
 
 	context.save();
 	context.globalAlpha = alpha;
-	context.strokeStyle = color;
-	context.lineWidth = snappedBarWidth;
-	context.lineCap = "butt";
-	context.beginPath();
+	context.fillStyle = color;
 
 	for (let x = 0; x < bars; x += 1) {
 		const waveA = Math.sin(x * 0.21);
@@ -406,12 +403,15 @@ function renderPlaceholderCanvas(
 		const amplitude = 0.25 + 0.75 * (Math.abs(waveA + waveB) / 2);
 		const barHeight = Math.max(1, Math.round(amplitude * height * 0.7));
 		const y = Math.round((height - barHeight) / 2);
-		const barX = Math.round(x * snappedBarWidth + snappedBarWidth / 2);
-		context.moveTo(barX, y);
-		context.lineTo(barX, y + barHeight);
+		const barX = Math.round(x * snappedBarWidth);
+		context.fillRect(
+			barX,
+			y,
+			Math.min(snappedBarWidth, Math.max(1, width - barX)),
+			barHeight,
+		);
 	}
 
-	context.stroke();
 	context.restore();
 }
 
@@ -1138,9 +1138,7 @@ function renderWaveformMinimap(
 		return;
 	}
 
-	const waveformColor =
-		surfaceMetadata.waveformColor ||
-		resolveWaveformColor(surfaceMetadata.surface);
+	const waveformColor = resolveWaveformColor(surfaceMetadata.zoomCanvas);
 	surfaceMetadata.waveformColor = waveformColor;
 
 	const cssWidth = Math.max(
@@ -1365,9 +1363,6 @@ export function drawDummyWaveforms(ctx: any, waveformEngine: any): any {
 
 		for (let i = 0; i < this.waveformSeekSurfaces.length; i += 1) {
 			const surfaceMetadata = this.waveformSeekSurfaces[i];
-			surfaceMetadata.waveformColor = resolveWaveformColor(
-				surfaceMetadata.surface,
-			);
 			this.forEachVisibleWaveformTile(
 				surfaceMetadata,
 				(tile: {
@@ -1381,7 +1376,7 @@ export function drawDummyWaveforms(ctx: any, waveformEngine: any): any {
 						tile.tileCssWidth,
 						tile.tileCssHeight,
 						tile.renderBarWidth,
-						surfaceMetadata.waveformColor,
+						resolveWaveformColor(tile.canvas),
 						0.3,
 					);
 				},
@@ -1490,9 +1485,6 @@ export function renderWaveformsInternal(
 
 		for (let i = 0; i < this.waveformSeekSurfaces.length; i += 1) {
 			const surfaceMetadata = this.waveformSeekSurfaces[i];
-			surfaceMetadata.waveformColor = resolveWaveformColor(
-				surfaceMetadata.surface,
-			);
 			const waveformSource = surfaceMetadata.waveformSource;
 			const sourceRuntimes = this.getWaveformSourceRuntimes(
 				runtimes,
@@ -1573,13 +1565,14 @@ export function renderWaveformsInternal(
 					isNew: boolean;
 					record: { lastDrawKey: string | null };
 				}) => {
+					const waveformColor = resolveWaveformColor(tile.canvas);
 					const tileDrawKey = [
 						normalizationCacheKey,
 						Math.round(tile.tileStartPx),
 						Math.round(tile.tileCssWidth),
 						Math.round(tile.tileCssHeight),
 						tile.renderBarWidth,
-						surfaceMetadata.waveformColor,
+						waveformColor,
 						Math.max(1, window.devicePixelRatio || 1),
 					].join("#");
 
@@ -1601,7 +1594,7 @@ export function renderWaveformsInternal(
 							tile.tileCssWidth,
 							tile.tileCssHeight,
 							tile.renderBarWidth,
-							surfaceMetadata.waveformColor,
+							waveformColor,
 							0.3,
 						);
 						tile.record.lastDrawKey = tileDrawKey;
@@ -1618,7 +1611,7 @@ export function renderWaveformsInternal(
 							tile.tileCssWidth,
 							tile.tileCssHeight,
 							tile.renderBarWidth,
-							surfaceMetadata.waveformColor,
+							waveformColor,
 							0.3,
 						);
 						tile.record.lastDrawKey = tileDrawKey;
@@ -1654,7 +1647,7 @@ export function renderWaveformsInternal(
 							tile.tileCssWidth,
 							tile.tileCssHeight,
 							tile.renderBarWidth,
-							surfaceMetadata.waveformColor,
+							waveformColor,
 							0.3,
 						);
 						tile.record.lastDrawKey = tileDrawKey;
@@ -1667,7 +1660,7 @@ export function renderWaveformsInternal(
 						tile.tileCssHeight,
 						mixed,
 						tile.renderBarWidth,
-						surfaceMetadata.waveformColor,
+						waveformColor,
 						normalizationPeak,
 					);
 					tile.record.lastDrawKey = tileDrawKey;
