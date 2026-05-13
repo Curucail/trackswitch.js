@@ -216,6 +216,7 @@
 
 @media (max-width: 767px) {
 	.trackswitch.trackswitch {
+		--ts-main-control-icon-size: 18px;
 		--ts-main-control-playback-gap: 16px;
 	}
 
@@ -257,7 +258,76 @@
 		> .loop-controls
 		> li.loop-clear
 		.ts-icon-slot {
+		font-size: 18px;
+	}
+
+	.trackswitch
+		.main-control
+		.control
+		> li.loop-group
+		> .loop-controls
+		> li.loop-a
+		.ts-icon-slot,
+	.trackswitch
+		.main-control
+		.control
+		> li.loop-group
+		> .loop-controls
+		> li.loop-b
+		.ts-icon-slot,
+	.trackswitch
+		.main-control
+		.control
+		> li.loop-group
+		> .loop-controls
+		> li.loop-a
+		.ts-icon-svg,
+	.trackswitch
+		.main-control
+		.control
+		> li.loop-group
+		> .loop-controls
+		> li.loop-b
+		.ts-icon-svg {
+		width: 20px;
+		height: 20px;
 		font-size: 20px;
+	}
+
+	.trackswitch
+		.main-control
+		.control
+		> li.loop-group
+		> .loop-controls
+		> li.loop-toggle
+		.ts-icon-slot,
+	.trackswitch
+		.main-control
+		.control
+		> li.loop-group
+		> .loop-controls
+		> li.loop-toggle
+		.ts-icon-svg {
+		width: 18px;
+		height: 18px;
+	}
+
+	.trackswitch
+		.main-control
+		.control
+		> li.loop-group
+		> .loop-controls
+		> li.loop-clear
+		.ts-icon-slot,
+	.trackswitch
+		.main-control
+		.control
+		> li.loop-group
+		> .loop-controls
+		> li.loop-clear
+		.ts-icon-svg {
+		width: 14px;
+		height: 14px;
 	}
 
 	.trackswitch .main-control .preset-selector {

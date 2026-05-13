@@ -8,8 +8,8 @@
 		var(--ts-main-seek-hit-height),
 		var(--ts-main-control-large-button-size)
 	);
-	--ts-main-control-padding-block-start: 10px;
-	--ts-main-control-padding-block-end: 10px;
+	--ts-main-control-padding-block-start: 8px;
+	--ts-main-control-padding-block-end: 8px;
 	--ts-main-control-padding-inline: 12px;
 	--ts-main-control-row-gap: 10px;
 	--ts-main-control-column-gap: 16px;
@@ -28,7 +28,7 @@
 	--ts-main-seek-hit-height: 20px;
 	--ts-main-seekhead-width: 5px;
 	--ts-main-seekhead-half-width: 2.5px;
-	--ts-main-seekhead-height: 22px;
+	--ts-main-seekhead-height: 20px;
 	--ts-seek-marker-hit-width: 10px;
 	--ts-seek-marker-line-width: 2px;
 	--ts-seek-marker-dash: 6px;
