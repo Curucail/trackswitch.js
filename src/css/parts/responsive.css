@@ -15,28 +15,6 @@
 		padding-inline: var(--ts-main-control-padding-inline);
 	}
 
-	.trackswitch .main-control .playback-group {
-		grid-column: 1;
-		min-width: 0;
-	}
-
-	.trackswitch .main-control .volume {
-		grid-column: 2;
-	}
-
-	.trackswitch .main-control .loop-group {
-		grid-column: 3;
-	}
-
-	.trackswitch .main-control .sync-global {
-		grid-column: 4;
-	}
-
-	.trackswitch .main-control .preset-selector-wrap {
-		grid-column: 5;
-		min-width: 0;
-	}
-
 	.trackswitch .main-control .settings-button {
 		grid-column: 7;
 		justify-self: end;

@@ -193,7 +193,7 @@
 .trackswitch .main-control .control > li.loop-group > .loop-controls {
 	display: flex;
 	align-items: center;
-	gap: 1px;
+	gap: var(--ts-main-control-loop-gap);
 }
 
 .trackswitch
@@ -216,7 +216,23 @@
 	> li.loop-group
 	> .loop-controls
 	> li.loop-a
-	.ts-icon-slot,
+	.ts-icon-slot {
+	width: 18px;
+	height: 18px;
+	font-size: 18px;
+}
+
+.trackswitch
+	.main-control
+	.control
+	> li.loop-group
+	> .loop-controls
+	> li.loop-a
+	.ts-icon-svg {
+	width: 18px;
+	height: 18px;
+}
+
 .trackswitch
 	.main-control
 	.control
@@ -234,13 +250,6 @@
 	.control
 	> li.loop-group
 	> .loop-controls
-	> li.loop-a
-	.ts-icon-svg,
-.trackswitch
-	.main-control
-	.control
-	> li.loop-group
-	> .loop-controls
 	> li.loop-b
 	.ts-icon-svg {
 	width: 18px;
@@ -252,15 +261,23 @@
 	.control
 	> li.loop-group
 	> .loop-controls
-	> li.loop-toggle,
+	> li.loop-toggle
+	.ts-icon-slot {
+	width: 14px;
+	height: 14px;
+	font-size: 14px;
+}
+
 .trackswitch
 	.main-control
 	.control
 	> li.loop-group
 	> .loop-controls
-	> li.loop-clear {
-	width: var(--ts-main-control-large-button-size);
-	height: var(--ts-main-control-large-button-size);
+	> li.loop-clear
+	.ts-icon-slot {
+	width: 12px;
+	height: 12px;
+	font-size: 12px;
 }
 
 .trackswitch
@@ -269,17 +286,20 @@
 	> li.loop-group
 	> .loop-controls
 	> li.loop-toggle
-	.ts-icon-slot,
+	.ts-icon-svg {
+	width: 14px;
+	height: 14px;
+}
+
 .trackswitch
 	.main-control
 	.control
 	> li.loop-group
 	> .loop-controls
 	> li.loop-clear
-	.ts-icon-slot {
-	font-size: 16px;
-	width: 1em;
-	height: 1em;
+	.ts-icon-svg {
+	width: 12px;
+	height: 12px;
 }
 
 /* Preset selector */

@@ -14,6 +14,7 @@
 	--ts-main-control-row-gap: 8px;
 	--ts-main-control-column-gap: 14px;
 	--ts-main-control-playback-gap: 10px;
+	--ts-main-control-loop-gap: 2px;
 
 	--ts-track-min-height: 32px;
 	--ts-track-padding-block: 8px;
@@ -27,7 +28,7 @@
 	--ts-main-seek-hit-height: 20px;
 	--ts-main-seekhead-width: 5px;
 	--ts-main-seekhead-half-width: 2.5px;
-	--ts-main-seekhead-height: 22px;
+	--ts-main-seekhead-height: 20px;
 	--ts-seek-marker-hit-width: 10px;
 	--ts-seek-marker-line-width: 2px;
 	--ts-seek-marker-dash: 6px;
