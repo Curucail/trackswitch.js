@@ -1007,6 +1007,13 @@
 		justify-self: auto;
 	}
 
+	.trackswitch.ts-interactive-player .main-control .timing {
+		flex: 0 0 100%;
+		justify-content: center;
+		margin-left: 0;
+		text-align: center;
+	}
+
 	.trackswitch.ts-interactive-player .main-control .seekwrap {
 		flex-basis: 100%;
 	}
