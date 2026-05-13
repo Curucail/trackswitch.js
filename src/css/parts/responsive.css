@@ -1,11 +1,8 @@
 /* Main-control layout adapts to container width; touch sizing adapts to viewport width. */
 @container ts-main-control (max-width: 1000px) {
 	.trackswitch .main-control ul.control {
-		display: grid;
-		grid-template-columns:
-			auto auto auto auto auto minmax(0, 1fr)
-			auto auto;
-		grid-auto-rows: var(--ts-main-control-row-height);
+		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
 		row-gap: var(--ts-main-control-row-gap);
 		column-gap: var(--ts-main-control-column-gap);
@@ -16,21 +13,18 @@
 	}
 
 	.trackswitch .main-control .settings-button {
-		grid-column: 7;
-		justify-self: end;
-		margin-left: 0;
+		margin-left: auto;
 	}
 
 	.trackswitch .main-control .timing {
-		grid-column: 8;
-		justify-self: end;
+		flex: 0 0 auto;
 		margin-left: 0;
 		text-align: right;
 	}
 
 	.trackswitch .main-control .seekwrap {
 		order: 100;
-		grid-column: 1 / -1;
+		flex: 0 0 100%;
 		min-width: 0;
 		width: 100%;
 		margin: 0;
