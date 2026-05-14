@@ -118,62 +118,73 @@
 		);
 	};
 
-	const initializeTabs = () => {
-		Array.from(main.querySelectorAll("[data-doc-tabs]")).forEach((tabsRoot) => {
-			if (!(tabsRoot instanceof HTMLElement)) {
-				return;
-			}
+	const initializeMatrixControls = () => {
+		const roots = Array.from(main.querySelectorAll("[data-doc-matrix]")).filter(
+			(root) => root instanceof HTMLElement,
+		);
+		let sharedVersion =
+			roots.find((root) => root.dataset.docMatrixVersion)?.dataset
+				.docMatrixVersion || "default";
 
-			const tabs = Array.from(
-				tabsRoot.querySelectorAll("[data-doc-tab]"),
-			).filter((tab) => tab instanceof HTMLButtonElement);
+		const updateRoot = (root) => {
+			root.dataset.docMatrixVersion = sharedVersion;
+
+			const controls = Array.from(
+				root.querySelectorAll("[data-doc-matrix-control]"),
+			).filter((control) => control instanceof HTMLButtonElement);
 			const panels = Array.from(
-				tabsRoot.querySelectorAll("[data-doc-tab-panel]"),
+				root.querySelectorAll("[data-doc-matrix-panel]"),
 			).filter((panel) => panel instanceof HTMLElement);
 
-			const activateTab = (activeTab) => {
-				const activePanelId = activeTab.getAttribute("aria-controls");
-				tabs.forEach((tab) => {
-					const isActive = tab === activeTab;
-					tab.classList.toggle("is-active", isActive);
-					tab.setAttribute("aria-selected", isActive ? "true" : "false");
-					tab.tabIndex = isActive ? 0 : -1;
-				});
-				panels.forEach((panel) => {
-					const isActive = panel.id === activePanelId;
-					panel.classList.toggle("is-active", isActive);
-					panel.hidden = !isActive;
-				});
-			};
+			const integration = root.dataset.docMatrixIntegration || "html";
 
-			tabs.forEach((tab, index) => {
-				tab.tabIndex = tab.classList.contains("is-active") ? 0 : -1;
-				tab.addEventListener("click", () => activateTab(tab));
-				tab.addEventListener("keydown", (event) => {
-					let nextIndex = null;
-					if (event.key === "ArrowRight") {
-						nextIndex = (index + 1) % tabs.length;
-					} else if (event.key === "ArrowLeft") {
-						nextIndex = (index - 1 + tabs.length) % tabs.length;
-					} else if (event.key === "Home") {
-						nextIndex = 0;
-					} else if (event.key === "End") {
-						nextIndex = tabs.length - 1;
+			controls.forEach((control) => {
+				const controlType = control.dataset.docMatrixControl;
+				const value = control.dataset.docMatrixValue;
+				const isActive =
+					(controlType === "version" && value === sharedVersion) ||
+					(controlType === "integration" && value === integration);
+				control.classList.toggle("is-active", isActive);
+				control.setAttribute("aria-pressed", isActive ? "true" : "false");
+			});
+
+			panels.forEach((panel) => {
+				const panelIntegration = panel.dataset.docMatrixIntegration;
+				const isActive =
+					panel.dataset.docMatrixVersion === sharedVersion &&
+					(!panelIntegration || panelIntegration === integration);
+				panel.classList.toggle("is-active", isActive);
+				panel.hidden = !isActive;
+			});
+		};
+
+		const updateAll = () => {
+			roots.forEach(updateRoot);
+		};
+
+		roots.forEach((root) => {
+			const controls = Array.from(
+				root.querySelectorAll("[data-doc-matrix-control]"),
+			).filter((control) => control instanceof HTMLButtonElement);
+
+			controls.forEach((control) => {
+				control.addEventListener("click", () => {
+					const controlType = control.dataset.docMatrixControl;
+					const value = control.dataset.docMatrixValue;
+					if (controlType === "version" && value) {
+						sharedVersion = value;
 					}
-
-					if (nextIndex === null) {
-						return;
+					if (controlType === "integration" && value) {
+						root.dataset.docMatrixIntegration = value;
 					}
-
-					event.preventDefault();
-					const nextTab = tabs[nextIndex];
-					activateTab(nextTab);
-					nextTab.focus();
+					updateAll();
 				});
 			});
 		});
+
+		updateAll();
 	};
 
 	initializeCodeCopyButtons();
-	initializeTabs();
+	initializeMatrixControls();
 })();

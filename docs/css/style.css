@@ -1167,6 +1167,15 @@ kbd {
 	border-bottom: 1px solid rgba(153, 153, 153, 0.2);
 }
 
+.ts-doc-tabs__list--stacked {
+	padding-bottom: 0;
+	border-bottom: 0;
+}
+
+.ts-doc-tabs__list--stacked + .ts-doc-tabs__list {
+	padding-top: 0.45rem;
+}
+
 .ts-doc-tabs__tab {
 	display: inline-flex;
 	align-items: center;

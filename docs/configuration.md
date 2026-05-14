@@ -7,8 +7,6 @@ permalink: /documentation.html
 - [Player Versions](#player-versions)
 - [Quick Minimal Setup](#quick-setup)
 - [Full Options Reference](#full-options-reference)
-  - [Default Mode](#default-mode)
-  - [Alignment Mode](#alignment-mode)
 - [Player-Wide Settings](#player-wide-settings)
   - [`ui`](#ui)
   - [`presetNames`](#presetnames)
@@ -33,22 +31,27 @@ permalink: /documentation.html
 
 trackswitch.js ships three browser-ready player versions. Each version has its own JavaScript bundle.
 
-| Version | Custom HTML tag | Necessary Files |
-| --- | --- | --- | --- |
+| Version | Custom HTML tag | Necessary files |
+| --- | --- | --- |
 | Default player | `<trackswitch-player>` | `dist/js/trackswitch-player.js` |
 | Alignment player | `<trackswitch-alignment-player>` | `dist/js/trackswitch-alignment-player.js` |
-| Alignment interactive player | `<trackswitch-alignment-interactive>` | `dist/js/trackswitch-alignment-interactive.js`, `dist/js/trackswitch-interactive-worker.js` |
+| Interactive alignment player | `<trackswitch-alignment-interactive>` | `dist/js/trackswitch-alignment-interactive.js`, `dist/js/trackswitch-interactive-worker.js` |
 
 ## Quick Minimal Setup {#quick-setup}
 
-<div class="ts-doc-tabs" data-doc-tabs markdown="1">
-  <div class="ts-doc-tabs__list" role="tablist" aria-label="Integration method">
-    <button class="ts-doc-tabs__tab is-active" type="button" role="tab" aria-selected="true" aria-controls="quick-setup-html" id="quick-setup-html-tab" data-doc-tab="quick-setup-html">HTML</button>
-    <button class="ts-doc-tabs__tab" type="button" role="tab" aria-selected="false" aria-controls="quick-setup-esm" id="quick-setup-esm-tab" data-doc-tab="quick-setup-esm">ESM</button>
-    <button class="ts-doc-tabs__tab" type="button" role="tab" aria-selected="false" aria-controls="quick-setup-react" id="quick-setup-react-tab" data-doc-tab="quick-setup-react">React</button>
-    <button class="ts-doc-tabs__tab" type="button" role="tab" aria-selected="false" aria-controls="quick-setup-vue" id="quick-setup-vue-tab" data-doc-tab="quick-setup-vue">Vue</button>
+<div class="ts-doc-tabs" data-doc-matrix data-doc-matrix-version="default" data-doc-matrix-integration="html" markdown="1">
+  <div class="ts-doc-tabs__list ts-doc-tabs__list--versions ts-doc-tabs__list--stacked" aria-label="Player version">
+    <button class="ts-doc-tabs__tab is-active" type="button" aria-pressed="true" data-doc-matrix-control="version" data-doc-matrix-value="default">Default</button>
+    <button class="ts-doc-tabs__tab" type="button" aria-pressed="false" data-doc-matrix-control="version" data-doc-matrix-value="alignment">Alignment</button>
+    <button class="ts-doc-tabs__tab" type="button" aria-pressed="false" data-doc-matrix-control="version" data-doc-matrix-value="interactive">Interactive Alignment</button>
   </div>
-  <div class="ts-doc-tabs__panel is-active" role="tabpanel" id="quick-setup-html" aria-labelledby="quick-setup-html-tab" data-doc-tab-panel markdown="1">
+  <div class="ts-doc-tabs__list" aria-label="Integration method">
+    <button class="ts-doc-tabs__tab is-active" type="button" aria-pressed="true" data-doc-matrix-control="integration" data-doc-matrix-value="html">HTML</button>
+    <button class="ts-doc-tabs__tab" type="button" aria-pressed="false" data-doc-matrix-control="integration" data-doc-matrix-value="esm">ESM</button>
+    <button class="ts-doc-tabs__tab" type="button" aria-pressed="false" data-doc-matrix-control="integration" data-doc-matrix-value="react">React</button>
+    <button class="ts-doc-tabs__tab" type="button" aria-pressed="false" data-doc-matrix-control="integration" data-doc-matrix-value="vue">Vue</button>
+  </div>
+  <div class="ts-doc-tabs__panel is-active" data-doc-matrix-panel data-doc-matrix-version="default" data-doc-matrix-integration="html" markdown="1">
 
 ```html
 <script src="dist/js/trackswitch-player.js"></script>
@@ -73,7 +76,7 @@ trackswitch.js ships three browser-ready player versions. Each version has its o
 ```
 
   </div>
-  <div class="ts-doc-tabs__panel" role="tabpanel" id="quick-setup-esm" aria-labelledby="quick-setup-esm-tab" data-doc-tab-panel hidden markdown="1">
+  <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="default" data-doc-matrix-integration="esm" hidden markdown="1">
 
 ```ts
 import { defineTrackswitchDefaultElement, type TrackSwitchInit } from 'trackswitch';
@@ -85,7 +88,7 @@ const config: TrackSwitchInit = {
       trackGroup: [
         {
           title: 'Track 1',
-          sources: [{ src: 'track1.mp3' }],
+          sources: [{ src: 'track1.mp3', type: 'audio/mpeg' }],
         },
       ],
     },
@@ -97,7 +100,7 @@ document.querySelector('trackswitch-player')!.config = config;
 ```
 
   </div>
-  <div class="ts-doc-tabs__panel" role="tabpanel" id="quick-setup-react" aria-labelledby="quick-setup-react-tab" data-doc-tab-panel hidden markdown="1">
+  <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="default" data-doc-matrix-integration="react" hidden markdown="1">
 
 ```tsx
 import { useMemo } from 'react';
@@ -112,7 +115,7 @@ export function ExamplePlayer() {
           trackGroup: [
             {
               title: 'Track 1',
-              sources: [{ src: '/audio/track1.mp3' }],
+              sources: [{ src: 'track1.mp3', type: 'audio/mpeg' }],
             },
           ],
         },
@@ -125,7 +128,7 @@ export function ExamplePlayer() {
 ```
 
   </div>
-  <div class="ts-doc-tabs__panel" role="tabpanel" id="quick-setup-vue" aria-labelledby="quick-setup-vue-tab" data-doc-tab-panel hidden markdown="1">
+  <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="default" data-doc-matrix-integration="vue" hidden markdown="1">
 
 ```vue
 <script setup lang="ts">
@@ -138,7 +141,7 @@ const config: TrackSwitchInit = {
       trackGroup: [
         {
           title: 'Track 1',
-          sources: [{ src: '/audio/track1.mp3' }],
+          sources: [{ src: 'track1.mp3', type: 'audio/mpeg' }],
         },
       ],
     },
@@ -152,17 +155,226 @@ const config: TrackSwitchInit = {
 ```
 
   </div>
+  <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="alignment" data-doc-matrix-integration="html" hidden markdown="1">
+
+```html
+<script src="dist/js/trackswitch-alignment-player.js"></script>
+
+<trackswitch-alignment-player>
+  <script type="application/json">
+    {
+      "ui": [
+        {
+          "type": "trackGroup",
+          "trackGroup": [
+            {
+              "title": "Performance A",
+              "sources": [{ "src": "performance-a.mp3", "type": "audio/mpeg" }],
+              "alignment": { "column": "time_a" }
+            },
+            {
+              "title": "Performance B",
+              "sources": [{ "src": "performance-b.mp3", "type": "audio/mpeg" }],
+              "alignment": { "column": "time_b" }
+            }
+          ]
+        }
+      ],
+      "alignment": {
+        "csv": "alignment.csv",
+        "referenceTimeColumn": "time_a"
+      }
+    }
+  </script>
+</trackswitch-alignment-player>
+```
+
+  </div>
+  <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="alignment" data-doc-matrix-integration="esm" hidden markdown="1">
+
+```ts
+import { defineTrackswitchAlignmentElement, type TrackSwitchInit } from 'trackswitch';
+
+const config: TrackSwitchInit = {
+  ui: [
+    {
+      type: 'trackGroup',
+      trackGroup: [
+        {
+          title: 'Performance A',
+          sources: [{ src: 'performance-a.mp3', type: 'audio/mpeg' }],
+          alignment: { column: 'time_a' },
+        },
+        {
+          title: 'Performance B',
+          sources: [{ src: 'performance-b.mp3', type: 'audio/mpeg' }],
+          alignment: { column: 'time_b' },
+        },
+      ],
+    },
+  ],
+  alignment: {
+    csv: 'alignment.csv',
+    referenceTimeColumn: 'time_a',
+  },
+};
+
+defineTrackswitchAlignmentElement();
+document.querySelector('trackswitch-alignment-player')!.config = config;
+```
+
+  </div>
+  <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="alignment" data-doc-matrix-integration="react" hidden markdown="1">
+
+```tsx
+import { TrackSwitchAlignmentPlayer, type TrackSwitchInit } from 'trackswitch/react';
+
+const config: TrackSwitchInit = {
+  ui: [
+    {
+      type: 'trackGroup',
+      trackGroup: [
+        {
+          title: 'Performance A',
+          sources: [{ src: 'performance-a.mp3', type: 'audio/mpeg' }],
+          alignment: { column: 'time_a' },
+        },
+        {
+          title: 'Performance B',
+          sources: [{ src: 'performance-b.mp3', type: 'audio/mpeg' }],
+          alignment: { column: 'time_b' },
+        },
+      ],
+    },
+  ],
+  alignment: {
+    csv: 'alignment.csv',
+    referenceTimeColumn: 'time_a',
+  },
+};
+
+export function ExamplePlayer() {
+  return <TrackSwitchAlignmentPlayer config={config} className="trackswitch-host" />;
+}
+```
+
+  </div>
+  <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="alignment" data-doc-matrix-integration="vue" hidden markdown="1">
+
+```vue
+<script setup lang="ts">
+import { TrackSwitchAlignmentPlayer, type TrackSwitchInit } from 'trackswitch/vue';
+
+const config: TrackSwitchInit = {
+  ui: [
+    {
+      type: 'trackGroup',
+      trackGroup: [
+        {
+          title: 'Performance A',
+          sources: [{ src: 'performance-a.mp3', type: 'audio/mpeg' }],
+          alignment: { column: 'time_a' },
+        },
+        {
+          title: 'Performance B',
+          sources: [{ src: 'performance-b.mp3', type: 'audio/mpeg' }],
+          alignment: { column: 'time_b' },
+        },
+      ],
+    },
+  ],
+  alignment: {
+    csv: 'alignment.csv',
+    referenceTimeColumn: 'time_a',
+  },
+};
+</script>
+
+<template>
+  <TrackSwitchAlignmentPlayer :config="config" class="trackswitch-host" />
+</template>
+```
+
+  </div>
+  <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="interactive" data-doc-matrix-integration="html" hidden markdown="1">
+
+```html
+<script src="dist/js/trackswitch-alignment-interactive.js"></script>
+
+<trackswitch-alignment-interactive>
+  <script type="application/json">
+    {
+      "workerUrl": "dist/js/trackswitch-interactive-worker.js"
+    }
+  </script>
+</trackswitch-alignment-interactive>
+```
+
+  </div>
+  <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="interactive" data-doc-matrix-integration="esm" hidden markdown="1">
+
+```ts
+import {
+  defineTrackswitchInteractiveElement,
+  type InteractiveTrackSwitchInit,
+} from 'trackswitch/interactive';
+
+const config: InteractiveTrackSwitchInit = {
+  workerUrl: 'dist/js/trackswitch-interactive-worker.js',
+};
+
+defineTrackswitchInteractiveElement();
+document.querySelector('trackswitch-alignment-interactive')!.config = config;
+```
+
+  </div>
+  <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="interactive" data-doc-matrix-integration="react" hidden markdown="1">
+
+```tsx
+import { TrackSwitchAlignmentInteractive } from 'trackswitch/react';
+import type { InteractiveTrackSwitchInit } from 'trackswitch/interactive';
+
+const config: InteractiveTrackSwitchInit = {
+  workerUrl: 'dist/js/trackswitch-interactive-worker.js',
+};
+
+export function ExamplePlayer() {
+  return <TrackSwitchAlignmentInteractive config={config} className="trackswitch-host" />;
+}
+```
+
+  </div>
+  <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="interactive" data-doc-matrix-integration="vue" hidden markdown="1">
+
+```vue
+<script setup lang="ts">
+import { TrackSwitchAlignmentInteractive } from 'trackswitch/vue';
+import type { InteractiveTrackSwitchInit } from 'trackswitch/interactive';
+
+const config: InteractiveTrackSwitchInit = {
+  workerUrl: 'dist/js/trackswitch-interactive-worker.js',
+};
+</script>
+
+<template>
+  <TrackSwitchAlignmentInteractive :config="config" class="trackswitch-host" />
+</template>
+```
+
+  </div>
 </div>
-
-For alignment mode, use `trackswitch-alignment-player`, `defineTrackswitchAlignmentElement()`, `TrackSwitchAlignmentPlayer` from `trackswitch/react`, or `TrackSwitchAlignmentPlayer` from `trackswitch/vue`. The config must include the player-wide `alignment` block and every track must include `alignment.column`.
-
-Use framework entrypoints only in client-side components. The player needs the browser DOM and Web Audio APIs, even though the package can be imported in server-rendered projects.
 
 ## Full Options Reference {#full-options-reference}
 
-The browser bundles expose these factory functions on `window.TrackSwitch`. In ESM, import the same functions directly from `trackswitch`.
+<div class="ts-doc-tabs" data-doc-matrix data-doc-matrix-version="default" markdown="1">
+  <div class="ts-doc-tabs__list ts-doc-tabs__list--versions" aria-label="Player version">
+    <button class="ts-doc-tabs__tab is-active" type="button" aria-pressed="true" data-doc-matrix-control="version" data-doc-matrix-value="default">Default</button>
+    <button class="ts-doc-tabs__tab" type="button" aria-pressed="false" data-doc-matrix-control="version" data-doc-matrix-value="alignment">Alignment</button>
+    <button class="ts-doc-tabs__tab" type="button" aria-pressed="false" data-doc-matrix-control="version" data-doc-matrix-value="interactive">Interactive Alignment</button>
+  </div>
+  <div class="ts-doc-tabs__panel is-active" data-doc-matrix-panel data-doc-matrix-version="default" markdown="1">
 
-### Default Mode {#default-mode}
+The default browser bundle exposes `createDefaultTrackSwitch()` on `window.TrackSwitch`. In ESM, import the same function directly from `trackswitch`.
 
 ```javascript
 TrackSwitch.createDefaultTrackSwitch(rootElement, {
@@ -256,7 +468,10 @@ TrackSwitch.createDefaultTrackSwitch(rootElement, {
 });
 ```
 
-### Alignment Mode {#alignment-mode}
+  </div>
+  <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="alignment" hidden markdown="1">
+
+The alignment browser bundle exposes `createAlignmentTrackSwitch()` on `window.TrackSwitch`. In ESM, import the same function directly from `trackswitch`.
 
 ```javascript
 TrackSwitch.createAlignmentTrackSwitch(rootElement, {
@@ -374,6 +589,20 @@ TrackSwitch.createAlignmentTrackSwitch(rootElement, {
   },
 });
 ```
+
+  </div>
+  <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="interactive" hidden markdown="1">
+
+The interactive alignment browser bundle exposes `createAlignmentInteractiveTrackSwitch()` on `window.TrackSwitchInteractive`. In ESM, import the same function directly from `trackswitch/interactive`.
+
+```javascript
+TrackSwitchInteractive.createAlignmentInteractiveTrackSwitch(rootElement, {
+  workerUrl: 'dist/js/trackswitch-interactive-worker.js',
+});
+```
+
+  </div>
+</div>
 
 ## Player-Wide Settings {#player-wide-settings}
 
