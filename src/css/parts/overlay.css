@@ -65,7 +65,7 @@
 	font-size: 30pt;
 	width: auto;
 	height: auto;
-	color: var(--ts-color-text-primary);
+	color: var(--ts-color-text-inverse);
 }
 
 .trackswitch.error .overlay-activation {
