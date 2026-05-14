@@ -22,6 +22,11 @@ export function injectSettingsButton(
 	li.title = "Settings";
 	li.setAttribute("aria-label", "Settings");
 	li.innerHTML = renderIconSlotHtml("gear");
-	controlList.appendChild(li);
+	const timing = controlList.querySelector(".timing");
+	if (timing) {
+		controlList.insertBefore(li, timing);
+	} else {
+		controlList.appendChild(li);
+	}
 	return li;
 }

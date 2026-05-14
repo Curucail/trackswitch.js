@@ -57,12 +57,12 @@
 }
 
 .trackswitch .main-control .timing {
-	order: 70;
+	order: 90;
 	margin-left: 0;
 }
 
 .trackswitch .main-control .settings-button {
-	order: 60;
+	order: 80;
 	margin-left: auto;
 }
 
