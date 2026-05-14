@@ -7,7 +7,7 @@ permalink: /documentation.html
 - [Player Versions](#player-versions)
 - [Quick Minimal Setup](#quick-setup)
 - [Full Options Reference](#full-options-reference)
-- [Player-Wide Settings](#player-wide-settings)
+- [Configuration](#player-wide-settings)
   - [`ui`](#ui)
   - [`presetNames`](#presetnames)
   - [`features`](#features)
@@ -589,7 +589,7 @@ TrackSwitch.createAlignmentTrackSwitch(rootElement, {
 
   </div>
   <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="interactive" hidden markdown="1">
-  
+
 ```javascript
 TrackSwitchInteractive.createAlignmentInteractiveTrackSwitch(rootElement, {
   workerUrl: 'dist/js/trackswitch-interactive-worker.js',
@@ -599,7 +599,7 @@ TrackSwitchInteractive.createAlignmentInteractiveTrackSwitch(rootElement, {
   </div>
 </div>
 
-## Player-Wide Settings {#player-wide-settings}
+## Configuration {#player-wide-settings}
 
 ### `ui` {#ui}
 
@@ -653,18 +653,18 @@ Notes:
 | `timer?` | `boolean` | `true` | Show the main time display. |
 | `presets?` | `boolean` | `true` | Show preset switching UI element when presets are available. |
 
-Unknown feature keys are rejected. The old `features.mode` option is not supported; choose the default or alignment player variant instead.
+Unknown feature keys are rejected.
 
 ### `alignment` {#alignment}
 
-Use `alignment` only with `createAlignmentTrackSwitch`, `<trackswitch-alignment-player>`, or `<TrackSwitchAlignmentPlayer>`. Default-mode players reject this block.
+Use `alignment` only with alignment or interactive alignment modes. Default-mode players reject this block.
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `csv` | `string` | `-` | The timing data file used to connect the different performances. |
 | `referenceTimeColumn` | `string` | `-` | The csv column to determine the main shared timeline used by the player. A usual setup would be to align tracks to a reference timeline calculated from the score. |
 | `referenceTimeColumnSync?` | `string` | none | The csv column to determine the shared timeline when Sync is turned on in alignment mode. |
-| `outOfRange?` | `'clamp' \| 'linear'` | `'clamp'` | What the player should do when playback reaches a part of the timing map that has no matching value. |
+| `outOfRange?` | `'clamp' | 'linear'` | `'clamp'` | What the player should do when playback reaches a part of the timing map that has no matching value. |
 
 ## Track Settings {#track-settings}
 
@@ -736,7 +736,7 @@ Notes:
 
 ### Track Alignment Options {#track-alignment-options}
 
-Each track can also use an `alignment` block:
+In alignment mode, each track can also use an `alignment` block:
 
 ```javascript
 trackGroup: [
@@ -758,7 +758,6 @@ trackGroup: [
 
 Notes:
 
-- Use these options only in alignment mode.
 - `synchronizedSources` are what make mixed synced playback possible.
 - Sync is only available when the player also has a shared sync timeline through `referenceTimeColumnSync`.
 
@@ -790,7 +789,7 @@ Section options:
 | `bold?` | `boolean` | `false` | Makes the text bold. |
 | `italic?` | `boolean` | `false` | Makes the text italic. |
 | `fontSize?` | `number` | none | Sets the text size in pixels. |
-| `align?` | `'left' \| 'center' \| 'right'` | `'center'` | Sets horizontal text alignment. |
+| `align?` | `'left' | 'center' | 'right'` | `'center'` | Sets horizontal text alignment. |
 | `style?` | `string` | none | Lets you fine-tune the look or spacing of the section with CSS. |
 
 Notes:
@@ -878,8 +877,8 @@ Section options:
 | `height?` | `number` | `150` | Height of the waveform. |
 | `waveformBarWidth?` | `number` | `1` | Thickness of the waveform bars. |
 | `maxZoom?` | `number` | `5` | The closest zoom level listeners can reach, in seconds. Smaller numbers allow tighter zoom. |
-| `waveformSource?` | `'audible' \| number \| number[]` | `'audible'` | Chooses which sound the waveform represents. |
-| `playbackFollowMode?` | `'off' \| 'center' \| 'jump'` | `'off'` | Decides whether the waveform view follows playback automatically. |
+| `waveformSource?` | `'audible' | number | number[]` | `'audible'` | Chooses which sound the waveform represents. |
+| `playbackFollowMode?` | `'off' | 'center' | 'jump'` | `'off'` | Decides whether the waveform view follows playback automatically. |
 | `timer?` | `boolean` | Standard: `false`; Alignment: `true` | Shows a small time label inside the waveform panel. |
 | `alignedPlayhead?` | `boolean` | `false` | Draws a diagonal Z-shaped indicator that shows where the reference timeline position is relative to this track's local playhead. Only has an effect in alignment mode and requires `waveformSource` to be a track index (number). |
 | `showAlignmentPoints?` | `boolean` | `false` | Draws a thin dashed Z-shaped line for every alignment anchor point that exists, showing the full warping path across the waveform. Only has an effect in alignment mode and requires `waveformSource` to be a track index (number). |
@@ -929,7 +928,6 @@ Section options:
 
 Notes:
 
-- The score can still be shown without measure syncing.
 - If `measureColumn` is set and matching alignment data is available, listeners can click measures to jump through the music.
 - `measureColumn` is an alignment-only option. Default-mode players reject sheet music elements that include it.
 
@@ -955,7 +953,7 @@ Section options:
 | --- | --- | --- | --- |
 | `height?` | `number` | auto | Height of the chart area. |
 | `tempoSmoothingSeconds?` | `number` | `5` | How much the local tempo deviation graph should be smoothed. Tempo Deviation is computed as a central differences variant of the warping path. Larger values give a smoother curve. |
-| `bpm?` | `number \| 'infer_score' \| null` | `null` | Controls whether the left tempo axis is shown as BPM. Use a positive number for a fixed global BPM, `'infer_score'` to infer it from the score dynamically (changing BPM also supported), or `null` to hide the BPM axis and show only tempo percent. |
+| `bpm?` | `number | 'infer_score' | null` | `null` | Controls whether the left tempo axis is shown as BPM. Use a positive number for a fixed global BPM, `'infer_score'` to infer it from the score dynamically (changing BPM also supported), or `null` to hide the BPM axis and show only tempo percent. |
 | `style?` | `string` | none | Lets you fine-tune the look or spacing of the section with CSS. |
 
 Notes:
