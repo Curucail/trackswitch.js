@@ -51,10 +51,6 @@ export function normalizeFeatures(
 		...(features ?? {}),
 	};
 
-	if (normalized.tabView) {
-		normalized.exclusiveSolo = true;
-	}
-
 	if (normalized.exclusiveSolo) {
 		normalized.presets = false;
 	}
