@@ -58,6 +58,27 @@
 		];
 	}
 
+	function stripSnippetPath(value) {
+		return value.replace(/^\//, "");
+	}
+
+	function createAlignmentSnippetTracks() {
+		return createAlignmentTracks("").map(function (track) {
+			var normalizedTrack = Object.assign({}, track);
+			normalizedTrack.sources = track.sources.map(function (source) {
+				return { src: stripSnippetPath(source.src) };
+			});
+			normalizedTrack.alignment = Object.assign({}, track.alignment, {
+				synchronizedSources: track.alignment.synchronizedSources.map(
+					function (source) {
+						return { src: stripSnippetPath(source.src) };
+					},
+				),
+			});
+			return normalizedTrack;
+		});
+	}
+
 	var CONTROL_NAMES = [
 		"looping",
 		"globalVolume",
@@ -820,26 +841,7 @@
 				uiConfig.push({ type: "perTrackImage", seekable: true });
 			}
 
-			trackGroup = [
-				{
-					title: "SC06",
-					sources: [{ src: "Schubert_D911-03_SC06.wav" }],
-					alignment: {
-						column: "time_HU33",
-						synchronizedSources: [
-							{ src: "Schubert_D911-03_SC06_syncronized.wav" },
-						],
-					},
-				},
-				{
-					title: "HU33",
-					sources: [{ src: "Schubert_D911-03_HU33.wav" }],
-					alignment: {
-						column: "time_SC06",
-						synchronizedSources: [{ src: "Schubert_D911-03_HU33.wav" }],
-					},
-				},
-			];
+			trackGroup = createAlignmentSnippetTracks();
 			uiConfig.push({
 				type: "trackGroup",
 				trackGroup: trackGroup,

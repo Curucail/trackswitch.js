@@ -168,21 +168,21 @@ const config: TrackSwitchInit = {
           "type": "trackGroup",
           "trackGroup": [
             {
-              "title": "Performance A",
-              "sources": [{ "src": "performance-a.mp3", "type": "audio/mpeg" }],
-              "alignment": { "column": "time_a" }
+              "title": "Track 1",
+              "sources": [{ "src": "track1.mp3", "type": "audio/mpeg" }],
+              "alignment": { "column": "track_1_time" }
             },
             {
-              "title": "Performance B",
-              "sources": [{ "src": "performance-b.mp3", "type": "audio/mpeg" }],
-              "alignment": { "column": "time_b" }
+              "title": "Track 2",
+              "sources": [{ "src": "track2.mp3", "type": "audio/mpeg" }],
+              "alignment": { "column": "track_2_time" }
             }
           ]
         }
       ],
       "alignment": {
         "csv": "alignment.csv",
-        "referenceTimeColumn": "time_a"
+        "referenceTimeColumn": "track_1_time"
       }
     }
   </script>
@@ -201,21 +201,21 @@ const config: TrackSwitchInit = {
       type: 'trackGroup',
       trackGroup: [
         {
-          title: 'Performance A',
-          sources: [{ src: 'performance-a.mp3', type: 'audio/mpeg' }],
-          alignment: { column: 'time_a' },
+          title: 'Track 1',
+          sources: [{ src: 'track1.mp3', type: 'audio/mpeg' }],
+          alignment: { column: 'track_1_time' },
         },
         {
-          title: 'Performance B',
-          sources: [{ src: 'performance-b.mp3', type: 'audio/mpeg' }],
-          alignment: { column: 'time_b' },
+          title: 'Track 2',
+          sources: [{ src: 'track2.mp3', type: 'audio/mpeg' }],
+          alignment: { column: 'track_2_time' },
         },
       ],
     },
   ],
   alignment: {
     csv: 'alignment.csv',
-    referenceTimeColumn: 'time_a',
+    referenceTimeColumn: 'track_1_time',
   },
 };
 
@@ -235,21 +235,21 @@ const config: TrackSwitchInit = {
       type: 'trackGroup',
       trackGroup: [
         {
-          title: 'Performance A',
-          sources: [{ src: 'performance-a.mp3', type: 'audio/mpeg' }],
-          alignment: { column: 'time_a' },
+          title: 'Track 1',
+          sources: [{ src: 'track1.mp3', type: 'audio/mpeg' }],
+          alignment: { column: 'track_1_time' },
         },
         {
-          title: 'Performance B',
-          sources: [{ src: 'performance-b.mp3', type: 'audio/mpeg' }],
-          alignment: { column: 'time_b' },
+          title: 'Track 2',
+          sources: [{ src: 'track2.mp3', type: 'audio/mpeg' }],
+          alignment: { column: 'track_2_time' },
         },
       ],
     },
   ],
   alignment: {
     csv: 'alignment.csv',
-    referenceTimeColumn: 'time_a',
+    referenceTimeColumn: 'track_1_time',
   },
 };
 
@@ -271,21 +271,21 @@ const config: TrackSwitchInit = {
       type: 'trackGroup',
       trackGroup: [
         {
-          title: 'Performance A',
-          sources: [{ src: 'performance-a.mp3', type: 'audio/mpeg' }],
-          alignment: { column: 'time_a' },
+          title: 'Track 1',
+          sources: [{ src: 'track1.mp3', type: 'audio/mpeg' }],
+          alignment: { column: 'track_1_time' },
         },
         {
-          title: 'Performance B',
-          sources: [{ src: 'performance-b.mp3', type: 'audio/mpeg' }],
-          alignment: { column: 'time_b' },
+          title: 'Track 2',
+          sources: [{ src: 'track2.mp3', type: 'audio/mpeg' }],
+          alignment: { column: 'track_2_time' },
         },
       ],
     },
   ],
   alignment: {
     csv: 'alignment.csv',
-    referenceTimeColumn: 'time_a',
+    referenceTimeColumn: 'track_1_time',
   },
 };
 </script>
@@ -490,7 +490,7 @@ TrackSwitch.createAlignmentTrackSwitch(rootElement, {
     },
     {
       type: 'text',
-      text: 'Compare aligned performances on the shared score timeline.',
+      text: 'Compare aligned tracks on the shared score timeline.',
       bold: true,
       fontSize: 18,
       align: 'center',
@@ -515,31 +515,31 @@ TrackSwitch.createAlignmentTrackSwitch(rootElement, {
       rowHeight: 44,
       trackGroup: [
         {
-          title: 'Performance A',
+          title: 'Track 1',
           solo: true,
           volume: 1,
           pan: 0,
-          image: 'performance-a.png',
+          image: 'track1.png',
           style: 'border-left: 3px solid #4f8dc9;',
-          sources: [{ src: 'performance-a.mp3', type: 'audio/mpeg', startOffsetMs: 0, endOffsetMs: 0 }],
+          sources: [{ src: 'track1.mp3', type: 'audio/mpeg', startOffsetMs: 0, endOffsetMs: 0 }],
           alignment: {
-            column: 'perf_a_sec',
+            column: 'track_1_time',
             synchronizedSources: [
-              { src: 'performance-a-synced.mp3', type: 'audio/mpeg', startOffsetMs: 0, endOffsetMs: 0 },
+              { src: 'track1-synced.mp3', type: 'audio/mpeg', startOffsetMs: 0, endOffsetMs: 0 },
             ],
           },
         },
         {
-          title: 'Performance B',
+          title: 'Track 2',
           solo: false,
           volume: 0.92,
           pan: 0.1,
-          image: 'performance-b.png',
+          image: 'track2.png',
           style: 'border-left: 3px solid #6c757d;',
-          sources: [{ src: 'performance-b.mp3', type: 'audio/mpeg', startOffsetMs: 50, endOffsetMs: 0 }],
+          sources: [{ src: 'track2.mp3', type: 'audio/mpeg', startOffsetMs: 50, endOffsetMs: 0 }],
           alignment: {
-            column: 'perf_b_sec',
-            synchronizedSources: [{ src: 'performance-b-synced.mp3', type: 'audio/mpeg' }],
+            column: 'track_2_time',
+            synchronizedSources: [{ src: 'track2-synced.mp3', type: 'audio/mpeg' }],
           },
         },
       ],
@@ -741,11 +741,11 @@ In alignment mode, each track can also use an `alignment` block:
 ```javascript
 trackGroup: [
     {
-      title: 'Drums',
-      sources: [{ src: 'drums.mp3' }],
+      title: 'Track 1',
+      sources: [{ src: 'track1.mp3' }],
       alignment: {
-        column: 'perf_a_sec',
-        synchronizedSources: [{ src: 'performance-a-synced.mp3' }],
+        column: 'track_1_time',
+        synchronizedSources: [{ src: 'track1-synced.mp3' }],
       }
     },
   ],
