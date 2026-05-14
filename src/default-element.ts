@@ -214,22 +214,25 @@ export abstract class TrackswitchPlayerBase
 		const generation = ++this.loadGeneration;
 		const loadPromise = controller
 			.load()
-			.catch((error) => {
-				if (
-					this.currentController !== controller ||
-					this.loadGeneration !== generation
-				) {
-					return;
-				}
+			.then(
+				() => undefined,
+				(error) => {
+					if (
+						this.currentController !== controller ||
+						this.loadGeneration !== generation
+					) {
+						return;
+					}
 
-				dispatchTrackSwitchEvent(this, "error", {
-					message:
-						error instanceof Error
-							? error.message
-							: "Unexpected error while loading TrackSwitch.",
-				});
-			})
-			.finally(() => {
+					dispatchTrackSwitchEvent(this, "error", {
+						message:
+							error instanceof Error
+								? error.message
+								: "Unexpected error while loading TrackSwitch.",
+					});
+				},
+			)
+			.then(() => {
 				if (
 					this.currentController === controller &&
 					this.loadGeneration === generation
