@@ -166,7 +166,9 @@
 	width: 1em;
 	height: 1em;
 	flex: 0 0 1em;
+	overflow: visible;
 	transform-origin: center;
+	shape-rendering: geometricPrecision;
 }
 
 .trackswitch .control li.solo .ts-icon-slot[data-icon="circle"] .ts-icon-svg,
@@ -180,29 +182,7 @@
 	li.solo
 	.ts-icon-slot[data-icon="circle-dot"]
 	.ts-icon-svg {
-	transform: translateY(0em) scale(0.96);
-}
-
-.trackswitch
-	.control
-	li.solo
-	.ts-icon-slot[data-icon="circle"]
-	.ts-icon-svg
-	path,
-.trackswitch
-	.control
-	li.solo
-	.ts-icon-slot[data-icon="circle-check"]
-	.ts-icon-svg
-	path,
-.trackswitch
-	.control
-	li.solo
-	.ts-icon-slot[data-icon="circle-dot"]
-	.ts-icon-svg
-	path {
-	stroke: currentColor;
-	stroke-width: 14;
+	transform: none;
 }
 
 .trackswitch .control li.solo.radio {
@@ -216,7 +196,7 @@
 }
 
 .trackswitch li.track .track-title {
-	line-height: 1.2;
+	line-height: 1.35;
 	flex: 1 1 auto;
 	min-width: 0;
 	overflow: hidden;
