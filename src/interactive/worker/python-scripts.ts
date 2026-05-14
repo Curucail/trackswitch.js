@@ -296,6 +296,7 @@ sys.modules['librosa.sequence'] = librosa_sequence
  */
 export const ALIGNMENT_PIPELINE = `
 import numpy as np
+import gc
 import io
 import wave
 
@@ -407,7 +408,7 @@ def build_valid_time_map(warping_path, source_sample_count, target_sample_count,
     return time_map.astype(int)
 
 def encode_wav_bytes(audio_data, sample_rate):
-    audio_array = np.asarray(audio_data, dtype=np.float64)
+    audio_array = np.asarray(audio_data, dtype=np.float32)
     if audio_array.ndim == 1:
         audio_array = audio_array[:, np.newaxis]
 
@@ -424,23 +425,23 @@ def encode_wav_bytes(audio_data, sample_rate):
     return buffer.getvalue()
 
 def render_synchronized_audio(fid, warping_path, chroma_shift, progress_fn=None):
+    channels = full_resolution_audio.get(fid)
+    if not channels:
+        raise ValueError('No full-resolution audio channels available for synchronized rendering: ' + str(_file_names_dict.get(fid, fid)))
+
     sample_rate = int(audio_sample_rates[str(fid)])
-    if reference_file_id in full_resolution_audio:
-        reference_sample_rate = int(audio_sample_rates[str(reference_file_id)])
-        reference_duration = len(full_resolution_audio[reference_file_id][0]) / reference_sample_rate
-    else:
-        reference_duration = ref_length / FEATURE_RATE
+    reference_duration = float(sync_render_reference_duration)
     target_sample_count = int(round(reference_duration * sample_rate))
     if progress_fn is not None:
         progress_fn(0.02, 'preparing time map')
     pitch_shift_cents = pitch_shift_cents_from_chroma_shift(chroma_shift)
     rendered_channels = []
-    total_channels = len(full_resolution_audio[fid])
+    total_channels = len(channels)
 
-    for channel_index, channel_audio in enumerate(full_resolution_audio[fid]):
+    for channel_index, channel_audio in enumerate(channels):
         channel_start = channel_index / max(total_channels, 1)
         channel_span = 1.0 / max(total_channels, 1)
-        channel_audio = np.asarray(channel_audio, dtype=np.float64).reshape(-1)
+        channel_audio = np.asarray(channel_audio, dtype=np.float32).reshape(-1)
         time_map = build_valid_time_map(
             warping_path,
             len(channel_audio),
@@ -466,14 +467,14 @@ def render_synchronized_audio(fid, warping_path, chroma_shift, progress_fn=None)
                 Fs=sample_rate,
                 order='tsm-res'
             )
-        shifted_audio = np.asarray(shifted_audio, dtype=np.float64).reshape(-1)
+        shifted_audio = np.asarray(shifted_audio, dtype=np.float32).reshape(-1)
         if progress_fn is not None:
             progress_fn(
                 channel_start + 0.62 * channel_span,
                 f'Synchronizing audio: time-stretching channel {channel_index + 1}/{total_channels}'
             )
         synced_audio = libtsm.hps_tsm(shifted_audio, time_map, Fs=sample_rate)
-        rendered_channels.append(np.asarray(synced_audio, dtype=np.float64).reshape(-1))
+        rendered_channels.append(np.asarray(synced_audio, dtype=np.float32).reshape(-1))
 
     if len(rendered_channels) == 0:
         raise ValueError('No audio channels available for synchronized rendering.')
@@ -585,7 +586,13 @@ total_files = len(all_file_ids)
 non_ref_count = total_files - 1
 sync_audio_file_ids = [
     fid for fid in all_file_ids
-    if generate_synced_audio and fid in audio_files and fid != reference_file_id
+    if (
+        generate_synced_audio
+        and fid in audio_files
+        and fid != reference_file_id
+        and fid in full_resolution_audio
+        and len(full_resolution_audio[fid]) > 0
+    )
 ]
 sync_audio_count = len(sync_audio_file_ids)
 _file_names_dict = dict(file_names)
@@ -829,6 +836,10 @@ import pandas as pd
 
 ref_length = get_reference_feature_length(reference_file_id)
 ref_times = np.arange(ref_length, dtype=np.float64) / FEATURE_RATE
+if reference_file_id in audio_files:
+    sync_render_reference_duration = len(audio_files[reference_file_id]) / SAMPLE_RATE
+else:
+    sync_render_reference_duration = ref_length / FEATURE_RATE
 
 other_file_ids_ordered = [fid for fid in all_file_ids if fid != reference_file_id]
 
@@ -874,6 +885,30 @@ df = pd.DataFrame(columns)
 csv_output = df.to_csv(index=False, float_format='%.6f')
 
 if generate_synced_audio:
+    report_progress(f'[{_progress_percent(SYNC_START)}%] Releasing alignment buffers before audio rendering...')
+    _feature_cache.clear()
+    for _name in (
+        'audio_files',
+        'score_files',
+        'features',
+        'score_measure_maps',
+        'ref_chroma',
+        'ref_cens',
+        'other_chroma',
+        'other_onset',
+        'other_cens',
+        'columns',
+        'df',
+        'ref_times',
+        'm_times',
+        'm_nums',
+        'score_times',
+        'file_features',
+        'cached_entry',
+    ):
+        globals().pop(_name, None)
+    gc.collect()
+
     total_sync_files = max(len(sync_audio_file_ids), 1)
 
     def _make_sync_progress_fn(base, span, name):
@@ -896,6 +931,8 @@ if generate_synced_audio:
             ),
             dtype=np.uint8
         )
+        full_resolution_audio.pop(fid, None)
+        gc.collect()
 
 report_progress('[100%] Alignment complete')
 `;

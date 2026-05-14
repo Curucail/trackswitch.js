@@ -146,9 +146,12 @@ export class AlignmentWorkerBridge {
 					throw new Error(`Audio file is missing decoded data: ${file.name}`);
 				}
 				const pcmCopy = new Float32Array(file.pcmData);
-				const fullPcmChannels = (file.fullPcmChannels || []).map(
-					(channelData) => new Float32Array(channelData),
-				);
+				const fullPcmChannels =
+					generateSyncedAudio && file.id !== referenceFileId
+					? (file.fullPcmChannels || []).map(
+							(channelData) => new Float32Array(channelData),
+						)
+					: [];
 				return {
 					id: file.id,
 					name: file.name,

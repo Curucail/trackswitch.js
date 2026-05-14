@@ -162,9 +162,11 @@ async function computeAlignment(
 		fileNames[file.id] = file.name;
 		if (file.type === "audio") {
 			audioFiles[file.id] = file.pcmData;
-			fullResolutionAudioFiles[file.id] = file.fullPcmChannels.map(
-				(channelData) => Array.from(channelData),
-			);
+			if (generateSyncedAudio && file.id !== referenceFileId) {
+				fullResolutionAudioFiles[file.id] = file.fullPcmChannels.map(
+					(channelData) => Array.from(channelData),
+				);
+			}
 			audioSampleRates[file.id] = file.sampleRate;
 		} else {
 			scoreFiles[file.id] = file.xmlText;
@@ -220,7 +222,7 @@ import numpy as np
 _audio_files_raw = dict(audio_files_js)
 audio_files = {}
 for fid, arr in _audio_files_raw.items():
-    audio_files[fid] = np.array(arr, dtype=np.float64)
+    audio_files[fid] = np.array(arr, dtype=np.float32)
 del _audio_files_raw
 `);
 
@@ -228,7 +230,7 @@ del _audio_files_raw
 _full_resolution_audio_files_raw = dict(full_resolution_audio_files)
 full_resolution_audio = {}
 for fid, channels in _full_resolution_audio_files_raw.items():
-    full_resolution_audio[fid] = [np.array(channel, dtype=np.float64) for channel in channels]
+    full_resolution_audio[fid] = [np.array(channel, dtype=np.float32) for channel in channels]
 del _full_resolution_audio_files_raw
 audio_sample_rates = {str(fid): int(rate) for fid, rate in dict(audio_sample_rates).items()}
 `);
