@@ -50,11 +50,6 @@ const ALIGNMENT_HELP_TOOLTIP_CONTENT: Record<
 				title: "Chroma",
 				description: "Simple Chroma features.",
 			},
-			{
-				title: "Basic Pitch",
-				description:
-					'Use Spotifys "Basic Pitch" transcription model outputs as features.',
-			},
 		],
 	},
 	algorithm: {

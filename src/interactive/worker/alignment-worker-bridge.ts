@@ -43,7 +43,7 @@ export class AlignmentWorkerBridge {
 
 		this.initPromise = new Promise((resolve, reject) => {
 			try {
-				this.worker = new Worker(this.workerUrl, { type: "module" });
+				this.worker = new Worker(this.workerUrl);
 			} catch (_e) {
 				reject(
 					new Error(
@@ -69,7 +69,16 @@ export class AlignmentWorkerBridge {
 
 			this.worker.addEventListener("message", onMessage);
 			this.worker.addEventListener("error", (event) => {
-				reject(new Error(`Worker error: ${event.message || "unknown"}`));
+				const message = event.message || "unknown";
+				const location =
+					event.filename || event.lineno || event.colno
+						? ` (${event.filename || this.workerUrl}:${event.lineno || 0}:${event.colno || 0})`
+						: "";
+				reject(
+					new Error(
+						`Worker error while loading ${this.workerUrl}: ${message}${location}`,
+					),
+				);
 			});
 
 			this.worker.postMessage({
