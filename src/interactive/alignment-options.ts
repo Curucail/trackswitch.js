@@ -19,7 +19,6 @@ export const ALIGNMENT_FEATURE_SET_OPTIONS: AlignmentFeatureSetOption[] = [
 	{ id: "chroma_dlnco_synctoolbox", label: "Chroma + DLNCO (synctoolbox)" },
 	{ id: "chroma_dlnco", label: "Chroma + DLNCO" },
 	{ id: "chroma", label: "Chroma" },
-	{ id: "basic_pitch", label: "Basic Pitch" },
 ];
 
 export const ALIGNMENT_ALGORITHM_OPTIONS: AlignmentAlgorithmOption[] = [
@@ -34,20 +33,14 @@ const COMPATIBLE_ALGORITHMS_BY_FEATURE_SET: Record<
 	chroma_dlnco_synctoolbox: ["mrmsdtw"],
 	chroma_dlnco: ["mrmsdtw", "dtw"],
 	chroma: ["mrmsdtw", "dtw"],
-	basic_pitch: ["mrmsdtw", "dtw"],
 };
 
 const COMPATIBLE_FEATURE_SETS_BY_ALGORITHM: Record<
 	AlignmentAlgorithmId,
 	AlignmentFeatureSetId[]
 > = {
-	mrmsdtw: [
-		"chroma_dlnco_synctoolbox",
-		"chroma_dlnco",
-		"chroma",
-		"basic_pitch",
-	],
-	dtw: ["chroma_dlnco", "chroma", "basic_pitch"],
+	mrmsdtw: ["chroma_dlnco_synctoolbox", "chroma_dlnco", "chroma"],
+	dtw: ["chroma_dlnco", "chroma"],
 };
 
 export function getDefaultAlignmentSelection(): AlignmentSelection {
@@ -172,11 +165,6 @@ export function mapLegacyAlignmentMethod(
 			return {
 				featureSet: "chroma",
 				algorithm: "dtw",
-			};
-		case "basic_pitch":
-			return {
-				featureSet: "basic_pitch",
-				algorithm: "mrmsdtw",
 			};
 		default:
 			return {

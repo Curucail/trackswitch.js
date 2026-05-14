@@ -1,4 +1,3 @@
-import { cloneBasicPitchFeatureSet } from "../basic-pitch";
 import {
 	DEFAULT_WORKER_URL,
 	FEATURE_RATE,
@@ -148,10 +147,6 @@ export class AlignmentWorkerBridge {
 					pcmData: pcmCopy,
 					fullPcmChannels: fullPcmChannels,
 					sampleRate: file.sampleRate,
-					basicPitchFeatures:
-						featureSet === "basic_pitch" && file.basicPitchFeatures
-							? cloneBasicPitchFeatureSet(file.basicPitchFeatures)
-							: undefined,
 				} as WorkerFileAudio;
 			}
 			if (!file.xmlText) {
@@ -172,10 +167,6 @@ export class AlignmentWorkerBridge {
 				wf.fullPcmChannels.forEach((channelData) => {
 					transferables.push(channelData.buffer);
 				});
-				if (wf.basicPitchFeatures) {
-					transferables.push(wf.basicPitchFeatures.frames.data.buffer);
-					transferables.push(wf.basicPitchFeatures.contours.data.buffer);
-				}
 			}
 		});
 

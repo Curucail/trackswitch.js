@@ -11,13 +11,7 @@ export const pythonRuntimeAssets = [
 	},
 ];
 
-export const runtimeAssets = [
-	{
-		source: "node_modules/@spotify/basic-pitch/model",
-		dist: "dist/js/basic-pitch",
-		docs: "docs/js/basic-pitch",
-	},
-];
+export const runtimeAssets = [];
 
 export const docsAssets = [
 	{

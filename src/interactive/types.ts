@@ -6,24 +6,12 @@ export type AlignmentAlgorithmId = "dtw" | "mrmsdtw";
 export type AlignmentFeatureSetId =
 	| "chroma"
 	| "chroma_dlnco"
-	| "chroma_dlnco_synctoolbox"
-	| "basic_pitch";
-export type AlignmentMethodId = "dtw" | "mrmsdtw" | "basic_pitch";
+	| "chroma_dlnco_synctoolbox";
+export type AlignmentMethodId = "dtw" | "mrmsdtw";
 
 export interface AlignmentSelection {
 	featureSet: AlignmentFeatureSetId;
 	algorithm: AlignmentAlgorithmId;
-}
-
-export interface BasicPitchFeatureMatrix {
-	data: Float32Array;
-	frameCount: number;
-	binCount: number;
-}
-
-export interface BasicPitchFeatureSet {
-	frames: BasicPitchFeatureMatrix;
-	contours: BasicPitchFeatureMatrix;
 }
 
 export interface InteractiveFile {
@@ -41,8 +29,6 @@ export interface InteractiveFile {
 	xmlText?: string;
 	/** Duration in seconds (audio files only, set after decoding). */
 	duration?: number;
-	/** Cached Basic Pitch features (audio files only). */
-	basicPitchFeatures?: BasicPitchFeatureSet;
 }
 
 export interface InteractiveSynchronizedAudio {
@@ -106,7 +92,6 @@ export interface WorkerFileAudio {
 	pcmData: Float32Array;
 	fullPcmChannels: Float32Array[];
 	sampleRate: number;
-	basicPitchFeatures?: BasicPitchFeatureSet;
 }
 
 export interface WorkerFileScore {

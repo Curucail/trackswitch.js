@@ -316,9 +316,6 @@ try:
 except Exception:
     HAS_ONSET_FEATURES = False
 
-BASIC_PITCH_MIDI_OFFSET = 21
-BASIC_PITCH_N_SEMITONES = 88
-
 def extract_audio_features(audio_data, sample_rate, feature_rate, include_onset=False, progress_fn=None):
     """Extract chroma features and, optionally, DLNCO onset features from audio PCM data."""
     if progress_fn: progress_fn('Estimating tuning')
@@ -357,32 +354,6 @@ def extract_audio_features(audio_data, sample_rate, feature_rate, include_onset=
         )
 
     return f_chroma_quantized, f_onset
-
-def decode_basic_pitch_feature_matrix(payload):
-    frame_count = int(payload['frameCount'])
-    bin_count = int(payload['binCount'])
-    data = np.asarray(payload['data'], dtype=np.float64)
-
-    if frame_count == 0 or bin_count == 0:
-        return np.zeros((0, 0), dtype=np.float64)
-
-    if data.size != frame_count * bin_count:
-        raise ValueError('Invalid Basic Pitch feature payload dimensions.')
-
-    # JS caches matrices as time x bins. DTW expects feature_dim x time.
-    return data.reshape((frame_count, bin_count)).T
-
-def build_basic_pitch_score_matrix(f_pitch):
-    target_end = BASIC_PITCH_MIDI_OFFSET + BASIC_PITCH_N_SEMITONES
-    if f_pitch.shape[0] < target_end:
-        padded = np.zeros((target_end, f_pitch.shape[1]), dtype=np.float64)
-        padded[:f_pitch.shape[0], :] = f_pitch
-        f_pitch = padded
-
-    return np.asarray(
-        f_pitch[BASIC_PITCH_MIDI_OFFSET:target_end, :],
-        dtype=np.float64
-    )
 
 def pitch_shift_cents_from_chroma_shift(chroma_shift):
     cents = int(chroma_shift) % 12
@@ -577,14 +548,13 @@ def extract_score_note_events_and_measure_map(xml_text):
 
     return pd.DataFrame(notes), measure_times
 
-def extract_score_features(xml_text, feature_rate, include_onset=False, include_basic_pitch_score=False):
-    """Extract score chroma features, optional DLNCO / Basic Pitch-like features, and measure map."""
+def extract_score_features(xml_text, feature_rate, include_onset=False):
+    """Extract score chroma features, optional DLNCO features, and measure map."""
     from synctoolbox.feature.csv_tools import df_to_pitch_features, df_to_pitch_onset_features
 
     df, measure_times = extract_score_note_events_and_measure_map(xml_text)
 
     f_pitch = df_to_pitch_features(df, feature_rate=feature_rate)
-    f_basic_pitch_score = build_basic_pitch_score_matrix(f_pitch) if include_basic_pitch_score else None
     f_chroma = pitch_to_chroma(f_pitch=f_pitch)
     f_chroma_quantized = quantize_chroma(f_chroma=f_chroma)
 
@@ -600,7 +570,7 @@ def extract_score_features(xml_text, feature_rate, include_onset=False, include_
             visualize=False,
         )
 
-    return f_chroma_quantized, f_onset, measure_times, f_basic_pitch_score
+    return f_chroma_quantized, f_onset, measure_times
 
 
 # ── Main pipeline ──
@@ -619,22 +589,12 @@ sync_audio_file_ids = [
 ]
 sync_audio_count = len(sync_audio_file_ids)
 _file_names_dict = dict(file_names)
-_basic_pitch_audio_features_raw = dict(basic_pitch_audio_features) if 'basic_pitch_audio_features' in globals() else {}
-audio_basic_pitch_features = {}
 _feature_cache = globals().get('_interactive_feature_cache')
 if _feature_cache is None:
     _feature_cache = {}
     globals()['_interactive_feature_cache'] = _feature_cache
 
 NEEDS_DLNCO_FEATURES = alignment_feature_set_id in ('chroma_dlnco_synctoolbox', 'chroma_dlnco')
-NEEDS_BASIC_PITCH_FEATURES = alignment_feature_set_id == 'basic_pitch'
-
-if NEEDS_BASIC_PITCH_FEATURES:
-    for fid, payload in _basic_pitch_audio_features_raw.items():
-        audio_basic_pitch_features[str(fid)] = {
-            'frames': decode_basic_pitch_feature_matrix(payload['frames']),
-            'contours': decode_basic_pitch_feature_matrix(payload['contours']),
-        }
 
 def _progress_percent(value):
     return int(np.clip(np.round(value), 0, 100))
@@ -657,8 +617,6 @@ def _clone_cached_file_features(cached_entry):
         'chroma': _clone_feature_matrix(cached_entry['chroma']),
         'onset': _clone_feature_matrix(cached_entry.get('onset')),
     }
-    if 'score_basic_pitch' in cached_entry and cached_entry['score_basic_pitch'] is not None:
-        cloned['score_basic_pitch'] = _clone_feature_matrix(cached_entry['score_basic_pitch'])
     if 'measure_map' in cached_entry:
         cloned['measure_map'] = _clone_measure_map(cached_entry['measure_map'])
     return cloned
@@ -716,7 +674,6 @@ for file_idx, fid in enumerate(all_file_ids):
     cache_satisfies_request = (
         cached_entry is not None
         and (not NEEDS_DLNCO_FEATURES or cached_entry.get('onset') is not None)
-        and (not NEEDS_BASIC_PITCH_FEATURES or fid in audio_files or cached_entry.get('score_basic_pitch') is not None)
     )
 
     if cache_satisfies_request:
@@ -752,12 +709,6 @@ for file_idx, fid in enumerate(all_file_ids):
             'chroma': chroma,
             'onset': onset,
         }
-        if NEEDS_BASIC_PITCH_FEATURES:
-            audio_basic_pitch = audio_basic_pitch_features.get(str(fid))
-            if not audio_basic_pitch:
-                raise ValueError(f'Missing Basic Pitch features for audio file: {fname}')
-            file_features['basic_pitch_frames'] = audio_basic_pitch['frames']
-            file_features['basic_pitch_contours'] = audio_basic_pitch['contours']
         _feature_cache[fid] = {
             'type': 'audio',
             'chroma': _clone_feature_matrix(chroma),
@@ -765,11 +716,10 @@ for file_idx, fid in enumerate(all_file_ids):
         }
     else:
         report_progress(f'[{_progress_percent(file_start_pct)}%] Parsing score: {fname}')
-        chroma, onset, measure_map, score_basic_pitch = extract_score_features(
+        chroma, onset, measure_map = extract_score_features(
             score_files[fid],
             FEATURE_RATE,
             include_onset=NEEDS_DLNCO_FEATURES,
-            include_basic_pitch_score=NEEDS_BASIC_PITCH_FEATURES,
         )
         if measure_map:
             score_measure_maps[fid] = measure_map
@@ -777,13 +727,10 @@ for file_idx, fid in enumerate(all_file_ids):
             'chroma': chroma,
             'onset': onset,
         }
-        if NEEDS_BASIC_PITCH_FEATURES:
-            file_features['score_basic_pitch'] = score_basic_pitch
         _feature_cache[fid] = {
             'type': 'musicxml',
             'chroma': _clone_feature_matrix(chroma),
             'onset': _clone_feature_matrix(onset),
-            'score_basic_pitch': _clone_feature_matrix(score_basic_pitch),
             'measure_map': _clone_measure_map(measure_map),
         }
     features[fid] = file_features
@@ -847,36 +794,9 @@ def get_alignment_pair_features(reference_id, other_id):
             other_features.get('onset'),
         )
 
-    reference_is_audio = reference_id in audio_files
-    other_is_audio = other_id in audio_files
-
-    if reference_is_audio and other_is_audio:
-        return (
-            ref_features['basic_pitch_contours'],
-            other_features['basic_pitch_contours'],
-            None,
-            None,
-        )
-
-    if reference_is_audio and not other_is_audio:
-        return (
-            ref_features['basic_pitch_frames'],
-            other_features['score_basic_pitch'],
-            None,
-            None,
-        )
-
-    if not reference_is_audio and other_is_audio:
-        return (
-            ref_features['score_basic_pitch'],
-            other_features['basic_pitch_frames'],
-            None,
-            None,
-        )
-
     return (
-        ref_features['score_basic_pitch'],
-        other_features['score_basic_pitch'],
+        ref_features['chroma'],
+        other_features['chroma'],
         None,
         None,
     )
@@ -884,15 +804,7 @@ def get_alignment_pair_features(reference_id, other_id):
 def get_reference_feature_length(reference_id):
     reference_features = features[reference_id]
 
-    if alignment_feature_set_id != 'basic_pitch':
-        return int(reference_features['chroma'].shape[1])
-
-    if reference_id in audio_files:
-        if 'basic_pitch_frames' in reference_features:
-            return int(reference_features['basic_pitch_frames'].shape[1])
-        return int(reference_features['basic_pitch_contours'].shape[1])
-
-    return int(reference_features['score_basic_pitch'].shape[1])
+    return int(reference_features['chroma'].shape[1])
 
 # Align each non-reference file to the reference
 warping_paths = {}
