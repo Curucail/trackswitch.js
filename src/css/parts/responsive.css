@@ -39,7 +39,7 @@
 	}
 }
 
-@container ts-main-control (max-width: 767px) {
+@container ts-main-control (max-width: 700px) {
 	.trackswitch .main-control .volume,
 	.trackswitch .main-control .preset-selector-wrap {
 		align-self: center;
@@ -71,7 +71,7 @@
 	}
 }
 
-@container ts-main-control (max-width: 767px) {
+@container ts-main-control (max-width: 700px) {
 	.trackswitch
 		.main-control
 		.control
@@ -211,7 +211,7 @@
 	}
 }
 
-@media (max-width: 767px) {
+@media (max-width: 700px) {
 	.trackswitch.trackswitch {
 		--ts-main-control-icon-size: 18px;
 		--ts-main-control-playback-gap: 16px;
@@ -342,13 +342,13 @@
 	}
 }
 
-@media (max-width: 767px) {
+@media (max-width: 700px) {
 	.trackswitch li.track {
 		min-height: 40px;
 	}
 }
 
-@container ts-track-row (max-width: 767px) {
+@container ts-track-row (max-width: 700px) {
 	.trackswitch li.track .track-mix-controls {
 		gap: 10px;
 		padding-left: 10px;
@@ -359,7 +359,7 @@
 	}
 }
 
-@media (max-width: 767px) {
+@media (max-width: 700px) {
 	.trackswitch li.track .track-volume-icon {
 		font-size: 18px;
 		margin-right: 10px;
@@ -418,7 +418,7 @@
 }
 
 /* Tablet/mobile adjustments */
-@media (max-width: 767px) {
+@media (max-width: 700px) {
 	.trackswitch .overlay-activation #overlayinfo {
 		font-size: 8pt;
 		top: calc(50% + 42px);
