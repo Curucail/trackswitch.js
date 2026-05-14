@@ -23,23 +23,22 @@ jobs:
       BUNDLE_GEMFILE: docs/Gemfile
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '24'
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
-          python-version: '3.13'
+          python-version: '3.14'
 
       - name: Checkout synctoolbox
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
-          repository: Curucail/synctoolbox
-          ref: numba-to-numpy-vectorization
+          repository: meinardmueller/synctoolbox
           path: .tmp/synctoolbox
 
       - name: Build synctoolbox wheel
@@ -63,7 +62,7 @@ jobs:
       
       - name: Setup Pages
         id: pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
@@ -76,7 +75,7 @@ jobs:
         run: bundle exec jekyll build --source ./docs --destination ./_site --baseurl "${{ steps.pages.outputs.base_path }}"
       
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
 
   # Deployment job
   deploy:
@@ -88,4 +87,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
