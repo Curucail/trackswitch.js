@@ -4,10 +4,8 @@ title: Documentation
 permalink: /documentation.html
 ---
 
-- [Quick Minimal Setup](#quick-setup) 
-  - [In ESM / TypeScript](#in-esm--typescript)
-  - [In React](#in-react)
-  - [In HTML](#in-html)
+- [Player Versions](#player-versions)
+- [Quick Minimal Setup](#quick-setup)
 - [Full Options Reference](#full-options-reference)
   - [Default Mode](#default-mode)
   - [Alignment Mode](#alignment-mode)
@@ -31,9 +29,51 @@ permalink: /documentation.html
 - [Keyboard and Loop Controls](#keyboard-and-loop-controls)
 - [Things to Check](#things-to-check)
 
+## Player Versions {#player-versions}
+
+trackswitch.js ships three browser-ready player versions. Each version has its own JavaScript bundle.
+
+| Version | Custom HTML tag | Necessary Files |
+| --- | --- | --- | --- |
+| Default player | `<trackswitch-player>` | `dist/js/trackswitch-player.js` |
+| Alignment player | `<trackswitch-alignment-player>` | `dist/js/trackswitch-alignment-player.js` |
+| Alignment interactive player | `<trackswitch-alignment-interactive>` | `dist/js/trackswitch-alignment-interactive.js`, `dist/js/trackswitch-interactive-worker.js` |
+
 ## Quick Minimal Setup {#quick-setup}
 
-### In ESM / TypeScript {#in-esm--typescript}
+<div class="ts-doc-tabs" data-doc-tabs markdown="1">
+  <div class="ts-doc-tabs__list" role="tablist" aria-label="Integration method">
+    <button class="ts-doc-tabs__tab is-active" type="button" role="tab" aria-selected="true" aria-controls="quick-setup-html" id="quick-setup-html-tab" data-doc-tab="quick-setup-html">HTML</button>
+    <button class="ts-doc-tabs__tab" type="button" role="tab" aria-selected="false" aria-controls="quick-setup-esm" id="quick-setup-esm-tab" data-doc-tab="quick-setup-esm">ESM</button>
+    <button class="ts-doc-tabs__tab" type="button" role="tab" aria-selected="false" aria-controls="quick-setup-react" id="quick-setup-react-tab" data-doc-tab="quick-setup-react">React</button>
+    <button class="ts-doc-tabs__tab" type="button" role="tab" aria-selected="false" aria-controls="quick-setup-vue" id="quick-setup-vue-tab" data-doc-tab="quick-setup-vue">Vue</button>
+  </div>
+  <div class="ts-doc-tabs__panel is-active" role="tabpanel" id="quick-setup-html" aria-labelledby="quick-setup-html-tab" data-doc-tab-panel markdown="1">
+
+```html
+<script src="dist/js/trackswitch-player.js"></script>
+
+<trackswitch-player>
+  <script type="application/json">
+    {
+      "ui": [
+        {
+          "type": "trackGroup",
+          "trackGroup": [
+            {
+              "title": "Track 1",
+              "sources": [{ "src": "track1.mp3", "type": "audio/mpeg" }]
+            }
+          ]
+        }
+      ]
+    }
+  </script>
+</trackswitch-player>
+```
+
+  </div>
+  <div class="ts-doc-tabs__panel" role="tabpanel" id="quick-setup-esm" aria-labelledby="quick-setup-esm-tab" data-doc-tab-panel hidden markdown="1">
 
 ```ts
 import { defineTrackswitchDefaultElement, type TrackSwitchInit } from 'trackswitch';
@@ -56,7 +96,8 @@ defineTrackswitchDefaultElement();
 document.querySelector('trackswitch-player')!.config = config;
 ```
 
-### In React {#in-react}
+  </div>
+  <div class="ts-doc-tabs__panel" role="tabpanel" id="quick-setup-react" aria-labelledby="quick-setup-react-tab" data-doc-tab-panel hidden markdown="1">
 
 ```tsx
 import { useMemo } from 'react';
@@ -83,43 +124,43 @@ export function ExamplePlayer() {
 }
 ```
 
-If you prefer hooks, `trackswitch/react` also exports `useTrackSwitchElement()`.
+  </div>
+  <div class="ts-doc-tabs__panel" role="tabpanel" id="quick-setup-vue" aria-labelledby="quick-setup-vue-tab" data-doc-tab-panel hidden markdown="1">
 
-Use the React entrypoint only in client components. The player itself needs the browser DOM and Web Audio APIs, even though the package can be imported in a server-rendered project.
+```vue
+<script setup lang="ts">
+import { TrackSwitchPlayer, type TrackSwitchInit } from 'trackswitch/vue';
 
-### In HTML {#in-html}
-
-```html
-<script src="dist/js/trackswitch-player.js"></script>
-
-<trackswitch-player>
-  <script type="application/json">
+const config: TrackSwitchInit = {
+  ui: [
     {
-      "ui": [
+      type: 'trackGroup',
+      trackGroup: [
         {
-          "type": "trackGroup",
-          "trackGroup": [
-            {
-              "title": "Track 1",
-              "sources": [{ "src": "track1.mp3", "type": "audio/mpeg" }]
-            }
-          ]
-        }
-      ]
-    }
-  </script>
-</trackswitch-player>
+          title: 'Track 1',
+          sources: [{ src: '/audio/track1.mp3' }],
+        },
+      ],
+    },
+  ],
+};
+</script>
+
+<template>
+  <TrackSwitchPlayer :config="config" class="trackswitch-host" />
+</template>
 ```
 
-You can also load the same JSON from a separate file:
+  </div>
+</div>
 
-```html
-<script src="dist/js/trackswitch-player.js"></script>
+For alignment mode, use `trackswitch-alignment-player`, `defineTrackswitchAlignmentElement()`, `TrackSwitchAlignmentPlayer` from `trackswitch/react`, or `TrackSwitchAlignmentPlayer` from `trackswitch/vue`. The config must include the player-wide `alignment` block and every track must include `alignment.column`.
 
-<trackswitch-player config-src="player.json"></trackswitch-player>
-```
+Use framework entrypoints only in client-side components. The player needs the browser DOM and Web Audio APIs, even though the package can be imported in server-rendered projects.
 
 ## Full Options Reference {#full-options-reference}
+
+The browser bundles expose these factory functions on `window.TrackSwitch`. In ESM, import the same functions directly from `trackswitch`.
 
 ### Default Mode {#default-mode}
 
@@ -368,6 +409,7 @@ Notes:
 - Presets only appear in the ui when you have at least two usable preset choices.
 - Tracks decide which presets they belong to through each track's `presets` setting.
 - If you use presets, `presetNames` assigns names to preset IDs in numerical order.
+- If `features.exclusiveSolo` is `true`, presets are disabled.
 
 ### `features` {#features}
 
@@ -387,14 +429,18 @@ Notes:
 | `timer?` | `boolean` | `true` | Show the main time display. |
 | `presets?` | `boolean` | `true` | Show preset switching UI element when presets are available. |
 
+Unknown feature keys are rejected. The old `features.mode` option is not supported; choose the default or alignment player variant instead.
+
 ### `alignment` {#alignment}
+
+Use `alignment` only with `createAlignmentTrackSwitch`, `<trackswitch-alignment-player>`, or `<TrackSwitchAlignmentPlayer>`. Default-mode players reject this block.
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `csv` | `string` | `-` | The timing data file used to connect the different performances. |
 | `referenceTimeColumn` | `string` | `-` | The csv column to determine the main shared timeline used by the player. A usual setup would be to align tracks to a reference timeline calculated from the score. |
 | `referenceTimeColumnSync?` | `string` | none | The csv column to determine the shared timeline when Sync is turned on in alignment mode. |
-| `outOfRange?` | `'clamp' | 'linear'` | `'clamp'` | What the player should do when playback reaches a part of the timing map that has no matching value. |
+| `outOfRange?` | `'clamp' \| 'linear'` | `'clamp'` | What the player should do when playback reaches a part of the timing map that has no matching value. |
 
 ## Track Settings {#track-settings}
 
@@ -462,6 +508,7 @@ Notes:
 
 - Every track needs at least one `src`.
 - If you list several source files, the player uses the first one that works for the listener's browser.
+- If `type` is omitted and the file extension is not in the table above, the player asks the browser about `audio/<extension>`.
 
 ### Track Alignment Options {#track-alignment-options}
 
@@ -482,7 +529,7 @@ trackGroup: [
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `column?` | `string` | none | The timing-data column for that performance. |
+| `column?` | `string` | none | The timing-data column for that performance. Required in alignment mode. |
 | `synchronizedSources?` | `object[]` | none | Extra audio files used when Sync is turned on. |
 
 Notes:
@@ -607,8 +654,8 @@ Section options:
 | `height?` | `number` | `150` | Height of the waveform. |
 | `waveformBarWidth?` | `number` | `1` | Thickness of the waveform bars. |
 | `maxZoom?` | `number` | `5` | The closest zoom level listeners can reach, in seconds. Smaller numbers allow tighter zoom. |
-| `waveformSource?` | `'audible' | number | number[]` | `'audible'` | Chooses which sound the waveform represents. |
-| `playbackFollowMode?` | `'off' | 'center' | 'jump'` | `'off'` | Decides whether the waveform view follows playback automatically. |
+| `waveformSource?` | `'audible' \| number \| number[]` | `'audible'` | Chooses which sound the waveform represents. |
+| `playbackFollowMode?` | `'off' \| 'center' \| 'jump'` | `'off'` | Decides whether the waveform view follows playback automatically. |
 | `timer?` | `boolean` | Standard: `false`; Alignment: `true` | Shows a small time label inside the waveform panel. |
 | `alignedPlayhead?` | `boolean` | `false` | Draws a diagonal Z-shaped indicator that shows where the reference timeline position is relative to this track's local playhead. Only has an effect in alignment mode and requires `waveformSource` to be a track index (number). |
 | `showAlignmentPoints?` | `boolean` | `false` | Draws a thin dashed Z-shaped line for every alignment anchor point that exists, showing the full warping path across the waveform. Only has an effect in alignment mode and requires `waveformSource` to be a track index (number). |
@@ -648,18 +695,19 @@ Section options:
 | --- | --- | --- | --- |
 | `src` | `string` | `-` | The MusicXML file to show. |
 | `measureColumn?` | `string` | none | The column in the alignment data that contains measure numbers for score following. |
-| `maxWidth?` | `number` | none | The widest the score area should become. |
-| `maxHeight?` | `number` | none | The tallest the score area should become. |
-| `renderScale?` | `number` | auto | Determines the size of rendered score elements. |
+| `maxWidth?` | `number` | `1000` | The widest the score area should become. |
+| `maxHeight?` | `number` | `380` | The tallest the score area should become. |
+| `renderScale?` | `number` | `0.7` | Determines the size of rendered score elements. |
 | `followPlayback?` | `boolean` | `true` | Keeps the score view moving with playback. |
 | `cursorColor?` | `string` | `'#999999'` | Color of the playback follow cursor. |
-| `cursorAlpha?` | `number` | `0.1` | Transparency of the playback follow cursor. |
+| `cursorAlpha?` | `number` | `0.4` | Transparency of the playback follow cursor. Values below `0` become `0`; values above `1` become `1`. |
 | `style?` | `string` | none | Lets you fine-tune the look or spacing of the section with CSS. |
 
 Notes:
 
 - The score can still be shown without measure syncing.
 - If `measureColumn` is set and matching alignment data is available, listeners can click measures to jump through the music.
+- `measureColumn` is an alignment-only option. Default-mode players reject sheet music elements that include it.
 
 ### `warpingMatrix` {#warpingmatrix}
 
@@ -692,6 +740,7 @@ Notes:
 - It shows two views: the timing relationship between the active track and the reference timeline, and the local tempo deviation of the active track over time.
 - This section is only enabled in unsynced alignment mode.
 - `bpm: 'infer_score'` requires at least one `sheetMusic` ui element in the player.
+- Positive `height`, `tempoSmoothingSeconds`, and numeric `bpm` values are used as given. Invalid values are ignored.
 
 ## Keyboard and Loop Controls {#keyboard-and-loop-controls}
 

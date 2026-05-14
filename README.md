@@ -15,16 +15,6 @@ Live Demo
 
 - See what **trackswitch.js** can do on our demo website: https://audiolabs.github.io/trackswitch.js/
 
-Screenshots
------------
-### Default Mode
-[![Screenshot](examples/default/screenshot.png)](https://audiolabs.github.io/trackswitch.js/)
-### Alignment Mode
-[![Screenshot](examples/alignment/screenshot.png)](https://audiolabs.github.io/trackswitch.js/)
-
-
-
-
 Installation
 ------------
 

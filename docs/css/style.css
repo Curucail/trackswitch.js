@@ -162,6 +162,7 @@ kbd {
 .site-main > ul,
 .site-main > ol,
 .site-main > blockquote,
+.site-main > .ts-doc-tabs,
 .site-main > .ts-doc-code-block,
 .site-main > .highlighter-rouge {
 	max-width: 760px;
@@ -224,6 +225,7 @@ kbd {
 .docs-page--config .site-main > ul,
 .docs-page--config .site-main > ol,
 .docs-page--config .site-main > blockquote,
+.docs-page--config .site-main > .ts-doc-tabs,
 .docs-page--config .site-main > .ts-doc-code-block,
 .docs-page--config .site-main > .highlighter-rouge,
 .docs-page--config .site-main > pre,
@@ -400,6 +402,7 @@ kbd {
 .docs-page--narrow .site-main > ul,
 .docs-page--narrow .site-main > ol,
 .docs-page--narrow .site-main > blockquote,
+.docs-page--narrow .site-main > .ts-doc-tabs,
 .docs-page--narrow .site-main > .ts-doc-code-block,
 .docs-page--narrow .site-main > .highlighter-rouge,
 .docs-page--narrow .site-main > pre {
@@ -418,6 +421,7 @@ kbd {
 .docs-page--cite .site-main > ul,
 .docs-page--cite .site-main > ol,
 .docs-page--cite .site-main > blockquote,
+.docs-page--cite .site-main > .ts-doc-tabs,
 .docs-page--cite .site-main > .ts-doc-code-block,
 .docs-page--cite .site-main > .highlighter-rouge,
 .docs-page--cite .site-main > pre {
@@ -471,6 +475,14 @@ kbd {
 	padding: 0.08rem 0.32rem;
 	border-radius: 0.3rem;
 	color: var(--ts-doc-color-text-primary);
+}
+
+.docs-page--config .site-main > ul:first-of-type a code {
+	background: transparent;
+	border: 0;
+	border-radius: 0;
+	color: inherit;
+	padding: 0;
 }
 
 .site-main > pre,
@@ -1135,6 +1147,67 @@ kbd {
 
 .ts-copy-btn:hover {
 	background: #ffffff;
+}
+
+.ts-doc-tabs {
+	margin: 1.3rem 0 1.6rem;
+	background: rgba(255, 255, 255, 0.55);
+	border: 1px solid rgba(153, 153, 153, 0.28);
+	border-radius: 20px;
+	box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+	overflow: hidden;
+}
+
+.ts-doc-tabs__list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35rem;
+	padding: 0.7rem;
+	background: rgba(56, 56, 56, 0.05);
+	border-bottom: 1px solid rgba(153, 153, 153, 0.2);
+}
+
+.ts-doc-tabs__tab {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 36px;
+	padding: 0.45rem 0.85rem;
+	border: 1px solid transparent;
+	border-radius: 999px;
+	background: transparent;
+	color: var(--ts-doc-color-text-secondary);
+	font-family: var(--ts-doc-font-ui);
+	font-size: 0.86rem;
+	font-weight: 700;
+	line-height: 1;
+	cursor: pointer;
+	transition:
+		background-color 0.16s ease,
+		border-color 0.16s ease,
+		color 0.16s ease;
+}
+
+.ts-doc-tabs__tab:hover {
+	background: rgba(56, 56, 56, 0.08);
+	color: var(--ts-doc-color-text-primary);
+}
+
+.ts-doc-tabs__tab.is-active {
+	background: var(--ts-doc-color-surface-panel-dark);
+	color: #ffffff;
+}
+
+.ts-doc-tabs__panel {
+	padding: 0.8rem;
+}
+
+.ts-doc-tabs__panel[hidden] {
+	display: none;
+}
+
+.ts-doc-tabs__panel > .ts-doc-code-block {
+	margin: 0;
 }
 
 .ts-doc-code-block {
