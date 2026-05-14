@@ -341,10 +341,6 @@ export class TrackSwitchControllerImpl
 		controllerInput.onOverlayActivate(this, event);
 	}
 
-	onOverlayInfo(event: ControllerPointerEvent): void {
-		controllerInput.onOverlayInfo(this, event);
-	}
-
 	onShortcutHelpOverlay(event: ControllerPointerEvent): void {
 		controllerInput.onShortcutHelpOverlay(this, event);
 	}

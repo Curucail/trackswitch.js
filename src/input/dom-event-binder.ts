@@ -14,7 +14,6 @@ export interface InputController {
 	toggleShortcutHelp(): void;
 	closeShortcutHelp(): void;
 	onOverlayActivate(event: ControllerPointerEvent): void;
-	onOverlayInfo(event: ControllerPointerEvent): void;
 	onShortcutHelpOverlay(event: ControllerPointerEvent): void;
 	onPlayPause(event: ControllerPointerEvent): void;
 	onStop(event: ControllerPointerEvent): void;
@@ -240,9 +239,6 @@ export class InputBinder {
 	private bindBaseControls(): void {
 		this.addDelegatedListener("click", ".overlay .activate", (event) => {
 			this.controller.onOverlayActivate(event);
-		});
-		this.addDelegatedListener("click", ".overlay .info", (event) => {
-			this.controller.onOverlayInfo(event);
 		});
 		this.addDelegatedListener("click", ".overlay-shortcuts", (event) => {
 			this.controller.onShortcutHelpOverlay(event);

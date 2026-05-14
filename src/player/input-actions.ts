@@ -76,14 +76,6 @@ export function onOverlayActivate(ctx: any, event: any): any {
 	}.call(ctx, event);
 }
 
-export function onOverlayInfo(ctx: any, event: any): any {
-	return function (this: any, event: any) {
-		event.preventDefault();
-		this.renderer.showOverlayInfoText();
-		event.stopPropagation();
-	}.call(ctx, event);
-}
-
 export function onShortcutHelpOverlay(ctx: any, event: any): any {
 	return function (this: any, event: any) {
 		const target = eventTargetAsElement(event.target ?? null);

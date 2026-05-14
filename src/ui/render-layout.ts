@@ -1660,18 +1660,6 @@ export function setShortcutHelpVisible(ctx: any, isVisible: any): any {
 	}.call(ctx, isVisible);
 }
 
-export function showOverlayInfoText(ctx: any): any {
-	return function (this: any) {
-		this.queryAll(".overlay .info").forEach((info: HTMLElement) => {
-			setDisplay(info, "none");
-		});
-
-		this.queryAll(".overlay .text").forEach((text: HTMLElement) => {
-			setDisplay(text, "block");
-		});
-	}.call(ctx);
-}
-
 export function updateOverlayDownloadInfo(ctx: any, info: any): any {
 	return function (this: any, info: AudioDownloadSizeInfo) {
 		const downloadInfo = this.query(".overlay-download-info");

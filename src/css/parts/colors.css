@@ -61,9 +61,10 @@
 	--ts-color-accent-soft-55: rgba(237, 140, 1, 0.55);
 	--ts-color-accent-shadow: rgba(237, 140, 1, 0.18);
 	--ts-color-overlay-dim: rgba(0, 0, 0, 0.5);
+	--ts-color-overlay-dim-68: rgba(0, 0, 0, 0.65);
 	--ts-color-overlay-dim-48: rgba(0, 0, 0, 0.48);
 	--ts-color-overlay-ring: rgba(0, 0, 0, 0.18);
-	--ts-color-overlay-button: var(--ts-color-surface-control);
+	--ts-color-overlay-button: rgba(56, 56, 56, 0.82);
 	--ts-color-shadow-soft: var(--ts-color-overlay-ring);
 	--ts-color-shadow-medium: rgba(0, 0, 0, 0.22);
 	--ts-color-shadow-strong: rgba(0, 0, 0, 0.3);

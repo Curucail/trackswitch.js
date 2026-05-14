@@ -23,7 +23,7 @@
 }
 
 .trackswitch .overlay {
-	background-color: var(--ts-color-overlay-dim);
+	background-color: var(--ts-color-overlay-dim-68);
 	position: absolute;
 	inset: 0;
 	z-index: 10;

@@ -1024,10 +1024,6 @@ export class ViewRenderer {
 		viewRendererCore.updateOverlayDownloadInfo(this, info);
 	}
 
-	showOverlayInfoText(): void {
-		viewRendererCore.showOverlayInfoText(this);
-	}
-
 	hideOverlayOnLoaded(): void {
 		viewRendererCore.hideOverlayOnLoaded(this);
 	}

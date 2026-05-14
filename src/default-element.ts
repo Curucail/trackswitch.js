@@ -56,7 +56,6 @@ export abstract class TrackswitchPlayerBase
 	private unsubscribeHandlers: Array<() => void> = [];
 	private loadGeneration = 0;
 	private configLoadGeneration = 0;
-	private controllerLoadPromise: Promise<void> | null = null;
 
 	get config(): TrackSwitchInit | undefined {
 		return this.currentConfig;
@@ -155,24 +154,25 @@ export abstract class TrackswitchPlayerBase
 		const controller = this.currentController;
 
 		if (controller) {
-			try {
-				if (this.controllerLoadPromise) {
-					await this.controllerLoadPromise;
-				}
-				if (
-					!this.isConnected ||
-					this.currentController !== controller ||
-					!this.currentConfig
-				) {
-					return;
-				}
-				await controller.updateConfig(this.currentConfig);
-				return;
-			} catch (_error) {
-				if (!this.isConnected || !this.currentConfig) {
-					return;
-				}
+			if (!(controller as { isLoaded?: boolean }).isLoaded) {
 				this.destroyController();
+			} else {
+				try {
+					if (
+						!this.isConnected ||
+						this.currentController !== controller ||
+						!this.currentConfig
+					) {
+						return;
+					}
+					await controller.updateConfig(this.currentConfig);
+					return;
+				} catch (_error) {
+					if (!this.isConnected || !this.currentConfig) {
+						return;
+					}
+					this.destroyController();
+				}
 			}
 		}
 
@@ -210,43 +210,11 @@ export abstract class TrackswitchPlayerBase
 				dispatchTrackSwitchEvent(this, "trackState", detail),
 			),
 		];
-
-		const generation = ++this.loadGeneration;
-		const loadPromise = controller
-			.load()
-			.then(
-				() => undefined,
-				(error) => {
-					if (
-						this.currentController !== controller ||
-						this.loadGeneration !== generation
-					) {
-						return;
-					}
-
-					dispatchTrackSwitchEvent(this, "error", {
-						message:
-							error instanceof Error
-								? error.message
-								: "Unexpected error while loading TrackSwitch.",
-					});
-				},
-			)
-			.then(() => {
-				if (
-					this.currentController === controller &&
-					this.loadGeneration === generation
-				) {
-					this.controllerLoadPromise = null;
-				}
-			});
-		this.controllerLoadPromise = loadPromise;
 	}
 
 	private destroyController(): void {
 		const controller = this.currentController;
 		this.currentController = null;
-		this.controllerLoadPromise = null;
 		this.loadGeneration += 1;
 
 		this.unsubscribeHandlers.forEach((unsubscribe) => {
