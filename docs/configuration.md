@@ -374,8 +374,6 @@ const config: InteractiveTrackSwitchInit = {
   </div>
   <div class="ts-doc-tabs__panel is-active" data-doc-matrix-panel data-doc-matrix-version="default" markdown="1">
 
-The default browser bundle exposes `createDefaultTrackSwitch()` on `window.TrackSwitch`. In ESM, import the same function directly from `trackswitch`.
-
 ```javascript
 TrackSwitch.createDefaultTrackSwitch(rootElement, {
   presetNames: ['Full Mix', 'Strings', 'Rhythm'],
@@ -471,7 +469,6 @@ TrackSwitch.createDefaultTrackSwitch(rootElement, {
   </div>
   <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="alignment" hidden markdown="1">
 
-The alignment browser bundle exposes `createAlignmentTrackSwitch()` on `window.TrackSwitch`. In ESM, import the same function directly from `trackswitch`.
 
 ```javascript
 TrackSwitch.createAlignmentTrackSwitch(rootElement, {
@@ -592,9 +589,7 @@ TrackSwitch.createAlignmentTrackSwitch(rootElement, {
 
   </div>
   <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="interactive" hidden markdown="1">
-
-The interactive alignment browser bundle exposes `createAlignmentInteractiveTrackSwitch()` on `window.TrackSwitchInteractive`. In ESM, import the same function directly from `trackswitch/interactive`.
-
+  
 ```javascript
 TrackSwitchInteractive.createAlignmentInteractiveTrackSwitch(rootElement, {
   workerUrl: 'dist/js/trackswitch-interactive-worker.js',

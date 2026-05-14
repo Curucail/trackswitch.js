@@ -169,6 +169,7 @@
 
 			controls.forEach((control) => {
 				control.addEventListener("click", () => {
+					const previousTop = control.getBoundingClientRect().top;
 					const controlType = control.dataset.docMatrixControl;
 					const value = control.dataset.docMatrixValue;
 					if (controlType === "version" && value) {
@@ -178,6 +179,12 @@
 						root.dataset.docMatrixIntegration = value;
 					}
 					updateAll();
+
+					const nextTop = control.getBoundingClientRect().top;
+					const scrollDelta = nextTop - previousTop;
+					if (Math.abs(scrollDelta) > 0.5) {
+						window.scrollBy(0, scrollDelta);
+					}
 				});
 			});
 		});
