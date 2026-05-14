@@ -210,7 +210,7 @@ export function bindAlignmentHelpTooltips(container: HTMLElement): void {
 			if (tooltip.parentNode) {
 				tooltip.parentNode.insertBefore(placeholder, tooltip);
 			}
-			playerRoot.appendChild(tooltip);
+			playerRoot.insertBefore(tooltip, playerRoot.firstChild);
 		}
 
 		tooltip.style.position = "absolute";
