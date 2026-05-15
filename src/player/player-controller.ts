@@ -7,6 +7,7 @@ import type {
 	NormalizedTrackSwitchConfig,
 	PlayerState,
 	TrackRuntime,
+	TrackAlignmentConfig,
 	TrackSourceVariant,
 	TrackSwitchController,
 	TrackSwitchEventHandler,
@@ -24,6 +25,8 @@ import {
 	WaveformEngine,
 } from "../engine/waveform-engine";
 import { InputBinder, type InputController } from "../input/dom-event-binder";
+import { type ParsedNumericCsv, loadNumericCsv } from "../shared/alignment";
+import { buildMeasureMapFromColumns } from "../shared/measure-map";
 import { derivePresetNames } from "../shared/preset";
 import type { ControllerPointerEvent } from "../shared/seek";
 import {
@@ -77,7 +80,7 @@ export class TrackSwitchControllerImpl
 	public readonly renderer: ViewRenderer;
 	public readonly inputBinder: InputBinder;
 	public alignmentConfig: NormalizedTrackSwitchConfig["alignment"];
-	public alignmentCsvRequest: Promise<unknown> | null = null;
+	public alignmentCsvRequest: Promise<ParsedNumericCsv> | null = null;
 
 	public state: PlayerState;
 	public longestDuration = 0;
@@ -672,17 +675,40 @@ export class TrackSwitchControllerImpl
 		source: string,
 	): Promise<SheetMusicMeasureMapsByAxis> {
 		void source;
-		if (measureColumn) {
+		if (!measureColumn) {
+			return Promise.resolve({
+				base: null,
+				sync: null,
+			});
+		}
+
+		if (!this.alignmentConfig) {
 			return Promise.reject(
 				new Error(
-					"Sheet music measure sync requires the alignment player variant.",
+					"Sheet music measure sync requires init.alignment when sheetMusic.measureColumn is set.",
 				),
 			);
 		}
 
-		return Promise.resolve({
-			base: null,
-			sync: null,
+		return this.loadAlignmentCsv().then((parsedCsv) => {
+			const referenceTimeColumn = this.resolveReferenceTimeColumn(
+				this.alignmentConfig as TrackAlignmentConfig,
+			);
+			if (!referenceTimeColumn) {
+				throw new Error(
+					"Sheet music measure sync requires alignment.referenceTimeColumn when sheetMusic.measureColumn is set.",
+				);
+			}
+
+			return {
+				base: buildMeasureMapFromColumns(
+					parsedCsv.rows,
+					parsedCsv.headers,
+					referenceTimeColumn,
+					measureColumn,
+				),
+				sync: null,
+			};
 		});
 	}
 
@@ -733,10 +759,28 @@ export class TrackSwitchControllerImpl
 		return "Alignment mode requires the alignment player variant.";
 	}
 
-	public loadAlignmentCsv(): Promise<unknown> {
-		return Promise.reject(
-			new Error("Alignment mode requires the alignment player variant."),
-		);
+	public loadAlignmentCsv(): Promise<ParsedNumericCsv> {
+		if (
+			!this.alignmentConfig?.csv ||
+			typeof this.alignmentConfig.csv !== "string"
+		) {
+			return Promise.reject(
+				new Error(
+					"Sheet music measure sync requires alignment.csv when sheetMusic.measureColumn is set.",
+				),
+			);
+		}
+
+		if (!this.alignmentCsvRequest) {
+			this.alignmentCsvRequest = loadNumericCsv(this.alignmentConfig.csv).catch(
+				(error) => {
+					this.alignmentCsvRequest = null;
+					throw error;
+				},
+			);
+		}
+
+		return this.alignmentCsvRequest;
 	}
 
 	public collectUniqueAlignmentColumns(

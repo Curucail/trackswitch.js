@@ -929,7 +929,7 @@ Section options:
 Notes:
 
 - If `measureColumn` is set and matching alignment data is available, listeners can click measures to jump through the music.
-- `measureColumn` is an alignment-only option. Default-mode players reject sheet music elements that include it.
+- In a standard player, `measureColumn` can use `init.alignment` as timing CSV metadata for score following. Full alignment features such as track alignment, aligned waveform overlays, and warping matrices still require the alignment player.
 
 ### `warpingMatrix` {#warpingmatrix}
 

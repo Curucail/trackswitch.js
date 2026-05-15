@@ -39,7 +39,6 @@ export class InteractiveTrackSwitchControllerImpl
 	implements InteractiveTrackSwitchController
 {
 	private rootElement: HTMLElement;
-	private init: InteractiveTrackSwitchInit;
 	private state: InteractiveState;
 	private workerBridge: AlignmentWorkerBridge;
 	private innerController: TrackSwitchController | null = null;
@@ -63,7 +62,6 @@ export class InteractiveTrackSwitchControllerImpl
 
 	constructor(rootElement: HTMLElement, init: InteractiveTrackSwitchInit) {
 		this.rootElement = rootElement;
-		this.init = init;
 		const initialAlignmentSelection = normalizeAlignmentSelection(init);
 		this.state = {
 			files: [],

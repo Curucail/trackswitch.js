@@ -89,66 +89,41 @@ export class AlignmentTrackSwitchControllerImpl extends TrackSwitchControllerImp
 		source: string,
 	): Promise<SheetMusicMeasureMapsByAxis> {
 		if (!measureColumn) {
-			return Promise.resolve({
-				base: null,
-				sync: null,
-			});
+			return super.buildSheetMusicMeasureMaps(measureColumn, source);
 		}
 
-		if (!this.alignmentConfig) {
-			return Promise.reject(
-				new Error(
-					"Sheet music measure sync requires init.alignment when sheetMusic.measureColumn is set.",
-				),
-			);
-		}
-
-		return this.loadAlignmentCsv().then((parsedCsv) => {
-			const referenceTimeColumn = this.resolveReferenceTimeColumn(
-				this.alignmentConfig as TrackAlignmentConfig,
-			);
-			if (!referenceTimeColumn) {
-				throw new Error(
-					"Sheet music measure sync requires alignment.referenceTimeColumn when sheetMusic.measureColumn is set.",
+		return super.buildSheetMusicMeasureMaps(measureColumn, source).then((maps) =>
+			this.loadAlignmentCsv().then((parsedCsv) => {
+				const referenceTimeColumnSync = this.resolveReferenceTimeColumnSync(
+					this.alignmentConfig as TrackAlignmentConfig,
 				);
-			}
-
-			const baseMeasureMap = buildMeasureMapFromColumns(
-				parsedCsv.rows,
-				parsedCsv.headers,
-				referenceTimeColumn,
-				measureColumn,
-			);
-
-			const referenceTimeColumnSync = this.resolveReferenceTimeColumnSync(
-				this.alignmentConfig as TrackAlignmentConfig,
-			);
-			let syncMeasureMap = null;
-			if (
-				referenceTimeColumnSync &&
-				parsedCsv.headers.indexOf(referenceTimeColumnSync) >= 0
-			) {
-				try {
-					syncMeasureMap = buildMeasureMapFromColumns(
-						parsedCsv.rows,
-						parsedCsv.headers,
-						referenceTimeColumnSync,
-						measureColumn,
-					);
-				} catch (error) {
-					console.warn(
-						"[trackswitch] Failed to load sync-axis sheet-music measure map:",
-						source,
-						error,
-					);
+				let syncMeasureMap = null;
+				if (
+					referenceTimeColumnSync &&
+					parsedCsv.headers.indexOf(referenceTimeColumnSync) >= 0
+				) {
+					try {
+						syncMeasureMap = buildMeasureMapFromColumns(
+							parsedCsv.rows,
+							parsedCsv.headers,
+							referenceTimeColumnSync,
+							measureColumn,
+						);
+					} catch (error) {
+						console.warn(
+							"[trackswitch] Failed to load sync-axis sheet-music measure map:",
+							source,
+							error,
+						);
+					}
 				}
-			}
 
-			return {
-				base: baseMeasureMap,
-				sync: syncMeasureMap,
-			};
-		});
+				return {
+					base: maps.base,
+					sync: syncMeasureMap,
+				};
+			}),
+		);
 	}
 
 	public collectUniqueAlignmentColumns(

@@ -4,7 +4,6 @@ import type {
 	NormalizedTrackSwitchConfig,
 	TrackDefinition,
 	TrackSwitchInit,
-	TrackSwitchSheetMusicUiElement,
 	TrackSwitchUiElement,
 	TrackSwitchVariant,
 	TrackSwitchWaveformUiElement,
@@ -147,16 +146,6 @@ function isAlignmentTrack(track: TrackDefinition): boolean {
 	return !!track.alignment;
 }
 
-function isAlignmentSheetMusic(
-	entry: TrackSwitchUiElement,
-): entry is TrackSwitchSheetMusicUiElement {
-	return (
-		entry.type === "sheetMusic" &&
-		typeof entry.measureColumn === "string" &&
-		entry.measureColumn.trim().length > 0
-	);
-}
-
 function isAlignmentWaveform(
 	entry: TrackSwitchUiElement,
 ): entry is TrackSwitchWaveformUiElement {
@@ -173,11 +162,6 @@ function validateVariantConfig(
 	tracks: TrackDefinition[],
 ): void {
 	if (variant === "default") {
-		if (init.alignment !== undefined) {
-			throw new Error(
-				"Invalid default player configuration: alignment config requires the alignment player variant.",
-			);
-		}
 		if (tracks.some(isAlignmentTrack)) {
 			throw new Error(
 				"Invalid default player configuration: track alignment config requires the alignment player variant.",
@@ -186,11 +170,6 @@ function validateVariantConfig(
 		if (resolvedUi?.some((entry) => entry.type === "warpingMatrix")) {
 			throw new Error(
 				"Invalid default player configuration: warpingMatrix requires the alignment player variant.",
-			);
-		}
-		if (resolvedUi?.some(isAlignmentSheetMusic)) {
-			throw new Error(
-				"Invalid default player configuration: sheetMusic.measureColumn requires the alignment player variant.",
 			);
 		}
 		if (resolvedUi?.some(isAlignmentWaveform)) {
