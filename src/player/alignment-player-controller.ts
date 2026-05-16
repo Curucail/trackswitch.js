@@ -92,38 +92,40 @@ export class AlignmentTrackSwitchControllerImpl extends TrackSwitchControllerImp
 			return super.buildSheetMusicMeasureMaps(measureColumn, source);
 		}
 
-		return super.buildSheetMusicMeasureMaps(measureColumn, source).then((maps) =>
-			this.loadAlignmentCsv().then((parsedCsv) => {
-				const referenceTimeColumnSync = this.resolveReferenceTimeColumnSync(
-					this.alignmentConfig as TrackAlignmentConfig,
-				);
-				let syncMeasureMap = null;
-				if (
-					referenceTimeColumnSync &&
-					parsedCsv.headers.indexOf(referenceTimeColumnSync) >= 0
-				) {
-					try {
-						syncMeasureMap = buildMeasureMapFromColumns(
-							parsedCsv.rows,
-							parsedCsv.headers,
-							referenceTimeColumnSync,
-							measureColumn,
-						);
-					} catch (error) {
-						console.warn(
-							"[trackswitch] Failed to load sync-axis sheet-music measure map:",
-							source,
-							error,
-						);
+		return super
+			.buildSheetMusicMeasureMaps(measureColumn, source)
+			.then((maps) =>
+				this.loadAlignmentCsv().then((parsedCsv) => {
+					const referenceTimeColumnSync = this.resolveReferenceTimeColumnSync(
+						this.alignmentConfig as TrackAlignmentConfig,
+					);
+					let syncMeasureMap = null;
+					if (
+						referenceTimeColumnSync &&
+						parsedCsv.headers.indexOf(referenceTimeColumnSync) >= 0
+					) {
+						try {
+							syncMeasureMap = buildMeasureMapFromColumns(
+								parsedCsv.rows,
+								parsedCsv.headers,
+								referenceTimeColumnSync,
+								measureColumn,
+							);
+						} catch (error) {
+							console.warn(
+								"[trackswitch] Failed to load sync-axis sheet-music measure map:",
+								source,
+								error,
+							);
+						}
 					}
-				}
 
-				return {
-					base: maps.base,
-					sync: syncMeasureMap,
-				};
-			}),
-		);
+					return {
+						base: maps.base,
+						sync: syncMeasureMap,
+					};
+				}),
+			);
 	}
 
 	public collectUniqueAlignmentColumns(

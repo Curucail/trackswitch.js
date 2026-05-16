@@ -148,10 +148,10 @@ export class AlignmentWorkerBridge {
 				const pcmCopy = new Float32Array(file.pcmData);
 				const fullPcmChannels =
 					generateSyncedAudio && file.id !== referenceFileId
-					? (file.fullPcmChannels || []).map(
-							(channelData) => new Float32Array(channelData),
-						)
-					: [];
+						? (file.fullPcmChannels || []).map(
+								(channelData) => new Float32Array(channelData),
+							)
+						: [];
 				return {
 					id: file.id,
 					name: file.name,

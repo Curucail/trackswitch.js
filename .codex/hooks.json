@@ -1,0 +1,16 @@
+{
+	"hooks": {
+		"Stop": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/biome-stop.mjs\"",
+						"timeout": 120,
+						"statusMessage": "Running Biome on source code"
+					}
+				]
+			}
+		]
+	}
+}

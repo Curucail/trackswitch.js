@@ -6,8 +6,8 @@ import type {
 	LoopMarker,
 	NormalizedTrackSwitchConfig,
 	PlayerState,
-	TrackRuntime,
 	TrackAlignmentConfig,
+	TrackRuntime,
 	TrackSourceVariant,
 	TrackSwitchController,
 	TrackSwitchEventHandler,
@@ -25,7 +25,7 @@ import {
 	WaveformEngine,
 } from "../engine/waveform-engine";
 import { InputBinder, type InputController } from "../input/dom-event-binder";
-import { type ParsedNumericCsv, loadNumericCsv } from "../shared/alignment";
+import { loadNumericCsv, type ParsedNumericCsv } from "../shared/alignment";
 import { buildMeasureMapFromColumns } from "../shared/measure-map";
 import { derivePresetNames } from "../shared/preset";
 import type { ControllerPointerEvent } from "../shared/seek";
