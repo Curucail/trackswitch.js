@@ -645,11 +645,6 @@
 				}
 			}
 
-			if (normalized.tabView && !normalized.exclusiveSolo) {
-				normalized.exclusiveSolo = true;
-				notes.push("Tab view uses single solo mode.");
-			}
-
 			if (normalized.exclusiveSolo && normalized.presets) {
 				normalized.presets = false;
 				notes.push(

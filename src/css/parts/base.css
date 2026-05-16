@@ -38,6 +38,13 @@
 	border-bottom: 1px solid var(--ts-color-border-mid);
 }
 
+.trackswitch.trackswitch
+	> .ts-stack-section:not(.main-control):has(
+		+ .ts-stack-section.ts-stack-section-hidden:last-child
+	) {
+	border-bottom: 1px solid var(--ts-color-border-mid);
+}
+
 .trackswitch.trackswitch :is(p, ul, ol, li, div, span, label, a, i) {
 	color: inherit;
 	font-family: inherit;

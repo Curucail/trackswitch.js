@@ -1838,9 +1838,8 @@ export function setWarpingMatrixVisible(ctx: any, visible: any): any {
 	return function (this: any, visible: boolean) {
 		this.warpingMatrixHosts.forEach((host: WarpingMatrixHostMetadata) => {
 			host.visible = visible;
-			if (!visible) {
-				host.wrapper.style.display = "none";
-			}
+			host.wrapper.style.display = visible ? "" : "none";
+			host.wrapper.classList.toggle("ts-stack-section-hidden", !visible);
 		});
 	}.call(ctx, visible === true);
 }
