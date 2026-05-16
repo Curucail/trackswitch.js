@@ -22,7 +22,7 @@ permalink: /documentation.html
   - [`image`](#image)
   - [`perTrackImage`](#pertrackimage)
   - [`waveform`](#waveform)
-  - [`midi`](#midi-midi)
+  - [`midi`](#midi)
   - [`sheetMusic`](#sheetmusic)
   - [`warpingMatrix`](#warpingmatrix)
 - [Keyboard and Loop Controls](#keyboard-and-loop-controls)
