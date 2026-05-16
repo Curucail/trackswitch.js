@@ -57,10 +57,13 @@ export function buildFileListHtml(
 		'<span class="ts-section-kicker">Selected files</span>' +
 		'<strong class="ts-section-title">Pick a reference to align other sources to</strong>' +
 		"</div>" +
+		'<div class="ts-file-list-actions">' +
 		'<span class="ts-file-count">' +
 		files.length +
 		(files.length === 1 ? " file" : " files") +
 		"</span>" +
+		'<button class="ts-upload-more-files-btn" type="button">Upload more files</button>' +
+		"</div>" +
 		"</div>";
 
 	if (infoMessage) {
@@ -286,6 +289,15 @@ export function bindDropZoneEvents(
 			if ((e.target as HTMLElement).closest(".ts-file-remove-btn")) {
 				return;
 			}
+			fileInput.click();
+		});
+	}
+
+	const uploadMoreButton = container.querySelector(
+		".ts-upload-more-files-btn",
+	) as HTMLButtonElement | null;
+	if (uploadMoreButton && fileInput) {
+		uploadMoreButton.addEventListener("click", () => {
 			fileInput.click();
 		});
 	}
