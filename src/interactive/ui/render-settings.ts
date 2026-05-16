@@ -76,7 +76,8 @@ export function buildSettingsPanelHtml(state: SettingsPanelState): string {
 		const file = state.files[i];
 		const isReference = file.id === state.referenceFileId;
 		const iconName = file.type === "audio" ? "file-audio" : "file-code";
-		const typeLabel = file.type === "audio" ? "Audio" : "Score";
+		const typeLabel =
+			file.type === "audio" ? "Audio" : file.type === "midi" ? "MIDI" : "Score";
 
 		html +=
 			'<tr data-file-id="' +

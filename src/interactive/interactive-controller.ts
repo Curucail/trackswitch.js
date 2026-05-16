@@ -226,6 +226,13 @@ export class InteractiveTrackSwitchControllerImpl
 
 	// ── File Handling ──
 
+	private selectDefaultReferenceFileId(): string | null {
+		const firstSymbolic = this.state.files.find(
+			(file) => file.type === "musicxml" || file.type === "midi",
+		);
+		return firstSymbolic ? firstSymbolic.id : this.state.files[0]?.id || null;
+	}
+
 	private async handleFilesAdded(files: File[]): Promise<void> {
 		if (this.destroyed) {
 			return;
@@ -240,12 +247,9 @@ export class InteractiveTrackSwitchControllerImpl
 			}
 		}
 
-		// Auto-select reference: first score file, else first item
+		// Auto-select reference: first symbolic file, else first item
 		if (!this.state.referenceFileId && this.state.files.length > 0) {
-			const firstScore = this.state.files.find((f) => f.type === "musicxml");
-			this.state.referenceFileId = firstScore
-				? firstScore.id
-				: this.state.files[0].id;
+			this.state.referenceFileId = this.selectDefaultReferenceFileId();
 		}
 
 		// Start loading Pyodide in the background when first file is added
@@ -304,10 +308,7 @@ export class InteractiveTrackSwitchControllerImpl
 
 		if (this.state.referenceFileId === fileId) {
 			if (this.state.files.length > 0) {
-				const firstScore = this.state.files.find((f) => f.type === "musicxml");
-				this.state.referenceFileId = firstScore
-					? firstScore.id
-					: this.state.files[0].id;
+				this.state.referenceFileId = this.selectDefaultReferenceFileId();
 			} else {
 				this.state.referenceFileId = null;
 			}
@@ -524,6 +525,25 @@ export class InteractiveTrackSwitchControllerImpl
 					renderScale: 0.65,
 					measureColumn: columnMaps.measureColumnByFileId[file.id],
 					followPlayback: true,
+				});
+			}
+		}
+
+		// Add MIDI piano-roll visualizations for MIDI files
+		for (const file of this.state.files) {
+			if (file.type === "midi") {
+				const midiBlob = new Blob([file.file], {
+					type: file.file.type || "audio/midi",
+				});
+				const midiUrl = URL.createObjectURL(midiBlob);
+				uiElements.push({
+					type: "midi",
+					src: midiUrl,
+					alignmentColumn: columnMaps.timeColumnByFileId[file.id],
+					height: 180,
+					maxZoom: 5,
+					playbackFollowMode: "center",
+					timer: true,
 				});
 			}
 		}

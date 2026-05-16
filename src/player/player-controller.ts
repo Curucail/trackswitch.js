@@ -927,6 +927,12 @@ export class TrackSwitchControllerImpl
 		return controllerSeek.getSeekTimelineContext(this, seekingElement);
 	}
 
+	public getMidiTimelineContext(
+		midiSurface: unknown,
+	): SeekTimelineContext | null {
+		return controllerSeek.getMidiTimelineContext(this, midiSurface);
+	}
+
 	public getWaveformTimelineContext(): WaveformTimelineContext {
 		return controllerSeek.getWaveformTimelineContext(this);
 	}

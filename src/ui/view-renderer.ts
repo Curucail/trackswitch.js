@@ -13,7 +13,10 @@ import type {
 	WaveformEngine,
 } from "../engine/waveform-engine";
 import * as viewRendererCore from "./render-layout";
-import type { MidiSeekSurfaceMetadata } from "./render-midi";
+import type {
+	MidiSeekSurfaceMetadata,
+	MidiTimelineContextResolver,
+} from "./render-midi";
 import * as viewRendererMidi from "./render-midi";
 import * as viewRendererSeek from "./render-seek";
 import * as viewRendererWaveform from "./render-waveforms";
@@ -916,12 +919,14 @@ export class ViewRenderer {
 		state: TrackSwitchUiState,
 		suppressPlaybackFollow: boolean,
 		useMidiLocalTimeline = false,
+		timelineContextResolver?: MidiTimelineContextResolver,
 	): void {
 		viewRendererMidi.updateMidiPlaybackState(
 			this,
 			state,
 			suppressPlaybackFollow,
 			useMidiLocalTimeline,
+			timelineContextResolver,
 		);
 	}
 

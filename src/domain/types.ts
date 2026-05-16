@@ -83,6 +83,7 @@ export interface TrackSwitchWaveformConfig {
 
 export interface TrackSwitchMidiConfig {
 	src: string;
+	alignmentColumn?: string;
 	height?: number;
 	maxZoom?: number;
 	playbackFollowMode?: WaveformPlaybackFollowMode;

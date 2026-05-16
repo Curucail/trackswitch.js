@@ -1,5 +1,10 @@
+import { Midi } from "@tonejs/midi";
 import { SAMPLE_RATE } from "./constants";
-import type { InteractiveFile, InteractiveFileType } from "./types";
+import type {
+	InteractiveFile,
+	InteractiveFileType,
+	InteractiveMidiNote,
+} from "./types";
 
 let idCounter = 0;
 
@@ -18,6 +23,7 @@ const AUDIO_EXTENSIONS = new Set([
 	".webm",
 ]);
 const MUSICXML_EXTENSIONS = new Set([".xml", ".musicxml", ".mxl"]);
+const MIDI_EXTENSIONS = new Set([".mid", ".midi"]);
 
 function getExtension(filename: string): string {
 	const dot = filename.lastIndexOf(".");
@@ -31,6 +37,9 @@ export function classifyFileType(file: File): InteractiveFileType | null {
 	}
 	if (MUSICXML_EXTENSIONS.has(ext)) {
 		return "musicxml";
+	}
+	if (MIDI_EXTENSIONS.has(ext)) {
+		return "midi";
 	}
 	return null;
 }
@@ -125,6 +134,69 @@ export async function processMusicXmlFile(
 	};
 }
 
+function flattenMidiNotes(
+	midi: Midi,
+	fileName: string,
+): {
+	notes: InteractiveMidiNote[];
+	duration: number;
+} {
+	const notes: InteractiveMidiNote[] = [];
+	let duration = 0;
+
+	midi.tracks.forEach((track) => {
+		track.notes.forEach((note) => {
+			const start = Number(note.time);
+			const noteDuration = Number(note.duration);
+			const pitch = Number(note.midi);
+			const velocity = Number(note.velocity);
+			if (
+				!Number.isFinite(start) ||
+				!Number.isFinite(noteDuration) ||
+				!Number.isFinite(pitch) ||
+				noteDuration < 0
+			) {
+				return;
+			}
+
+			notes.push({
+				midi: Math.round(pitch),
+				time: Math.max(0, start),
+				duration: noteDuration,
+				velocity: Number.isFinite(velocity) ? Math.max(0, velocity) : 0,
+			});
+			duration = Math.max(duration, Math.max(0, start) + noteDuration);
+		});
+	});
+
+	notes.sort((a, b) => a.time - b.time || a.midi - b.midi);
+
+	if (notes.length === 0 || !Number.isFinite(duration) || duration <= 0) {
+		throw new Error(`MIDI file contains no note events: ${fileName}`);
+	}
+
+	return {
+		notes: notes,
+		duration: duration,
+	};
+}
+
+export async function processMidiFile(file: File): Promise<InteractiveFile> {
+	const arrayBuffer = await readFileAsArrayBuffer(file);
+	const midi = new Midi(arrayBuffer);
+	const parsed = flattenMidiNotes(midi, file.name);
+
+	return {
+		id: generateFileId(),
+		name: file.name,
+		type: "midi",
+		file: file,
+		midiNotes: parsed.notes,
+		midiDuration: parsed.duration,
+		duration: parsed.duration,
+	};
+}
+
 export async function processFile(file: File): Promise<InteractiveFile> {
 	const fileType = classifyFileType(file);
 	if (fileType === "audio") {
@@ -132,6 +204,9 @@ export async function processFile(file: File): Promise<InteractiveFile> {
 	}
 	if (fileType === "musicxml") {
 		return processMusicXmlFile(file);
+	}
+	if (fileType === "midi") {
+		return processMidiFile(file);
 	}
 	throw new Error(`Unsupported file type: ${file.name}`);
 }

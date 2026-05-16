@@ -902,6 +902,7 @@ Example:
 {
   type: 'midi',
   src: 'notes.mid',
+  alignmentColumn: 'time_notes',
   height: 180,
   maxZoom: 5,
   playbackFollowMode: 'center',
@@ -915,6 +916,7 @@ Section options:
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `src` | `string` | - | MIDI file to visualize. |
+| `alignmentColumn?` | `string` | none | Alignment CSV column containing this MIDI file's local seconds. Used by alignment players for mapped playback heads, timers, following, loops, and seeking. |
 | `height?` | `number` | `180` | Height of the MIDI view. |
 | `maxZoom?` | `number` | `5` | The closest zoom level listeners can reach, in seconds. Smaller numbers allow tighter zoom. |
 | `playbackFollowMode?` | `'off' | 'center' | 'jump'` | `'off'` | Decides whether the MIDI view follows playback automatically. |

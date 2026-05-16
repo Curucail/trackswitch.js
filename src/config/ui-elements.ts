@@ -59,6 +59,7 @@ const uiWaveformAllowedKeys = [
 const uiMidiAllowedKeys = [
 	"type",
 	"src",
+	"alignmentColumn",
 	"height",
 	"maxZoom",
 	"playbackFollowMode",
@@ -220,6 +221,11 @@ function normalizeMidiConfig<T extends TrackSwitchMidiConfig>(midi: T): T {
 	const normalized = {
 		...midi,
 		src: midi.src.trim(),
+		alignmentColumn:
+			typeof midi.alignmentColumn === "string" &&
+			midi.alignmentColumn.trim().length > 0
+				? midi.alignmentColumn.trim()
+				: undefined,
 		height: toCanvasSize(midi.height, 180),
 		maxZoom: normalizeWaveformMaxZoom(midi.maxZoom),
 		playbackFollowMode: normalizeWaveformPlaybackFollowMode(
@@ -655,6 +661,7 @@ function injectMidi(root: HTMLElement, midi: TrackSwitchMidiConfig): void {
 	canvas.height = toCanvasSize(midi.height, 180);
 	canvas.setAttribute("data-midi-src", midi.src);
 	canvas.setAttribute("data-midi-max-zoom", String(midi.maxZoom));
+	canvas.setAttribute("data-midi-alignment-column", midi.alignmentColumn || "");
 	canvas.setAttribute(
 		"data-midi-playback-follow-mode",
 		midi.playbackFollowMode || "off",

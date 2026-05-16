@@ -85,6 +85,7 @@ export function updateMainControls(ctx: TrackSwitchControllerImpl): void {
 		uiState,
 		shouldSuppressMidiPlaybackFollow(ctx),
 		ctx.isAlignmentMode(),
+		(surface) => ctx.getMidiTimelineContext(surface),
 	);
 	ctx.sheetMusicEngine.updatePosition(
 		ctx.state.position,
@@ -115,6 +116,7 @@ export function updatePlaybackPositionUi(ctx: TrackSwitchControllerImpl): void {
 		uiState,
 		shouldSuppressMidiPlaybackFollow(ctx),
 		ctx.isAlignmentMode(),
+		(surface) => ctx.getMidiTimelineContext(surface),
 	);
 	ctx.sheetMusicEngine.updatePosition(
 		ctx.state.position,

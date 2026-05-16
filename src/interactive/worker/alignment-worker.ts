@@ -156,6 +156,18 @@ async function computeAlignment(
 	const fullResolutionAudioFiles: Record<string, number[][]> = {};
 	const audioSampleRates: Record<string, number> = {};
 	const scoreFiles: Record<string, string> = {};
+	const midiFiles: Record<
+		string,
+		{
+			notes: Array<{
+				midi: number;
+				time: number;
+				duration: number;
+				velocity: number;
+			}>;
+			duration: number;
+		}
+	> = {};
 	const fileNames: Record<string, string> = {};
 
 	for (const file of files) {
@@ -168,8 +180,13 @@ async function computeAlignment(
 				);
 			}
 			audioSampleRates[file.id] = file.sampleRate;
-		} else {
+		} else if (file.type === "musicxml") {
 			scoreFiles[file.id] = file.xmlText;
+		} else if (file.type === "midi") {
+			midiFiles[file.id] = {
+				notes: file.notes,
+				duration: file.duration,
+			};
 		}
 	}
 
@@ -198,6 +215,7 @@ async function computeAlignment(
 	);
 	pyodide.globals.set("audio_sample_rates", pyodide.toPy(audioSampleRates));
 	pyodide.globals.set("score_files", pyodide.toPy(scoreFiles));
+	pyodide.globals.set("midi_files", pyodide.toPy(midiFiles));
 	pyodide.globals.set("file_names", pyodide.toPy(fileNames));
 	pyodide.globals.set(
 		"file_time_column_names",

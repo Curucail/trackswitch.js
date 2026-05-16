@@ -19,7 +19,7 @@ import {
 export function buildDropZoneInputHtml(): string {
 	return (
 		'<input type="file" class="ts-dropzone-input" multiple ' +
-		'accept=".wav,.mp3,.ogg,.flac,.m4a,.aac,.webm,.xml,.musicxml,.mxl">'
+		'accept=".wav,.mp3,.ogg,.flac,.m4a,.aac,.webm,.xml,.musicxml,.mxl,.mid,.midi">'
 	);
 }
 
@@ -31,9 +31,10 @@ export function buildDropZoneHtml(): string {
 		'<span class="ts-dropzone-icon">' +
 		renderIconSlotHtml("upload") +
 		"</span>" +
-		'<strong class="ts-dropzone-title">Drop audio and scores here</strong>' +
+		'<strong class="ts-dropzone-title">Drop audio, scores, and MIDI here</strong>' +
 		'<span class="ts-dropzone-hint">Supported Audio Formats: WAV, MP3, OGG, FLAC, M4A, AAC, WebM</span>' +
 		'<span class="ts-dropzone-hint">Supported Score Formats: XML, MusicXML, MXL</span>' +
+		'<span class="ts-dropzone-hint">Supported MIDI Formats: MID, MIDI</span>' +
 		"</div>" +
 		buildDropZoneInputHtml() +
 		"</div>"
@@ -83,8 +84,14 @@ export function buildFileListHtml(
 	for (let i = 0; i < files.length; i += 1) {
 		const file = files[i];
 		const isReference = file.id === referenceFileId;
-		const iconName = file.type === "audio" ? "file-audio" : "file-code";
-		const typeLabel = file.type === "audio" ? "Audio" : "Score";
+		const iconName =
+			file.type === "audio"
+				? "file-audio"
+				: file.type === "midi"
+					? "file-code"
+					: "file-code";
+		const typeLabel =
+			file.type === "audio" ? "Audio" : file.type === "midi" ? "MIDI" : "Score";
 
 		html +=
 			'<tr data-file-id="' +

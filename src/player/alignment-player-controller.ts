@@ -137,6 +137,10 @@ export class AlignmentTrackSwitchControllerImpl extends TrackSwitchControllerImp
 		);
 	}
 
+	public collectMidiAlignmentColumns(): string[] {
+		return controllerAlignment.collectMidiAlignmentColumns(this);
+	}
+
 	public getWarpingMatrixContext(): WarpingMatrixRenderContext | undefined {
 		return controllerAlignment.getWarpingMatrixContext(this);
 	}

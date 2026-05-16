@@ -285,6 +285,7 @@ sys.modules['librosa.sequence'] = librosa_sequence
  *   - full_resolution_audio: dict of {file_id: [numpy_array, ...]} (per-channel PCM at original sample rate)
  *   - audio_sample_rates: dict of {file_id: sample_rate}
  *   - score_files: dict of {file_id: xml_text_string}
+ *   - midi_files: dict of {file_id: {'notes': note_events, 'duration': seconds}}
  *   - file_names: dict of {file_id: filename}
  *   - reference_file_id: str
  *   - alignment_feature_set_id: str
@@ -573,6 +574,53 @@ def extract_score_features(xml_text, feature_rate, include_onset=False):
 
     return f_chroma_quantized, f_onset, measure_times
 
+def extract_midi_features(midi_entry, feature_rate, include_onset=False):
+    """Extract MIDI chroma features and optional DLNCO features from parsed note events."""
+    from synctoolbox.feature.csv_tools import df_to_pitch_features, df_to_pitch_onset_features
+    import pandas as pd
+
+    notes_raw = list(dict(midi_entry).get('notes', []))
+    notes = []
+    for raw_note in notes_raw:
+        note = dict(raw_note)
+        start = float(note.get('time', 0.0))
+        duration = float(note.get('duration', 0.0))
+        pitch = int(round(float(note.get('midi', 0))))
+        velocity = float(note.get('velocity', 1.0))
+        if velocity <= 1.0:
+            velocity *= 127.0
+        if not np.isfinite(start) or not np.isfinite(duration) or duration < 0:
+            continue
+        notes.append({
+            'start': max(0.0, start),
+            'duration': duration,
+            'pitch': pitch,
+            'velocity': int(max(1, min(127, round(velocity)))),
+            'instrument': 'MIDI',
+        })
+
+    if not notes:
+        raise ValueError('No notes found in MIDI file')
+
+    df = pd.DataFrame(notes)
+    f_pitch = df_to_pitch_features(df, feature_rate=feature_rate)
+    f_chroma = pitch_to_chroma(f_pitch=f_pitch)
+    f_chroma_quantized = quantize_chroma(f_chroma=f_chroma)
+
+    f_onset = None
+    if include_onset:
+        if not HAS_ONSET_FEATURES:
+            raise ValueError('DLNCO alignment requires synctoolbox onset feature support.')
+        f_pitch_onset = df_to_pitch_onset_features(df)
+        f_onset = pitch_onset_features_to_DLNCO(
+            f_peaks=f_pitch_onset,
+            feature_rate=feature_rate,
+            feature_sequence_length=f_chroma_quantized.shape[1],
+            visualize=False,
+        )
+
+    return f_chroma_quantized, f_onset
+
 
 # ── Main pipeline ──
 
@@ -581,7 +629,8 @@ file_measure_column_names = dict(file_measure_column_names)
 
 report_progress('[18%] Importing synctoolbox modules...')
 
-all_file_ids = list(audio_files.keys()) + list(score_files.keys())
+midi_files = dict(midi_files)
+all_file_ids = list(audio_files.keys()) + list(score_files.keys()) + list(midi_files.keys())
 total_files = len(all_file_ids)
 non_ref_count = total_files - 1
 sync_audio_file_ids = [
@@ -721,7 +770,7 @@ for file_idx, fid in enumerate(all_file_ids):
             'chroma': _clone_feature_matrix(chroma),
             'onset': _clone_feature_matrix(onset),
         }
-    else:
+    elif fid in score_files:
         report_progress(f'[{_progress_percent(file_start_pct)}%] Parsing score: {fname}')
         chroma, onset, measure_map = extract_score_features(
             score_files[fid],
@@ -739,6 +788,22 @@ for file_idx, fid in enumerate(all_file_ids):
             'chroma': _clone_feature_matrix(chroma),
             'onset': _clone_feature_matrix(onset),
             'measure_map': _clone_measure_map(measure_map),
+        }
+    else:
+        report_progress(f'[{_progress_percent(file_start_pct)}%] Parsing MIDI: {fname}')
+        chroma, onset = extract_midi_features(
+            midi_files[fid],
+            FEATURE_RATE,
+            include_onset=NEEDS_DLNCO_FEATURES,
+        )
+        file_features = {
+            'chroma': chroma,
+            'onset': onset,
+        }
+        _feature_cache[fid] = {
+            'type': 'midi',
+            'chroma': _clone_feature_matrix(chroma),
+            'onset': _clone_feature_matrix(onset),
         }
     features[fid] = file_features
 
@@ -838,6 +903,8 @@ ref_length = get_reference_feature_length(reference_file_id)
 ref_times = np.arange(ref_length, dtype=np.float64) / FEATURE_RATE
 if reference_file_id in audio_files:
     sync_render_reference_duration = len(audio_files[reference_file_id]) / SAMPLE_RATE
+elif reference_file_id in midi_files:
+    sync_render_reference_duration = float(dict(midi_files[reference_file_id]).get('duration', ref_length / FEATURE_RATE))
 else:
     sync_render_reference_duration = ref_length / FEATURE_RATE
 
@@ -890,6 +957,7 @@ if generate_synced_audio:
     for _name in (
         'audio_files',
         'score_files',
+        'midi_files',
         'features',
         'score_measure_maps',
         'ref_chroma',

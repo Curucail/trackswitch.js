@@ -1,6 +1,6 @@
 import type { TrackSwitchController } from "../domain/types";
 
-export type InteractiveFileType = "audio" | "musicxml";
+export type InteractiveFileType = "audio" | "musicxml" | "midi";
 
 export type AlignmentAlgorithmId = "dtw" | "mrmsdtw";
 export type AlignmentFeatureSetId =
@@ -27,8 +27,19 @@ export interface InteractiveFile {
 	sampleRate?: number;
 	/** Raw MusicXML text (musicxml files only). */
 	xmlText?: string;
+	/** Parsed MIDI note events (midi files only). */
+	midiNotes?: InteractiveMidiNote[];
+	/** Duration in seconds derived from parsed MIDI notes (midi files only). */
+	midiDuration?: number;
 	/** Duration in seconds (audio files only, set after decoding). */
 	duration?: number;
+}
+
+export interface InteractiveMidiNote {
+	midi: number;
+	time: number;
+	duration: number;
+	velocity: number;
 }
 
 export interface InteractiveSynchronizedAudio {
@@ -101,7 +112,15 @@ export interface WorkerFileScore {
 	xmlText: string;
 }
 
-export type WorkerFile = WorkerFileAudio | WorkerFileScore;
+export interface WorkerFileMidi {
+	id: string;
+	name: string;
+	type: "midi";
+	notes: InteractiveMidiNote[];
+	duration: number;
+}
+
+export type WorkerFile = WorkerFileAudio | WorkerFileScore | WorkerFileMidi;
 
 export interface WorkerInitMessage {
 	type: "init";

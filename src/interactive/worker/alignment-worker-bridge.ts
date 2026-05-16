@@ -12,6 +12,7 @@ import type {
 	WorkerComputeResult,
 	WorkerFile,
 	WorkerFileAudio,
+	WorkerFileMidi,
 	WorkerFileScore,
 	WorkerResponse,
 } from "../types";
@@ -160,6 +161,30 @@ export class AlignmentWorkerBridge {
 					fullPcmChannels: fullPcmChannels,
 					sampleRate: file.sampleRate,
 				} as WorkerFileAudio;
+			}
+			if (file.type === "midi") {
+				if (
+					!file.midiNotes ||
+					file.midiNotes.length === 0 ||
+					!Number.isFinite(file.midiDuration) ||
+					Number(file.midiDuration) <= 0
+				) {
+					throw new Error(
+						`MIDI file is missing parsed note data: ${file.name}`,
+					);
+				}
+				return {
+					id: file.id,
+					name: file.name,
+					type: "midi",
+					notes: file.midiNotes.map((note) => ({
+						midi: note.midi,
+						time: note.time,
+						duration: note.duration,
+						velocity: note.velocity,
+					})),
+					duration: file.midiDuration,
+				} as WorkerFileMidi;
 			}
 			if (!file.xmlText) {
 				throw new Error(`MusicXML file is missing XML text: ${file.name}`);

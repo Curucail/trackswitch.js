@@ -304,6 +304,13 @@ export function buildAlignmentContext(ctx: any): any {
 			}
 		}
 
+		const midiAlignmentColumns = this.collectMidiAlignmentColumns();
+		for (const column of midiAlignmentColumns) {
+			if (!availableColumns.has(column)) {
+				return `Alignment CSV is missing configured MIDI alignmentColumn: ${column}`;
+			}
+		}
+
 		const baseAxisResult = buildAlignmentAxisContext(
 			this,
 			parsedCsv,
@@ -316,6 +323,21 @@ export function buildAlignmentContext(ctx: any): any {
 		const baseAxis = baseAxisResult.axis;
 
 		const warpingSeriesByTrack = new Map<number, WarpingMatrixTrackSeries>();
+		const midiMappingsByColumn = new Map<string, TrackAlignmentConverter>();
+		midiAlignmentColumns.forEach((column: string) => {
+			midiMappingsByColumn.set(column, {
+				referenceToTrack: buildColumnTimeMapping(
+					parsedCsv.rows,
+					referenceTimeColumn,
+					column,
+				),
+				trackToReference: buildColumnTimeMapping(
+					parsedCsv.rows,
+					column,
+					referenceTimeColumn,
+				),
+			});
+		});
 		baseAxis.converters.forEach(
 			(converter: TrackAlignmentConverter, trackIndex: number) => {
 				const column = mappingByTrack.get(trackIndex);
@@ -349,6 +371,8 @@ export function buildAlignmentContext(ctx: any): any {
 		let syncAxis = null;
 		let baseToSync = null;
 		let syncToBase = null;
+		let syncMidiMappingsByColumn: Map<string, TrackAlignmentConverter> | null =
+			null;
 
 		if (syncReferenceTimeColumn) {
 			if (!availableColumns.has(syncReferenceTimeColumn)) {
@@ -381,11 +405,30 @@ export function buildAlignmentContext(ctx: any): any {
 							syncReferenceTimeColumn,
 							referenceTimeColumn,
 						);
+						syncMidiMappingsByColumn = new Map<
+							string,
+							TrackAlignmentConverter
+						>();
+						midiAlignmentColumns.forEach((column: string) => {
+							syncMidiMappingsByColumn?.set(column, {
+								referenceToTrack: buildColumnTimeMapping(
+									parsedCsv.rows,
+									syncReferenceTimeColumn,
+									column,
+								),
+								trackToReference: buildColumnTimeMapping(
+									parsedCsv.rows,
+									column,
+									syncReferenceTimeColumn,
+								),
+							});
+						});
 						syncAxis = syncAxisResult.axis;
 					} catch (error) {
 						syncAxis = null;
 						baseToSync = null;
 						syncToBase = null;
+						syncMidiMappingsByColumn = null;
 						console.warn(
 							"[trackswitch] Failed to build sync reference bridge mappings:",
 							error,
@@ -403,10 +446,43 @@ export function buildAlignmentContext(ctx: any): any {
 			syncAxis: syncAxis,
 			baseToSync: baseToSync,
 			syncToBase: syncToBase,
+			midiMappingsByColumn: midiMappingsByColumn,
+			syncMidiMappingsByColumn: syncMidiMappingsByColumn,
 			columnByTrack: new Map<number, string>(mappingByTrack),
 			uniqueColumnOrder: this.collectUniqueAlignmentColumns(mappingByTrack),
 			warpingSeriesByTrack: warpingSeriesByTrack,
 		};
+	}.call(ctx);
+}
+
+export function collectMidiAlignmentColumns(ctx: any): any {
+	return function (this: any) {
+		const columns: string[] = [];
+		const seenColumns = new Set<string>();
+
+		const addColumn = (rawColumn: unknown): void => {
+			const column = typeof rawColumn === "string" ? rawColumn.trim() : "";
+			if (!column || seenColumns.has(column)) {
+				return;
+			}
+
+			seenColumns.add(column);
+			columns.push(column);
+		};
+
+		const midiSurfaces = this.renderer?.midiSeekSurfaces || [];
+		midiSurfaces.forEach((surface: { alignmentColumn?: string | null }) => {
+			addColumn(surface.alignmentColumn);
+		});
+
+		const midiCanvases = this.root.querySelectorAll(
+			"canvas.midi[data-midi-alignment-column]",
+		);
+		midiCanvases.forEach((canvas: Element) => {
+			addColumn(canvas.getAttribute("data-midi-alignment-column"));
+		});
+
+		return columns;
 	}.call(ctx);
 }
 

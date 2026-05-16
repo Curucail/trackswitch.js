@@ -37,6 +37,7 @@ export interface MidiSeekSurfaceMetadata {
 	overlay: HTMLElement;
 	seekWrap: HTMLElement;
 	source: string;
+	alignmentColumn: string | null;
 	playbackFollowMode: WaveformPlaybackFollowMode;
 	originalHeight: number;
 	maxZoomSeconds: number;
@@ -54,6 +55,16 @@ export interface MidiSeekSurfaceMetadata {
 	lastRenderKey: string | null;
 	lastMinimapKey: string | null;
 }
+
+export interface MidiTimelineContext {
+	duration: number;
+	toReferenceTime(timelineTime: number): number;
+	fromReferenceTime(referenceTime: number): number;
+}
+
+export type MidiTimelineContextResolver = (
+	surface: MidiSeekSurfaceMetadata,
+) => MidiTimelineContext | null;
 
 function clampTime(value: number, minimum: number, maximum: number): number {
 	return clampTimelineValue(value, minimum, maximum);
@@ -478,6 +489,9 @@ export function wrapMidiCanvases(ctx: any): any {
 				overlay,
 				seekWrap,
 				source,
+				alignmentColumn:
+					canvasElement.getAttribute("data-midi-alignment-column")?.trim() ||
+					null,
 				playbackFollowMode: parseMidiPlaybackFollowMode(
 					canvasElement.getAttribute("data-midi-playback-follow-mode"),
 				),
@@ -597,6 +611,7 @@ export function updateMidiPlaybackState(
 	},
 	suppressPlaybackFollow: boolean,
 	useMidiLocalTimeline = false,
+	timelineContextResolver?: MidiTimelineContextResolver,
 ): any {
 	return function (
 		this: any,
@@ -607,27 +622,51 @@ export function updateMidiPlaybackState(
 		},
 		suppressPlaybackFollow: boolean,
 		useMidiLocalTimeline: boolean,
+		timelineContextResolver?: MidiTimelineContextResolver,
 	) {
 		this.midiSeekSurfaces.forEach((surface: MidiSeekSurfaceMetadata) => {
-			const safeDuration = resolveMidiTimelineDuration(
-				surface,
-				state.longestDuration,
-				useMidiLocalTimeline,
-			);
-			const position = resolveMidiTimelinePosition(
-				surface,
-				state.position,
-				state.longestDuration,
-				useMidiLocalTimeline,
-			);
+			const timelineContext = timelineContextResolver
+				? timelineContextResolver(surface)
+				: null;
+			const safeDuration = timelineContext
+				? sanitizeDuration(timelineContext.duration)
+				: resolveMidiTimelineDuration(
+						surface,
+						state.longestDuration,
+						useMidiLocalTimeline,
+					);
+			const position = timelineContext
+				? clampTime(
+						timelineContext.fromReferenceTime(state.position),
+						0,
+						safeDuration,
+					)
+				: resolveMidiTimelinePosition(
+						surface,
+						state.position,
+						state.longestDuration,
+						useMidiLocalTimeline,
+					);
 			const loopPointA =
 				state.loop?.pointA === null || state.loop?.pointA === undefined
 					? null
-					: clampTime(state.loop.pointA, 0, safeDuration);
+					: timelineContext
+						? clampTime(
+								timelineContext.fromReferenceTime(state.loop.pointA),
+								0,
+								safeDuration,
+							)
+						: clampTime(state.loop.pointA, 0, safeDuration);
 			const loopPointB =
 				state.loop?.pointB === null || state.loop?.pointB === undefined
 					? null
-					: clampTime(state.loop.pointB, 0, safeDuration);
+					: timelineContext
+						? clampTime(
+								timelineContext.fromReferenceTime(state.loop.pointB),
+								0,
+								safeDuration,
+							)
+						: clampTime(state.loop.pointB, 0, safeDuration);
 			this.updateSeekWrapVisuals(surface.seekWrap, position, safeDuration, {
 				pointA: loopPointA,
 				pointB: loopPointB,
@@ -652,7 +691,13 @@ export function updateMidiPlaybackState(
 				}
 			}
 		});
-	}.call(ctx, state, suppressPlaybackFollow, useMidiLocalTimeline);
+	}.call(
+		ctx,
+		state,
+		suppressPlaybackFollow,
+		useMidiLocalTimeline,
+		timelineContextResolver,
+	);
 }
 
 export function updateMidiZoomIndicators(ctx: any): any {

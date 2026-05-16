@@ -1,4 +1,5 @@
 import type { TrackRuntime } from "../domain/types";
+import { mapTime } from "../shared/alignment";
 import { closestInRoot, getOwnerWindow } from "../shared/dom";
 import { clamp } from "../shared/math";
 import { getSeekMetrics } from "../shared/seek";
@@ -742,18 +743,7 @@ export function getSeekTimelineContext(ctx: any, seekingElement: any): any {
 
 		if (this.isMidiSeekSurface(seekingElement) && this.isAlignmentMode()) {
 			const midiSurface = this.renderer.findMidiSurface(seekingElement);
-			const midiDuration = midiSurface?.midiDurationSeconds ?? 0;
-			if (!Number.isFinite(midiDuration) || midiDuration <= 0) {
-				return referenceContext;
-			}
-
-			return {
-				duration: midiDuration,
-				toReferenceTime: (midiTime: number): number =>
-					clamp(midiTime, 0, this.longestDuration),
-				fromReferenceTime: (referenceTime: number): number =>
-					clamp(referenceTime, 0, midiDuration),
-			};
+			return this.getMidiTimelineContext(midiSurface) || referenceContext;
 		}
 
 		if (!this.isFixedWaveformLocalAxisEnabled()) {
@@ -814,6 +804,75 @@ export function getSeekTimelineContext(ctx: any, seekingElement: any): any {
 			},
 		};
 	}.call(ctx, seekingElement);
+}
+
+export function getMidiTimelineContext(ctx: any, midiSurface: any): any {
+	return function (this: any, midiSurface: any) {
+		if (!midiSurface || !this.isAlignmentMode()) {
+			return null;
+		}
+
+		const midiDuration = Number(midiSurface.midiDurationSeconds);
+		if (!Number.isFinite(midiDuration) || midiDuration <= 0) {
+			return null;
+		}
+
+		const alignmentColumn =
+			typeof midiSurface.alignmentColumn === "string"
+				? midiSurface.alignmentColumn.trim()
+				: "";
+		if (!alignmentColumn || !this.alignmentContext) {
+			return {
+				duration: midiDuration,
+				toReferenceTime: (midiTime: number): number =>
+					clamp(midiTime, 0, this.longestDuration),
+				fromReferenceTime: (referenceTime: number): number =>
+					clamp(referenceTime, 0, midiDuration),
+			};
+		}
+
+		const useSyncAxis = this.getActiveAlignmentAxisKey() === "sync";
+		const mappings = useSyncAxis
+			? this.alignmentContext.syncMidiMappingsByColumn
+			: this.alignmentContext.midiMappingsByColumn;
+		const converter = mappings?.get(alignmentColumn);
+		const activeAxis = useSyncAxis
+			? this.alignmentContext.syncAxis
+			: this.alignmentContext.baseAxis;
+		const referenceDuration = Number(
+			activeAxis?.referenceDuration ?? this.longestDuration,
+		);
+		if (!converter || !activeAxis || !Number.isFinite(referenceDuration)) {
+			throw new Error(
+				"Alignment MIDI timeline is missing configured alignmentColumn mapping: " +
+					alignmentColumn,
+			);
+		}
+
+		return {
+			duration: midiDuration,
+			toReferenceTime: (midiTime: number): number =>
+				clamp(
+					mapTime(
+						converter.trackToReference,
+						clamp(midiTime, 0, midiDuration),
+						this.alignmentContext.outOfRange,
+					),
+					0,
+					referenceDuration,
+				),
+			fromReferenceTime: (referenceTime: number): number =>
+				clamp(
+					mapTime(
+						converter.referenceToTrack,
+						clamp(referenceTime, 0, referenceDuration),
+						this.alignmentContext.outOfRange,
+					),
+					0,
+					midiDuration,
+				),
+		};
+	}.call(ctx, midiSurface);
 }
 
 export function getWaveformTimelineContext(ctx: any): any {
