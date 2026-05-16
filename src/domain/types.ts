@@ -81,6 +81,17 @@ export interface TrackSwitchWaveformConfig {
 	seekMarginRight?: number;
 }
 
+export interface TrackSwitchMidiConfig {
+	src: string;
+	height?: number;
+	maxZoom?: number;
+	playbackFollowMode?: WaveformPlaybackFollowMode;
+	timer?: boolean;
+	style?: string;
+	seekMarginLeft?: number;
+	seekMarginRight?: number;
+}
+
 export interface TrackSwitchSheetMusicConfig {
 	src: string;
 	measureColumn?: string;
@@ -123,6 +134,10 @@ export interface TrackSwitchWaveformUiElement
 	type: "waveform";
 }
 
+export interface TrackSwitchMidiUiElement extends TrackSwitchMidiConfig {
+	type: "midi";
+}
+
 export interface TrackSwitchSheetMusicUiElement
 	extends TrackSwitchSheetMusicConfig {
 	type: "sheetMusic";
@@ -154,6 +169,7 @@ export type TrackSwitchUiElement =
 	| TrackSwitchImageUiElement
 	| TrackSwitchPerTrackImageUiElement
 	| TrackSwitchWaveformUiElement
+	| TrackSwitchMidiUiElement
 	| TrackSwitchSheetMusicUiElement
 	| TrackSwitchWarpingMatrixUiElement
 	| TrackSwitchTextUiElement

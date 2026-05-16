@@ -612,6 +612,7 @@ Use it to add any of these section types:
 - `perTrackImage`
 - `text`
 - `waveform`
+- `midi`
 - `sheetMusic`
 - `warpingMatrix`
 
@@ -890,6 +891,44 @@ Notes:
 
 - If you leave out `timer`, the waveform timer is off in a standard player and on in an alignment player.
 - When listeners zoom in, the waveform shows a small overview map for quick navigation.
+
+### `midi` {#midi}
+
+Use `type: 'midi'` to show a MIDI file as a piano-roll visualization. MIDI files are only visual; they do not add playback tracks or change audio output.
+
+Example:
+
+```javascript
+{
+  type: 'midi',
+  src: 'notes.mid',
+  height: 180,
+  maxZoom: 5,
+  playbackFollowMode: 'center',
+  timer: true,
+  style: 'margin: 16px 0;',
+}
+```
+
+Section options:
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `src` | `string` | - | MIDI file to visualize. |
+| `height?` | `number` | `180` | Height of the MIDI view. |
+| `maxZoom?` | `number` | `5` | The closest zoom level listeners can reach, in seconds. Smaller numbers allow tighter zoom. |
+| `playbackFollowMode?` | `'off' | 'center' | 'jump'` | `'off'` | Decides whether the MIDI view follows playback automatically. |
+| `timer?` | `boolean` | `false` | Shows a small time label inside the MIDI panel. |
+| `seekMarginLeft?` | `number` | `0` | Leaves a non-seekable area on the left side. |
+| `seekMarginRight?` | `number` | `0` | Leaves a non-seekable area on the right side. |
+| `style?` | `string` | none | Lets you fine-tune the look or spacing of the section with CSS. |
+
+Notes:
+
+- MIDI note timing is read directly from the file in seconds and uses the main player timeline.
+- The visible pitch range is calculated from the notes in the file with two semitones of padding above and below.
+- Clicking or dragging the MIDI view seeks the audio player, like waveform sections.
+- MIDI files with no note events are treated as load errors.
 
 ### `sheetMusic` {#sheetmusic}
 

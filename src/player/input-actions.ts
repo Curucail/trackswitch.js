@@ -4,6 +4,7 @@ import { getSeekMetrics, isPrimaryInput } from "../shared/seek";
 import {
 	finalizeRightClickLoopSelection,
 	finishSeekEndInteraction,
+	resolveMidiMinimapStart,
 	resolveWaveformMinimapStart,
 } from "./input-seek-helpers";
 import {
@@ -246,6 +247,44 @@ export function onWaveformMinimapStart(ctx: any, event: any): any {
 		}
 
 		this.renderer.setWaveformMinimapViewportStart(
+			minimapStart.seekWrap,
+			minimapStart.pointerRatio - minimapStart.pointerOffsetRatio,
+		);
+		event.preventDefault();
+		event.stopPropagation();
+	}.call(ctx, event);
+}
+
+export function onMidiMinimapStart(ctx: any, event: any): any {
+	return function (this: any, event: any) {
+		if (!this.isLoaded || !isPrimaryInput(event) || this.pinchZoomState) {
+			return;
+		}
+
+		if (event.type === "touchstart" && this.getActiveTouchCount(event) !== 1) {
+			return;
+		}
+
+		const minimapStart = resolveMidiMinimapStart(this, event);
+		if (!minimapStart) {
+			return;
+		}
+
+		this.waveformMinimapDragState = {
+			seekWrap: minimapStart.seekWrap,
+			minimapNode: minimapStart.minimapNode,
+			pointerOffsetRatio: minimapStart.pointerOffsetRatio,
+		};
+		this.pendingWaveformTouchSeek = null;
+		this.seekingElement = null;
+		this.rightClickDragging = false;
+		this.loopDragStart = null;
+		this.draggingMarker = null;
+		if (this.state.currentlySeeking) {
+			this.dispatch({ type: "set-seeking", seeking: false });
+		}
+
+		this.renderer.setMidiMinimapViewportStart(
 			minimapStart.seekWrap,
 			minimapStart.pointerRatio - minimapStart.pointerOffsetRatio,
 		);
@@ -608,6 +647,7 @@ export function onResize(ctx: any): any {
 				this.getWaveformTimelineProjector(),
 				this.getWaveformTimelineContext(),
 			);
+			this.renderer.renderMidiDisplays(this.longestDuration);
 			this.sheetMusicEngine.resize();
 			this.updateMainControls();
 		}, 300);

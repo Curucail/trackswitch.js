@@ -67,6 +67,64 @@ export function resolveWaveformMinimapStart(
 	};
 }
 
+export function resolveMidiMinimapStart(
+	controller: TrackSwitchControllerImpl,
+	event: ControllerPointerEvent,
+): {
+	minimapNode: HTMLElement;
+	seekWrap: HTMLElement;
+	pointerRatio: number;
+	pointerOffsetRatio: number;
+} | null {
+	const minimapNode = closestInRoot(
+		controller.root,
+		event.target,
+		".midi-zoom-minimap",
+	);
+	if (!minimapNode || !Number.isFinite(event.pageX)) {
+		return null;
+	}
+
+	const wrapper = closestInRoot(controller.root, event.target, ".midi-wrap");
+	if (!wrapper) {
+		return null;
+	}
+
+	const seekWrap = wrapper.querySelector('.seekwrap[data-seek-surface="midi"]');
+	if (!(seekWrap instanceof HTMLElement)) {
+		return null;
+	}
+
+	const viewport = controller.renderer.getMidiMinimapViewport(seekWrap);
+	if (!viewport || viewport.widthRatio >= 1) {
+		return null;
+	}
+
+	const rect = minimapNode.getBoundingClientRect();
+	const minimapWidth = Math.max(1, rect.width || minimapNode.clientWidth);
+	const ownerWindow = getOwnerWindow(minimapNode);
+	const pointerRatio = Math.max(
+		0,
+		Math.min(
+			1,
+			((event.pageX as number) - (rect.left + ownerWindow.scrollX)) /
+				minimapWidth,
+		),
+	);
+	const isInsideViewport =
+		pointerRatio >= viewport.startRatio &&
+		pointerRatio <= viewport.startRatio + viewport.widthRatio;
+
+	return {
+		minimapNode,
+		seekWrap,
+		pointerRatio,
+		pointerOffsetRatio: isInsideViewport
+			? pointerRatio - viewport.startRatio
+			: viewport.widthRatio / 2,
+	};
+}
+
 export function finishSeekEndInteraction(
 	controller: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,

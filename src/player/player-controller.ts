@@ -424,6 +424,14 @@ export class TrackSwitchControllerImpl
 		controllerInput.onWaveformMinimapStart(this, event);
 	}
 
+	onMidiZoomWheel(event: ControllerPointerEvent): void {
+		controllerSeek.onMidiZoomWheel(this, event);
+	}
+
+	onMidiMinimapStart(event: ControllerPointerEvent): void {
+		controllerInput.onMidiMinimapStart(this, event);
+	}
+
 	onPanelReorderStart(event: ControllerPointerEvent): void {
 		if (!this.features.customizablePanelOrder) {
 			return;
@@ -518,6 +526,10 @@ export class TrackSwitchControllerImpl
 
 	public isWaveformSeekSurface(seekWrap: HTMLElement | null): boolean {
 		return controllerSeek.isWaveformSeekSurface(this, seekWrap);
+	}
+
+	public isMidiSeekSurface(seekWrap: HTMLElement | null): boolean {
+		return controllerSeek.isMidiSeekSurface(this, seekWrap);
 	}
 
 	public startInteractiveSeek(

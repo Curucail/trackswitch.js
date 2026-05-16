@@ -21,6 +21,17 @@ function shouldSuppressWaveformPlaybackFollow(
 	);
 }
 
+function shouldSuppressMidiPlaybackFollow(
+	controller: TrackSwitchControllerImpl,
+): boolean {
+	return (
+		!!controller.waveformMinimapDragState ||
+		!!controller.pinchZoomState ||
+		(controller.state.currentlySeeking &&
+			controller.isMidiSeekSurface(controller.seekingElement))
+	);
+}
+
 export function applyTrackProperties(ctx: TrackSwitchControllerImpl): void {
 	const panSupported = ctx.audioEngine.supportsStereoPanning();
 	const noSoloFallbackGate =
@@ -70,6 +81,10 @@ export function updateMainControls(ctx: TrackSwitchControllerImpl): void {
 		ctx.getWaveformTimelineContext(),
 		suppressWaveformPlaybackFollow,
 	);
+	ctx.renderer.updateMidiPlaybackState(
+		uiState,
+		shouldSuppressMidiPlaybackFollow(ctx),
+	);
 	ctx.sheetMusicEngine.updatePosition(
 		ctx.state.position,
 		ctx.isSyncReferenceAxisActive(),
@@ -94,6 +109,10 @@ export function updatePlaybackPositionUi(ctx: TrackSwitchControllerImpl): void {
 		ctx.runtimes,
 		ctx.getWaveformTimelineContext(),
 		suppressWaveformPlaybackFollow,
+	);
+	ctx.renderer.updateMidiPlaybackState(
+		uiState,
+		shouldSuppressMidiPlaybackFollow(ctx),
 	);
 	ctx.sheetMusicEngine.updatePosition(
 		ctx.state.position,

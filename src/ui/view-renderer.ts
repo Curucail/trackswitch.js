@@ -13,6 +13,8 @@ import type {
 	WaveformEngine,
 } from "../engine/waveform-engine";
 import * as viewRendererCore from "./render-layout";
+import type { MidiSeekSurfaceMetadata } from "./render-midi";
+import * as viewRendererMidi from "./render-midi";
 import * as viewRendererSeek from "./render-seek";
 import * as viewRendererWaveform from "./render-waveforms";
 
@@ -256,6 +258,7 @@ export class ViewRenderer {
 	public trackGroups: NormalizedTrackGroupLayout[];
 
 	public readonly waveformSeekSurfaces: WaveformSeekSurfaceMetadata[] = [];
+	public readonly midiSeekSurfaces: MidiSeekSurfaceMetadata[] = [];
 	public readonly sheetMusicHosts: SheetMusicHostConfig[] = [];
 	public readonly warpingMatrixHosts: WarpingMatrixHostMetadata[] = [];
 	public waveformTileRefreshFrameId: number | null = null;
@@ -405,6 +408,10 @@ export class ViewRenderer {
 
 	public wrapWaveformCanvases(): void {
 		viewRendererWaveform.wrapWaveformCanvases(this);
+	}
+
+	public wrapMidiCanvases(): void {
+		viewRendererMidi.wrapMidiCanvases(this);
 	}
 
 	public wrapSheetMusicContainers(): void {
@@ -664,6 +671,17 @@ export class ViewRenderer {
 		);
 	}
 
+	public resolveMidiBaseWidth(
+		scrollContainer: HTMLElement,
+		fallback: number,
+	): number {
+		return viewRendererMidi.resolveMidiBaseWidth(
+			this,
+			scrollContainer,
+			fallback,
+		);
+	}
+
 	public setWaveformSurfaceWidth(
 		surfaceMetadata: WaveformSeekSurfaceMetadata,
 	): void {
@@ -750,8 +768,18 @@ export class ViewRenderer {
 		return viewRendererWaveform.findWaveformSurface(this, seekWrap);
 	}
 
+	public findMidiSurface(
+		seekWrap: HTMLElement | null,
+	): MidiSeekSurfaceMetadata | null {
+		return viewRendererMidi.findMidiSurface(this, seekWrap);
+	}
+
 	reflowWaveforms(): void {
 		viewRendererWaveform.reflowWaveforms(this);
+	}
+
+	reflowMidiDisplays(): void {
+		viewRendererMidi.reflowMidiDisplays(this);
 	}
 
 	getWaveformZoom(seekWrap: HTMLElement): number | null {
@@ -801,6 +829,46 @@ export class ViewRenderer {
 		);
 	}
 
+	getMidiZoom(seekWrap: HTMLElement): number | null {
+		return viewRendererMidi.getMidiZoom(this, seekWrap);
+	}
+
+	isMidiZoomEnabled(seekWrap: HTMLElement, durationSeconds: number): boolean {
+		return viewRendererMidi.isMidiZoomEnabled(this, seekWrap, durationSeconds);
+	}
+
+	public getMidiMinimapViewport(
+		seekWrap: HTMLElement,
+	): { startRatio: number; widthRatio: number } | null {
+		return viewRendererMidi.getMidiMinimapViewport(this, seekWrap);
+	}
+
+	setMidiMinimapViewportStart(
+		seekWrap: HTMLElement,
+		startRatio: number,
+	): boolean {
+		return viewRendererMidi.setMidiMinimapViewportStart(
+			this,
+			seekWrap,
+			startRatio,
+		);
+	}
+
+	setMidiZoom(
+		seekWrap: HTMLElement,
+		zoom: number,
+		durationSeconds: number,
+		anchorPageX?: number,
+	): boolean {
+		return viewRendererMidi.setMidiZoom(
+			this,
+			seekWrap,
+			zoom,
+			durationSeconds,
+			anchorPageX,
+		);
+	}
+
 	drawDummyWaveforms(waveformEngine: WaveformEngine): void {
 		viewRendererWaveform.drawDummyWaveforms(this, waveformEngine);
 	}
@@ -820,6 +888,33 @@ export class ViewRenderer {
 			trackTimelineProjector,
 			waveformTimelineContext,
 		);
+	}
+
+	public async initializeMidiDisplays(timelineDuration: number): Promise<void> {
+		return viewRendererMidi.initializeMidiDisplays(this, timelineDuration);
+	}
+
+	public renderMidiDisplays(timelineDuration: number): void {
+		viewRendererMidi.renderMidiDisplays(this, timelineDuration);
+	}
+
+	public updateMidiPlaybackState(
+		state: TrackSwitchUiState,
+		suppressPlaybackFollow: boolean,
+	): void {
+		viewRendererMidi.updateMidiPlaybackState(
+			this,
+			state,
+			suppressPlaybackFollow,
+		);
+	}
+
+	public updateMidiZoomIndicators(): void {
+		viewRendererMidi.updateMidiZoomIndicators(this);
+	}
+
+	public destroyMidiDisplays(): void {
+		viewRendererMidi.destroyMidiDisplays(this);
 	}
 
 	public renderWaveformsInternal(

@@ -47,7 +47,7 @@ function handleWaveformAuxiliarySeekState(
 	event: any,
 ): boolean {
 	if (controller.waveformMinimapDragState) {
-		if (controller.updateWaveformMinimapDrag(event)) {
+		if (controller.updateTimelineMinimapDrag(event)) {
 			event.preventDefault();
 			event.stopPropagation();
 		}
@@ -257,7 +257,59 @@ export function onWaveformZoomWheel(ctx: any, event: any): any {
 	}.call(ctx, event);
 }
 
-export function updateWaveformMinimapDrag(ctx: any, event: any): any {
+export function onMidiZoomWheel(ctx: any, event: any): any {
+	return function (this: any, event: any) {
+		const wheelEvent = event.originalEvent as WheelEvent | undefined;
+		const deltaY = wheelEvent ? normalizeWaveformWheelDelta(wheelEvent) : 0;
+		if (
+			typeof deltaY !== "number" ||
+			!Number.isFinite(deltaY) ||
+			deltaY === 0
+		) {
+			return;
+		}
+
+		const wrapper = closestInRoot(this.root, event.target, ".midi-wrap");
+		if (!wrapper) {
+			return;
+		}
+
+		const seekWrap = wrapper.querySelector(
+			'.seekwrap[data-seek-surface="midi"]',
+		);
+		if (!(seekWrap instanceof HTMLElement)) {
+			return;
+		}
+
+		const zoomDuration = this.getSeekTimelineContext(seekWrap).duration;
+		if (!this.renderer.isMidiZoomEnabled(seekWrap, zoomDuration)) {
+			return;
+		}
+
+		const currentZoom = this.renderer.getMidiZoom(seekWrap);
+		if (currentZoom === null) {
+			return;
+		}
+
+		event.preventDefault();
+		event.stopPropagation();
+
+		const zoomFactor = Math.exp(-1 * deltaY * WAVEFORM_WHEEL_ZOOM_SPEED);
+		const nextZoom = currentZoom * zoomFactor;
+		const changed = this.renderer.setMidiZoom(
+			seekWrap,
+			nextZoom,
+			zoomDuration,
+			Number.isFinite(event.pageX) ? event.pageX : undefined,
+		);
+
+		if (changed) {
+			this.updateMainControls();
+		}
+	}.call(ctx, event);
+}
+
+export function updateTimelineMinimapDrag(ctx: any, event: any): any {
 	return function (this: any, event: any) {
 		if (!this.waveformMinimapDragState) {
 			return false;
@@ -287,12 +339,20 @@ export function updateWaveformMinimapDrag(ctx: any, event: any): any {
 			0,
 			1,
 		);
-		this.renderer.setWaveformMinimapViewportStart(
-			this.waveformMinimapDragState.seekWrap,
-			pointerRatio - this.waveformMinimapDragState.pointerOffsetRatio,
-		);
+		const seekWrap = this.waveformMinimapDragState.seekWrap;
+		const startRatio =
+			pointerRatio - this.waveformMinimapDragState.pointerOffsetRatio;
+		if (this.isMidiSeekSurface(seekWrap)) {
+			this.renderer.setMidiMinimapViewportStart(seekWrap, startRatio);
+		} else {
+			this.renderer.setWaveformMinimapViewportStart(seekWrap, startRatio);
+		}
 		return true;
 	}.call(ctx, event);
+}
+
+export function updateWaveformMinimapDrag(ctx: any, event: any): any {
+	return updateTimelineMinimapDrag(ctx, event);
 }
 
 export function endWaveformMinimapDrag(ctx: any): any {
@@ -325,6 +385,12 @@ export function isWaveformSeekSurface(ctx: any, seekWrap: any): any {
 		return (
 			!!seekWrap && seekWrap.getAttribute("data-seek-surface") === "waveform"
 		);
+	}.call(ctx, seekWrap);
+}
+
+export function isMidiSeekSurface(ctx: any, seekWrap: any): any {
+	return function (this: any, seekWrap: any) {
+		return !!seekWrap && seekWrap.getAttribute("data-seek-surface") === "midi";
 	}.call(ctx, seekWrap);
 }
 
@@ -365,7 +431,8 @@ export function tryStartPendingWaveformTouchSeek(
 	return function (this: any, event: any, seekWrap: any) {
 		if (
 			event.type !== "touchstart" ||
-			!this.isWaveformSeekSurface(seekWrap) ||
+			(!this.isWaveformSeekSurface(seekWrap) &&
+				!this.isMidiSeekSurface(seekWrap)) ||
 			this.getActiveTouchCount(event) !== 1 ||
 			!seekWrap
 		) {
@@ -534,13 +601,17 @@ export function tryStartPinchZoom(ctx: any, event: any, seekWrap: any): any {
 
 		if (
 			!seekWrap ||
-			seekWrap.getAttribute("data-seek-surface") !== "waveform"
+			(seekWrap.getAttribute("data-seek-surface") !== "waveform" &&
+				seekWrap.getAttribute("data-seek-surface") !== "midi")
 		) {
 			return false;
 		}
 
 		const zoomDuration = this.getSeekTimelineContext(seekWrap).duration;
-		if (!this.renderer.isWaveformZoomEnabled(seekWrap, zoomDuration)) {
+		const zoomEnabled = this.isMidiSeekSurface(seekWrap)
+			? this.renderer.isMidiZoomEnabled(seekWrap, zoomDuration)
+			: this.renderer.isWaveformZoomEnabled(seekWrap, zoomDuration);
+		if (!zoomEnabled) {
 			return false;
 		}
 
@@ -549,7 +620,9 @@ export function tryStartPinchZoom(ctx: any, event: any, seekWrap: any): any {
 			return false;
 		}
 
-		const initialZoom = this.renderer.getWaveformZoom(seekWrap);
+		const initialZoom = this.isMidiSeekSurface(seekWrap)
+			? this.renderer.getMidiZoom(seekWrap)
+			: this.renderer.getWaveformZoom(seekWrap);
 		if (initialZoom === null) {
 			return false;
 		}
@@ -590,15 +663,24 @@ export function updatePinchZoom(ctx: any, event: any): any {
 		const zoomDuration = this.getSeekTimelineContext(
 			this.pinchZoomState.seekWrap,
 		).duration;
-		const changed = this.renderer.setWaveformZoom(
-			this.pinchZoomState.seekWrap,
-			this.pinchZoomState.initialZoom * scale,
-			zoomDuration,
-			anchorPageX === null ? undefined : anchorPageX,
-		);
+		const changed = this.isMidiSeekSurface(this.pinchZoomState.seekWrap)
+			? this.renderer.setMidiZoom(
+					this.pinchZoomState.seekWrap,
+					this.pinchZoomState.initialZoom * scale,
+					zoomDuration,
+					anchorPageX === null ? undefined : anchorPageX,
+				)
+			: this.renderer.setWaveformZoom(
+					this.pinchZoomState.seekWrap,
+					this.pinchZoomState.initialZoom * scale,
+					zoomDuration,
+					anchorPageX === null ? undefined : anchorPageX,
+				);
 
 		if (changed) {
-			this.requestWaveformRender();
+			if (this.isWaveformSeekSurface(this.pinchZoomState.seekWrap)) {
+				this.requestWaveformRender();
+			}
 			this.updateMainControls();
 		}
 

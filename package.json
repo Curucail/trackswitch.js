@@ -109,6 +109,7 @@
 		"typecheck:unused": "tsc --project tsconfig.json --noUnusedLocals --noUnusedParameters --pretty false"
 	},
 	"dependencies": {
+		"@tonejs/midi": "^2.0.28",
 		"d3": "^7.9.0",
 		"opensheetmusicdisplay": "^1.9.9",
 		"papaparse": "^5.5.3"

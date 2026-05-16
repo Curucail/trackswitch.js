@@ -128,6 +128,12 @@ export function load(ctx: any): any {
 				return;
 			}
 
+			await this.renderer.initializeMidiDisplays(this.longestDuration);
+
+			if (this.isDestroyed) {
+				return;
+			}
+
 			this.isLoaded = true;
 			this.renderer.hideOverlayOnLoaded();
 
@@ -813,6 +819,7 @@ export function handleError(ctx: any, message: any): any {
 		this.pinchZoomState = null;
 		this.waveformMinimapDragState = null;
 		this.sheetMusicEngine.destroy();
+		this.renderer.destroyMidiDisplays();
 
 		this.renderer.showError(message, this.runtimes);
 		this.emit("error", { message: message });

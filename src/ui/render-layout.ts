@@ -232,6 +232,10 @@ function resolvePanelHandleLabel(panel: HTMLElement): string {
 		return "Reorder waveform panel";
 	}
 
+	if (panel.classList.contains("midi-wrap")) {
+		return "Reorder MIDI panel";
+	}
+
 	if (panel.classList.contains("sheetmusic-wrap")) {
 		return "Reorder sheet music panel";
 	}
@@ -559,10 +563,12 @@ export function initialize(ctx: any, runtimes: any): any {
 
 		this.wrapSeekableImages();
 		this.wrapWaveformCanvases();
+		this.wrapMidiCanvases();
 		this.prepareTextPanels();
 		this.wrapSheetMusicContainers();
 		this.wrapWarpingMatrixContainers();
 		this.reflowWaveforms();
+		this.reflowMidiDisplays();
 		this.renderTrackList(runtimes);
 		this.prepareCustomizablePanels();
 
@@ -1393,6 +1399,8 @@ export function updatePlaybackPosition(
 
 		this.updateWaveformTiming(state, runtimes, waveformTimelineContext);
 		this.updateWaveformZoomIndicators();
+		this.updateMidiPlaybackState(state, true);
+		this.updateMidiZoomIndicators();
 		this.warpingMatrixHosts.forEach((host: WarpingMatrixHostMetadata) => {
 			this.updateWarpingMatrixPlaybackState(host, warpingMatrixContext);
 		});
@@ -1732,6 +1740,7 @@ export function destroy(ctx: any): any {
 
 		this.latestWaveformRenderInput = null;
 		this.waveformSeekSurfaces.length = 0;
+		this.midiSeekSurfaces.length = 0;
 		this.sheetMusicHosts.length = 0;
 		this.warpingMatrixHosts.length = 0;
 		this.panelDragState = null;

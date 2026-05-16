@@ -2,6 +2,7 @@ import type {
 	TrackDefinitionAlignment,
 	TrackSourceDefinition,
 	TrackSwitchImageConfig,
+	TrackSwitchMidiConfig,
 	TrackSwitchPerTrackImageConfig,
 	TrackSwitchSheetMusicConfig,
 	TrackSwitchTextAlign,
@@ -51,6 +52,17 @@ const uiWaveformAllowedKeys = [
 	"timer",
 	"alignedPlayhead",
 	"showAlignmentPoints",
+	"style",
+	"seekMarginLeft",
+	"seekMarginRight",
+] as const;
+const uiMidiAllowedKeys = [
+	"type",
+	"src",
+	"height",
+	"maxZoom",
+	"playbackFollowMode",
+	"timer",
 	"style",
 	"seekMarginLeft",
 	"seekMarginRight",
@@ -109,6 +121,7 @@ const uiAllowedKeysByType: Record<string, readonly string[]> = {
 	image: uiImageAllowedKeys,
 	perTrackImage: uiPerTrackImageAllowedKeys,
 	waveform: uiWaveformAllowedKeys,
+	midi: uiMidiAllowedKeys,
 	trackGroup: uiTrackGroupAllowedKeys,
 	sheetMusic: uiSheetMusicAllowedKeys,
 	warpingMatrix: uiWarpingMatrixAllowedKeys,
@@ -196,6 +209,26 @@ function normalizeWaveformConfig<T extends TrackSwitchWaveformConfig>(
 	};
 
 	validateSeekMargins(normalized, "ui.waveform");
+	return normalized;
+}
+
+function normalizeMidiConfig<T extends TrackSwitchMidiConfig>(midi: T): T {
+	if (typeof midi.src !== "string" || midi.src.trim().length === 0) {
+		throw new Error("Invalid ui.midi configuration: src must be a string.");
+	}
+
+	const normalized = {
+		...midi,
+		src: midi.src.trim(),
+		height: toCanvasSize(midi.height, 180),
+		maxZoom: normalizeWaveformMaxZoom(midi.maxZoom),
+		playbackFollowMode: normalizeWaveformPlaybackFollowMode(
+			midi.playbackFollowMode,
+		),
+		timer: normalizeOptionalBoolean(midi.timer),
+	};
+
+	validateSeekMargins(normalized, "ui.midi");
 	return normalized;
 }
 
@@ -398,6 +431,10 @@ export function normalizeUiElement(
 
 	if (element.type === "waveform") {
 		return normalizeWaveformConfig(element);
+	}
+
+	if (element.type === "midi") {
+		return normalizeMidiConfig(element);
 	}
 
 	if (element.type === "sheetMusic") {
@@ -611,6 +648,43 @@ function injectWaveform(
 	root.appendChild(canvas);
 }
 
+function injectMidi(root: HTMLElement, midi: TrackSwitchMidiConfig): void {
+	const canvas = document.createElement("canvas");
+	canvas.className = "midi";
+	canvas.width = 1200;
+	canvas.height = toCanvasSize(midi.height, 180);
+	canvas.setAttribute("data-midi-src", midi.src);
+	canvas.setAttribute("data-midi-max-zoom", String(midi.maxZoom));
+	canvas.setAttribute(
+		"data-midi-playback-follow-mode",
+		midi.playbackFollowMode || "off",
+	);
+
+	if (typeof midi.timer === "boolean") {
+		canvas.setAttribute("data-midi-timer", String(midi.timer));
+	}
+
+	if (typeof midi.style === "string") {
+		canvas.setAttribute("data-midi-style", midi.style);
+	}
+
+	if (typeof midi.seekMarginLeft === "number") {
+		canvas.setAttribute(
+			"data-seek-margin-left",
+			toMarginString(midi.seekMarginLeft),
+		);
+	}
+
+	if (typeof midi.seekMarginRight === "number") {
+		canvas.setAttribute(
+			"data-seek-margin-right",
+			toMarginString(midi.seekMarginRight),
+		);
+	}
+
+	root.appendChild(canvas);
+}
+
 function injectSheetMusic(
 	root: HTMLElement,
 	sheetmusic: TrackSwitchSheetMusicConfig,
@@ -699,6 +773,11 @@ export function injectConfiguredUiElements(
 
 		if (entry.type === "waveform") {
 			injectWaveform(root, entry);
+			return;
+		}
+
+		if (entry.type === "midi") {
+			injectMidi(root, entry);
 			return;
 		}
 
