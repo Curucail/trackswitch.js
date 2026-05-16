@@ -128,7 +128,10 @@ export function load(ctx: any): any {
 				return;
 			}
 
-			await this.renderer.initializeMidiDisplays(this.longestDuration);
+			await this.renderer.initializeMidiDisplays(
+				this.longestDuration,
+				this.isAlignmentMode(),
+			);
 
 			if (this.isDestroyed) {
 				return;

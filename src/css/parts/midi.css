@@ -28,11 +28,7 @@
 	position: relative;
 	min-width: 100%;
 	overflow: hidden;
-	background: linear-gradient(
-		to bottom,
-		var(--ts-color-surface-raised-98),
-		var(--ts-color-surface-base)
-	);
+	background: var(--ts-color-surface-base);
 }
 
 .trackswitch .midi-wrap .midi-note-layer {

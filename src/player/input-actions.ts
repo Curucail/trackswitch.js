@@ -647,7 +647,10 @@ export function onResize(ctx: any): any {
 				this.getWaveformTimelineProjector(),
 				this.getWaveformTimelineContext(),
 			);
-			this.renderer.renderMidiDisplays(this.longestDuration);
+			this.renderer.renderMidiDisplays(
+				this.longestDuration,
+				this.isAlignmentMode(),
+			);
 			this.sheetMusicEngine.resize();
 			this.updateMainControls();
 		}, 300);

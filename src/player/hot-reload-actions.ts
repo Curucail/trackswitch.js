@@ -178,7 +178,10 @@ async function applyAudioPreservingConfig(
 
 	restoreAudioPreservingState(controller, previousPosition, wasPlaying);
 	await controller.initializeSheetMusic();
-	await controller.renderer.initializeMidiDisplays(controller.longestDuration);
+	await controller.renderer.initializeMidiDisplays(
+		controller.longestDuration,
+		controller.isAlignmentMode(),
+	);
 	controller.updateMainControls();
 }
 
@@ -352,6 +355,7 @@ async function updateConfigNow(
 		await controller.initializeSheetMusic();
 		await controller.renderer.initializeMidiDisplays(
 			controller.longestDuration,
+			controller.isAlignmentMode(),
 		);
 
 		const nextPosition = clamp(previousPosition, 0, controller.longestDuration);

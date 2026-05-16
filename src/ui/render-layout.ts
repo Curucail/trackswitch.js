@@ -1399,7 +1399,7 @@ export function updatePlaybackPosition(
 
 		this.updateWaveformTiming(state, runtimes, waveformTimelineContext);
 		this.updateWaveformZoomIndicators();
-		this.updateMidiPlaybackState(state, true);
+		this.updateMidiPlaybackState(state, true, false);
 		this.updateMidiZoomIndicators();
 		this.warpingMatrixHosts.forEach((host: WarpingMatrixHostMetadata) => {
 			this.updateWarpingMatrixPlaybackState(host, warpingMatrixContext);

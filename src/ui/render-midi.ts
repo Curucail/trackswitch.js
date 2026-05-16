@@ -3,8 +3,21 @@ import type { WaveformPlaybackFollowMode } from "../domain/types";
 import { sanitizeInlineStyle } from "../shared/dom";
 import { formatSecondsToHHMMSSmmm } from "../shared/format";
 import { clampPercent } from "../shared/math";
+import {
+	clampTimelineValue,
+	getTimelineMaximumZoom,
+	getTimelineSurfaceWidth,
+	getTimelineViewportState,
+	MIN_TIMELINE_ZOOM,
+	reflowTimelineSurface,
+	resolveTimelineBaseWidth,
+	resolveTimelinePlaybackFollowScrollLeft,
+	sanitizeTimelineDuration,
+	setTimelineZoomForSurface,
+	updateTimelineMinimapViewport,
+} from "./timeline-surface";
 
-const MIN_MIDI_ZOOM = 1;
+const MIN_MIDI_ZOOM = MIN_TIMELINE_ZOOM;
 const MIDI_RANGE_PADDING = 2;
 const MIN_MIDI_NOTE_WIDTH = 36;
 
@@ -37,32 +50,17 @@ export interface MidiSeekSurfaceMetadata {
 	notes: MidiNoteEvent[];
 	minMidi: number;
 	maxMidi: number;
+	midiDurationSeconds: number;
 	lastRenderKey: string | null;
 	lastMinimapKey: string | null;
 }
 
 function clampTime(value: number, minimum: number, maximum: number): number {
-	if (!Number.isFinite(value)) {
-		return minimum;
-	}
-
-	if (value < minimum) {
-		return minimum;
-	}
-
-	if (value > maximum) {
-		return maximum;
-	}
-
-	return value;
+	return clampTimelineValue(value, minimum, maximum);
 }
 
 function sanitizeDuration(value: number): number {
-	if (!Number.isFinite(value) || value <= 0) {
-		return 0;
-	}
-
-	return value;
+	return sanitizeTimelineDuration(value);
 }
 
 function parseMidiPlaybackFollowMode(
@@ -110,48 +108,25 @@ function buildSeekWrap(leftPercent: number, rightPercent: number): string {
 }
 
 function getMidiSurfaceWidth(surface: MidiSeekSurfaceMetadata): number {
-	return Math.max(1, Math.round(surface.baseWidth * surface.zoom));
+	return getTimelineSurfaceWidth(surface);
 }
 
 function getMidiMaximumZoom(
 	surface: MidiSeekSurfaceMetadata,
 	durationSeconds: number,
 ): number {
-	const safeDuration = sanitizeDuration(durationSeconds);
-	if (safeDuration <= 0 || surface.maxZoomSeconds <= 0) {
-		return MIN_MIDI_ZOOM;
-	}
-
-	return Math.max(MIN_MIDI_ZOOM, safeDuration / surface.maxZoomSeconds);
+	return getTimelineMaximumZoom(durationSeconds, surface.maxZoomSeconds);
 }
 
 function getMidiViewportState(surface: MidiSeekSurfaceMetadata): {
 	startRatio: number;
 	widthRatio: number;
 } {
-	const surfaceWidth = getMidiSurfaceWidth(surface);
-	const viewportWidth = Math.max(1, surface.scrollContainer.clientWidth);
-	const widthRatio = clampTime(viewportWidth / surfaceWidth, 0, 1);
-	const maxStartRatio = Math.max(0, 1 - widthRatio);
-	const startRatio = clampTime(
-		surface.scrollContainer.scrollLeft / surfaceWidth,
-		0,
-		maxStartRatio,
-	);
-	return { startRatio, widthRatio };
+	return getTimelineViewportState(surface);
 }
 
 function updateMidiMinimapViewport(surface: MidiSeekSurfaceMetadata): void {
-	const minimapWidth = Math.max(1, surface.zoomMinimapNode.clientWidth);
-	const viewportState = getMidiViewportState(surface);
-	surface.zoomMinimapNode.style.setProperty(
-		"--ts-zoom-viewport-left",
-		`${viewportState.startRatio * minimapWidth}px`,
-	);
-	surface.zoomMinimapNode.style.setProperty(
-		"--ts-zoom-viewport-width",
-		`${Math.max(0, viewportState.widthRatio * minimapWidth)}px`,
-	);
+	updateTimelineMinimapViewport(surface);
 }
 
 function resizeCanvasForCssSize(
@@ -179,9 +154,12 @@ function resizeCanvasForCssSize(
 	return context;
 }
 
-function setMidiSurfaceWidth(surface: MidiSeekSurfaceMetadata): void {
-	const width = getMidiSurfaceWidth(surface);
-	surface.surface.style.width = `${width}px`;
+function setMidiSurfaceWidth(
+	surface: MidiSeekSurfaceMetadata,
+	width?: number,
+): void {
+	const surfaceWidth = width ?? getMidiSurfaceWidth(surface);
+	surface.surface.style.width = `${surfaceWidth}px`;
 	surface.surface.style.height = `${surface.originalHeight}px`;
 	surface.noteLayer.style.height = `${surface.originalHeight}px`;
 	updateMidiMinimapViewport(surface);
@@ -193,48 +171,13 @@ function setMidiZoomForSurface(
 	maximum: number,
 	anchorPageX?: number,
 ): boolean {
-	const nextZoom = clampTime(
-		Number.isFinite(zoom) ? zoom : MIN_MIDI_ZOOM,
-		MIN_MIDI_ZOOM,
+	return setTimelineZoomForSurface(
+		surface,
+		zoom,
 		maximum,
+		anchorPageX,
+		setMidiSurfaceWidth,
 	);
-	if (Math.abs(nextZoom - surface.zoom) < 0.000001) {
-		updateMidiMinimapViewport(surface);
-		return false;
-	}
-
-	const previousSurfaceWidth = getMidiSurfaceWidth(surface);
-	const wrapperRect = surface.scrollContainer.getBoundingClientRect();
-	const wrapperWidth = Math.max(1, surface.scrollContainer.clientWidth);
-	const anchorWithinWrapper = Number.isFinite(anchorPageX)
-		? clampTime(
-				(anchorPageX as number) - (wrapperRect.left + window.scrollX),
-				0,
-				wrapperWidth,
-			)
-		: wrapperWidth / 2;
-	const anchorRatio =
-		previousSurfaceWidth > 0
-			? (surface.scrollContainer.scrollLeft + anchorWithinWrapper) /
-				previousSurfaceWidth
-			: 0;
-
-	surface.zoom = nextZoom;
-	setMidiSurfaceWidth(surface);
-
-	const nextSurfaceWidth = getMidiSurfaceWidth(surface);
-	const maxScrollLeft = Math.max(
-		0,
-		nextSurfaceWidth - surface.scrollContainer.clientWidth,
-	);
-	const nextScrollLeft = anchorRatio * nextSurfaceWidth - anchorWithinWrapper;
-	surface.scrollContainer.scrollLeft = clampTime(
-		nextScrollLeft,
-		0,
-		maxScrollLeft,
-	);
-	updateMidiMinimapViewport(surface);
-	return true;
 }
 
 function createMidiTimingNode(overlay: HTMLElement): HTMLElement {
@@ -287,14 +230,17 @@ function applyMidiNotes(
 ): void {
 	let minMidi = Number.POSITIVE_INFINITY;
 	let maxMidi = Number.NEGATIVE_INFINITY;
+	let durationSeconds = 0;
 	for (const note of notes) {
 		minMidi = Math.min(minMidi, note.midi);
 		maxMidi = Math.max(maxMidi, note.midi);
+		durationSeconds = Math.max(durationSeconds, note.time + note.duration);
 	}
 
 	surface.notes = notes;
 	surface.minMidi = Math.floor(minMidi) - MIDI_RANGE_PADDING;
 	surface.maxMidi = Math.ceil(maxMidi) + MIDI_RANGE_PADDING;
+	surface.midiDurationSeconds = durationSeconds;
 	surface.lastRenderKey = null;
 	surface.lastMinimapKey = null;
 }
@@ -408,35 +354,35 @@ function resolvePlaybackFollowScrollLeft(
 	surface: MidiSeekSurfaceMetadata,
 	playheadRatio: number,
 ): number | null {
-	if (surface.playbackFollowMode === "off") {
-		return null;
-	}
+	return resolveTimelinePlaybackFollowScrollLeft(surface, playheadRatio);
+}
 
-	const viewportWidth = Math.max(1, surface.scrollContainer.clientWidth);
-	const surfaceWidth = getMidiSurfaceWidth(surface);
-	const maxScrollLeft = Math.max(0, surfaceWidth - viewportWidth);
-	if (maxScrollLeft <= 0) {
-		return null;
-	}
+function resolveMidiTimelineDuration(
+	surface: MidiSeekSurfaceMetadata,
+	playerDuration: number,
+	useMidiLocalTimeline: boolean,
+): number {
+	return useMidiLocalTimeline
+		? sanitizeDuration(surface.midiDurationSeconds)
+		: sanitizeDuration(playerDuration);
+}
 
-	const playheadPx = clampTime(playheadRatio, 0, 1) * surfaceWidth;
-	const currentScrollLeft = clampTime(
-		surface.scrollContainer.scrollLeft,
-		0,
-		maxScrollLeft,
+function resolveMidiTimelinePosition(
+	surface: MidiSeekSurfaceMetadata,
+	playerPosition: number,
+	playerDuration: number,
+	useMidiLocalTimeline: boolean,
+): number {
+	const duration = resolveMidiTimelineDuration(
+		surface,
+		playerDuration,
+		useMidiLocalTimeline,
 	);
-	const visibleStart = currentScrollLeft;
-	const visibleEnd = currentScrollLeft + viewportWidth;
-
-	if (surface.playbackFollowMode === "center") {
-		return clampTime(playheadPx - viewportWidth / 2, 0, maxScrollLeft);
+	if (duration <= 0) {
+		return 0;
 	}
 
-	if (playheadPx < visibleStart || playheadPx > visibleEnd) {
-		return clampTime(playheadPx, 0, maxScrollLeft);
-	}
-
-	return null;
+	return clampTime(playerPosition, 0, duration);
 }
 
 export function wrapMidiCanvases(ctx: any): any {
@@ -553,6 +499,7 @@ export function wrapMidiCanvases(ctx: any): any {
 				notes: [],
 				minMidi: 0,
 				maxMidi: 0,
+				midiDurationSeconds: 0,
 				lastRenderKey: null,
 				lastMinimapKey: null,
 			};
@@ -575,48 +522,14 @@ export function resolveMidiBaseWidth(
 	fallback: number,
 ): number {
 	return function (this: any, scrollContainer: HTMLElement, fallback: number) {
-		const scrollWidth = scrollContainer.clientWidth;
-		if (Number.isFinite(scrollWidth) && scrollWidth > 0) {
-			return Math.max(1, Math.round(scrollWidth));
-		}
-
-		if (Number.isFinite(fallback) && fallback > 0) {
-			return Math.max(1, Math.round(fallback));
-		}
-
-		return 1;
+		return resolveTimelineBaseWidth(scrollContainer, fallback);
 	}.call(ctx, scrollContainer, fallback);
 }
 
 export function reflowMidiDisplays(ctx: any): any {
 	return function (this: any) {
 		this.midiSeekSurfaces.forEach((surface: MidiSeekSurfaceMetadata) => {
-			const previousSurfaceWidth = getMidiSurfaceWidth(surface);
-			const viewportCenter = surface.scrollContainer.clientWidth / 2;
-			const centerRatio =
-				previousSurfaceWidth > 0
-					? (surface.scrollContainer.scrollLeft + viewportCenter) /
-						previousSurfaceWidth
-					: 0;
-
-			surface.baseWidth = this.resolveMidiBaseWidth(
-				surface.scrollContainer,
-				surface.baseWidth,
-			);
-			setMidiSurfaceWidth(surface);
-
-			const nextSurfaceWidth = getMidiSurfaceWidth(surface);
-			const maxScrollLeft = Math.max(
-				0,
-				nextSurfaceWidth - surface.scrollContainer.clientWidth,
-			);
-			const nextScrollLeft = centerRatio * nextSurfaceWidth - viewportCenter;
-			surface.scrollContainer.scrollLeft = clampTime(
-				nextScrollLeft,
-				0,
-				maxScrollLeft,
-			);
-			updateMidiMinimapViewport(surface);
+			reflowTimelineSurface(surface, setMidiSurfaceWidth);
 		});
 	}.call(ctx);
 }
@@ -624,6 +537,7 @@ export function reflowMidiDisplays(ctx: any): any {
 export async function initializeMidiDisplays(
 	ctx: any,
 	timelineDuration: number,
+	useMidiLocalTimeline = false,
 ): Promise<void> {
 	const surfaces = ctx.midiSeekSurfaces as MidiSeekSurfaceMetadata[];
 	if (surfaces.length === 0) {
@@ -638,44 +552,88 @@ export async function initializeMidiDisplays(
 			surface.wrapper.classList.remove("midi-loading");
 		}),
 	);
-	ctx.renderMidiDisplays(timelineDuration);
+	ctx.renderMidiDisplays(timelineDuration, useMidiLocalTimeline);
 }
 
-export function renderMidiDisplays(ctx: any, timelineDuration: number): any {
-	return function (this: any, timelineDuration: number) {
+export function renderMidiDisplays(
+	ctx: any,
+	timelineDuration: number,
+	useMidiLocalTimeline = false,
+): any {
+	return function (
+		this: any,
+		timelineDuration: number,
+		useMidiLocalTimeline: boolean,
+	) {
 		if (this.midiSeekSurfaces.length === 0) {
 			return;
 		}
 
 		this.reflowMidiDisplays();
-		const safeDuration = sanitizeDuration(timelineDuration);
 		this.midiSeekSurfaces.forEach((surface: MidiSeekSurfaceMetadata) => {
+			const surfaceDuration = resolveMidiTimelineDuration(
+				surface,
+				timelineDuration,
+				useMidiLocalTimeline,
+			);
 			setMidiZoomForSurface(
 				surface,
 				surface.zoom,
-				getMidiMaximumZoom(surface, safeDuration),
+				getMidiMaximumZoom(surface, surfaceDuration),
 			);
-			renderMidiNotes(surface, safeDuration);
-			renderMidiMinimap(surface, safeDuration);
+			renderMidiNotes(surface, surfaceDuration);
+			renderMidiMinimap(surface, surfaceDuration);
 		});
 		this.updateMidiZoomIndicators();
-	}.call(ctx, timelineDuration);
+	}.call(ctx, timelineDuration, useMidiLocalTimeline);
 }
 
 export function updateMidiPlaybackState(
 	ctx: any,
-	state: { position: number; longestDuration: number },
+	state: {
+		position: number;
+		longestDuration: number;
+		loop?: { pointA: number | null; pointB: number | null; enabled: boolean };
+	},
 	suppressPlaybackFollow: boolean,
+	useMidiLocalTimeline = false,
 ): any {
 	return function (
 		this: any,
-		state: { position: number; longestDuration: number },
+		state: {
+			position: number;
+			longestDuration: number;
+			loop?: { pointA: number | null; pointB: number | null; enabled: boolean };
+		},
 		suppressPlaybackFollow: boolean,
+		useMidiLocalTimeline: boolean,
 	) {
-		const safeDuration = sanitizeDuration(state.longestDuration);
-		const position =
-			safeDuration > 0 ? clampTime(state.position, 0, safeDuration) : 0;
 		this.midiSeekSurfaces.forEach((surface: MidiSeekSurfaceMetadata) => {
+			const safeDuration = resolveMidiTimelineDuration(
+				surface,
+				state.longestDuration,
+				useMidiLocalTimeline,
+			);
+			const position = resolveMidiTimelinePosition(
+				surface,
+				state.position,
+				state.longestDuration,
+				useMidiLocalTimeline,
+			);
+			const loopPointA =
+				state.loop?.pointA === null || state.loop?.pointA === undefined
+					? null
+					: clampTime(state.loop.pointA, 0, safeDuration);
+			const loopPointB =
+				state.loop?.pointB === null || state.loop?.pointB === undefined
+					? null
+					: clampTime(state.loop.pointB, 0, safeDuration);
+			this.updateSeekWrapVisuals(surface.seekWrap, position, safeDuration, {
+				pointA: loopPointA,
+				pointB: loopPointB,
+				enabled: state.loop?.enabled === true,
+			});
+
 			if (surface.timingNode) {
 				surface.timingNode.textContent =
 					formatSecondsToHHMMSSmmm(position) +
@@ -694,7 +652,7 @@ export function updateMidiPlaybackState(
 				}
 			}
 		});
-	}.call(ctx, state, suppressPlaybackFollow);
+	}.call(ctx, state, suppressPlaybackFollow, useMidiLocalTimeline);
 }
 
 export function updateMidiZoomIndicators(ctx: any): any {
@@ -773,7 +731,7 @@ export function setMidiZoom(
 			anchorPageX,
 		);
 		if (changed) {
-			this.renderMidiDisplays(durationSeconds);
+			this.renderMidiDisplays(durationSeconds, false);
 		}
 		return changed;
 	}.call(ctx, seekWrap, zoom, durationSeconds, anchorPageX);

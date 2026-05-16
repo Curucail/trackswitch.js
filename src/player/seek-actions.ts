@@ -736,7 +736,27 @@ export function getSeekTimelineContext(ctx: any, seekingElement: any): any {
 				clamp(referenceTime, 0, this.longestDuration),
 		};
 
-		if (!seekingElement || !this.isFixedWaveformLocalAxisEnabled()) {
+		if (!seekingElement) {
+			return referenceContext;
+		}
+
+		if (this.isMidiSeekSurface(seekingElement) && this.isAlignmentMode()) {
+			const midiSurface = this.renderer.findMidiSurface(seekingElement);
+			const midiDuration = midiSurface?.midiDurationSeconds ?? 0;
+			if (!Number.isFinite(midiDuration) || midiDuration <= 0) {
+				return referenceContext;
+			}
+
+			return {
+				duration: midiDuration,
+				toReferenceTime: (midiTime: number): number =>
+					clamp(midiTime, 0, this.longestDuration),
+				fromReferenceTime: (referenceTime: number): number =>
+					clamp(referenceTime, 0, midiDuration),
+			};
+		}
+
+		if (!this.isFixedWaveformLocalAxisEnabled()) {
 			return referenceContext;
 		}
 

@@ -890,22 +890,38 @@ export class ViewRenderer {
 		);
 	}
 
-	public async initializeMidiDisplays(timelineDuration: number): Promise<void> {
-		return viewRendererMidi.initializeMidiDisplays(this, timelineDuration);
+	public async initializeMidiDisplays(
+		timelineDuration: number,
+		useMidiLocalTimeline = false,
+	): Promise<void> {
+		return viewRendererMidi.initializeMidiDisplays(
+			this,
+			timelineDuration,
+			useMidiLocalTimeline,
+		);
 	}
 
-	public renderMidiDisplays(timelineDuration: number): void {
-		viewRendererMidi.renderMidiDisplays(this, timelineDuration);
+	public renderMidiDisplays(
+		timelineDuration: number,
+		useMidiLocalTimeline = false,
+	): void {
+		viewRendererMidi.renderMidiDisplays(
+			this,
+			timelineDuration,
+			useMidiLocalTimeline,
+		);
 	}
 
 	public updateMidiPlaybackState(
 		state: TrackSwitchUiState,
 		suppressPlaybackFollow: boolean,
+		useMidiLocalTimeline = false,
 	): void {
 		viewRendererMidi.updateMidiPlaybackState(
 			this,
 			state,
 			suppressPlaybackFollow,
+			useMidiLocalTimeline,
 		);
 	}
 

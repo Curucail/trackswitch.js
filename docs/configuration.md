@@ -925,7 +925,7 @@ Section options:
 
 Notes:
 
-- MIDI note timing is read directly from the file in seconds and uses the main player timeline.
+- MIDI note timing is read directly from the file in seconds. Standard players use the main player timeline; alignment players use the MIDI file duration as the MIDI view's local timeline.
 - The visible pitch range is calculated from the notes in the file with two semitones of padding above and below.
 - Clicking or dragging the MIDI view seeks the audio player, like waveform sections.
 - MIDI files with no note events are treated as load errors.

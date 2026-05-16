@@ -16,6 +16,19 @@ import {
 	resolveWaveformTrackIndices,
 	serializeWaveformSource,
 } from "../shared/waveform-source";
+import {
+	clampTimelineValue,
+	getTimelineMaximumZoom,
+	getTimelineSurfaceWidth,
+	getTimelineViewportState,
+	MIN_TIMELINE_ZOOM,
+	reflowTimelineSurface,
+	resolveTimelineBaseWidth,
+	resolveTimelinePlaybackFollowScrollLeft,
+	sanitizeTimelineDuration,
+	setTimelineZoomForSurface,
+	updateTimelineMinimapViewport,
+} from "./timeline-surface";
 
 interface WaveformSeekSurfaceMetadata {
 	wrapper: HTMLElement;
@@ -56,7 +69,7 @@ interface WaveformSeekSurfaceMetadata {
 	alignmentPointsLastH: number;
 }
 
-const MIN_WAVEFORM_ZOOM = 1;
+const MIN_WAVEFORM_ZOOM = MIN_TIMELINE_ZOOM;
 const DEFAULT_MAX_WAVEFORM_ZOOM_SECONDS = 5;
 const WAVEFORM_TILE_WIDTH_PX = 1024;
 const WAVEFORM_TILE_PEAK_CACHE_LIMIT = 64;
@@ -77,27 +90,11 @@ function buildSeekWrap(leftPercent: number, rightPercent: number): string {
 }
 
 function clampTime(value: number, minimum: number, maximum: number): number {
-	if (!Number.isFinite(value)) {
-		return minimum;
-	}
-
-	if (value < minimum) {
-		return minimum;
-	}
-
-	if (value > maximum) {
-		return maximum;
-	}
-
-	return value;
+	return clampTimelineValue(value, minimum, maximum);
 }
 
 function sanitizeDuration(value: number): number {
-	if (!Number.isFinite(value) || value <= 0) {
-		return 0;
-	}
-
-	return value;
+	return sanitizeTimelineDuration(value);
 }
 
 function parseWaveformBarWidth(value: string | null, fallback: number): number {
@@ -190,14 +187,6 @@ function parseWaveformPlaybackFollowMode(
 	}
 
 	return "off";
-}
-
-function clampWaveformZoom(zoom: number, maximum: number): number {
-	if (!Number.isFinite(zoom)) {
-		return MIN_WAVEFORM_ZOOM;
-	}
-
-	return clampTime(zoom, MIN_WAVEFORM_ZOOM, maximum);
 }
 
 function resolveWaveformColor(element: HTMLElement): string {
@@ -409,46 +398,19 @@ function clearCanvas(
 function getWaveformSurfaceWidth(
 	surfaceMetadata: WaveformSeekSurfaceMetadata,
 ): number {
-	return Math.max(
-		1,
-		Math.round(surfaceMetadata.baseWidth * surfaceMetadata.zoom),
-	);
+	return getTimelineSurfaceWidth(surfaceMetadata);
 }
 
 function getWaveformViewportState(
 	surfaceMetadata: WaveformSeekSurfaceMetadata,
 ): { startRatio: number; widthRatio: number } {
-	const surfaceWidth = getWaveformSurfaceWidth(surfaceMetadata);
-	const viewportWidth = Math.max(
-		1,
-		surfaceMetadata.scrollContainer.clientWidth,
-	);
-	const widthRatio = clampTime(viewportWidth / surfaceWidth, 0, 1);
-	const maxStartRatio = Math.max(0, 1 - widthRatio);
-	const startRatio = clampTime(
-		surfaceMetadata.scrollContainer.scrollLeft / surfaceWidth,
-		0,
-		maxStartRatio,
-	);
-	return {
-		startRatio: startRatio,
-		widthRatio: widthRatio,
-	};
+	return getTimelineViewportState(surfaceMetadata);
 }
 
 function updateWaveformMinimapViewport(
 	surfaceMetadata: WaveformSeekSurfaceMetadata,
 ): void {
-	const minimapWidth = Math.max(1, surfaceMetadata.zoomMinimapNode.clientWidth);
-	const viewportState = getWaveformViewportState(surfaceMetadata);
-	surfaceMetadata.zoomMinimapNode.style.setProperty(
-		"--ts-zoom-viewport-left",
-		`${viewportState.startRatio * minimapWidth}px`,
-	);
-	surfaceMetadata.zoomMinimapNode.style.setProperty(
-		"--ts-zoom-viewport-width",
-		`${Math.max(0, viewportState.widthRatio * minimapWidth)}px`,
-	);
+	updateTimelineMinimapViewport(surfaceMetadata);
 }
 
 function resolveWaveformPlaybackMetrics(
@@ -503,39 +465,10 @@ function resolvePlaybackFollowScrollLeft(
 	surfaceMetadata: WaveformSeekSurfaceMetadata,
 	playheadRatio: number,
 ): number | null {
-	if (surfaceMetadata.playbackFollowMode === "off") {
-		return null;
-	}
-
-	const viewportWidth = Math.max(
-		1,
-		surfaceMetadata.scrollContainer.clientWidth,
+	return resolveTimelinePlaybackFollowScrollLeft(
+		surfaceMetadata,
+		playheadRatio,
 	);
-	const surfaceWidth = getWaveformSurfaceWidth(surfaceMetadata);
-	const maxScrollLeft = Math.max(0, surfaceWidth - viewportWidth);
-
-	if (maxScrollLeft <= 0) {
-		return null;
-	}
-
-	const playheadPx = clampTime(playheadRatio, 0, 1) * surfaceWidth;
-	const currentScrollLeft = clampTime(
-		surfaceMetadata.scrollContainer.scrollLeft,
-		0,
-		maxScrollLeft,
-	);
-	const visibleStart = currentScrollLeft;
-	const visibleEnd = currentScrollLeft + viewportWidth;
-
-	if (surfaceMetadata.playbackFollowMode === "center") {
-		return clampTime(playheadPx - viewportWidth / 2, 0, maxScrollLeft);
-	}
-
-	if (playheadPx < visibleStart || playheadPx > visibleEnd) {
-		return clampTime(playheadPx, 0, maxScrollLeft);
-	}
-
-	return null;
 }
 
 function applyWaveformPlaybackFollowScroll(
@@ -575,14 +508,9 @@ function getWaveformMaximumZoom(
 	surfaceMetadata: WaveformSeekSurfaceMetadata,
 	durationSeconds: number,
 ): number {
-	const safeDuration = sanitizeDuration(durationSeconds);
-	if (safeDuration <= 0 || surfaceMetadata.maxZoomSeconds <= 0) {
-		return MIN_WAVEFORM_ZOOM;
-	}
-
-	return Math.max(
-		MIN_WAVEFORM_ZOOM,
-		safeDuration / surfaceMetadata.maxZoomSeconds,
+	return getTimelineMaximumZoom(
+		durationSeconds,
+		surfaceMetadata.maxZoomSeconds,
 	);
 }
 
@@ -592,46 +520,17 @@ function setWaveformZoomForSurface(
 	maximum: number,
 	anchorPageX?: number,
 ): boolean {
-	const nextZoom = clampWaveformZoom(zoom, maximum);
-	if (Math.abs(nextZoom - surfaceMetadata.zoom) < 0.000001) {
-		updateWaveformMinimapViewport(surfaceMetadata);
-		return false;
-	}
-
-	const previousSurfaceWidth = getWaveformSurfaceWidth(surfaceMetadata);
-	const wrapperRect = surfaceMetadata.scrollContainer.getBoundingClientRect();
-	const wrapperWidth = Math.max(1, surfaceMetadata.scrollContainer.clientWidth);
-	const anchorWithinWrapper = Number.isFinite(anchorPageX)
-		? clampTime(
-				(anchorPageX as number) - (wrapperRect.left + window.scrollX),
-				0,
-				wrapperWidth,
-			)
-		: wrapperWidth / 2;
-	const anchorRatio =
-		previousSurfaceWidth > 0
-			? (surfaceMetadata.scrollContainer.scrollLeft + anchorWithinWrapper) /
-				previousSurfaceWidth
-			: 0;
-
-	surfaceMetadata.zoom = nextZoom;
-	const nextSurfaceWidth = getWaveformSurfaceWidth(surfaceMetadata);
-	surfaceMetadata.surface.style.width = `${nextSurfaceWidth}px`;
-	surfaceMetadata.surface.style.height = `${surfaceMetadata.originalHeight}px`;
-	surfaceMetadata.tileLayer.style.height = `${surfaceMetadata.originalHeight}px`;
-
-	const maxScrollLeft = Math.max(
-		0,
-		nextSurfaceWidth - surfaceMetadata.scrollContainer.clientWidth,
+	return setTimelineZoomForSurface(
+		surfaceMetadata,
+		zoom,
+		maximum,
+		anchorPageX,
+		(surface, width) => {
+			surface.surface.style.width = `${width}px`;
+			surface.surface.style.height = `${surface.originalHeight}px`;
+			surface.tileLayer.style.height = `${surface.originalHeight}px`;
+		},
 	);
-	const nextScrollLeft = anchorRatio * nextSurfaceWidth - anchorWithinWrapper;
-	surfaceMetadata.scrollContainer.scrollLeft = clampTime(
-		nextScrollLeft,
-		0,
-		maxScrollLeft,
-	);
-	updateWaveformMinimapViewport(surfaceMetadata);
-	return true;
 }
 
 export function wrapWaveformCanvases(ctx: any): any {
@@ -831,16 +730,7 @@ export function resolveWaveformBaseWidth(
 	fallback: any,
 ): any {
 	return function (this: any, scrollContainer: any, fallback: any) {
-		const scrollWidth = scrollContainer.clientWidth;
-		if (Number.isFinite(scrollWidth) && scrollWidth > 0) {
-			return Math.max(1, Math.round(scrollWidth));
-		}
-
-		if (Number.isFinite(fallback) && fallback > 0) {
-			return Math.max(1, Math.round(fallback));
-		}
-
-		return 1;
+		return resolveTimelineBaseWidth(scrollContainer, fallback);
 	}.call(ctx, scrollContainer, fallback);
 }
 
@@ -1201,32 +1091,11 @@ export function reflowWaveforms(ctx: any): any {
 	return function (this: any) {
 		this.waveformSeekSurfaces.forEach(
 			(surfaceMetadata: WaveformSeekSurfaceMetadata) => {
-				const previousSurfaceWidth = getWaveformSurfaceWidth(surfaceMetadata);
-				const viewportCenter = surfaceMetadata.scrollContainer.clientWidth / 2;
-				const centerRatio =
-					previousSurfaceWidth > 0
-						? (surfaceMetadata.scrollContainer.scrollLeft + viewportCenter) /
-							previousSurfaceWidth
-						: 0;
-
-				surfaceMetadata.baseWidth = this.resolveWaveformBaseWidth(
-					surfaceMetadata.scrollContainer,
-					surfaceMetadata.baseWidth,
-				);
-				this.setWaveformSurfaceWidth(surfaceMetadata);
-
-				const nextSurfaceWidth = getWaveformSurfaceWidth(surfaceMetadata);
-				const maxScrollLeft = Math.max(
-					0,
-					nextSurfaceWidth - surfaceMetadata.scrollContainer.clientWidth,
-				);
-				const nextScrollLeft = centerRatio * nextSurfaceWidth - viewportCenter;
-				surfaceMetadata.scrollContainer.scrollLeft = clampTime(
-					nextScrollLeft,
-					0,
-					maxScrollLeft,
-				);
-				updateWaveformMinimapViewport(surfaceMetadata);
+				reflowTimelineSurface(surfaceMetadata, (surface, width) => {
+					surface.surface.style.width = `${width}px`;
+					surface.surface.style.height = `${surface.originalHeight}px`;
+					surface.tileLayer.style.height = `${surface.originalHeight}px`;
+				});
 			},
 		);
 	}.call(ctx);
