@@ -54,6 +54,7 @@ export class InteractiveTrackSwitchControllerImpl
 		algorithm: AlignmentAlgorithmId;
 		syncGenerationEnabled: boolean;
 		advancedOptionsExpanded: boolean;
+		showWarpingMatrix: boolean;
 		alignmentResult: InteractiveAlignmentResult | null;
 		alignmentCacheKey: string | null;
 		playbackPosition: number;
@@ -72,6 +73,7 @@ export class InteractiveTrackSwitchControllerImpl
 			advancedOptionsExpanded: false,
 			waveformAlignedPlayhead: true,
 			waveformShowAlignmentPoints: false,
+			showWarpingMatrix: false,
 			computationStatus: "idle",
 			computationError: null,
 			alignmentResult: null,
@@ -595,7 +597,6 @@ export class InteractiveTrackSwitchControllerImpl
 			return;
 		}
 
-		// Add warping matrix
 		uiElements.push({
 			type: "warpingMatrix",
 			bpm: warpingMatrixBpm,
@@ -630,12 +631,14 @@ export class InteractiveTrackSwitchControllerImpl
 				this.rootElement,
 				playerInit,
 			);
+			this.applyWarpingMatrixVisibility();
 
 			// Load the player
 			this.innerController
 				.load()
 				.then(() => {
 					if (!this.destroyed) {
+						this.applyWarpingMatrixVisibility();
 						// Inject the settings button into the player's nav bar
 						const settingsBtn = injectSettingsButton(this.rootElement);
 						if (settingsBtn) {
@@ -686,6 +689,7 @@ export class InteractiveTrackSwitchControllerImpl
 			algorithm: this.state.algorithm,
 			syncGenerationEnabled: this.state.syncGenerationEnabled,
 			advancedOptionsExpanded: this.state.advancedOptionsExpanded,
+			showWarpingMatrix: this.state.showWarpingMatrix,
 			alignmentResult: this.state.alignmentResult,
 			alignmentCacheKey: this.state.alignmentCacheKey,
 			playbackPosition: playerSnapshot ? playerSnapshot.state.position : 0,
@@ -717,6 +721,7 @@ export class InteractiveTrackSwitchControllerImpl
 			this.playerSetupSnapshot.syncGenerationEnabled;
 		this.state.advancedOptionsExpanded =
 			this.playerSetupSnapshot.advancedOptionsExpanded;
+		this.state.showWarpingMatrix = this.playerSetupSnapshot.showWarpingMatrix;
 		this.state.alignmentResult = this.playerSetupSnapshot.alignmentResult;
 		this.state.alignmentCacheKey = this.playerSetupSnapshot.alignmentCacheKey;
 		this.state.canCancelBackToPlayer = false;
@@ -753,6 +758,7 @@ export class InteractiveTrackSwitchControllerImpl
 		wrapper.innerHTML = buildPlayerSettingsMenuHtml({
 			waveformAlignedPlayhead: this.state.waveformAlignedPlayhead,
 			waveformShowAlignmentPoints: this.state.waveformShowAlignmentPoints,
+			showWarpingMatrix: this.state.showWarpingMatrix,
 		});
 
 		const menu = wrapper.firstElementChild as HTMLElement | null;
@@ -792,6 +798,15 @@ export class InteractiveTrackSwitchControllerImpl
 					this.state.waveformAlignedPlayhead,
 					alignmentPointsInput.checked,
 				);
+			});
+		}
+
+		const warpingMatrixInput = menu.querySelector(
+			'[data-setting-id="show-warping-matrix"]',
+		) as HTMLInputElement | null;
+		if (warpingMatrixInput) {
+			warpingMatrixInput.addEventListener("change", () => {
+				this.applyWarpingMatrixDisplaySetting(warpingMatrixInput.checked);
 			});
 		}
 
@@ -896,6 +911,23 @@ export class InteractiveTrackSwitchControllerImpl
 			position: snapshot.state.position,
 			playing: snapshot.state.playing,
 		});
+	}
+
+	private applyWarpingMatrixDisplaySetting(showWarpingMatrix: boolean): void {
+		this.state.showWarpingMatrix = showWarpingMatrix;
+		this.applyWarpingMatrixVisibility();
+		(
+			this.innerController as unknown as { updateMainControls?(): void } | null
+		)?.updateMainControls?.();
+	}
+
+	private applyWarpingMatrixVisibility(): void {
+		const renderer = (
+			this.innerController as unknown as {
+				renderer?: { setWarpingMatrixVisible?(visible: boolean): void };
+			} | null
+		)?.renderer;
+		renderer?.setWarpingMatrixVisible?.(this.state.showWarpingMatrix);
 	}
 
 	private exportAlignmentCsv(): void {

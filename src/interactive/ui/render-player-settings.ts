@@ -1,14 +1,15 @@
 export interface PlayerSettingsMenuState {
 	waveformAlignedPlayhead: boolean;
 	waveformShowAlignmentPoints: boolean;
+	showWarpingMatrix: boolean;
 }
 
 export function buildPlayerSettingsMenuHtml(
 	state: PlayerSettingsMenuState,
 ): string {
 	return (
-		'<div class="ts-player-settings-menu" role="dialog" aria-label="Waveform settings">' +
-		'<div class="ts-player-settings-title">Waveform</div>' +
+		'<div class="ts-player-settings-menu" role="dialog" aria-label="Player settings">' +
+		'<div class="ts-player-settings-title">Display</div>' +
 		'<div class="ts-player-settings-group">' +
 		buildToggleRowHtml(
 			"aligned-playhead",
@@ -19,6 +20,11 @@ export function buildPlayerSettingsMenuHtml(
 			"show-alignment-points",
 			"Show all alignment points",
 			state.waveformShowAlignmentPoints,
+		) +
+		buildToggleRowHtml(
+			"show-warping-matrix",
+			"Show warping matrix",
+			state.showWarpingMatrix,
 		) +
 		"</div>" +
 		'<div class="ts-player-settings-footer">' +

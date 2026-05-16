@@ -207,6 +207,7 @@ interface WarpingTempoPlotState {
 interface WarpingMatrixHostMetadata {
 	wrapper: HTMLElement;
 	host: HTMLElement;
+	visible: boolean;
 	syncDisabledOverlay: HTMLElement;
 	matrixPanel: HTMLElement;
 	matrixPlotHost: HTMLElement;
@@ -591,6 +592,10 @@ export class ViewRenderer {
 	): void {
 		void host;
 		void context;
+	}
+
+	public setWarpingMatrixVisible(visible: boolean): void {
+		void visible;
 	}
 
 	public renderWarpingMatrixPathPlot(

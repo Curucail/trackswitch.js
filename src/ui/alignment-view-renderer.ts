@@ -255,6 +255,10 @@ export class AlignmentViewRenderer extends ViewRenderer {
 		viewRendererWarping.updateWarpingMatrixPlaybackState(this, host, context);
 	}
 
+	public setWarpingMatrixVisible(visible: boolean): void {
+		viewRendererWarping.setWarpingMatrixVisible(this, visible);
+	}
+
 	public renderWarpingMatrixPathPlot(
 		host: WarpingMatrixHostMetadata,
 		pathStrokeWidth: number,

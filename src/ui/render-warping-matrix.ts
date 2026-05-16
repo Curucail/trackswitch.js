@@ -114,6 +114,7 @@ interface WarpingTempoPlotState {
 interface WarpingMatrixHostMetadata {
 	wrapper: HTMLElement;
 	host: HTMLElement;
+	visible: boolean;
 	syncDisabledOverlay: HTMLElement;
 	matrixPanel: HTMLElement;
 	matrixPlotHost: HTMLElement;
@@ -544,6 +545,7 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
 			const metadata: WarpingMatrixHostMetadata = {
 				wrapper: wrapper,
 				host: hostElement,
+				visible: true,
 				syncDisabledOverlay: syncDisabledOverlay,
 				matrixPanel: matrixPanel,
 				matrixPlotHost: matrixPlotHost,
@@ -1549,7 +1551,7 @@ export function applyWarpingMatrixContext(
 
 export function updateWarpingMatrix(ctx: any, host: any, context: any): any {
 	return function (this: any, host: any, context: any) {
-		if (!context?.enabled) {
+		if (!host.visible || !context?.enabled) {
 			host.wrapper.style.display = "none";
 			return;
 		}
@@ -1803,7 +1805,7 @@ export function updateWarpingMatrixPlaybackState(
 	context: any,
 ): any {
 	return function (this: any, host: any, context: any) {
-		if (!context?.enabled) {
+		if (!host.visible || !context?.enabled) {
 			host.wrapper.style.display = "none";
 			return;
 		}
@@ -1830,6 +1832,17 @@ export function updateWarpingMatrixPlaybackState(
 		this.renderWarpingMatrixPlayhead(host);
 		this.renderWarpingMatrixTempoPlot(host);
 	}.call(ctx, host, context);
+}
+
+export function setWarpingMatrixVisible(ctx: any, visible: any): any {
+	return function (this: any, visible: boolean) {
+		this.warpingMatrixHosts.forEach((host: WarpingMatrixHostMetadata) => {
+			host.visible = visible;
+			if (!visible) {
+				host.wrapper.style.display = "none";
+			}
+		});
+	}.call(ctx, visible === true);
 }
 
 export function renderWarpingMatrixTempoPlot(ctx: any, host: any): any {

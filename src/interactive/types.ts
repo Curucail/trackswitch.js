@@ -64,6 +64,7 @@ export interface InteractiveState {
 	advancedOptionsExpanded: boolean;
 	waveformAlignedPlayhead: boolean;
 	waveformShowAlignmentPoints: boolean;
+	showWarpingMatrix: boolean;
 	computationStatus: "idle" | "initializing" | "computing" | "done" | "error";
 	computationError: string | null;
 	alignmentResult: InteractiveAlignmentResult | null;
