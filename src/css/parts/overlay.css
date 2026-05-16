@@ -75,6 +75,7 @@
 .trackswitch.error .overlay-activation > span {
 	background: var(--ts-color-text-error);
 	cursor: inherit;
+	pointer-events: none;
 }
 
 .trackswitch.error .overlay-activation p {

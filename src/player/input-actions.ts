@@ -64,6 +64,12 @@ export function closeShortcutHelp(ctx: any): any {
 
 export function onOverlayActivate(ctx: any, event: any): any {
 	return function (this: any, event: any) {
+		if (this.root.classList.contains("error")) {
+			event.preventDefault();
+			event.stopPropagation();
+			return;
+		}
+
 		if (!isPrimaryInput(event) && event.type !== "click") {
 			return;
 		}

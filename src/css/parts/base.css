@@ -259,6 +259,8 @@
 
 .trackswitch.trackswitch .ts-icon-slot.is-spinning svg {
 	animation: trackswitch-icon-spin 1s linear infinite;
+	transform-box: view-box;
+	transform-origin: center;
 }
 
 .trackswitch.trackswitch
