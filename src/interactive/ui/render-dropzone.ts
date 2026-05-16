@@ -27,7 +27,7 @@ export function buildDropZoneHtml(): string {
 	return (
 		'<div class="ts-dropzone" tabindex="0">' +
 		'<div class="ts-dropzone-prompt">' +
-		'<span class="ts-dropzone-eyebrow">Interactive alignment</span>' +
+		'<span class="ts-dropzone-eyebrow">Interactive music synchronization</span>' +
 		'<span class="ts-dropzone-icon">' +
 		renderIconSlotHtml("upload") +
 		"</span>" +
@@ -167,7 +167,7 @@ export function buildComputeBarHtml(
 		'<button class="ts-compute-btn"' +
 		(canCompute ? "" : " disabled") +
 		">" +
-		"<span>Compute Alignment</span></button>" +
+		"<span>Synchronize</span></button>" +
 		"</div>" +
 		"</div>";
 
