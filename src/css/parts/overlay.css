@@ -33,14 +33,14 @@
 	display: none;
 }
 
-.trackswitch .overlay-activation > span,
-.trackswitch .overlay-activation > p {
+.trackswitch.trackswitch .overlay-activation > span,
+.trackswitch.trackswitch .overlay-activation > p {
 	display: block;
 	position: absolute;
 	text-align: center;
 }
 
-.trackswitch .overlay-activation > span {
+.trackswitch.trackswitch .overlay-activation > span {
 	background-color: var(--ts-color-overlay-button);
 	width: 56px;
 	height: 56px;
@@ -57,7 +57,7 @@
 	justify-content: center;
 }
 
-.trackswitch .overlay-activation > span.loading {
+.trackswitch.trackswitch .overlay-activation > span.loading {
 	cursor: inherit;
 }
 
