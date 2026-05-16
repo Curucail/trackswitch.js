@@ -1620,6 +1620,7 @@ export function setOverlayLoading(ctx: any, isLoading: any): any {
 		this.queryAll(".overlay-activation .activate").forEach(
 			(activate: HTMLElement) => {
 				activate.classList.toggle("loading", isLoading);
+				activate.classList.remove("error");
 				setHostIcon(activate, isLoading ? "spinner" : "power-off");
 
 				const iconSlot = getHostIconSlot(activate);
@@ -1690,6 +1691,7 @@ export function showError(ctx: any, message: any, runtimes: any): any {
 		this.queryAll(".overlay-activation .activate").forEach(
 			(activate: HTMLElement) => {
 				activate.classList.remove("loading");
+				activate.classList.add("error");
 				setHostIcon(activate, "exclamation");
 
 				const iconSlot = getHostIconSlot(activate);

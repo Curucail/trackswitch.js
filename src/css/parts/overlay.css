@@ -63,9 +63,13 @@
 
 .trackswitch .overlay-activation > span .ts-icon-slot {
 	font-size: 30pt;
-	width: auto;
-	height: auto;
+	width: 1em;
+	height: 1em;
 	color: var(--ts-color-text-inverse);
+}
+
+.trackswitch .overlay-activation > span .ts-icon-slot .ts-icon-svg {
+	flex: 0 0 1em;
 }
 
 .trackswitch.error .overlay-activation {

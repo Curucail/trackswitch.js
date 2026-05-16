@@ -257,10 +257,9 @@
 	transform: translateX(-0.0625em) scale(1.25);
 }
 
-.trackswitch.trackswitch .ts-icon-slot.is-spinning svg {
+.trackswitch.trackswitch .ts-icon-slot.is-spinning {
 	animation: trackswitch-icon-spin 1s linear infinite;
-	transform-box: view-box;
-	transform-origin: center;
+	transform-origin: center center;
 }
 
 .trackswitch.trackswitch

@@ -237,9 +237,13 @@ export class InputBinder {
 	}
 
 	private bindBaseControls(): void {
-		this.addDelegatedListener("click", ".overlay .activate", (event) => {
-			this.controller.onOverlayActivate(event);
-		});
+		this.addDelegatedListener(
+			"click",
+			".overlay .activate:not(.error)",
+			(event) => {
+				this.controller.onOverlayActivate(event);
+			},
+		);
 		this.addDelegatedListener("click", ".overlay-shortcuts", (event) => {
 			this.controller.onShortcutHelpOverlay(event);
 		});
