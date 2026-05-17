@@ -187,7 +187,7 @@
 		customImage: false,
 		seekableImage: false,
 		trackImageBySolo: false,
-		midi: true,
+		midi: false,
 		sheetNotePreview: true,
 		warpingMatrix: false,
 		exclusiveSolo: true,

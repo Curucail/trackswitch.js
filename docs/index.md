@@ -164,7 +164,7 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
         </label>
         <label class="ts-control-row">
           <span>MIDI</span>
-          <input type="checkbox" name="midi" checked />
+          <input type="checkbox" name="midi" />
         </label>
         <label class="ts-control-row">
           <span>Score</span>
