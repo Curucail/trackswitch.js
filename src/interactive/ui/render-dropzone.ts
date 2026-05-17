@@ -27,13 +27,14 @@ export function buildDropZoneHtml(): string {
 	return (
 		'<div class="ts-dropzone" tabindex="0">' +
 		'<div class="ts-dropzone-prompt">' +
-		'<span class="ts-dropzone-eyebrow">Interactive music synchronization</span>' +
+		'<strong class="ts-dropzone-title">Music Synchronization</strong>' +
+		'<span class="ts-dropzone-hint">Processing is done only on your device, no files are uploaded to any server.</span>' +
 		'<span class="ts-dropzone-icon">' +
 		renderIconSlotHtml("upload") +
 		"</span>" +
-		'<strong class="ts-dropzone-title">Drop audio, scores, and MIDI here</strong>' +
+		'<strong class="ts-dropzone-title">Drop audio, sheet music, and MIDI here</strong>' +
 		'<span class="ts-dropzone-hint">Supported Audio Formats: WAV, MP3, OGG, FLAC, M4A, AAC, WebM</span>' +
-		'<span class="ts-dropzone-hint">Supported Score Formats: XML, MusicXML, MXL</span>' +
+		'<span class="ts-dropzone-hint">Supported Sheet Music Formats: XML, MusicXML, MXL</span>' +
 		'<span class="ts-dropzone-hint">Supported MIDI Formats: MID, MIDI</span>' +
 		"</div>" +
 		buildDropZoneInputHtml() +
