@@ -89,6 +89,7 @@
 		"timer",
 		"keyboard",
 		"waveform",
+		"midi",
 		"text",
 		"waveformPlaybackFollowMode",
 		"alignedPlayhead",
@@ -115,6 +116,7 @@
 		"timer",
 		"keyboard",
 		"waveform",
+		"midi",
 		"text",
 		"waveformPlaybackFollowMode",
 		"alignedPlayhead",
@@ -133,6 +135,7 @@
 	var MODE_DISABLED_CONTROLS = {
 		default: [
 			"sheetNotePreview",
+			"midi",
 			"warpingMatrix",
 			"alignedPlayhead",
 			"showAlignmentPoints",
@@ -162,6 +165,7 @@
 		timer: true,
 		keyboard: true,
 		waveform: true,
+		midi: false,
 		text: false,
 		waveformPlaybackFollowMode: "off",
 		alignedPlayhead: false,
@@ -183,6 +187,7 @@
 		customImage: false,
 		seekableImage: false,
 		trackImageBySolo: false,
+		midi: true,
 		sheetNotePreview: true,
 		warpingMatrix: false,
 		exclusiveSolo: true,
@@ -796,6 +801,18 @@
 				});
 			}
 
+			if (model.midi) {
+				uiConfig.push({
+					type: "midi",
+					src: "Schubert_D911-03.mid",
+					alignmentColumn: "time_score",
+					height: 180,
+					maxZoom: 5,
+					playbackFollowMode: "center",
+					timer: true,
+				});
+			}
+
 			if (model.text) {
 				uiConfig.push({
 					type: "text",
@@ -1093,6 +1110,18 @@
 					followPlayback: true,
 					cursorColor: "#999999",
 					cursorAlpha: 0.4,
+				});
+			}
+
+			if (isAlignmentMode(currentMode) && model.midi) {
+				uiConfig.push({
+					type: "midi",
+					src: basePath + "/Schubert_D911-03.mid",
+					alignmentColumn: "time_score",
+					height: 180,
+					maxZoom: 5,
+					playbackFollowMode: "center",
+					timer: true,
 				});
 			}
 

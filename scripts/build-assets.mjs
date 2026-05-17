@@ -47,7 +47,7 @@ export const docsAssets = [
 		docs: "docs/assets/multitracks",
 	},
 	{
-		source: "examples/alignment/data",
+		source: "examples/sync/data",
 		docs: "docs/assets/alignment",
 	},
 ];

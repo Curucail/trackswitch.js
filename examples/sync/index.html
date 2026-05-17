@@ -33,7 +33,7 @@
                     {
                         "type": "sheetMusic",
                         "src": "data/Schubert_D911-03.xml",
-                        "measureColumn": "measure",
+                        "measureColumn": "measure_Schubert_D911-03_2",
                         "maxHeight": 370,
                         "maxWidth": 1000,
                         "renderScale": 0.7,
@@ -44,6 +44,7 @@
                     {
                         "type": "midi",
                         "src": "data/Schubert_D911-03.mid",
+                        "alignmentColumn": "time_Schubert_D911-03",
                         "height": 180,
                         "maxZoom": 5,
                         "playbackFollowMode": "center",
@@ -80,7 +81,7 @@
                                 "sources": [{ "src": "data/Schubert_D911-03_HU33.wav" }],
                                 "alignment": {
                                     "synchronizedSources": [{ "src": "data/Schubert_D911-03_HU33.wav" }],
-                                    "column": "time_HU33"
+                                    "column": "time_Schubert_D911-03_HU33"
                                 }
                             },
                             {
@@ -88,7 +89,7 @@
                                 "sources": [{ "src": "data/Schubert_D911-03_SC06.wav" }],
                                 "alignment": {
                                     "synchronizedSources": [{ "src": "data/Schubert_D911-03_SC06_syncronized.wav" }],
-                                    "column": "time_SC06"
+                                    "column": "time_Schubert_D911-03_SC06"
                                 }
                             }
                         ]
@@ -96,8 +97,8 @@
                 ],
                 "alignment": {
                     "csv": "data/alignment.csv",
-                    "referenceTimeColumn": "time_HU33",
-                    "referenceTimeColumnSync": "time_HU33",
+                    "referenceTimeColumn": "time_sync_reference",
+                    "referenceTimeColumnSync": "time_sync_reference",
                     "outOfRange": "clamp"
                 },
                 "features": {

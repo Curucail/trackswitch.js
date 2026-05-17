@@ -163,6 +163,10 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
           <input type="checkbox" name="trackImageBySolo" />
         </label>
         <label class="ts-control-row">
+          <span>MIDI</span>
+          <input type="checkbox" name="midi" checked />
+        </label>
+        <label class="ts-control-row">
           <span>Score</span>
           <input type="checkbox" name="sheetNotePreview" checked />
         </label>
