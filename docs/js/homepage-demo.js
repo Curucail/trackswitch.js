@@ -39,7 +39,7 @@
 				title: "Schubert: Winterreise, D. 911: No. 3 - HU33",
 				sources: [{ src: basePath + "/Schubert_D911-03_HU33.wav" }],
 				alignment: {
-					column: "time_HU33",
+					column: "time_Schubert_D911-03_HU33",
 					synchronizedSources: [
 						{ src: basePath + "/Schubert_D911-03_HU33.wav" },
 					],
@@ -49,7 +49,7 @@
 				title: "Schubert: Winterreise, D. 911: No. 3 - SC06",
 				sources: [{ src: basePath + "/Schubert_D911-03_SC06.wav" }],
 				alignment: {
-					column: "time_SC06",
+					column: "time_Schubert_D911-03_SC06",
 					synchronizedSources: [
 						{ src: basePath + "/Schubert_D911-03_SC06_syncronized.wav" },
 					],
@@ -791,7 +791,7 @@
 				uiConfig.push({
 					type: "sheetMusic",
 					src: "Schubert_D911-03.xml",
-					measureColumn: "measure",
+					measureColumn: "measure_Schubert_D911-03_2",
 					maxHeight: 370,
 					renderScale: 0.65,
 					followPlayback: true,
@@ -805,7 +805,7 @@
 				uiConfig.push({
 					type: "midi",
 					src: "Schubert_D911-03.mid",
-					alignmentColumn: "time_score",
+					alignmentColumn: "time_Schubert_D911-03",
 					height: 180,
 					maxZoom: 5,
 					playbackFollowMode: "center",
@@ -862,8 +862,8 @@
 			config = {
 				alignment: {
 					csv: "alignment.csv",
-					referenceTimeColumn: "time_score",
-					referenceTimeColumnSync: "time_HU33",
+					referenceTimeColumn: "time_sync_reference",
+					referenceTimeColumnSync: "time_sync_reference",
 					outOfRange: "clamp",
 				},
 				ui: uiConfig,
@@ -1104,7 +1104,7 @@
 				uiConfig.push({
 					type: "sheetMusic",
 					src: basePath + "/Schubert_D911-03.xml",
-					measureColumn: "measure",
+					measureColumn: "measure_Schubert_D911-03_2",
 					maxHeight: 370,
 					renderScale: 0.65,
 					followPlayback: true,
@@ -1117,7 +1117,7 @@
 				uiConfig.push({
 					type: "midi",
 					src: basePath + "/Schubert_D911-03.mid",
-					alignmentColumn: "time_score",
+					alignmentColumn: "time_Schubert_D911-03",
 					height: 180,
 					maxZoom: 5,
 					playbackFollowMode: "center",
@@ -1218,8 +1218,8 @@
 
 				init.alignment = {
 					csv: basePath + "/alignment.csv",
-					referenceTimeColumn: "time_score",
-					referenceTimeColumnSync: "time_HU33",
+					referenceTimeColumn: "time_sync_reference",
+					referenceTimeColumnSync: "time_sync_reference",
 					outOfRange: "clamp",
 				};
 			} else {
