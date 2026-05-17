@@ -54,7 +54,7 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
     </div>
 
     <aside id="ts-showcase-controls" class="ts-control-panel" aria-label="TrackSwitch feature controls">
-      <h4>Features</h4>
+      <h4>Player Modes and Features</h4>
       <div class="ts-control-mode-tabs" role="tablist" aria-label="Showcase mode">
         <button
           type="button"
@@ -74,7 +74,7 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
           role="tab"
           aria-selected="false"
         >
-          Alignment
+          Sync
         </button>
         <button
           type="button"
@@ -84,7 +84,7 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
           role="tab"
           aria-selected="false"
         >
-          Interactive Alignment
+          Interactive Sync
         </button>
       </div>
 
