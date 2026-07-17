@@ -1,5 +1,6 @@
 import type {
 	TrackDefinitionAlignment,
+	TrackMarkerConfig,
 	TrackSourceDefinition,
 	TrackSwitchImageConfig,
 	TrackSwitchMidiConfig,
@@ -110,9 +111,17 @@ const trackAllowedKeys = [
 	"presets",
 	"sources",
 	"alignment",
+	"markers",
 ] as const;
 
 const trackAlignmentAllowedKeys = ["column", "synchronizedSources"] as const;
+const trackMarkerAllowedKeys = [
+	"csv",
+	"timeColumn",
+	"labelColumn",
+	"color",
+	"lineStyle",
+] as const;
 const sourceAllowedKeys = [
 	"src",
 	"type",
@@ -412,6 +421,80 @@ function normalizeTrackAlignmentConfig(
 	};
 }
 
+function normalizeRequiredMarkerString(
+	value: unknown,
+	field: "csv" | "timeColumn",
+): string {
+	if (typeof value !== "string" || value.trim().length === 0) {
+		throw new Error(
+			`Invalid track markers configuration: ${field} must be a non-empty string.`,
+		);
+	}
+
+	return value.trim();
+}
+
+function normalizeTrackMarkerConfig(
+	markers: TrackMarkerConfig | undefined,
+): TrackMarkerConfig | undefined {
+	if (markers === undefined) {
+		return undefined;
+	}
+
+	const markerRecord = toConfigRecord(markers, "track markers");
+	assertAllowedKeys(markerRecord, trackMarkerAllowedKeys, "track markers");
+
+	let labelColumn: string | undefined;
+	if (markers.labelColumn !== undefined) {
+		if (
+			typeof markers.labelColumn !== "string" ||
+			markers.labelColumn.trim().length === 0
+		) {
+			throw new Error(
+				"Invalid track markers configuration: labelColumn must be a non-empty string when provided.",
+			);
+		}
+		labelColumn = markers.labelColumn.trim();
+	}
+
+	let color = "black";
+	if (markers.color !== undefined) {
+		if (
+			typeof markers.color !== "string" ||
+			markers.color.trim().length === 0
+		) {
+			throw new Error(
+				"Invalid track markers configuration: color must be a valid CSS color.",
+			);
+		}
+
+		color = markers.color.trim();
+		if (!CSS.supports("color", color)) {
+			throw new Error(
+				`Invalid track markers configuration: color is not a valid CSS color: ${color}`,
+			);
+		}
+	}
+
+	if (
+		markers.lineStyle !== undefined &&
+		markers.lineStyle !== "solid" &&
+		markers.lineStyle !== "dashed"
+	) {
+		throw new Error(
+			"Invalid track markers configuration: lineStyle must be 'solid' or 'dashed'.",
+		);
+	}
+
+	return {
+		csv: normalizeRequiredMarkerString(markers.csv, "csv"),
+		timeColumn: normalizeRequiredMarkerString(markers.timeColumn, "timeColumn"),
+		labelColumn: labelColumn,
+		color: color,
+		lineStyle: markers.lineStyle ?? "solid",
+	};
+}
+
 function normalizeTrackGroupConfig<T extends TrackSwitchTrackGroupUiElement>(
 	group: T,
 ): T {
@@ -426,6 +509,7 @@ function normalizeTrackGroupConfig<T extends TrackSwitchTrackGroupUiElement>(
 						? track.sources.map((source) => normalizeSourceConfig(source))
 						: track.sources,
 					alignment: normalizeTrackAlignmentConfig(track.alignment),
+					markers: normalizeTrackMarkerConfig(track.markers),
 				};
 			})
 		: group.trackGroup;
@@ -477,16 +561,12 @@ export function normalizeUiElement(
 	}
 
 	if (element.type === "image") {
-		if (element.seekable) {
-			validateSeekMargins(element, "ui.image");
-		}
+		validateSeekMargins(element, "ui.image");
 		return element;
 	}
 
 	if (element.type === "perTrackImage") {
-		if (element.seekable) {
-			validateSeekMargins(element, "ui.perTrackImage");
-		}
+		validateSeekMargins(element, "ui.perTrackImage");
 		return element;
 	}
 

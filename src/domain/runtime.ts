@@ -44,5 +44,6 @@ export function createTrackRuntime(
 		successful: false,
 		errored: false,
 		waveformSummary: null,
+		markers: [],
 	};
 }

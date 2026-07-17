@@ -5,6 +5,7 @@
 @import "./parts/main-control.css";
 @import "./parts/text.css";
 @import "./parts/timeline.css";
+@import "./parts/markers.css";
 @import "./parts/seekable.css";
 @import "./parts/waveform.css";
 @import "./parts/midi.css";

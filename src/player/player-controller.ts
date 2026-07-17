@@ -37,6 +37,7 @@ import {
 import * as controllerEvents from "./event-emitter";
 import * as controllerHotReload from "./hot-reload-actions";
 import * as controllerInput from "./input-actions";
+import * as controllerMarkers from "./marker-actions";
 import * as controllerPlayback from "./playback-actions";
 import { allocateInstanceId, registerController } from "./player-registry";
 import * as controllerSeek from "./seek-actions";
@@ -81,6 +82,7 @@ export class TrackSwitchControllerImpl
 	public readonly inputBinder: InputBinder;
 	public alignmentConfig: NormalizedTrackSwitchConfig["alignment"];
 	public alignmentCsvRequest: Promise<ParsedNumericCsv> | null = null;
+	public markerLoadAbortController: AbortController | null = null;
 
 	public state: PlayerState;
 	public longestDuration = 0;
@@ -358,6 +360,21 @@ export class TrackSwitchControllerImpl
 
 	onRepeat(event: ControllerPointerEvent): void {
 		controllerInput.onRepeat(this, event);
+	}
+
+	onTimelineMarkerActivate(event: ControllerPointerEvent): void {
+		controllerInput.onTimelineMarkerActivate(this, event);
+	}
+
+	onTimelineMarkerKeydown(event: ControllerPointerEvent): void {
+		controllerInput.onTimelineMarkerKeydown(this, event);
+	}
+
+	onAdjacentMarker(
+		event: ControllerPointerEvent,
+		direction: "previous" | "next",
+	): void {
+		controllerInput.onAdjacentMarker(this, event, direction);
 	}
 
 	onSeekStart(event: ControllerPointerEvent): void {
@@ -672,6 +689,18 @@ export class TrackSwitchControllerImpl
 
 	public updateMainControls(): void {
 		controllerUi.updateMainControls(this);
+	}
+
+	public renderMarkerLayers(): void {
+		controllerMarkers.renderMarkerLayers(this);
+	}
+
+	public updateMarkerNavigation(): void {
+		controllerMarkers.updateMarkerNavigation(this);
+	}
+
+	public seekToAdjacentMarker(direction: "previous" | "next"): void {
+		controllerMarkers.seekToAdjacentMarker(this, direction);
 	}
 
 	public updatePlaybackPositionUi(): void {

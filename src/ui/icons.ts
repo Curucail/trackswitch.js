@@ -6,6 +6,8 @@ export type TrackSwitchIconName =
 	| "loop-a"
 	| "loop-b"
 	| "play"
+	| "marker-previous"
+	| "marker-next"
 	| "pause"
 	| "stop"
 	| "repeat"
@@ -35,6 +37,10 @@ const ICON_SVG_BY_NAME: Record<TrackSwitchIconName, string> = {
 	"loop-b":
 		'<svg class="ts-icon-svg" role="img" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="2.75" ry="2.75" fill="none" stroke="currentColor" stroke-width="1.5"></rect><path d="M8.8 6.9V17.1M8.8 6.9H12.7C14.4 6.9 15.5 7.9 15.5 9.4C15.5 10.8 14.5 11.7 12.9 11.8M8.8 11.8H13.2C15 11.8 16.1 12.8 16.1 14.5C16.1 16.1 14.8 17.1 12.8 17.1H8.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path></svg>',
 	play: '<svg class="ts-icon-svg" role="img" viewBox="32 36 416 440" aria-hidden="true"><path fill="currentColor" d="M91.2 36.9c-12.4-6.8-27.4-6.5-39.6 .7S32 57.9 32 72l0 368c0 14.1 7.5 27.2 19.6 34.4s27.2 7.5 39.6 .7l336-184c12.8-7 20.8-20.5 20.8-35.1s-8-28.1-20.8-35.1l-336-184z"></path></svg>',
+	"marker-previous":
+		'<svg class="ts-icon-svg" role="img" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11.2 5.2v13.6L2.5 12l8.7-6.8Zm10.3 0v13.6L12.8 12l8.7-6.8Z"></path></svg>',
+	"marker-next":
+		'<svg class="ts-icon-svg" role="img" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12.8 5.2 21.5 12l-8.7 6.8V5.2Zm-10.3 0L11.2 12l-8.7 6.8V5.2Z"></path></svg>',
 	pause:
 		'<svg class="ts-icon-svg" role="img" viewBox="0 32 384 448" aria-hidden="true"><path fill="currentColor" d="M48 32C21.5 32 0 53.5 0 80L0 432c0 26.5 21.5 48 48 48l64 0c26.5 0 48-21.5 48-48l0-352c0-26.5-21.5-48-48-48L48 32zm224 0c-26.5 0-48 21.5-48 48l0 352c0 26.5 21.5 48 48 48l64 0c26.5 0 48-21.5 48-48l0-352c0-26.5-21.5-48-48-48l-64 0z"></path></svg>',
 	stop: '<svg class="ts-icon-svg" role="img" viewBox="0 32 448 448" aria-hidden="true"><path fill="currentColor" d="M64 32l320 0c35.3 0 64 28.7 64 64l0 320c0 35.3-28.7 64-64 64L64 480c-35.3 0-64-28.7-64-64L0 96C0 60.7 28.7 32 64 32z"></path></svg>',

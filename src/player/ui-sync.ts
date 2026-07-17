@@ -58,6 +58,7 @@ export function applyTrackProperties(ctx: TrackSwitchControllerImpl): void {
 		ctx.getWaveformTimelineProjector(),
 		ctx.getWaveformTimelineContext(),
 	);
+	ctx.renderMarkerLayers();
 
 	ctx.runtimes.forEach((runtime, index) => {
 		ctx.emit("trackState", createTrackStateEventPayload(index, runtime));
@@ -87,6 +88,7 @@ export function updateMainControls(ctx: TrackSwitchControllerImpl): void {
 		ctx.isAlignmentMode(),
 		(surface) => ctx.getMidiTimelineContext(surface),
 	);
+	ctx.updateMarkerNavigation();
 	ctx.sheetMusicEngine.updatePosition(
 		ctx.state.position,
 		ctx.isSyncReferenceAxisActive(),
@@ -118,6 +120,7 @@ export function updatePlaybackPositionUi(ctx: TrackSwitchControllerImpl): void {
 		ctx.isAlignmentMode(),
 		(surface) => ctx.getMidiTimelineContext(surface),
 	);
+	ctx.updateMarkerNavigation();
 	ctx.sheetMusicEngine.updatePosition(
 		ctx.state.position,
 		ctx.isSyncReferenceAxisActive(),

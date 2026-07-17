@@ -603,6 +603,9 @@ export function buildMainControlHtml(ctx: any, runtimes: any): any {
 			}
 			presetDropdownHtml += "</select></li>";
 		}
+		const hasMarkers = runtimes.some(
+			(runtime: TrackRuntime) => !!runtime.definition.markers,
+		);
 
 		return (
 			'<div class="overlay overlay-activation"><span class="activate">Activate' +
@@ -641,6 +644,16 @@ export function buildMainControlHtml(ctx: any, runtimes: any): any {
 					renderIconSlotHtml("volume-high") +
 					"</i>" +
 					'<input type="range" class="volume-slider" min="0" max="100" value="100"></div></li>'
+				: "") +
+			(hasMarkers
+				? '<li class="marker-navigation-group"><div class="marker-navigation-controls" role="group" aria-label="Marker navigation">' +
+					'<button type="button" class="marker-previous button" title="Previous marker" aria-label="Previous marker" disabled>' +
+					renderIconSlotHtml("marker-previous") +
+					"</button>" +
+					'<button type="button" class="marker-next button" title="Next marker" aria-label="Next marker" disabled>' +
+					renderIconSlotHtml("marker-next") +
+					"</button>" +
+					"</div></li>"
 				: "") +
 			(this.features.looping
 				? '<li class="loop-group"><ul class="loop-controls">' +
@@ -1166,14 +1179,24 @@ export function wrapSeekableImages(ctx: any): any {
 			section.appendChild(wrapper);
 			wrapper.appendChild(candidate);
 
-			if (candidate.classList.contains("seekable")) {
-				wrapper.insertAdjacentHTML(
-					"beforeend",
-					buildSeekWrap(
-						clampPercent(candidate.getAttribute("data-seek-margin-left")),
-						clampPercent(candidate.getAttribute("data-seek-margin-right")),
-					),
+			wrapper.insertAdjacentHTML(
+				"beforeend",
+				buildSeekWrap(
+					clampPercent(candidate.getAttribute("data-seek-margin-left")),
+					clampPercent(candidate.getAttribute("data-seek-margin-right")),
+				),
+			);
+			const seekWrap = wrapper.querySelector(":scope > .seekwrap");
+			if (seekWrap instanceof HTMLElement) {
+				const perTrack =
+					candidate.getAttribute("data-per-track-image") === "true";
+				seekWrap.setAttribute(
+					"data-marker-image-scope",
+					perTrack ? "per-track" : "global",
 				);
+				if (!candidate.classList.contains("seekable")) {
+					seekWrap.classList.add("marker-only-seekwrap");
+				}
 			}
 		});
 	}.call(ctx);

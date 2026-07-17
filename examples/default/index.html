@@ -54,13 +54,25 @@
                                 "title": "Violins",
                                 "image": "data/violins.png",
                                 "presets": [0, 1],
-                                "sources": [{ "src": "data/violins.mp3" }]
+                                "sources": [{ "src": "data/violins.mp3" }],
+                                "markers": {
+                                    "csv": "data/violins-markers.csv",
+                                    "timeColumn": "position_seconds",
+                                    "labelColumn": "annotation",
+                                    "color": "#ed8c01",
+                                    "lineStyle": "solid"
+                                }
                             },
                             {
                                 "title": "Synths",
                                 "image": "data/synth.png",
                                 "presets": [0, 1],
-                                "sources": [{ "src": "data/synth.mp3" }]
+                                "sources": [{ "src": "data/synth.mp3" }],
+                                "markers": {
+                                    "csv": "data/synth-markers.csv",
+                                    "timeColumn": "cue_at",
+                                    "lineStyle": "dashed"
+                                }
                             },
                             {
                                 "title": "Bass",

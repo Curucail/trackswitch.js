@@ -17,6 +17,7 @@ permalink: /documentation.html
   - [Track Options](#track-options)
   - [Audio Source Options](#audio-source-options)
   - [Track Alignment Options](#track-alignment-options)
+  - [Track Marker Options](#track-marker-options)
 - [Visualizations](#visualizations)
   - [`text`](#text)
   - [`image`](#image)
@@ -720,6 +721,7 @@ Each entry inside `trackGroup` can use these options:
 | `presets?` | `number[]` | none | Decides which presets include this track. |
 | `sources` | `object[]` | `-` | Audio files for this track. |
 | `alignment?` | `object` | none | Alignment settings for this track in a sync player. |
+| `markers?` | `object` | none | Loads timestamped markers for this track from a CSV file. |
 | `style?` | `string` | none | Lets you give that track row its own visual styling. |
 
 ### Audio Source Options {#audio-source-options}
@@ -765,6 +767,50 @@ Notes:
 
 - `synchronizedSources` are what make mixed synced playback possible.
 - Sync is only available when the player also has a shared sync timeline through `referenceTimeColumnSync`.
+
+### Track Marker Options {#track-marker-options}
+
+Add one `markers` block to a track to annotate its waveform and image timelines from CSV data:
+
+```javascript
+{
+  title: 'Track 1',
+  sources: [{ src: 'track1.mp3' }],
+  markers: {
+    csv: 'track1-markers.csv',
+    timeColumn: 'position_seconds',
+    labelColumn: 'annotation',
+    color: '#ed8c01',
+    lineStyle: 'dashed',
+  },
+}
+```
+
+```csv
+position_seconds,annotation
+12.5,First entrance
+42.75,
+78.2,Texture change
+```
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `csv` | `string` | `-` | URL of the marker CSV. |
+| `timeColumn` | `string` | `-` | CSV column containing local track time in seconds. |
+| `labelColumn?` | `string` | none | CSV column containing marker labels. Empty cells stay empty. |
+| `color?` | CSS color string | `black` | Full-opacity marker color on hover, focus, or touch activation. |
+| `lineStyle?` | `'solid' \| 'dashed'` | `'solid'` | Style of the vertical marker line. |
+
+Notes:
+
+- Column names have no defaults. `timeColumn` is always required.
+- Without `labelColumn`, labels are the chronological marker numbers `1`, `2`, `3`, and so on. With `labelColumn`, the CSV value is always used, including an empty value.
+- IDs and numeric labels are assigned after chronological sorting. Rows at the same time keep their CSV order.
+- Marker times use the track's local playable timeline and must stay within its effective duration. Invalid files, missing columns, non-numeric times, negative times, and out-of-range times stop player loading with an error.
+- Markers rest as translucent gray. Hovering, focusing, or pressing one reveals its label and configured highlight color. Activate a marker to seek directly to it.
+- Waveforms show markers for the tracks they render. Per-track images show the current track's markers. Global images show the merged markers of selected tracks with audible per-track volume; marker-only overlays do not make an otherwise non-seekable image background seekable.
+- When at least one track configures markers, the main control bar adds previous/next marker buttons. Equal mapped times are one navigation stop.
+- Right-drag loop selection can snap its moving endpoint to a marker within 12 screen pixels. Its starting point remains exact.
 
 ## Visualizations {#visualizations}
 

@@ -2,6 +2,7 @@ import { playerStateReducer } from "../domain/state";
 import type { TrackRuntime } from "../domain/types";
 import { clamp } from "../shared/math";
 import { getSeekMetrics } from "../shared/seek";
+import { loadRuntimeMarkers } from "../shared/markers";
 import { pauseOtherControllers, unregisterController } from "./player-registry";
 
 function getLoadErrorMessage(error: unknown): string {
@@ -66,6 +67,7 @@ export function load(ctx: any): any {
 				};
 				runtime.syncedSource = null;
 				runtime.waveformSummary = null;
+				runtime.markers = [];
 			});
 
 			await this.audioEngine.loadTracks(this.runtimes);
@@ -109,6 +111,19 @@ export function load(ctx: any): any {
 			this.longestDuration = this.findLongestDuration();
 			this.alignmentContext = null;
 			this.alignmentPlaybackTrackIndex = null;
+			const markerLoadAbortController = new AbortController();
+			this.markerLoadAbortController?.abort();
+			this.markerLoadAbortController = markerLoadAbortController;
+			try {
+				await loadRuntimeMarkers(
+					this.runtimes,
+					markerLoadAbortController.signal,
+				);
+			} finally {
+				if (this.markerLoadAbortController === markerLoadAbortController) {
+					this.markerLoadAbortController = null;
+				}
+			}
 
 			if (this.isAlignmentMode()) {
 				const alignmentError = await this.initializeAlignmentMode();
@@ -184,6 +199,11 @@ export function destroy(ctx: any): any {
 		this.pinchZoomState = null;
 		this.pendingWaveformTouchSeek = null;
 		this.waveformMinimapDragState = null;
+		this.markerLoadAbortController?.abort();
+		this.markerLoadAbortController = null;
+		this.runtimes.forEach((runtime: TrackRuntime) => {
+			runtime.markers = [];
+		});
 
 		if (this.state.playing) {
 			this.stopAudio();

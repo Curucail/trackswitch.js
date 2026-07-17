@@ -1,0 +1,144 @@
+/* Per-track CSV timeline markers ----------------------------------------- */
+
+.trackswitch .timeline-marker-layer {
+	position: absolute;
+	inset: 0;
+	z-index: 3;
+	pointer-events: none;
+}
+
+.trackswitch .timeline-marker {
+	--ts-marker-position: 0%;
+	--ts-marker-highlight-color: black;
+	position: absolute;
+	inset-block: 0;
+	left: var(--ts-marker-position);
+	width: 20px;
+	min-width: 20px;
+	height: 100%;
+	transform: translateX(-50%);
+	color: var(--ts-color-text-secondary);
+	opacity: 0.45;
+	cursor: pointer;
+	pointer-events: auto;
+	touch-action: manipulation;
+	z-index: 1;
+	transition:
+		color 100ms ease-out,
+		opacity 100ms ease-out;
+}
+
+.trackswitch .timeline-marker::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 50%;
+	width: 0;
+	height: 0;
+	border-left: 5px solid transparent;
+	border-right: 5px solid transparent;
+	border-top: 6px solid currentColor;
+	transform: translateX(-50%);
+}
+
+.trackswitch .timeline-marker::after {
+	content: "";
+	position: absolute;
+	top: 5px;
+	bottom: 0;
+	left: 50%;
+	width: 1px;
+	background: currentColor;
+	transform: translateX(-50%);
+}
+
+.trackswitch .timeline-marker-dashed::after {
+	background: repeating-linear-gradient(
+		to bottom,
+		currentColor 0 4px,
+		transparent 4px 7px
+	);
+}
+
+.trackswitch .timeline-marker:is(:hover, :focus-visible, :active, .is-active) {
+	color: var(--ts-marker-highlight-color);
+	opacity: 1;
+	z-index: 2;
+}
+
+.trackswitch .timeline-marker:focus-visible {
+	outline: none;
+}
+
+.trackswitch .timeline-marker:focus-visible::after {
+	box-shadow: 0 0 0 2px var(--ts-focus-ring-color);
+}
+
+.trackswitch .timeline-marker-label {
+	position: absolute;
+	top: 8px;
+	left: calc(50% + 7px);
+	display: block;
+	max-width: min(220px, 60cqw);
+	padding: 3px 5px;
+	border: 1px solid currentColor;
+	border-radius: 3px;
+	background: var(--ts-color-surface-raised-94);
+	color: inherit;
+	font-family: var(--ts-font-ui);
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 1.2;
+	text-align: left;
+	text-indent: 0;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	opacity: 0;
+	visibility: hidden;
+	pointer-events: none;
+	transform: translateY(-2px);
+	transition:
+		opacity 100ms ease-out,
+		transform 100ms ease-out,
+		visibility 0s linear 100ms;
+}
+
+.trackswitch .timeline-marker-label-before .timeline-marker-label {
+	left: auto;
+	right: calc(50% + 7px);
+}
+
+.trackswitch
+	.timeline-marker:is(:hover, :focus-visible, :active, .is-active)
+	.timeline-marker-label {
+	opacity: 1;
+	visibility: visible;
+	transform: translateY(0);
+	transition-delay: 0s;
+}
+
+.trackswitch .seekable-img-wrap .marker-only-seekwrap {
+	pointer-events: none;
+}
+
+.trackswitch
+	.seekable-img-wrap
+	.marker-only-seekwrap
+	> :not(.timeline-marker-layer) {
+	display: none;
+}
+
+@media (pointer: coarse) {
+	.trackswitch .timeline-marker {
+		width: 44px;
+		min-width: 44px;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.trackswitch .timeline-marker,
+	.trackswitch .timeline-marker-label {
+		transition: none;
+	}
+}

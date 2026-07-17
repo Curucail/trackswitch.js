@@ -5,6 +5,24 @@ export type WaveformSource = "audible" | number | number[];
 export type WaveformPlaybackFollowMode = "off" | "center" | "jump";
 export type WaveformTimeAxis = "shared" | "individual";
 export type TrackSwitchTextAlign = "left" | "center" | "right";
+export type TrackMarkerLineStyle = "solid" | "dashed";
+
+export interface TrackMarkerConfig {
+	csv: string;
+	timeColumn: string;
+	labelColumn?: string;
+	color?: string;
+	lineStyle?: TrackMarkerLineStyle;
+}
+
+export interface TrackMarker {
+	id: number;
+	trackIndex: number;
+	time: number;
+	label: string;
+	color: string;
+	lineStyle: TrackMarkerLineStyle;
+}
 
 export interface TrackAlignmentConfig {
 	csv: string;
@@ -35,6 +53,7 @@ export interface TrackDefinition {
 	presets?: number[];
 	sources: TrackSourceDefinition[];
 	alignment?: TrackDefinitionAlignment;
+	markers?: TrackMarkerConfig;
 }
 
 export interface TrackSwitchFeatures {
@@ -263,6 +282,7 @@ export interface TrackRuntime {
 	successful: boolean;
 	errored: boolean;
 	waveformSummary: WaveformSummary | null;
+	markers: TrackMarker[];
 }
 
 export interface LoopState {

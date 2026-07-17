@@ -9,6 +9,7 @@ import type {
 	TrackSwitchFeatures,
 	TrackSwitchInit,
 } from "../domain/types";
+import { loadRuntimeMarkers } from "../shared/markers";
 import { clamp } from "../shared/math";
 import { derivePresetNames } from "../shared/preset";
 import type { TrackSwitchControllerImpl } from "./player-controller";
@@ -281,6 +282,17 @@ async function updateConfigNow(
 		if (erroredTracks.length > 0) {
 			controller.audioEngine.disconnectRuntimes(nextRuntimes);
 			throw new Error("One or more audio files failed to load.");
+		}
+
+		const markerLoadAbortController = new AbortController();
+		controller.markerLoadAbortController?.abort();
+		controller.markerLoadAbortController = markerLoadAbortController;
+		try {
+			await loadRuntimeMarkers(nextRuntimes, markerLoadAbortController.signal);
+		} finally {
+			if (controller.markerLoadAbortController === markerLoadAbortController) {
+				controller.markerLoadAbortController = null;
+			}
 		}
 
 		const stagedAlignmentContext = await buildStagedAlignmentContext(

@@ -23,6 +23,10 @@ import {
 	isKeyboardControllerActive,
 	setActiveKeyboardController,
 } from "./player-registry";
+import {
+	activateTimelineMarker,
+	moveTimelineMarkerFocus,
+} from "./marker-actions";
 
 export function setKeyboardActive(ctx: any): any {
 	return function (this: any) {
@@ -143,7 +147,7 @@ export function onSeekStart(ctx: any, event: any): any {
 
 		if (
 			isPrimaryInput(event) &&
-			closestInRoot(this.root, event.target, ".loop-marker")
+			closestInRoot(this.root, event.target, ".loop-marker, .timeline-marker")
 		) {
 			return;
 		}
@@ -215,6 +219,66 @@ export function onSeekStart(ctx: any, event: any): any {
 
 		event.stopPropagation();
 	}.call(ctx, event);
+}
+
+export function onTimelineMarkerActivate(ctx: any, event: any): any {
+	return function (this: any, event: any) {
+		const target = eventTargetAsElement(event.target ?? null);
+		const marker = target?.closest(".timeline-marker");
+		if (!(marker instanceof HTMLElement) || !this.root.contains(marker)) {
+			return;
+		}
+
+		event.preventDefault();
+		event.stopPropagation();
+		this.setKeyboardActive();
+		marker
+			.closest(".timeline-marker-layer")
+			?.querySelectorAll<HTMLElement>(".timeline-marker")
+			.forEach((candidate: HTMLElement) => {
+				candidate.tabIndex = candidate === marker ? 0 : -1;
+			});
+		activateTimelineMarker(this, marker);
+	}.call(ctx, event);
+}
+
+export function onTimelineMarkerKeydown(ctx: any, event: any): any {
+	return function (this: any, event: any) {
+		const target = eventTargetAsElement(event.target ?? null);
+		const marker = target?.closest(".timeline-marker");
+		if (!(marker instanceof HTMLElement) || !this.root.contains(marker)) {
+			return;
+		}
+
+		if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+			event.preventDefault();
+			event.stopPropagation();
+			moveTimelineMarkerFocus(
+				marker,
+				event.key === "ArrowLeft" ? "previous" : "next",
+			);
+			return;
+		}
+
+		if (event.key === "Enter" || event.key === " ") {
+			event.preventDefault();
+			event.stopPropagation();
+			activateTimelineMarker(this, marker);
+		}
+	}.call(ctx, event);
+}
+
+export function onAdjacentMarker(
+	ctx: any,
+	event: any,
+	direction: "previous" | "next",
+): any {
+	return function (this: any, event: any, direction: "previous" | "next") {
+		event.preventDefault();
+		event.stopPropagation();
+		this.setKeyboardActive();
+		this.seekToAdjacentMarker(direction);
+	}.call(ctx, event, direction);
 }
 
 export function onWaveformMinimapStart(ctx: any, event: any): any {

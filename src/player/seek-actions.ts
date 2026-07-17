@@ -7,6 +7,7 @@ import {
 	parseWaveformSource,
 	resolveFixedWaveformTrackIndex,
 } from "../shared/waveform-source";
+import { snapLoopEndToMarker } from "./marker-actions";
 
 interface SeekTimelineContext {
 	duration: number;
@@ -150,15 +151,22 @@ function updateRightClickLoopSelection(controller: any, event: any): boolean {
 	}
 
 	const loopStart = controller.loopDragStart;
-	const movingForward = metrics.time >= loopStart;
+	const snappedTime = snapLoopEndToMarker(
+		controller,
+		controller.seekingElement,
+		event,
+		metrics.time,
+		loopStart,
+	);
+	const movingForward = snappedTime >= loopStart;
 	const loopEnd = movingForward
 		? Math.min(
 				seekTimelineContext.duration,
-				Math.max(metrics.time, loopStart + controller.loopMinDistance),
+				Math.max(snappedTime, loopStart + controller.loopMinDistance),
 			)
 		: Math.max(
 				0,
-				Math.min(metrics.time, loopStart - controller.loopMinDistance),
+				Math.min(snappedTime, loopStart - controller.loopMinDistance),
 			);
 	const mappedStart = seekTimelineContext.toReferenceTime(
 		movingForward ? loopStart : loopEnd,

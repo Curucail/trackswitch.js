@@ -14,6 +14,8 @@ import type {
 	WaveformEngine,
 } from "../engine/waveform-engine";
 import * as viewRendererCore from "./render-layout";
+import type { MarkerPlacementResolver } from "./render-markers";
+import * as viewRendererMarkers from "./render-markers";
 import type {
 	MidiSeekSurfaceMetadata,
 	MidiTimelineContextResolver,
@@ -412,6 +414,30 @@ export class ViewRenderer {
 
 	public wrapSeekableImages(): void {
 		viewRendererCore.wrapSeekableImages(this);
+	}
+
+	public renderTimelineMarkers(
+		runtimes: TrackRuntime[],
+		activeMarkerRuntimes: TrackRuntime[],
+		resolvePlacement: MarkerPlacementResolver,
+	): void {
+		viewRendererMarkers.renderTimelineMarkers(
+			this,
+			runtimes,
+			activeMarkerRuntimes,
+			resolvePlacement,
+		);
+	}
+
+	public updateMarkerNavigationControls(
+		canGoPrevious: boolean,
+		canGoNext: boolean,
+	): void {
+		viewRendererMarkers.updateMarkerNavigationControls(
+			this.root,
+			canGoPrevious,
+			canGoNext,
+		);
 	}
 
 	public wrapWaveformCanvases(): void {

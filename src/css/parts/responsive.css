@@ -129,11 +129,35 @@
 		margin: 0;
 	}
 
+	.trackswitch .main-control .marker-navigation-group {
+		order: 25;
+		grid-column: auto;
+		justify-self: start;
+		margin: 0;
+	}
+
 	.trackswitch .main-control .loop-group {
 		order: 50;
 		grid-column: auto;
 		justify-self: end;
 		margin: 0;
+	}
+
+	.trackswitch
+		.main-control
+		ul.control:has(> .marker-navigation-group):has(> .loop-group)
+		> .marker-navigation-group {
+		grid-column: 1;
+		justify-self: start;
+	}
+
+	.trackswitch
+		.main-control
+		ul.control:has(> .marker-navigation-group):has(> .loop-group)
+		> .loop-group {
+		order: 30;
+		grid-column: 2;
+		justify-self: end;
 	}
 
 	.trackswitch .main-control .preset-selector-wrap {
@@ -184,6 +208,27 @@
 		grid-column: 2;
 		justify-self: end;
 		margin: 0;
+	}
+
+	.trackswitch
+		.main-control
+		ul.control:has(> .marker-navigation-group):has(> .sync-after-loop):has(
+			> .loop-group
+		):not(:has(> .preset-selector-wrap))
+		> .loop-group {
+		order: 30;
+		grid-column: 2;
+		justify-self: end;
+	}
+
+	.trackswitch
+		.main-control
+		ul.control:has(> .marker-navigation-group):has(> .sync-after-loop):has(
+			> .loop-group
+		):not(:has(> .preset-selector-wrap))
+		> .sync-after-loop {
+		grid-column: 1 / -1;
+		justify-self: end;
 	}
 
 	.trackswitch .main-control .timing {
@@ -239,6 +284,18 @@
 		gap: 6px;
 		position: relative;
 		top: 2px;
+	}
+
+	.trackswitch .main-control .marker-navigation-controls {
+		gap: 6px;
+	}
+
+	.trackswitch .main-control .marker-navigation-controls > .button,
+	.trackswitch .main-control .marker-navigation-controls .ts-icon-slot,
+	.trackswitch .main-control .marker-navigation-controls .ts-icon-svg {
+		width: 20px;
+		height: 20px;
+		font-size: 20px;
 	}
 
 	.trackswitch

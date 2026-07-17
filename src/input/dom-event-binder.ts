@@ -44,6 +44,12 @@ export interface InputController {
 	onToggleLoop(event: ControllerPointerEvent): void;
 	onClearLoop(event: ControllerPointerEvent): void;
 	onMarkerDragStart(event: ControllerPointerEvent): void;
+	onTimelineMarkerActivate(event: ControllerPointerEvent): void;
+	onTimelineMarkerKeydown(event: ControllerPointerEvent): void;
+	onAdjacentMarker(
+		event: ControllerPointerEvent,
+		direction: "previous" | "next",
+	): void;
 	onKeyboard(event: ControllerPointerEvent): void;
 	onResize(): void;
 }
@@ -258,6 +264,18 @@ export class InputBinder {
 		});
 		this.addPointerDelegatedListener(".repeat", (event) => {
 			this.controller.onRepeat(event);
+		});
+		this.addDelegatedListener("click", ".timeline-marker", (event) => {
+			this.controller.onTimelineMarkerActivate(event);
+		});
+		this.addDelegatedListener("keydown", ".timeline-marker", (event) => {
+			this.controller.onTimelineMarkerKeydown(event);
+		});
+		this.addDelegatedListener("click", ".marker-previous", (event) => {
+			this.controller.onAdjacentMarker(event, "previous");
+		});
+		this.addDelegatedListener("click", ".marker-next", (event) => {
+			this.controller.onAdjacentMarker(event, "next");
 		});
 		this.addPointerDelegatedListener(".seekwrap", (event) => {
 			this.controller.onSeekStart(event);
