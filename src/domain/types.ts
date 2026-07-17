@@ -3,6 +3,7 @@ export type TrackSwitchVariant = "default" | "sync";
 export type AlignmentOutOfRangeMode = "clamp" | "linear";
 export type WaveformSource = "audible" | number | number[];
 export type WaveformPlaybackFollowMode = "off" | "center" | "jump";
+export type WaveformTimeAxis = "shared" | "individual";
 export type TrackSwitchTextAlign = "left" | "center" | "right";
 
 export interface TrackAlignmentConfig {
@@ -74,6 +75,7 @@ export interface TrackSwitchWaveformConfig {
 	maxZoom?: number;
 	waveformSource?: WaveformSource;
 	playbackFollowMode?: WaveformPlaybackFollowMode;
+	timeAxis?: WaveformTimeAxis;
 	timer?: boolean;
 	alignedPlayhead?: boolean;
 	showAlignmentPoints?: boolean;

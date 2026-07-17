@@ -779,9 +779,14 @@ export function getSeekTimelineContext(ctx: any, seekingElement: any): any {
 					longestTrackDuration = d;
 			}
 		}
+		const waveformSurface = this.renderer.findWaveformSurface(seekingElement);
+		const axisDuration =
+			waveformSurface?.timeAxis === "individual"
+				? trackDuration
+				: longestTrackDuration;
 
 		return {
-			duration: longestTrackDuration,
+			duration: axisDuration,
 			toReferenceTime: (sharedTime: number): number => {
 				const clampedTrackTime = clamp(sharedTime, 0, trackDuration);
 				return clamp(

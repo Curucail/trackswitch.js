@@ -172,6 +172,15 @@ function validateVariantConfig(
 				"Invalid default player configuration: warpingMatrix requires the sync player variant.",
 			);
 		}
+		if (
+			resolvedUi?.some(
+				(entry) => entry.type === "waveform" && entry.timeAxis === "individual",
+			)
+		) {
+			throw new Error(
+				"Invalid default player configuration: waveform timeAxis 'individual' requires the sync player variant.",
+			);
+		}
 		if (resolvedUi?.some(isAlignmentWaveform)) {
 			throw new Error(
 				"Invalid default player configuration: aligned waveform options require the sync player variant.",
@@ -185,6 +194,18 @@ function validateVariantConfig(
 			"Invalid sync player configuration: alignment config is required.",
 		);
 	}
+
+	resolvedUi?.forEach((entry) => {
+		if (
+			entry.type === "waveform" &&
+			entry.timeAxis === "individual" &&
+			typeof entry.waveformSource !== "number"
+		) {
+			throw new Error(
+				"Invalid sync player configuration: waveform timeAxis 'individual' requires a numeric waveformSource.",
+			);
+		}
+	});
 
 	tracks.forEach((track) => {
 		const column = track.alignment?.column;

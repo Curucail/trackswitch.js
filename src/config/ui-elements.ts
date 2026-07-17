@@ -13,6 +13,7 @@ import type {
 	TrackSwitchWarpingMatrixConfig,
 	TrackSwitchWaveformConfig,
 	WaveformPlaybackFollowMode,
+	WaveformTimeAxis,
 } from "../domain/types";
 import { clampPercent } from "../shared/math";
 import {
@@ -49,6 +50,7 @@ const uiWaveformAllowedKeys = [
 	"maxZoom",
 	"waveformSource",
 	"playbackFollowMode",
+	"timeAxis",
 	"timer",
 	"alignedPlayhead",
 	"showAlignmentPoints",
@@ -177,6 +179,20 @@ function normalizeWaveformPlaybackFollowMode(
 	return "off";
 }
 
+function normalizeWaveformTimeAxis(value: unknown): WaveformTimeAxis {
+	if (value === undefined || value === "shared") {
+		return "shared";
+	}
+
+	if (value === "individual") {
+		return value;
+	}
+
+	throw new Error(
+		"Invalid ui.waveform configuration: timeAxis must be 'shared' or 'individual'.",
+	);
+}
+
 function validateSeekMargins(
 	config: { seekMarginLeft?: number; seekMarginRight?: number },
 	label: string,
@@ -204,6 +220,7 @@ function normalizeWaveformConfig<T extends TrackSwitchWaveformConfig>(
 		playbackFollowMode: normalizeWaveformPlaybackFollowMode(
 			waveform.playbackFollowMode,
 		),
+		timeAxis: normalizeWaveformTimeAxis(waveform.timeAxis),
 		timer: normalizeOptionalBoolean(waveform.timer),
 		alignedPlayhead: normalizeOptionalBoolean(waveform.alignedPlayhead),
 		showAlignmentPoints: normalizeOptionalBoolean(waveform.showAlignmentPoints),
@@ -614,6 +631,7 @@ function injectWaveform(
 		"data-waveform-playback-follow-mode",
 		waveform.playbackFollowMode || "off",
 	);
+	canvas.setAttribute("data-waveform-time-axis", waveform.timeAxis || "shared");
 
 	if (typeof waveform.timer === "boolean") {
 		canvas.setAttribute("data-waveform-timer", String(waveform.timer));

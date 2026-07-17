@@ -7,6 +7,7 @@ import type {
 	TrackSwitchUiState,
 	WaveformPlaybackFollowMode,
 	WaveformSource,
+	WaveformTimeAxis,
 } from "../domain/types";
 import type {
 	TrackTimelineProjector,
@@ -78,9 +79,11 @@ interface WaveformSeekSurfaceMetadata {
 	overlay: HTMLElement;
 	surface: HTMLElement;
 	tileLayer: HTMLElement;
+	endedRegion: HTMLElement;
 	seekWrap: HTMLElement;
 	waveformSource: WaveformSource;
 	playbackFollowMode: WaveformPlaybackFollowMode;
+	timeAxis: WaveformTimeAxis;
 	originalHeight: number;
 	barWidth: number;
 	maxZoomSeconds: number;
@@ -90,6 +93,7 @@ interface WaveformSeekSurfaceMetadata {
 	zoomNode: HTMLElement;
 	zoomMinimapNode: HTMLElement;
 	zoomCanvas: HTMLCanvasElement;
+	zoomEndedRegion: HTMLElement;
 	zoomViewportNode: HTMLElement;
 	zoomCanvasLastDrawKey: string | null;
 	waveformColor: string | null;

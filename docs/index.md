@@ -143,6 +143,13 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
           </select>
         </label>
         <label class="ts-control-row">
+          <span>Waveform Time Axis</span>
+          <select name="waveformTimeAxis">
+            <option value="shared" selected>Shared</option>
+            <option value="individual">Individual</option>
+          </select>
+        </label>
+        <label class="ts-control-row">
           <span>Text</span>
           <input type="checkbox" name="text" />
         </label>

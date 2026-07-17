@@ -65,6 +65,7 @@ export type {
 	TrackSwitchWaveformConfig,
 	TrackSwitchWaveformUiElement,
 	WaveformSource,
+	WaveformTimeAxis,
 } from "./domain/types";
 export type {
 	TrackswitchDomEventName,

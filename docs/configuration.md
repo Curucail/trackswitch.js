@@ -884,6 +884,7 @@ Section options:
 | `maxZoom?` | `number` | `5` | The closest zoom level listeners can reach, in seconds. Smaller numbers allow tighter zoom. |
 | `waveformSource?` | `'audible' | number | number[]` | `'audible'` | Chooses which sound the waveform represents. |
 | `playbackFollowMode?` | `'off' | 'center' | 'jump'` | `'off'` | Decides whether the waveform view follows playback automatically. |
+| `timeAxis?` | `'shared' | 'individual'` | `'shared'` | In a sync player, uses either the longest audio duration for comparable fixed-track waveforms or each track's own duration. Requires a numeric `waveformSource`. |
 | `timer?` | `boolean` | Standard: `false`; Sync: `true` | Shows a small time label inside the waveform panel. |
 | `alignedPlayhead?` | `boolean` | `false` | Draws a diagonal Z-shaped indicator that shows where the reference timeline position is relative to this track's local playhead. Only has an effect in sync mode and requires `waveformSource` to be a track index (number). |
 | `showAlignmentPoints?` | `boolean` | `false` | Draws a thin dashed Z-shaped line for every alignment anchor point that exists, showing the full warping path across the waveform. Only has an effect in sync mode and requires `waveformSource` to be a track index (number). |
@@ -894,6 +895,8 @@ Section options:
 Notes:
 
 - If you leave out `timer`, the waveform timer is off in a standard player and on in a sync player.
+- In shared mode, the region after a shorter track has ended is shaded in the waveform and zoom overview. Individual mode removes that region and expands the track to its own time axis.
+- `timeAxis` only affects fixed-track waveforms in sync mode. Using `individual` outside sync mode or without a numeric `waveformSource` is invalid.
 - When listeners zoom in, the waveform shows a small overview map for quick navigation.
 
 ### `midi` {#midi}

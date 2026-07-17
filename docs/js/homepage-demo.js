@@ -114,6 +114,7 @@
 		"midi",
 		"text",
 		"waveformPlaybackFollowMode",
+		"waveformTimeAxis",
 		"alignedPlayhead",
 		"showAlignmentPoints",
 		"sheetNotePreview",
@@ -142,6 +143,7 @@
 		"midi",
 		"text",
 		"waveformPlaybackFollowMode",
+		"waveformTimeAxis",
 		"alignedPlayhead",
 		"showAlignmentPoints",
 		"sheetNotePreview",
@@ -162,6 +164,7 @@
 			"warpingMatrix",
 			"alignedPlayhead",
 			"showAlignmentPoints",
+			"waveformTimeAxis",
 		],
 		sync: [
 			"customImage",
@@ -192,6 +195,7 @@
 		midi: false,
 		text: false,
 		waveformPlaybackFollowMode: "off",
+		waveformTimeAxis: "shared",
 		alignedPlayhead: false,
 		showAlignmentPoints: false,
 		sheetNotePreview: false,
@@ -321,6 +325,10 @@
 			}
 
 			if (name === "waveformPlaybackFollowMode" && !model.waveform) {
+				return true;
+			}
+
+			if (name === "waveformTimeAxis" && !model.waveform) {
 				return true;
 			}
 
@@ -636,6 +644,13 @@
 				normalized.waveformPlaybackFollowMode = "off";
 			}
 
+			if (
+				normalized.waveformTimeAxis !== "shared" &&
+				normalized.waveformTimeAxis !== "individual"
+			) {
+				normalized.waveformTimeAxis = "shared";
+			}
+
 			if (isInteractiveMode(mode)) {
 				return {
 					model: normalized,
@@ -851,6 +866,10 @@
 				if (model.waveformPlaybackFollowMode !== "off") {
 					waveformOne.playbackFollowMode = model.waveformPlaybackFollowMode;
 					waveformTwo.playbackFollowMode = model.waveformPlaybackFollowMode;
+				}
+				if (model.waveformTimeAxis === "individual") {
+					waveformOne.timeAxis = "individual";
+					waveformTwo.timeAxis = "individual";
 				}
 				if (model.alignedPlayhead) {
 					waveformOne.alignedPlayhead = true;
@@ -1216,6 +1235,11 @@
 							model.waveformPlaybackFollowMode;
 						alignmentWaveformTwo.playbackFollowMode =
 							model.waveformPlaybackFollowMode;
+					}
+
+					if (model.waveformTimeAxis === "individual") {
+						alignmentWaveformOne.timeAxis = "individual";
+						alignmentWaveformTwo.timeAxis = "individual";
 					}
 
 					if (model.alignedPlayhead) {
