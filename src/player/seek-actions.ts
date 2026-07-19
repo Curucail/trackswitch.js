@@ -49,7 +49,7 @@ function handleWaveformAuxiliarySeekState(
 	event: any,
 ): boolean {
 	if (controller.waveformMinimapDragState) {
-		if (controller.updateTimelineMinimapDrag(event)) {
+		if (updateTimelineMinimapDrag(controller, event)) {
 			event.preventDefault();
 			event.stopPropagation();
 		}
