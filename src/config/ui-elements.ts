@@ -491,7 +491,7 @@ function normalizeTrackMarkerConfig(
 		timeColumn: normalizeRequiredMarkerString(markers.timeColumn, "timeColumn"),
 		labelColumn: labelColumn,
 		color: color,
-		lineStyle: markers.lineStyle ?? "solid",
+		lineStyle: markers.lineStyle ?? "dashed",
 	};
 }
 

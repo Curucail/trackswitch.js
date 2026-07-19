@@ -9,7 +9,7 @@
 
 .trackswitch .timeline-marker {
 	--ts-marker-position: 0%;
-	--ts-marker-highlight-color: black;
+	--ts-marker-highlight-color: var(--ts-color-accent);
 	position: absolute;
 	inset-block: 0;
 	left: var(--ts-marker-position);

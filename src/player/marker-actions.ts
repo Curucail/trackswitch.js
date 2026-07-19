@@ -5,6 +5,7 @@ import type { TrackSwitchControllerImpl } from "./player-controller";
 
 const MARKER_TIME_EPSILON = 0.000001;
 const MARKER_SNAP_DISTANCE_PX = 12;
+const MARKER_PREVIOUS_JUMP_MARGIN = 0.8;
 
 export function getActiveMarkerRuntimes(
 	controller: TrackSwitchControllerImpl,
@@ -90,7 +91,7 @@ function getMarkerNavigationTargets(controller: TrackSwitchControllerImpl): {
 	let next: number | null = null;
 
 	for (const time of times) {
-		if (time < position - MARKER_TIME_EPSILON) {
+		if (time < position - MARKER_PREVIOUS_JUMP_MARGIN) {
 			previous = time;
 			continue;
 		}

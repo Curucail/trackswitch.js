@@ -121,7 +121,7 @@ export function parseTrackMarkers(
 		time: marker.time,
 		label: config.labelColumn ? marker.label : String(index + 1),
 		color: config.color ?? "black",
-		lineStyle: config.lineStyle ?? "solid",
+		lineStyle: config.lineStyle ?? "dashed",
 	}));
 }
 
