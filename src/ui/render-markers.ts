@@ -4,6 +4,7 @@ import type {
 	WaveformSource,
 } from "../domain/types";
 import { formatSecondsToHHMMSSmmm } from "../shared/format";
+import type { MidiSeekSurfaceMetadata } from "./render-midi";
 
 export interface MarkerPlacement {
 	referenceTime: number;
@@ -28,6 +29,7 @@ interface MarkerRendererContext {
 		seekWrap: HTMLElement;
 		waveformSource: WaveformSource;
 	}>;
+	midiSeekSurfaces: MidiSeekSurfaceMetadata[];
 	getWaveformSourceRuntimes(
 		runtimes: TrackRuntime[],
 		waveformSource: WaveformSource,
@@ -151,6 +153,15 @@ export function renderTimelineMarkers(
 			surface.seekWrap,
 			runtimes,
 			ctx.getWaveformSourceRuntimes(runtimes, surface.waveformSource),
+			resolvePlacement,
+		);
+	});
+
+	ctx.midiSeekSurfaces.forEach((surface) => {
+		renderMarkerLayer(
+			surface.seekWrap,
+			runtimes,
+			activeMarkerRuntimes,
 			resolvePlacement,
 		);
 	});
