@@ -48,7 +48,11 @@
                         "height": 180,
                         "maxZoom": 5,
                         "playbackFollowMode": "center",
-                        "timer": true
+                        "timer": true,
+                        "markers": {
+                            "color": "#ed8c01",
+                            "lineStyle": "dashed"
+                        }
                     },
                     {
                         "type": "waveform",
@@ -57,7 +61,11 @@
                         "height": 100,
                         "timer": true,
                         "alignedPlayhead": true,
-                        "showAlignmentPoints": false
+                        "showAlignmentPoints": false,
+                        "markers": {
+                            "color": "#ed8c01",
+                            "lineStyle": "dashed"
+                        }
                     },
                     {
                         "type": "waveform",
@@ -66,7 +74,11 @@
                         "height": 100,
                         "timer": true,
                         "alignedPlayhead": true,
-                        "showAlignmentPoints": false
+                        "showAlignmentPoints": false,
+                        "markers": {
+                            "color": "#ed8c01",
+                            "lineStyle": "dashed"
+                        }
                     },
                     {
                         "type": "warpingMatrix",
@@ -85,8 +97,8 @@
                                 },
                                 "markers": {
                                     "csv": "data/HU33-markers.csv",
-                                    "timeColumn": "performance_second",
-                                    "labelColumn": "musical_note"
+                                    "timeColumn": "start",
+                                    "labelColumn": "label"
                                 }
                             },
                             {
@@ -98,9 +110,8 @@
                                 },
                                 "markers": {
                                     "csv": "data/SC06-markers.csv",
-                                    "timeColumn": "cue_seconds",
-                                    "color": "#ed8c01",
-                                    "lineStyle": "dashed"
+                                    "timeColumn": "start",
+                                    "labelColumn": "structure"
                                 }
                             }
                         ]

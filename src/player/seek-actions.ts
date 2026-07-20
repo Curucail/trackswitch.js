@@ -99,6 +99,13 @@ function updateDraggedLoopMarker(controller: any, event: any): boolean {
 				? null
 				: seekTimelineContext.fromReferenceTime(controller.state.loop.pointB);
 		if (loopPointB !== null) {
+			newTime = snapLoopEndToMarker(
+				controller,
+				controller.seekingElement,
+				event,
+				newTime,
+				loopPointB,
+			);
 			newTime = Math.min(newTime, loopPointB - controller.loopMinDistance);
 		}
 		newTime = Math.max(0, newTime);
@@ -115,6 +122,13 @@ function updateDraggedLoopMarker(controller: any, event: any): boolean {
 				? null
 				: seekTimelineContext.fromReferenceTime(controller.state.loop.pointA);
 		if (loopPointA !== null) {
+			newTime = snapLoopEndToMarker(
+				controller,
+				controller.seekingElement,
+				event,
+				newTime,
+				loopPointA,
+			);
 			newTime = Math.max(newTime, loopPointA + controller.loopMinDistance);
 		}
 		newTime = Math.min(seekTimelineContext.duration, newTime);

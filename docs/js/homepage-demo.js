@@ -33,8 +33,8 @@
 		];
 	}
 
-	function createAlignmentTracks(basePath) {
-		return [
+	function createAlignmentTracks(basePath, includeMarkers) {
+		var tracks = [
 			{
 				title: "Schubert: Winterreise, D. 911: No. 3 - HU33",
 				sources: [{ src: basePath + "/Schubert_D911-03_HU33.wav" }],
@@ -56,14 +56,36 @@
 				},
 			},
 		];
+
+		if (includeMarkers) {
+			tracks[0].markers = {
+				csv: basePath + "/HU33-markers.csv",
+				timeColumn: "start",
+				labelColumn: "label",
+			};
+			tracks[1].markers = {
+				csv: basePath + "/SC06-markers.csv",
+				timeColumn: "start",
+				labelColumn: "structure",
+			};
+		}
+
+		return tracks;
 	}
 
 	function stripSnippetPath(value) {
 		return value.replace(/^\//, "");
 	}
 
-	function createAlignmentSnippetTracks() {
-		return createAlignmentTracks("").map(function (track) {
+	function createMarkerDisplayConfig() {
+		return {
+			color: "#ed8c01",
+			lineStyle: "dashed",
+		};
+	}
+
+	function createAlignmentSnippetTracks(includeMarkers) {
+		return createAlignmentTracks("", includeMarkers).map(function (track) {
 			var normalizedTrack = Object.assign({}, track);
 			normalizedTrack.sources = track.sources.map(function (source) {
 				return { src: stripSnippetPath(source.src) };
@@ -117,6 +139,7 @@
 		"waveformTimeAxis",
 		"alignedPlayhead",
 		"showAlignmentPoints",
+		"markers",
 		"sheetNotePreview",
 		"warpingMatrix",
 		"customImage",
@@ -146,6 +169,7 @@
 		"waveformTimeAxis",
 		"alignedPlayhead",
 		"showAlignmentPoints",
+		"markers",
 		"sheetNotePreview",
 		"warpingMatrix",
 		"customImage",
@@ -165,6 +189,7 @@
 			"alignedPlayhead",
 			"showAlignmentPoints",
 			"waveformTimeAxis",
+			"markers",
 		],
 		sync: [
 			"customImage",
@@ -198,6 +223,7 @@
 		waveformTimeAxis: "shared",
 		alignedPlayhead: false,
 		showAlignmentPoints: false,
+		markers: false,
 		sheetNotePreview: false,
 		warpingMatrix: false,
 		customImage: false,
@@ -219,6 +245,7 @@
 		sheetNotePreview: true,
 		warpingMatrix: false,
 		exclusiveSolo: true,
+		markers: true,
 	});
 	var INTERACTIVE_DEFAULT_MODEL = Object.assign({}, ALIGNMENT_DEFAULT_MODEL, {
 		looping: true,
@@ -842,13 +869,17 @@
 			}
 
 			if (model.midi) {
-				uiConfig.push({
+				var midiConfig = {
 					type: "midi",
 					src: "Schubert_D911-03.mid",
 					alignmentColumn: "time_Schubert_D911-03",
 					playbackFollowMode: "center",
 					timer: true,
-				});
+				};
+				if (model.markers) {
+					midiConfig.markers = createMarkerDisplayConfig();
+				}
+				uiConfig.push(midiConfig);
 			}
 
 			if (model.text) {
@@ -879,6 +910,10 @@
 					waveformOne.showAlignmentPoints = true;
 					waveformTwo.showAlignmentPoints = true;
 				}
+				if (model.markers) {
+					waveformOne.markers = createMarkerDisplayConfig();
+					waveformTwo.markers = createMarkerDisplayConfig();
+				}
 				uiConfig.push(waveformOne);
 				uiConfig.push(waveformTwo);
 			}
@@ -895,10 +930,17 @@
 			}
 
 			if (model.trackImageBySolo) {
-				uiConfig.push({ type: "perTrackImage", seekable: true });
+				var perTrackImageConfig = {
+					type: "perTrackImage",
+					seekable: true,
+				};
+				if (model.markers) {
+					perTrackImageConfig.markers = createMarkerDisplayConfig();
+				}
+				uiConfig.push(perTrackImageConfig);
 			}
 
-			trackGroup = createAlignmentSnippetTracks();
+			trackGroup = createAlignmentSnippetTracks(Boolean(model.markers));
 			uiConfig.push({
 				type: "trackGroup",
 				trackGroup: trackGroup,
@@ -1175,10 +1217,14 @@
 			}
 
 			if (model.trackImageBySolo) {
-				uiConfig.push({
+				var perTrackImageConfig = {
 					type: "perTrackImage",
 					seekable: true,
-				});
+				};
+				if (model.markers) {
+					perTrackImageConfig.markers = createMarkerDisplayConfig();
+				}
+				uiConfig.push(perTrackImageConfig);
 			}
 
 			if (isAlignmentMode(currentMode) && model.sheetNotePreview) {
@@ -1195,7 +1241,7 @@
 			}
 
 			if (isAlignmentMode(currentMode) && model.midi) {
-				uiConfig.push({
+				var midiConfig = {
 					type: "midi",
 					src: basePath + "/Schubert_D911-03.mid",
 					alignmentColumn: "time_Schubert_D911-03",
@@ -1203,7 +1249,11 @@
 					maxZoom: 5,
 					playbackFollowMode: "center",
 					timer: true,
-				});
+				};
+				if (model.markers) {
+					midiConfig.markers = createMarkerDisplayConfig();
+				}
+				uiConfig.push(midiConfig);
 			}
 
 			if (model.text) {
@@ -1250,6 +1300,11 @@
 					if (model.showAlignmentPoints) {
 						alignmentWaveformOne.showAlignmentPoints = true;
 						alignmentWaveformTwo.showAlignmentPoints = true;
+					}
+
+					if (model.markers) {
+						alignmentWaveformOne.markers = createMarkerDisplayConfig();
+						alignmentWaveformTwo.markers = createMarkerDisplayConfig();
 					}
 
 					uiConfig.push(alignmentWaveformOne);
@@ -1300,7 +1355,7 @@
 			if (isAlignmentMode(currentMode)) {
 				uiConfig.push({
 					type: "trackGroup",
-					trackGroup: createAlignmentTracks(basePath),
+					trackGroup: createAlignmentTracks(basePath, Boolean(model.markers)),
 				});
 
 				init.alignment = {

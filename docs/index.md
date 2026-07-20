@@ -162,6 +162,10 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
           <input type="checkbox" name="showAlignmentPoints" />
         </label>
         <label class="ts-control-row">
+          <span>Markers</span>
+          <input type="checkbox" name="markers" />
+        </label>
+        <label class="ts-control-row">
           <span>Custom Cover Image</span>
           <input type="checkbox" name="customImage" />
         </label>

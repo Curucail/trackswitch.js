@@ -1,6 +1,7 @@
 import type {
 	TrackDefinitionAlignment,
 	TrackMarkerConfig,
+	TrackMarkerDisplayConfig,
 	TrackSourceDefinition,
 	TrackSwitchImageConfig,
 	TrackSwitchMidiConfig,
@@ -16,6 +17,7 @@ import type {
 	WaveformPlaybackFollowMode,
 	WaveformTimeAxis,
 } from "../domain/types";
+import { setMarkerDisplayAttributes } from "../shared/marker-display";
 import { clampPercent } from "../shared/math";
 import {
 	normalizeWaveformSource,
@@ -33,6 +35,7 @@ const uiImageAllowedKeys = [
 	"type",
 	"src",
 	"seekable",
+	"markers",
 	"style",
 	"seekMarginLeft",
 	"seekMarginRight",
@@ -40,6 +43,7 @@ const uiImageAllowedKeys = [
 const uiPerTrackImageAllowedKeys = [
 	"type",
 	"seekable",
+	"markers",
 	"style",
 	"seekMarginLeft",
 	"seekMarginRight",
@@ -55,6 +59,7 @@ const uiWaveformAllowedKeys = [
 	"timer",
 	"alignedPlayhead",
 	"showAlignmentPoints",
+	"markers",
 	"style",
 	"seekMarginLeft",
 	"seekMarginRight",
@@ -67,6 +72,7 @@ const uiMidiAllowedKeys = [
 	"maxZoom",
 	"playbackFollowMode",
 	"timer",
+	"markers",
 	"style",
 	"seekMarginLeft",
 	"seekMarginRight",
@@ -115,13 +121,8 @@ const trackAllowedKeys = [
 ] as const;
 
 const trackAlignmentAllowedKeys = ["column", "synchronizedSources"] as const;
-const trackMarkerAllowedKeys = [
-	"csv",
-	"timeColumn",
-	"labelColumn",
-	"color",
-	"lineStyle",
-] as const;
+const trackMarkerAllowedKeys = ["csv", "timeColumn", "labelColumn"] as const;
+const markerDisplayAllowedKeys = ["color", "lineStyle"] as const;
 const sourceAllowedKeys = [
 	"src",
 	"type",
@@ -233,6 +234,7 @@ function normalizeWaveformConfig<T extends TrackSwitchWaveformConfig>(
 		timer: normalizeOptionalBoolean(waveform.timer),
 		alignedPlayhead: normalizeOptionalBoolean(waveform.alignedPlayhead),
 		showAlignmentPoints: normalizeOptionalBoolean(waveform.showAlignmentPoints),
+		markers: normalizeMarkerDisplayConfig(waveform.markers, "ui.waveform"),
 	};
 
 	validateSeekMargins(normalized, "ui.waveform");
@@ -258,6 +260,7 @@ function normalizeMidiConfig<T extends TrackSwitchMidiConfig>(midi: T): T {
 			midi.playbackFollowMode,
 		),
 		timer: normalizeOptionalBoolean(midi.timer),
+		markers: normalizeMarkerDisplayConfig(midi.markers, "ui.midi"),
 	};
 
 	validateSeekMargins(normalized, "ui.midi");
@@ -457,6 +460,24 @@ function normalizeTrackMarkerConfig(
 		labelColumn = markers.labelColumn.trim();
 	}
 
+	return {
+		csv: normalizeRequiredMarkerString(markers.csv, "csv"),
+		timeColumn: normalizeRequiredMarkerString(markers.timeColumn, "timeColumn"),
+		labelColumn: labelColumn,
+	};
+}
+
+function normalizeMarkerDisplayConfig(
+	markers: TrackMarkerDisplayConfig | undefined,
+	label: string,
+): TrackMarkerDisplayConfig | undefined {
+	if (markers === undefined) {
+		return undefined;
+	}
+
+	const markerRecord = toConfigRecord(markers, `${label}.markers`);
+	assertAllowedKeys(markerRecord, markerDisplayAllowedKeys, `${label}.markers`);
+
 	let color = "black";
 	if (markers.color !== undefined) {
 		if (
@@ -464,14 +485,14 @@ function normalizeTrackMarkerConfig(
 			markers.color.trim().length === 0
 		) {
 			throw new Error(
-				"Invalid track markers configuration: color must be a valid CSS color.",
+				`Invalid ${label}.markers configuration: color must be a valid CSS color.`,
 			);
 		}
 
 		color = markers.color.trim();
 		if (!CSS.supports("color", color)) {
 			throw new Error(
-				`Invalid track markers configuration: color is not a valid CSS color: ${color}`,
+				`Invalid ${label}.markers configuration: color is not a valid CSS color: ${color}`,
 			);
 		}
 	}
@@ -482,15 +503,12 @@ function normalizeTrackMarkerConfig(
 		markers.lineStyle !== "dashed"
 	) {
 		throw new Error(
-			"Invalid track markers configuration: lineStyle must be 'solid' or 'dashed'.",
+			`Invalid ${label}.markers configuration: lineStyle must be 'solid' or 'dashed'.`,
 		);
 	}
 
 	return {
-		csv: normalizeRequiredMarkerString(markers.csv, "csv"),
-		timeColumn: normalizeRequiredMarkerString(markers.timeColumn, "timeColumn"),
-		labelColumn: labelColumn,
-		color: color,
+		color,
 		lineStyle: markers.lineStyle ?? "dashed",
 	};
 }
@@ -562,12 +580,21 @@ export function normalizeUiElement(
 
 	if (element.type === "image") {
 		validateSeekMargins(element, "ui.image");
-		return element;
+		return {
+			...element,
+			markers: normalizeMarkerDisplayConfig(element.markers, "ui.image"),
+		};
 	}
 
 	if (element.type === "perTrackImage") {
 		validateSeekMargins(element, "ui.perTrackImage");
-		return element;
+		return {
+			...element,
+			markers: normalizeMarkerDisplayConfig(
+				element.markers,
+				"ui.perTrackImage",
+			),
+		};
 	}
 
 	throw new Error(`Invalid ui element type: ${elementType}`);
@@ -660,7 +687,7 @@ function injectPerTrackImage(
 function createImageElement(
 	image: Pick<
 		TrackSwitchImageConfig,
-		"seekable" | "style" | "seekMarginLeft" | "seekMarginRight"
+		"seekable" | "markers" | "style" | "seekMarginLeft" | "seekMarginRight"
 	>,
 ): HTMLImageElement {
 	const imageElement = document.createElement("img");
@@ -668,6 +695,7 @@ function createImageElement(
 	if (image.seekable) {
 		imageElement.classList.add("seekable");
 	}
+	setMarkerDisplayAttributes(imageElement, image.markers);
 
 	if (typeof image.style === "string") {
 		imageElement.setAttribute("data-style", image.style);
@@ -712,6 +740,7 @@ function injectWaveform(
 		waveform.playbackFollowMode || "off",
 	);
 	canvas.setAttribute("data-waveform-time-axis", waveform.timeAxis || "shared");
+	setMarkerDisplayAttributes(canvas, waveform.markers);
 
 	if (typeof waveform.timer === "boolean") {
 		canvas.setAttribute("data-waveform-timer", String(waveform.timer));
@@ -764,6 +793,7 @@ function injectMidi(root: HTMLElement, midi: TrackSwitchMidiConfig): void {
 		"data-midi-playback-follow-mode",
 		midi.playbackFollowMode || "off",
 	);
+	setMarkerDisplayAttributes(canvas, midi.markers);
 
 	if (typeof midi.timer === "boolean") {
 		canvas.setAttribute("data-midi-timer", String(midi.timer));

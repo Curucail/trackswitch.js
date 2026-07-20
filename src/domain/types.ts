@@ -11,6 +11,9 @@ export interface TrackMarkerConfig {
 	csv: string;
 	timeColumn: string;
 	labelColumn?: string;
+}
+
+export interface TrackMarkerDisplayConfig {
 	color?: string;
 	lineStyle?: TrackMarkerLineStyle;
 }
@@ -20,8 +23,6 @@ export interface TrackMarker {
 	trackIndex: number;
 	time: number;
 	label: string;
-	color: string;
-	lineStyle: TrackMarkerLineStyle;
 }
 
 export interface TrackAlignmentConfig {
@@ -76,6 +77,7 @@ export interface TrackSwitchFeatures {
 export interface TrackSwitchImageConfig {
 	src: string;
 	seekable?: boolean;
+	markers?: TrackMarkerDisplayConfig;
 	style?: string;
 	seekMarginLeft?: number;
 	seekMarginRight?: number;
@@ -83,6 +85,7 @@ export interface TrackSwitchImageConfig {
 
 export interface TrackSwitchPerTrackImageConfig {
 	seekable?: boolean;
+	markers?: TrackMarkerDisplayConfig;
 	style?: string;
 	seekMarginLeft?: number;
 	seekMarginRight?: number;
@@ -98,6 +101,7 @@ export interface TrackSwitchWaveformConfig {
 	timer?: boolean;
 	alignedPlayhead?: boolean;
 	showAlignmentPoints?: boolean;
+	markers?: TrackMarkerDisplayConfig;
 	style?: string;
 	seekMarginLeft?: number;
 	seekMarginRight?: number;
@@ -110,6 +114,7 @@ export interface TrackSwitchMidiConfig {
 	maxZoom?: number;
 	playbackFollowMode?: WaveformPlaybackFollowMode;
 	timer?: boolean;
+	markers?: TrackMarkerDisplayConfig;
 	style?: string;
 	seekMarginLeft?: number;
 	seekMarginRight?: number;

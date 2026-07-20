@@ -13,6 +13,7 @@ import {
 	formatBytesToHumanReadable,
 	formatSecondsToHHMMSSmmm,
 } from "../shared/format";
+import { copyMarkerDisplayAttributes } from "../shared/marker-display";
 import { clampPercent } from "../shared/math";
 import { getHostIconSlot, renderIconSlotHtml, setHostIcon } from "./icons";
 
@@ -1188,6 +1189,7 @@ export function wrapSeekableImages(ctx: any): any {
 			);
 			const seekWrap = wrapper.querySelector(":scope > .seekwrap");
 			if (seekWrap instanceof HTMLElement) {
+				copyMarkerDisplayAttributes(candidate, seekWrap);
 				const perTrack =
 					candidate.getAttribute("data-per-track-image") === "true";
 				seekWrap.setAttribute(

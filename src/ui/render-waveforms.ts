@@ -10,6 +10,7 @@ import type {
 } from "../engine/waveform-engine";
 import { sanitizeInlineStyle } from "../shared/dom";
 import { formatSecondsToHHMMSSmmm } from "../shared/format";
+import { copyMarkerDisplayAttributes } from "../shared/marker-display";
 import { clampPercent } from "../shared/math";
 import {
 	parseWaveformSource,
@@ -675,6 +676,7 @@ export function wrapWaveformCanvases(ctx: any): any {
 			canvasElement.remove();
 
 			if (seekWrap instanceof HTMLElement) {
+				copyMarkerDisplayAttributes(canvasElement, seekWrap);
 				seekWrap.setAttribute("data-seek-surface", "waveform");
 				seekWrap.setAttribute(
 					"data-waveform-source",

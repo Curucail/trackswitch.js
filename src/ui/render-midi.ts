@@ -2,6 +2,7 @@ import { Midi } from "@tonejs/midi";
 import type { WaveformPlaybackFollowMode } from "../domain/types";
 import { sanitizeInlineStyle } from "../shared/dom";
 import { formatSecondsToHHMMSSmmm } from "../shared/format";
+import { copyMarkerDisplayAttributes } from "../shared/marker-display";
 import { clampPercent } from "../shared/math";
 import {
 	clampTimelineValue,
@@ -458,6 +459,7 @@ export function wrapMidiCanvases(ctx: any): any {
 			if (!(seekWrap instanceof HTMLElement)) {
 				return;
 			}
+			copyMarkerDisplayAttributes(canvasElement, seekWrap);
 			seekWrap.setAttribute("data-seek-surface", "midi");
 
 			const originalHeight = Math.max(1, canvasElement.height);

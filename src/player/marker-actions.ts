@@ -175,6 +175,35 @@ export function snapLoopEndToMarker(
 	rawTime: number,
 	loopStart: number,
 ): number {
+	const movingForward = rawTime >= loopStart;
+	return snapTimeToMarker(
+		controller,
+		seekWrap,
+		event,
+		rawTime,
+		(surfaceTime) =>
+			movingForward
+				? surfaceTime >= loopStart + controller.loopMinDistance
+				: surfaceTime <= loopStart - controller.loopMinDistance,
+	);
+}
+
+export function snapLoopStartToMarker(
+	controller: TrackSwitchControllerImpl,
+	seekWrap: HTMLElement | null,
+	event: ControllerPointerEvent,
+	rawTime: number,
+): number {
+	return snapTimeToMarker(controller, seekWrap, event, rawTime);
+}
+
+function snapTimeToMarker(
+	controller: TrackSwitchControllerImpl,
+	seekWrap: HTMLElement | null,
+	event: ControllerPointerEvent,
+	rawTime: number,
+	isCandidate: (surfaceTime: number) => boolean = () => true,
+): number {
 	if (!seekWrap || !Number.isFinite(event.pageX)) {
 		return rawTime;
 	}
@@ -187,13 +216,7 @@ export function snapLoopEndToMarker(
 			const surfaceTime = Number(
 				marker.getAttribute("data-marker-surface-time"),
 			);
-			const movingForward = rawTime >= loopStart;
-			if (
-				!Number.isFinite(surfaceTime) ||
-				(movingForward
-					? surfaceTime < loopStart + controller.loopMinDistance
-					: surfaceTime > loopStart - controller.loopMinDistance)
-			) {
+			if (!Number.isFinite(surfaceTime) || !isCandidate(surfaceTime)) {
 				return;
 			}
 

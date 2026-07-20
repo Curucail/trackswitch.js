@@ -4,6 +4,7 @@ import type {
 	WaveformSource,
 } from "../domain/types";
 import { formatSecondsToHHMMSSmmm } from "../shared/format";
+import { readMarkerDisplayConfig } from "../shared/marker-display";
 import type { MidiSeekSurfaceMetadata } from "./render-midi";
 
 export interface MarkerPlacement {
@@ -55,6 +56,10 @@ function renderMarkerLayer(
 	resolvePlacement: MarkerPlacementResolver,
 ): void {
 	seekWrap.querySelector(":scope > .timeline-marker-layer")?.remove();
+	const display = readMarkerDisplayConfig(seekWrap);
+	if (!display) {
+		return;
+	}
 
 	const entries: MarkerRenderEntry[] = [];
 	markerRuntimes.forEach((runtime) => {
@@ -103,7 +108,7 @@ function renderMarkerLayer(
 	entries.forEach((entry, index) => {
 		const marker = seekWrap.ownerDocument.createElement("button");
 		marker.type = "button";
-		marker.className = `timeline-marker timeline-marker-${entry.marker.lineStyle}`;
+		marker.className = `timeline-marker timeline-marker-${display.lineStyle}`;
 		marker.tabIndex = index === 0 ? 0 : -1;
 		marker.setAttribute("aria-label", createMarkerAriaLabel(entry));
 		marker.title = createMarkerAriaLabel(entry);
@@ -127,7 +132,7 @@ function renderMarkerLayer(
 		if (entry.placement.surfaceTime / entry.placement.duration >= 0.75) {
 			marker.classList.add("timeline-marker-label-before");
 		}
-		marker.style.setProperty("--ts-marker-highlight-color", entry.marker.color);
+		marker.style.setProperty("--ts-marker-highlight-color", display.color);
 
 		if (entry.marker.label.length > 0) {
 			const label = seekWrap.ownerDocument.createElement("span");

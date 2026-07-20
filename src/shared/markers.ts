@@ -49,7 +49,7 @@ export function parseTrackMarkers(
 	const parsed = Papa.parse<RawMarkerRow>(
 		String(csvText || "").replace(/^\uFEFF/, ""),
 		{
-			delimiter: ",",
+			delimiter: "",
 			header: true,
 			dynamicTyping: false,
 			skipEmptyLines: "greedy",
@@ -120,8 +120,6 @@ export function parseTrackMarkers(
 		trackIndex: trackIndex,
 		time: marker.time,
 		label: config.labelColumn ? marker.label : String(index + 1),
-		color: config.color ?? "black",
-		lineStyle: config.lineStyle ?? "dashed",
 	}));
 }
 

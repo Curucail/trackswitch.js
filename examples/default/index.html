@@ -33,12 +33,20 @@
                     {
                         "type": "image",
                         "src": "data/cover.png",
-                        "seekable": true
+                        "seekable": true,
+                        "markers": {
+                            "color": "#ed8c01",
+                            "lineStyle": "solid"
+                        }
                     },
                     {
                         "type": "waveform",
                         "height": 150,
-                        "waveformBarWidth": 1
+                        "waveformBarWidth": 1,
+                        "markers": {
+                            "color": "#ed8c01",
+                            "lineStyle": "solid"
+                        }
                     },
                     {
                         "type": "text",
@@ -58,9 +66,7 @@
                                 "markers": {
                                     "csv": "data/violins-markers.csv",
                                     "timeColumn": "position_seconds",
-                                    "labelColumn": "annotation",
-                                    "color": "#ed8c01",
-                                    "lineStyle": "solid"
+                                    "labelColumn": "annotation"
                                 }
                             },
                             {
@@ -70,8 +76,7 @@
                                 "sources": [{ "src": "data/synth.mp3" }],
                                 "markers": {
                                     "csv": "data/synth-markers.csv",
-                                    "timeColumn": "cue_at",
-                                    "lineStyle": "dashed"
+                                    "timeColumn": "cue_at"
                                 }
                             },
                             {

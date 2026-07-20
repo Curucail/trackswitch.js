@@ -770,7 +770,7 @@ Notes:
 
 ### Track Marker Options {#track-marker-options}
 
-Add one `markers` block to a track to annotate its waveform and image timelines from CSV data:
+Add one `markers` block to a track to load its timestamped marker data from CSV:
 
 ```javascript
 {
@@ -780,8 +780,6 @@ Add one `markers` block to a track to annotate its waveform and image timelines 
     csv: 'track1-markers.csv',
     timeColumn: 'position_seconds',
     labelColumn: 'annotation',
-    color: '#ed8c01',
-    lineStyle: 'dashed',
   },
 }
 ```
@@ -798,8 +796,6 @@ position_seconds,annotation
 | `csv` | `string` | `-` | URL of the marker CSV. |
 | `timeColumn` | `string` | `-` | CSV column containing local track time in seconds. |
 | `labelColumn?` | `string` | none | CSV column containing marker labels. Empty cells stay empty. |
-| `color?` | CSS color string | `black` | Full-opacity marker color on hover, focus, or touch activation. |
-| `lineStyle?` | `'solid' \| 'dashed'` | `'solid'` | Style of the vertical marker line. |
 
 Notes:
 
@@ -807,10 +803,21 @@ Notes:
 - Without `labelColumn`, labels are the chronological marker numbers `1`, `2`, `3`, and so on. With `labelColumn`, the CSV value is always used, including an empty value.
 - IDs and numeric labels are assigned after chronological sorting. Rows at the same time keep their CSV order.
 - Marker times use the track's local playable timeline and must stay within its effective duration. Invalid files, missing columns, non-numeric times, negative times, and out-of-range times stop player loading with an error.
-- Markers rest as translucent gray. Hovering, focusing, or pressing one reveals its label and configured highlight color. Activate a marker to seek directly to it.
-- Waveforms show markers for the tracks they render. Per-track images show the current track's markers. Global images show the merged markers of selected tracks with audible per-track volume; marker-only overlays do not make an otherwise non-seekable image background seekable.
+- Marker data is loaded independently of its presentation. Add a `markers` block to each supported UI element where the markers should be visible.
+- On visible marker surfaces, waveforms use the tracks selected by `waveformSource`, per-track images use the current track, and global images and MIDI views merge the selected tracks with audible per-track volume.
 - When at least one track configures markers, the main control bar adds previous/next marker buttons. Equal mapped times are one navigation stop.
 - Right-drag loop selection can snap its moving endpoint to a marker within 12 screen pixels. Its starting point remains exact.
+
+#### UI Marker Display Options
+
+The optional `markers` block on `image`, `perTrackImage`, `waveform`, and `midi` elements makes track markers visible on that element:
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `color?` | CSS color string | `black` | Full-opacity marker color on hover, focus, or touch activation. |
+| `lineStyle?` | `'solid' \| 'dashed'` | `'dashed'` | Style of the vertical marker line. |
+
+Markers rest as translucent gray. Hovering, focusing, or pressing one reveals its label and configured highlight color. Activating a marker seeks directly to it. An element without a `markers` block does not render markers.
 
 ## Visualizations {#visualizations}
 
@@ -860,6 +867,10 @@ Example:
   seekable: true,
   seekMarginLeft: 5,
   seekMarginRight: 5,
+  markers: {
+    color: '#ed8c01',
+    lineStyle: 'dashed',
+  },
   style: 'margin: 12px auto;',
 }
 ```
@@ -870,6 +881,7 @@ Section options:
 | --- | --- | --- | --- |
 | `src` | `string` | `-` | The image file to show. |
 | `seekable?` | `boolean` | `false` | Lets listeners click the image to jump to a different point in the audio. |
+| `markers?` | `object` | none | Shows track markers and configures their appearance on this image. |
 | `seekMarginLeft?` | `number` | `0` | Leaves a non-seekable area on the left side of the image. |
 | `seekMarginRight?` | `number` | `0` | Leaves a non-seekable area on the right side of the image. |
 | `style?` | `string` | none | Lets you fine-tune the look of the section with CSS. |
@@ -884,6 +896,10 @@ Example:
 {
   type: 'perTrackImage',
   seekable: false,
+  markers: {
+    color: '#ed8c01',
+    lineStyle: 'dashed',
+  },
   style: 'margin: 12px auto;',
 }
 ```
@@ -893,6 +909,7 @@ Section options:
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `seekable?` | `boolean` | `false` | Lets listeners click the current track image to jump in time. |
+| `markers?` | `object` | none | Shows the current track's markers and configures their appearance. |
 | `seekMarginLeft?` | `number` | `0` | Leaves a non-seekable area on the left side of the image. |
 | `seekMarginRight?` | `number` | `0` | Leaves a non-seekable area on the right side of the image. |
 | `style?` | `string` | none | Lets you fine-tune the look or spacing of the section with CSS. |
@@ -917,6 +934,10 @@ Example:
   waveformSource: 'audible',
   playbackFollowMode: 'center',
   timer: true,
+  markers: {
+    color: '#ed8c01',
+    lineStyle: 'dashed',
+  },
   style: 'margin: 16px 0;',
 }
 ```
@@ -934,6 +955,7 @@ Section options:
 | `timer?` | `boolean` | Standard: `false`; Sync: `true` | Shows a small time label inside the waveform panel. |
 | `alignedPlayhead?` | `boolean` | `false` | Draws a diagonal Z-shaped indicator that shows where the reference timeline position is relative to this track's local playhead. Only has an effect in sync mode and requires `waveformSource` to be a track index (number). |
 | `showAlignmentPoints?` | `boolean` | `false` | Draws a thin dashed Z-shaped line for every alignment anchor point that exists, showing the full warping path across the waveform. Only has an effect in sync mode and requires `waveformSource` to be a track index (number). |
+| `markers?` | `object` | none | Shows markers from the tracks selected by `waveformSource` and configures their appearance. |
 | `seekMarginLeft?` | `number` | `0` | Leaves a non-seekable area on the left side. |
 | `seekMarginRight?` | `number` | `0` | Leaves a non-seekable area on the right side. |
 | `style?` | `string` | none | Lets you fine-tune the look or spacing of the section with CSS. |
@@ -960,6 +982,10 @@ Example:
   maxZoom: 5,
   playbackFollowMode: 'center',
   timer: true,
+  markers: {
+    color: '#ed8c01',
+    lineStyle: 'dashed',
+  },
   style: 'margin: 16px 0;',
 }
 ```
@@ -974,6 +1000,7 @@ Section options:
 | `maxZoom?` | `number` | `5` | The closest zoom level listeners can reach, in seconds. Smaller numbers allow tighter zoom. |
 | `playbackFollowMode?` | `'off' | 'center' | 'jump'` | `'off'` | Decides whether the MIDI view follows playback automatically. |
 | `timer?` | `boolean` | `false` | Shows a small time label inside the MIDI panel. |
+| `markers?` | `object` | none | Shows the active tracks' markers and configures their appearance. |
 | `seekMarginLeft?` | `number` | `0` | Leaves a non-seekable area on the left side. |
 | `seekMarginRight?` | `number` | `0` | Leaves a non-seekable area on the right side. |
 | `style?` | `string` | none | Lets you fine-tune the look or spacing of the section with CSS. |

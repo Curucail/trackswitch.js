@@ -40,6 +40,7 @@ export type {
 	TrackLoadedSource,
 	TrackMarker,
 	TrackMarkerConfig,
+	TrackMarkerDisplayConfig,
 	TrackMarkerLineStyle,
 	TrackRuntime,
 	TrackSourceDefinition,

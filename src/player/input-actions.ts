@@ -20,13 +20,14 @@ import {
 	toggleSoloFromPointerEvent,
 } from "./input-track-controls";
 import {
+	activateTimelineMarker,
+	moveTimelineMarkerFocus,
+	snapLoopStartToMarker,
+} from "./marker-actions";
+import {
 	isKeyboardControllerActive,
 	setActiveKeyboardController,
 } from "./player-registry";
-import {
-	activateTimelineMarker,
-	moveTimelineMarkerFocus,
-} from "./marker-actions";
 
 export function setKeyboardActive(ctx: any): any {
 	return function (this: any) {
@@ -187,9 +188,14 @@ export function onSeekStart(ctx: any, event: any): any {
 				return;
 			}
 
-			this.loopDragStart = seekMetrics.time;
-			const loopStartReference = seekTimelineContext.toReferenceTime(
+			this.loopDragStart = snapLoopStartToMarker(
+				this,
+				this.seekingElement,
+				event,
 				seekMetrics.time,
+			);
+			const loopStartReference = seekTimelineContext.toReferenceTime(
+				this.loopDragStart,
 			);
 			this.state = {
 				...this.state,
@@ -223,6 +229,10 @@ export function onSeekStart(ctx: any, event: any): any {
 
 export function onTimelineMarkerActivate(ctx: any, event: any): any {
 	return function (this: any, event: any) {
+		if (event.which !== undefined && event.which !== 1) {
+			return;
+		}
+
 		const target = eventTargetAsElement(event.target ?? null);
 		const marker = target?.closest(".timeline-marker");
 		if (!(marker instanceof HTMLElement) || !this.root.contains(marker)) {
