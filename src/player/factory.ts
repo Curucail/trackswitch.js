@@ -8,5 +8,5 @@ export function createTrackSwitch(
 	init: TrackSwitchInit,
 ): TrackSwitchController {
 	ensureTrackSwitchStyles(rootElement);
-	return new TrackSwitchControllerImpl(rootElement, normalizeInit(rootElement, init));
+	return new TrackSwitchControllerImpl(rootElement, normalizeInit(init));
 }

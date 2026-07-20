@@ -1,6 +1,7 @@
 import type { ScaleLinear, Selection } from "d3";
 import type {
 	AudioDownloadSizeInfo,
+	MarkerLayerConfig,
 	TrackListGroup,
 	TrackRuntime,
 	TrackSwitchFeatures,
@@ -8,7 +9,11 @@ import type {
 	WaveformPlaybackFollowMode,
 	WaveformSourceIndex,
 	WaveformTimeAxis,
+	TrackSwitchViewConfig,
 } from "../domain/types";
+import type { ViewNormalizeContext } from "../config/ui-elements";
+import { formatTimelineValue, type TimelineUnit } from "../timeline/timeline";
+import { formatSecondsToHHMMSSmmm } from "../shared/format";
 import type {
 	TrackTimelineProjector,
 	WaveformEngine,
@@ -24,6 +29,7 @@ import * as viewRendererMidi from "./render-midi";
 import * as viewRendererSeek from "./render-seek";
 import * as viewRendererWarping from "./render-warping-matrix";
 import * as viewRendererWaveform from "./render-waveforms";
+import { renderConfiguredViews } from "./render-configured-views";
 
 type SvgSelection = Selection<SVGSVGElement, unknown, null, undefined>;
 type GroupSelection = Selection<SVGGElement, unknown, null, undefined>;
@@ -41,6 +47,13 @@ export interface WaveformTimelineContext {
 	getTrackAlignmentPoints(
 		trackIndex: number,
 	): Array<{ referenceTime: number; trackTime: number }>;
+}
+
+export interface ConfiguredViewHost {
+	view: TrackSwitchViewConfig;
+	waveformSource?: WaveformSourceIndex;
+	alignmentTimeline?: string;
+	source?: string;
 }
 
 export interface SheetMusicHostConfig {
@@ -268,11 +281,20 @@ export class ViewRenderer {
 	public trackGroups: TrackListGroup[];
 	public hasMarkers = false;
 	public hasAlignment = false;
+	public referenceTimelineUnit: TimelineUnit = "seconds";
 
 	public readonly waveformSeekSurfaces: WaveformSeekSurfaceMetadata[] = [];
 	public readonly midiSeekSurfaces: MidiSeekSurfaceMetadata[] = [];
 	public readonly sheetMusicHosts: SheetMusicHostConfig[] = [];
 	public readonly warpingMatrixHosts: WarpingMatrixHostMetadata[] = [];
+	public readonly configuredViewHosts = new WeakMap<
+		Element,
+		ConfiguredViewHost
+	>();
+	public readonly markerLayersBySeekWrap = new WeakMap<
+		HTMLElement,
+		MarkerLayerConfig[]
+	>();
 	public waveformTileRefreshFrameId: number | null = null;
 	public latestWaveformRenderInput: LatestWaveformRenderInput | null = null;
 	public readonly onWarpingMatrixSeek?: (referenceTime: number) => void;
@@ -308,6 +330,47 @@ export class ViewRenderer {
 	): void {
 		this.presetEntries = presetEntries;
 		this.trackGroups = trackGroups;
+	}
+
+	public renderViews(
+		views: TrackSwitchViewConfig[],
+		context: ViewNormalizeContext,
+	): void {
+		renderConfiguredViews(this, views, context);
+	}
+
+	public registerConfiguredViewHost(
+		element: Element,
+		definition: ConfiguredViewHost,
+	): void {
+		this.configuredViewHosts.set(element, definition);
+	}
+
+	public getConfiguredViewHost(element: Element): ConfiguredViewHost {
+		const definition = this.configuredViewHosts.get(element);
+		if (!definition) {
+			throw new Error("Missing typed view definition for rendered surface.");
+		}
+		return definition;
+	}
+
+	public registerSeekMarkerLayers(
+		seekWrap: HTMLElement,
+		layers: MarkerLayerConfig[] | undefined,
+	): void {
+		if (layers?.length) this.markerLayersBySeekWrap.set(seekWrap, layers);
+	}
+
+	public getSeekMarkerLayers(seekWrap: HTMLElement): MarkerLayerConfig[] {
+		return this.markerLayersBySeekWrap.get(seekWrap) ?? [];
+	}
+
+	public setReferenceTimelineUnit(unit: TimelineUnit): void {
+		this.referenceTimelineUnit = unit;
+	}
+
+	public formatReferenceTimelineValue(value: number): string {
+		return formatTimelineValue(this.referenceTimelineUnit, value);
 	}
 
 	public query(selector: string): HTMLElement | null {
@@ -617,6 +680,10 @@ export class ViewRenderer {
 		context: WarpingMatrixRenderContext | undefined,
 	): void {
 		viewRendererWarping.updateWarpingMatrix(this, host, context);
+	}
+
+	public drawDummyWarpingMatrices(): void {
+		viewRendererWarping.drawDummyWarpingMatrices(this);
 	}
 
 	public updateWarpingMatrixPlaybackState(
@@ -1125,12 +1192,18 @@ export class ViewRenderer {
 			return;
 		}
 
+		const surfaceKind = seekWrap.getAttribute("data-seek-surface");
+		const formatValue =
+			surfaceKind === "waveform" || surfaceKind === "midi"
+				? formatSecondsToHHMMSSmmm
+				: (value: number) => this.formatReferenceTimelineValue(value);
 		viewRendererSeek.updateSeekWrapVisuals(
 			seekWrap,
 			position,
 			duration,
 			loop,
 			this.features.looping,
+			formatValue,
 		);
 	}
 

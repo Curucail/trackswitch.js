@@ -10,15 +10,11 @@ import type {
 	TrackSwitchInit,
 	TrackSwitchViewConfig,
 } from "../domain/types";
-import {
-	injectConfiguredViews,
-	normalizeViewConfig,
-	type ViewNormalizeContext,
-} from "./ui-elements";
+import { normalizeViewConfig, type ViewNormalizeContext } from "./ui-elements";
 import { assertAllowedKeys, toConfigRecord } from "./validation";
 
 export const MEDIA_REQUIRED_ERROR =
-	"TrackSwitch requires at least one media entry of type \"audio\".";
+	'TrackSwitch requires at least one media entry of type "audio".';
 
 const initAllowedKeys = [
 	"media",
@@ -35,7 +31,12 @@ const alignmentAllowedKeys = [
 	"outside",
 	"duplicatePlacements",
 ] as const;
-const markerSetAllowedKeys = ["src", "timeline", "timeCol", "labelCol"] as const;
+const markerSetAllowedKeys = [
+	"src",
+	"timeline",
+	"timeCol",
+	"labelCol",
+] as const;
 const presetAllowedKeys = ["label", "tracks"] as const;
 const audioMediaAllowedKeys = [
 	"type",
@@ -70,7 +71,9 @@ function normalizeAlignmentConfig(
 	assertAllowedKeys(record, alignmentAllowedKeys, "alignment");
 
 	if (typeof alignment.src !== "string" || alignment.src.trim().length === 0) {
-		throw new Error("Invalid alignment configuration: src must be a non-empty string.");
+		throw new Error(
+			"Invalid alignment configuration: src must be a non-empty string.",
+		);
 	}
 	if (
 		typeof alignment.referenceTimeline !== "string" ||
@@ -135,7 +138,9 @@ function normalizeMarkersConfig(
 		const set = rawSet as MarkersConfig[string];
 
 		if (typeof set.src !== "string" || set.src.trim().length === 0) {
-			throw new Error(`Invalid markers.${setId} configuration: src must be a non-empty string.`);
+			throw new Error(
+				`Invalid markers.${setId} configuration: src must be a non-empty string.`,
+			);
 		}
 		if (typeof set.timeCol !== "string" || set.timeCol.trim().length === 0) {
 			throw new Error(
@@ -143,10 +148,15 @@ function normalizeMarkersConfig(
 			);
 		}
 		if (set.labelCol !== undefined && typeof set.labelCol !== "string") {
-			throw new Error(`Invalid markers.${setId} configuration: labelCol must be a string.`);
+			throw new Error(
+				`Invalid markers.${setId} configuration: labelCol must be a string.`,
+			);
 		}
 		if (set.timeline !== undefined) {
-			if (typeof set.timeline !== "string" || set.timeline.trim().length === 0) {
+			if (
+				typeof set.timeline !== "string" ||
+				set.timeline.trim().length === 0
+			) {
 				throw new Error(
 					`Invalid markers.${setId} configuration: timeline must be a non-empty string.`,
 				);
@@ -204,7 +214,10 @@ function normalizeSynchronizedSource(
 		return undefined;
 	}
 
-	const record = toConfigRecord(srcSynchronized, `media.${mediaId}.srcSynchronized`);
+	const record = toConfigRecord(
+		srcSynchronized,
+		`media.${mediaId}.srcSynchronized`,
+	);
 	assertAllowedKeys(
 		record,
 		synchronizedSourceAllowedKeys,
@@ -217,7 +230,10 @@ function normalizeSynchronizedSource(
 			`Invalid media.${mediaId}.srcSynchronized configuration: src must be a non-empty string.`,
 		);
 	}
-	if (typeof synced.timeline !== "string" || synced.timeline.trim().length === 0) {
+	if (
+		typeof synced.timeline !== "string" ||
+		synced.timeline.trim().length === 0
+	) {
 		throw new Error(
 			`Invalid media.${mediaId}.srcSynchronized configuration: timeline must be a non-empty string.`,
 		);
@@ -245,7 +261,9 @@ function normalizeMediaConfig(media: MediaConfig | undefined): {
 			assertAllowedKeys(entryRecord, audioMediaAllowedKeys, `media.${mediaId}`);
 			const entry = rawEntry as Extract<MediaConfig[string], { type: "audio" }>;
 			if (typeof entry.src !== "string" || entry.src.trim().length === 0) {
-				throw new Error(`Invalid media.${mediaId} configuration: src must be a non-empty string.`);
+				throw new Error(
+					`Invalid media.${mediaId} configuration: src must be a non-empty string.`,
+				);
 			}
 
 			normalizedMedia[mediaId] = { ...entry };
@@ -264,7 +282,10 @@ function normalizeMediaConfig(media: MediaConfig | undefined): {
 						endOffsetMs: entry.endOffsetMs,
 					},
 				],
-				syncedSources: normalizeSynchronizedSource(mediaId, entry.srcSynchronized),
+				syncedSources: normalizeSynchronizedSource(
+					mediaId,
+					entry.srcSynchronized,
+				),
 			});
 			return;
 		}
@@ -273,17 +294,28 @@ function normalizeMediaConfig(media: MediaConfig | undefined): {
 			assertAllowedKeys(entryRecord, midiMediaAllowedKeys, `media.${mediaId}`);
 			const entry = rawEntry as Extract<MediaConfig[string], { type: "midi" }>;
 			if (typeof entry.src !== "string" || entry.src.trim().length === 0) {
-				throw new Error(`Invalid media.${mediaId} configuration: src must be a non-empty string.`);
+				throw new Error(
+					`Invalid media.${mediaId} configuration: src must be a non-empty string.`,
+				);
 			}
 			normalizedMedia[mediaId] = { ...entry };
 			return;
 		}
 
 		if (type === "musicxml") {
-			assertAllowedKeys(entryRecord, musicxmlMediaAllowedKeys, `media.${mediaId}`);
-			const entry = rawEntry as Extract<MediaConfig[string], { type: "musicxml" }>;
+			assertAllowedKeys(
+				entryRecord,
+				musicxmlMediaAllowedKeys,
+				`media.${mediaId}`,
+			);
+			const entry = rawEntry as Extract<
+				MediaConfig[string],
+				{ type: "musicxml" }
+			>;
 			if (typeof entry.src !== "string" || entry.src.trim().length === 0) {
-				throw new Error(`Invalid media.${mediaId} configuration: src must be a non-empty string.`);
+				throw new Error(
+					`Invalid media.${mediaId} configuration: src must be a non-empty string.`,
+				);
 			}
 			normalizedMedia[mediaId] = { ...entry };
 			return;
@@ -308,7 +340,10 @@ export function normalizeTrackSwitchConfig(
 	}
 
 	const alignment = normalizeAlignmentConfig(init.alignment);
-	const markers = normalizeMarkersConfig(init.markers, alignment?.referenceTimeline);
+	const markers = normalizeMarkersConfig(
+		init.markers,
+		alignment?.referenceTimeline,
+	);
 	const trackIdSet = new Set(tracks.map((track) => track.id));
 	const presets = normalizePresetsConfig(init.presets, trackIdSet);
 
@@ -317,11 +352,15 @@ export function normalizeTrackSwitchConfig(
 		trackIds: tracks.map((track) => track.id),
 		markerSetIds: new Set(Object.keys(markers)),
 		hasAlignment: !!alignment,
-		alignmentTimelines: new Set(alignment ? Object.keys(alignment.timelines) : []),
+		alignmentTimelines: new Set(
+			alignment ? Object.keys(alignment.timelines) : [],
+		),
 	};
 
 	if (!Array.isArray(init.views) || init.views.length === 0) {
-		throw new Error("Invalid init configuration: views must be a non-empty array.");
+		throw new Error(
+			"Invalid init configuration: views must be a non-empty array.",
+		);
 	}
 
 	const views: TrackSwitchViewConfig[] = init.views.map((view) =>
@@ -340,19 +379,7 @@ export function normalizeTrackSwitchConfig(
 }
 
 export function normalizeInit(
-	root: HTMLElement,
 	init: TrackSwitchInit,
 ): NormalizedTrackSwitchConfig {
-	const normalized = normalizeTrackSwitchConfig(init);
-	const viewCtx: ViewNormalizeContext = {
-		media: normalized.media,
-		trackIds: normalized.tracks.map((track) => track.id),
-		markerSetIds: new Set(Object.keys(normalized.markers)),
-		hasAlignment: !!normalized.alignment,
-		alignmentTimelines: new Set(
-			normalized.alignment ? Object.keys(normalized.alignment.timelines) : [],
-		),
-	};
-	injectConfiguredViews(root, normalized.views, viewCtx);
-	return normalized;
+	return normalizeTrackSwitchConfig(init);
 }

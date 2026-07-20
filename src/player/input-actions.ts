@@ -269,7 +269,8 @@ export function onTimelineMarkerKeydown(ctx: any, event: any): any {
 			return;
 		}
 
-		if (event.key === "Enter" || event.key === " ") {
+		// Space remains the global play/pause shortcut while a marker has focus.
+		if (event.key === "Enter") {
 			event.preventDefault();
 			event.stopPropagation();
 			activateTimelineMarker(this, marker);

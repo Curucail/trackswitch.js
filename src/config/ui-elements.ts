@@ -1,7 +1,6 @@
 import type {
 	MarkerLayerConfig,
 	MediaConfig,
-	MediaId,
 	TrackId,
 	TrackSwitchImageViewConfig,
 	TrackSwitchMidiViewConfig,
@@ -15,10 +14,9 @@ import type {
 	TrackSwitchWaveformViewConfig,
 	WaveformPlaybackFollowMode,
 	WaveformSourceIndex,
+	WaveformTimeAxis,
 } from "../domain/types";
-import { setMarkerLayersAttribute } from "../shared/marker-display";
 import { clampPercent } from "../shared/math";
-import { serializeWaveformSource } from "../shared/waveform-source";
 import {
 	assertAllowedKeys,
 	normalizeOptionalBoolean,
@@ -51,6 +49,7 @@ const uiWaveformAllowedKeys = [
 	"waveformBarWidth",
 	"maxZoom",
 	"playbackFollowMode",
+	"timeAxis",
 	"timer",
 	"alignedPlayhead",
 	"markerLayers",
@@ -99,7 +98,12 @@ const uiTextAllowedKeys = [
 	"align",
 	"style",
 ] as const;
-const markerLayerAllowedKeys = ["set", "color", "line", "foldToReference"] as const;
+const markerLayerAllowedKeys = [
+	"set",
+	"color",
+	"line",
+	"foldToReference",
+] as const;
 
 const uiAllowedKeysByType: Record<string, readonly string[]> = {
 	image: uiImageAllowedKeys,
@@ -119,10 +123,6 @@ export interface ViewNormalizeContext {
 	markerSetIds: ReadonlySet<string>;
 	hasAlignment: boolean;
 	alignmentTimelines: ReadonlySet<string>;
-}
-
-function toMarginString(value: number | undefined): string {
-	return String(clampPercent(value));
 }
 
 function toCanvasSize(value: number | undefined, fallback: number): number {
@@ -169,6 +169,18 @@ function normalizeWaveformPlaybackFollowMode(
 	return "off";
 }
 
+function normalizeWaveformTimeAxis(value: unknown): WaveformTimeAxis {
+	if (value === undefined || value === "shared") {
+		return "shared";
+	}
+	if (value === "individual") {
+		return "individual";
+	}
+	throw new Error(
+		"Invalid waveform configuration: timeAxis must be 'shared' or 'individual'.",
+	);
+}
+
 function validateSeekMargins(
 	config: { seekMarginLeft?: number; seekMarginRight?: number },
 	label: string,
@@ -199,7 +211,9 @@ function normalizeMarkerLayers(
 	}
 
 	if (!Array.isArray(layers)) {
-		throw new Error(`Invalid ${label} configuration: markerLayers must be an array.`);
+		throw new Error(
+			`Invalid ${label} configuration: markerLayers must be an array.`,
+		);
 	}
 
 	return layers.map((layer) => {
@@ -252,7 +266,10 @@ function normalizeMarkerLayers(
 	});
 }
 
-function resolveTrackIndex(ctx: ViewNormalizeContext, trackId: TrackId): number {
+function resolveTrackIndex(
+	ctx: ViewNormalizeContext,
+	trackId: TrackId,
+): number {
 	return ctx.trackIds.indexOf(trackId);
 }
 
@@ -308,7 +325,9 @@ function normalizeImageConfig(
 	ctx: ViewNormalizeContext,
 ): TrackSwitchImageViewConfig {
 	if (typeof image.src !== "string" || image.src.trim().length === 0) {
-		throw new Error("Invalid image configuration: src must be a non-empty string.");
+		throw new Error(
+			"Invalid image configuration: src must be a non-empty string.",
+		);
 	}
 	validateSeekMargins(image, "image");
 	return {
@@ -324,7 +343,11 @@ function normalizePerTrackImageConfig(
 	validateSeekMargins(image, "perTrackImage");
 	return {
 		...image,
-		markerLayers: normalizeMarkerLayers(image.markerLayers, "perTrackImage", ctx),
+		markerLayers: normalizeMarkerLayers(
+			image.markerLayers,
+			"perTrackImage",
+			ctx,
+		),
 	};
 }
 
@@ -339,13 +362,29 @@ function normalizeWaveformConfig(
 		playbackFollowMode: normalizeWaveformPlaybackFollowMode(
 			waveform.playbackFollowMode,
 		),
+		timeAxis: normalizeWaveformTimeAxis(waveform.timeAxis),
 		timer: normalizeOptionalBoolean(waveform.timer),
 		alignedPlayhead: normalizeOptionalBoolean(waveform.alignedPlayhead),
 		markerLayers: normalizeMarkerLayers(waveform.markerLayers, "waveform", ctx),
 	};
 
-	// Validated for the side effect of rejecting bad sourceTracks shapes/references.
-	resolveSourceTracksIndex(normalized.sourceTracks, ctx, "waveform");
+	const waveformSource = resolveSourceTracksIndex(
+		normalized.sourceTracks,
+		ctx,
+		"waveform",
+	);
+	if (normalized.timeAxis === "individual") {
+		if (!ctx.hasAlignment) {
+			throw new Error(
+				"Invalid waveform configuration: timeAxis 'individual' requires an alignment block.",
+			);
+		}
+		if (typeof waveformSource !== "number") {
+			throw new Error(
+				"Invalid waveform configuration: timeAxis 'individual' requires exactly one source track.",
+			);
+		}
+	}
 	validateSeekMargins(normalized, "waveform");
 	return normalized;
 }
@@ -355,7 +394,9 @@ function normalizeMidiConfig(
 	ctx: ViewNormalizeContext,
 ): TrackSwitchMidiViewConfig {
 	if (typeof midi.mediaID !== "string" || midi.mediaID.trim().length === 0) {
-		throw new Error("Invalid midi configuration: mediaID must be a non-empty string.");
+		throw new Error(
+			"Invalid midi configuration: mediaID must be a non-empty string.",
+		);
 	}
 	const entry = ctx.media[midi.mediaID];
 	if (!entry || entry.type !== "midi") {
@@ -368,7 +409,9 @@ function normalizeMidiConfig(
 		...midi,
 		height: toCanvasSize(midi.height, 180),
 		maxZoom: normalizeWaveformMaxZoom(midi.maxZoom),
-		playbackFollowMode: normalizeWaveformPlaybackFollowMode(midi.playbackFollowMode),
+		playbackFollowMode: normalizeWaveformPlaybackFollowMode(
+			midi.playbackFollowMode,
+		),
 		timer: normalizeOptionalBoolean(midi.timer),
 		markerLayers: normalizeMarkerLayers(midi.markerLayers, "midi", ctx),
 	};
@@ -443,7 +486,9 @@ function normalizeWarpingMatrixConfig(
 		);
 	}
 	if (warpingMatrix.x === warpingMatrix.y) {
-		throw new Error("Invalid warpingMatrix configuration: x and y must differ.");
+		throw new Error(
+			"Invalid warpingMatrix configuration: x and y must differ.",
+		);
 	}
 	if (!ctx.alignmentTimelines.has(warpingMatrix.x)) {
 		throw new Error(
@@ -558,326 +603,4 @@ export function normalizeViewConfig(
 		default:
 			throw new Error(`Invalid view type: ${viewType}`);
 	}
-}
-
-// ═══════════ DOM injection (legacy attribute-driven rendering bridge) ═══════════
-
-function injectWarpingMatrix(
-	root: HTMLElement,
-	warpingMatrix: TrackSwitchWarpingMatrixViewConfig,
-): void {
-	const container = document.createElement("div");
-	container.className = "warping-matrix";
-
-	if (typeof warpingMatrix.style === "string") {
-		container.setAttribute("data-warping-matrix-style", warpingMatrix.style);
-	}
-	if (warpingMatrix.height !== undefined) {
-		container.setAttribute(
-			"data-warping-matrix-height",
-			String(warpingMatrix.height),
-		);
-	}
-	if (warpingMatrix.tempoSmoothingSeconds !== undefined) {
-		container.setAttribute(
-			"data-warping-matrix-tempo-smoothing-seconds",
-			String(warpingMatrix.tempoSmoothingSeconds),
-		);
-	}
-	container.setAttribute("data-warping-matrix-x", warpingMatrix.x);
-	container.setAttribute("data-warping-matrix-y", warpingMatrix.y);
-
-	root.appendChild(container);
-}
-
-function injectTrackList(root: HTMLElement, groupIndex: number): void {
-	const container = document.createElement("div");
-	container.className = "track-group ts-stack-section";
-	container.setAttribute("data-track-group-index", String(groupIndex));
-	root.appendChild(container);
-}
-
-function injectText(root: HTMLElement, text: TrackSwitchTextViewConfig): void {
-	const container = document.createElement("div");
-	container.className = "ts-text";
-	container.textContent = text.text;
-	container.setAttribute("data-ts-text-align", text.align || "center");
-
-	if (text.bold === true) {
-		container.setAttribute("data-ts-text-bold", "true");
-	}
-	if (text.italic === true) {
-		container.setAttribute("data-ts-text-italic", "true");
-	}
-	if (text.fontSize !== undefined) {
-		container.setAttribute("data-ts-text-font-size", String(text.fontSize));
-	}
-	if (typeof text.style === "string") {
-		container.setAttribute("data-ts-text-style", text.style);
-	}
-
-	root.appendChild(container);
-}
-
-function injectImage(
-	root: HTMLElement,
-	image: TrackSwitchImageViewConfig,
-): void {
-	const imageElement = createImageElement(image);
-	imageElement.src = image.src;
-	root.appendChild(imageElement);
-}
-
-function injectPerTrackImage(
-	root: HTMLElement,
-	image: TrackSwitchPerTrackImageViewConfig,
-): void {
-	const imageElement = createImageElement(image);
-	imageElement.classList.add("per-track-image");
-	imageElement.setAttribute("data-per-track-image", "true");
-	imageElement.style.display = "none";
-	root.appendChild(imageElement);
-}
-
-function createImageElement(
-	image: Pick<
-		TrackSwitchImageViewConfig,
-		"seekable" | "style" | "seekMarginLeft" | "seekMarginRight" | "markerLayers"
-	>,
-): HTMLImageElement {
-	const imageElement = document.createElement("img");
-
-	if (image.seekable) {
-		imageElement.classList.add("seekable");
-	}
-	setMarkerLayersAttribute(imageElement, image.markerLayers);
-
-	if (typeof image.style === "string") {
-		imageElement.setAttribute("data-style", image.style);
-	}
-	if (typeof image.seekMarginLeft === "number") {
-		imageElement.setAttribute(
-			"data-seek-margin-left",
-			toMarginString(image.seekMarginLeft),
-		);
-	}
-	if (typeof image.seekMarginRight === "number") {
-		imageElement.setAttribute(
-			"data-seek-margin-right",
-			toMarginString(image.seekMarginRight),
-		);
-	}
-
-	return imageElement;
-}
-
-function injectWaveform(
-	root: HTMLElement,
-	waveform: TrackSwitchWaveformViewConfig,
-	ctx: ViewNormalizeContext,
-): void {
-	const sourceIndex = resolveSourceTracksIndex(
-		waveform.sourceTracks,
-		ctx,
-		"waveform",
-	);
-	const isIndividualAxis = ctx.hasAlignment;
-	const showAlignmentPoints = !!waveform.markerLayers?.some(
-		(layer) => layer.set === "alignment" && layer.foldToReference,
-	);
-
-	const canvas = document.createElement("canvas");
-	canvas.className = "waveform";
-	canvas.width = 1200;
-	canvas.height = toCanvasSize(waveform.height, 150);
-	canvas.setAttribute("data-waveform-bar-width", String(waveform.waveformBarWidth));
-	canvas.setAttribute("data-waveform-source", serializeWaveformSource(sourceIndex));
-	canvas.setAttribute("data-waveform-max-zoom", String(waveform.maxZoom));
-	canvas.setAttribute(
-		"data-waveform-playback-follow-mode",
-		waveform.playbackFollowMode || "off",
-	);
-	canvas.setAttribute(
-		"data-waveform-time-axis",
-		isIndividualAxis ? "individual" : "shared",
-	);
-	setMarkerLayersAttribute(canvas, waveform.markerLayers);
-
-	if (typeof waveform.timer === "boolean") {
-		canvas.setAttribute("data-waveform-timer", String(waveform.timer));
-	}
-	if (typeof waveform.alignedPlayhead === "boolean") {
-		canvas.setAttribute(
-			"data-waveform-aligned-playhead",
-			String(waveform.alignedPlayhead),
-		);
-	}
-	canvas.setAttribute(
-		"data-waveform-show-alignment-points",
-		String(showAlignmentPoints),
-	);
-	if (typeof waveform.style === "string") {
-		canvas.setAttribute("data-waveform-style", waveform.style);
-	}
-	if (typeof waveform.seekMarginLeft === "number") {
-		canvas.setAttribute(
-			"data-seek-margin-left",
-			toMarginString(waveform.seekMarginLeft),
-		);
-	}
-	if (typeof waveform.seekMarginRight === "number") {
-		canvas.setAttribute(
-			"data-seek-margin-right",
-			toMarginString(waveform.seekMarginRight),
-		);
-	}
-
-	root.appendChild(canvas);
-}
-
-function resolveAlignmentTimelineAttribute(
-	mediaID: MediaId,
-	ctx: ViewNormalizeContext,
-): string {
-	return ctx.hasAlignment && ctx.alignmentTimelines.has(mediaID) ? mediaID : "";
-}
-
-function injectMidi(
-	root: HTMLElement,
-	midi: TrackSwitchMidiViewConfig,
-	ctx: ViewNormalizeContext,
-): void {
-	const entry = ctx.media[midi.mediaID];
-	const canvas = document.createElement("canvas");
-	canvas.className = "midi";
-	canvas.width = 1200;
-	canvas.height = toCanvasSize(midi.height, 180);
-	canvas.setAttribute("data-midi-src", entry && "src" in entry ? entry.src : "");
-	canvas.setAttribute("data-midi-max-zoom", String(midi.maxZoom));
-	canvas.setAttribute(
-		"data-midi-alignment-column",
-		resolveAlignmentTimelineAttribute(midi.mediaID, ctx),
-	);
-	canvas.setAttribute(
-		"data-midi-playback-follow-mode",
-		midi.playbackFollowMode || "off",
-	);
-	setMarkerLayersAttribute(canvas, midi.markerLayers);
-
-	if (typeof midi.timer === "boolean") {
-		canvas.setAttribute("data-midi-timer", String(midi.timer));
-	}
-	if (typeof midi.style === "string") {
-		canvas.setAttribute("data-midi-style", midi.style);
-	}
-	if (typeof midi.seekMarginLeft === "number") {
-		canvas.setAttribute(
-			"data-seek-margin-left",
-			toMarginString(midi.seekMarginLeft),
-		);
-	}
-	if (typeof midi.seekMarginRight === "number") {
-		canvas.setAttribute(
-			"data-seek-margin-right",
-			toMarginString(midi.seekMarginRight),
-		);
-	}
-
-	root.appendChild(canvas);
-}
-
-function injectSheetMusic(
-	root: HTMLElement,
-	sheetmusic: TrackSwitchSheetMusicViewConfig,
-	ctx: ViewNormalizeContext,
-): void {
-	const entry = ctx.media[sheetmusic.mediaID];
-	const container = document.createElement("div");
-	container.className = "sheetmusic";
-	container.setAttribute(
-		"data-sheetmusic-src",
-		entry && "src" in entry ? entry.src : "",
-	);
-	container.setAttribute(
-		"data-sheetmusic-measure-column",
-		resolveAlignmentTimelineAttribute(sheetmusic.mediaID, ctx),
-	);
-	container.setAttribute(
-		"data-sheetmusic-follow-playback",
-		String(sheetmusic.followPlayback),
-	);
-	container.setAttribute(
-		"data-sheetmusic-cursor-alpha",
-		String(sheetmusic.cursorAlpha),
-	);
-
-	if (sheetmusic.maxWidth !== undefined) {
-		container.setAttribute("data-sheetmusic-max-width", String(sheetmusic.maxWidth));
-	}
-	if (sheetmusic.maxHeight !== undefined) {
-		container.setAttribute(
-			"data-sheetmusic-max-height",
-			String(sheetmusic.maxHeight),
-		);
-	}
-	if (sheetmusic.renderScale !== undefined) {
-		container.setAttribute(
-			"data-sheetmusic-render-scale",
-			String(sheetmusic.renderScale),
-		);
-	}
-	if (typeof sheetmusic.style === "string") {
-		container.setAttribute("data-sheetmusic-style", sheetmusic.style);
-	}
-	if (typeof sheetmusic.cursorColor === "string") {
-		container.setAttribute("data-sheetmusic-cursor-color", sheetmusic.cursorColor);
-	}
-
-	root.appendChild(container);
-}
-
-export function injectConfiguredViews(
-	root: HTMLElement,
-	views: TrackSwitchViewConfig[],
-	ctx: ViewNormalizeContext,
-): void {
-	let trackGroupIndex = 0;
-	views.forEach((entry) => {
-		if (entry.type === "trackList") {
-			injectTrackList(root, trackGroupIndex);
-			trackGroupIndex += 1;
-			return;
-		}
-		if (entry.type === "image") {
-			injectImage(root, entry);
-			return;
-		}
-		if (entry.type === "text") {
-			injectText(root, entry);
-			return;
-		}
-		if (entry.type === "perTrackImage") {
-			injectPerTrackImage(root, entry);
-			return;
-		}
-		if (entry.type === "waveform") {
-			injectWaveform(root, entry, ctx);
-			return;
-		}
-		if (entry.type === "midi") {
-			injectMidi(root, entry, ctx);
-			return;
-		}
-		if (entry.type === "sheetMusic") {
-			injectSheetMusic(root, entry, ctx);
-			return;
-		}
-		if (entry.type === "warpingMatrix") {
-			injectWarpingMatrix(root, entry);
-			return;
-		}
-		throw new Error(
-			`Invalid view type: ${String((entry as { type?: unknown }).type)}`,
-		);
-	});
 }

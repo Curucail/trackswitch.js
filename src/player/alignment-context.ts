@@ -1,12 +1,24 @@
-import type { AlignmentConfig, ResolvedAlignment } from "../domain/types";
+import type {
+	AlignmentConfig,
+	MediaConfig,
+	ResolvedAlignment,
+} from "../domain/types";
 import { parseMarkerCsv } from "../timeline/marker-csv";
-import { buildProjectionService, computeReferenceExtent } from "../timeline/projection";
-import { timelineId } from "../timeline/timeline";
+import {
+	buildProjectionService,
+	computeReferenceExtent,
+} from "../timeline/projection";
+import {
+	timelineId,
+	type Timeline,
+	type TimelineUnit,
+} from "../timeline/timeline";
 import { requestText } from "../shared/request-text";
 import { validateAlignmentSet } from "../timeline/validation";
 
 export async function buildResolvedAlignment(
 	alignment: AlignmentConfig,
+	media: MediaConfig,
 ): Promise<ResolvedAlignment> {
 	const csvText = await requestText(alignment.src, "alignment CSV source");
 	const timelineEntries = Object.entries(alignment.timelines);
@@ -40,9 +52,26 @@ export async function buildResolvedAlignment(
 		referenceTimeline,
 	);
 	const referenceExtent = computeReferenceExtent(markerSet, referenceTimeline);
+	const timelines = new Map(
+		timelineEntries.map(([id]) => {
+			const timeline = timelineId(id);
+			const mediaEntry = media[id];
+			const unit: TimelineUnit =
+				mediaEntry?.type === "musicxml" ? "measure" : "seconds";
+			return [
+				timeline,
+				{
+					id: timeline,
+					unit,
+					media: mediaEntry ? timeline : undefined,
+				} satisfies Timeline,
+			] as const;
+		}),
+	);
 
 	return {
 		referenceTimeline,
+		timelines,
 		outOfRange,
 		markerSet,
 		projection,

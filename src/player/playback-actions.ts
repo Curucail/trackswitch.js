@@ -3,6 +3,7 @@ import type { TrackRuntime } from "../domain/types";
 import { clamp } from "../shared/math";
 import { getSeekMetrics } from "../shared/seek";
 import { IMPLICIT_REFERENCE_TIMELINE } from "../timeline/timeline";
+import { moveRuntimeMarker } from "../timeline/marker";
 import { loadMarkerSets } from "./marker-sets";
 import { pauseOtherControllers, unregisterController } from "./player-registry";
 
@@ -636,6 +637,36 @@ export function initializeSheetMusic(ctx: any): any {
 export function dispatch(ctx: any, action: any): any {
 	return function (this: any, action: any) {
 		this.state = playerStateReducer(this.state, action);
+		const referenceTimeline =
+			this.alignment?.referenceTimeline ?? IMPLICIT_REFERENCE_TIMELINE;
+		if (action.type === "set-position") {
+			this.runtimeMarkers = moveRuntimeMarker(
+				this.runtimeMarkers,
+				"playhead",
+				referenceTimeline,
+				this.state.position,
+			);
+		} else if (action.type === "set-loop-point") {
+			this.runtimeMarkers = moveRuntimeMarker(
+				this.runtimeMarkers,
+				action.marker === "A" ? "loopA" : "loopB",
+				referenceTimeline,
+				action.marker === "A" ? this.state.loop.pointA : this.state.loop.pointB,
+			);
+		} else if (action.type === "clear-loop") {
+			this.runtimeMarkers = moveRuntimeMarker(
+				this.runtimeMarkers,
+				"loopA",
+				referenceTimeline,
+				null,
+			);
+			this.runtimeMarkers = moveRuntimeMarker(
+				this.runtimeMarkers,
+				"loopB",
+				referenceTimeline,
+				null,
+			);
+		}
 	}.call(ctx, action);
 }
 

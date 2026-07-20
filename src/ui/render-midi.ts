@@ -1,8 +1,10 @@
 import { Midi } from "@tonejs/midi";
-import type { WaveformPlaybackFollowMode } from "../domain/types";
+import type {
+	TrackSwitchMidiViewConfig,
+	WaveformPlaybackFollowMode,
+} from "../domain/types";
 import { sanitizeInlineStyle } from "../shared/dom";
 import { formatSecondsToHHMMSSmmm } from "../shared/format";
-import { copyMarkerDisplayAttributes } from "../shared/marker-display";
 import { clampPercent } from "../shared/math";
 import {
 	clampTimelineValue,
@@ -73,35 +75,6 @@ function clampTime(value: number, minimum: number, maximum: number): number {
 
 function sanitizeDuration(value: number): number {
 	return sanitizeTimelineDuration(value);
-}
-
-function parseMidiPlaybackFollowMode(
-	value: string | null,
-): WaveformPlaybackFollowMode {
-	const normalized =
-		typeof value === "string" ? value.trim().toLowerCase() : "";
-
-	if (normalized === "center" || normalized === "jump") {
-		return normalized;
-	}
-
-	return "off";
-}
-
-function parseMidiBoolean(value: string | null): boolean {
-	return typeof value === "string" && value.trim().toLowerCase() === "true";
-}
-
-function parsePositiveFiniteNumber(
-	value: string | null,
-	fallback: number,
-): number {
-	const parsed = Number(value);
-	if (!Number.isFinite(parsed) || parsed <= 0) {
-		return fallback;
-	}
-
-	return parsed;
 }
 
 function buildSeekWrap(leftPercent: number, rightPercent: number): string {
@@ -411,17 +384,17 @@ export function wrapMidiCanvases(ctx: any): any {
 				return;
 			}
 
-			const source = String(canvasElement.getAttribute("data-midi-src") || "");
-			if (!source) {
-				return;
-			}
+			const definition = this.getConfiguredViewHost(canvasElement);
+			if (definition.view.type !== "midi") return;
+			const config = definition.view as TrackSwitchMidiViewConfig;
+			const source = definition.source;
+			if (!source) return;
 
 			const wrapper = document.createElement("div");
 			wrapper.className = "midi-wrap ts-stack-section";
 			wrapper.setAttribute(
 				"style",
-				sanitizeInlineStyle(canvasElement.getAttribute("data-midi-style")) +
-					"; display: block;",
+				sanitizeInlineStyle(config.style) + "; display: block;",
 			);
 
 			const scrollContainer = document.createElement("div");
@@ -448,8 +421,8 @@ export function wrapMidiCanvases(ctx: any): any {
 			surface.insertAdjacentHTML(
 				"beforeend",
 				buildSeekWrap(
-					clampPercent(canvasElement.getAttribute("data-seek-margin-left")),
-					clampPercent(canvasElement.getAttribute("data-seek-margin-right")),
+					clampPercent(config.seekMarginLeft),
+					clampPercent(config.seekMarginRight),
 				),
 			);
 			wrapper.appendChild(overlay);
@@ -459,18 +432,15 @@ export function wrapMidiCanvases(ctx: any): any {
 			if (!(seekWrap instanceof HTMLElement)) {
 				return;
 			}
-			copyMarkerDisplayAttributes(canvasElement, seekWrap);
+			this.registerSeekMarkerLayers(seekWrap, config.markerLayers);
 			seekWrap.setAttribute("data-seek-surface", "midi");
 
 			const originalHeight = Math.max(1, canvasElement.height);
 			surface.style.height = `${originalHeight}px`;
 			noteLayer.style.height = `${originalHeight}px`;
 
-			const timingNode = parseMidiBoolean(
-				canvasElement.getAttribute("data-midi-timer"),
-			)
-				? createMidiTimingNode(overlay)
-				: null;
+			const timingNode =
+				config.timer === true ? createMidiTimingNode(overlay) : null;
 			const zoomNode = createMidiZoomNode(overlay);
 			const zoomMinimapNode = zoomNode.querySelector(".midi-zoom-minimap");
 			const zoomCanvas = zoomNode.querySelector(".midi-zoom-canvas");
@@ -491,17 +461,10 @@ export function wrapMidiCanvases(ctx: any): any {
 				overlay,
 				seekWrap,
 				source,
-				alignmentColumn:
-					canvasElement.getAttribute("data-midi-alignment-column")?.trim() ||
-					null,
-				playbackFollowMode: parseMidiPlaybackFollowMode(
-					canvasElement.getAttribute("data-midi-playback-follow-mode"),
-				),
+				alignmentColumn: definition.alignmentTimeline?.trim() || null,
+				playbackFollowMode: config.playbackFollowMode ?? "off",
 				originalHeight,
-				maxZoomSeconds: parsePositiveFiniteNumber(
-					canvasElement.getAttribute("data-midi-max-zoom"),
-					5,
-				),
+				maxZoomSeconds: config.maxZoom ?? 5,
 				baseWidth: this.resolveMidiBaseWidth(
 					scrollContainer,
 					canvasElement.width,

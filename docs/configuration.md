@@ -1,57 +1,90 @@
 ---
 layout: default
 title: Documentation
+description: Configuration reference for trackswitch.js
 permalink: /documentation.html
+body_class: docs-page docs-page--config
+toc_script: true
 ---
 
-- [Player Versions](#player-versions)
-- [Quick Minimal Setup](#quick-setup)
-- [Full Options Reference](#full-options-reference)
-- [Configuration](#player-wide-settings)
-  - [`ui`](#ui)
-  - [`presetNames`](#presetnames)
-  - [`features`](#features)
+# Documentation
+
+- [Introduction](#introduction)
+- [Quick setup](#quick-setup)
+- [Configuration shape](#configuration-shape)
+- [Data](#data)
+  - [`media`](#media)
   - [`alignment`](#alignment)
-- [Track Settings](#track-settings)
-  - [`trackGroup`](#trackgroup)
-  - [Track Options](#track-options)
-  - [Audio Source Options](#audio-source-options)
-  - [Track Alignment Options](#track-alignment-options)
-  - [Track Marker Options](#track-marker-options)
-- [Visualizations](#visualizations)
-  - [`text`](#text)
+  - [`markers`](#markers)
+  - [`presets`](#presets)
+- [Views](#views)
   - [`image`](#image)
   - [`perTrackImage`](#pertrackimage)
   - [`waveform`](#waveform)
   - [`midi`](#midi)
   - [`sheetMusic`](#sheetmusic)
   - [`warpingMatrix`](#warpingmatrix)
-- [Keyboard and Loop Controls](#keyboard-and-loop-controls)
-- [Things to Check](#things-to-check)
+  - [`text`](#text)
+  - [`trackList`](#tracklist)
+- [Features](#features)
+- [Keyboard and loop controls](#keyboard-and-loop-controls)
+- [Things to check](#things-to-check)
 
-## Player Versions {#player-versions}
+## Introduction
 
-trackswitch.js ships one browser-ready JavaScript bundle for all player versions. The interactive sync player also needs the separate worker file.
+TrackSwitch is a web-based multitrack audio player for presenting scientific results. Different from ordinary multitrack audio players, trackswitch allows each track to live on its own abstract timeline. This feature allows for a variety of interesting use cases that need some form of aligned audio data. For example, it can be used for comparing different performances of the same piece of music.
 
-| Version | Custom HTML tag |
-| --- | --- |
-| Default player | `<trackswitch-player>` |
-| Sync player | `<trackswitch-sync-player>` |
-| Interactive sync player | `<trackswitch-sync-interactive>` |
+The simplest TrackSwitch player is a normal multitrack audio player. In this case, all audio tracks
+share the same timeline and can play simultaneously:
 
-## Quick Minimal Setup {#quick-setup}
+```json
+{
+  "media": {
+    "drums": { "type": "audio", "src": "drums.mp3", "title": "Drums" },
+    "bass": { "type": "audio", "src": "bass.mp3", "title": "Bass" }
+  },
+  "views": [
+    { "type": "waveform", "sourceTracks": "audible" },
+    { "type": "trackList", "tracks": ["drums", "bass"] }
+  ]
+}
+```
+
+For comparative listening, tracks and visual media can also live on separate, abstract
+timelines. A timeline is just an ordered coordinate system: it can be seconds, measures in sheet music,
+MIDI ticks, or any other unit that makes sense for the material. Add an
+`alignment` CSV to connect those timelines. TrackSwitch then projects seeking, playback
+positions, loops, markers, and visual cursors through the same alignment graph.
+
+The player configuration is split into data and views. Data describes what exists: audio tracks,
+visual media, abstract timelines, alignment data, annotation markers, presets, and
+player-wide feature switches. Views describe how that data should appear on the page:
+waveforms, images, MIDI piano rolls, sheet music, text, track lists, and warping
+visualizations.
+
+Markers are the central concept behind that graph. Alignment CSV rows become dense
+correspondence markers between timelines. Authored marker CSV files become annotation
+markers such as section labels, beats, events, or analysis points. Runtime markers such as
+the playhead and loop points use the same projection path, so a marker placed on one
+timeline can be rendered or navigated from another aligned view.
+
+## Quick setup
+
+Use the first row to choose the player type and the second row to choose the integration
+method.
 
 <div class="ts-doc-tabs" data-doc-matrix data-doc-matrix-version="default" data-doc-matrix-integration="html" markdown="1">
-  <div class="ts-doc-tabs__list ts-doc-tabs__list--versions ts-doc-tabs__list--stacked" aria-label="Player version">
+  <div class="ts-doc-tabs__list ts-doc-tabs__list--versions ts-doc-tabs__list--stacked" aria-label="Player type">
     <button class="ts-doc-tabs__tab is-active" type="button" aria-pressed="true" data-doc-matrix-control="version" data-doc-matrix-value="default">Default</button>
-    <button class="ts-doc-tabs__tab" type="button" aria-pressed="false" data-doc-matrix-control="version" data-doc-matrix-value="sync">Sync</button>
-    <button class="ts-doc-tabs__tab" type="button" aria-pressed="false" data-doc-matrix-control="version" data-doc-matrix-value="interactive">Interactive Sync</button>
+    <button class="ts-doc-tabs__tab" type="button" aria-pressed="false" data-doc-matrix-control="version" data-doc-matrix-value="aligned">Multiple timelines</button>
+    <button class="ts-doc-tabs__tab" type="button" aria-pressed="false" data-doc-matrix-control="version" data-doc-matrix-value="interactive">Interactive sync</button>
   </div>
   <div class="ts-doc-tabs__list" aria-label="Integration method">
     <button class="ts-doc-tabs__tab is-active" type="button" aria-pressed="true" data-doc-matrix-control="integration" data-doc-matrix-value="html">HTML</button>
     <button class="ts-doc-tabs__tab" type="button" aria-pressed="false" data-doc-matrix-control="integration" data-doc-matrix-value="esm">ESM</button>
     <button class="ts-doc-tabs__tab" type="button" aria-pressed="false" data-doc-matrix-control="integration" data-doc-matrix-value="react">React</button>
     <button class="ts-doc-tabs__tab" type="button" aria-pressed="false" data-doc-matrix-control="integration" data-doc-matrix-value="vue">Vue</button>
+    <button class="ts-doc-tabs__tab" type="button" aria-pressed="false" data-doc-matrix-control="integration" data-doc-matrix-value="svelte">Svelte</button>
   </div>
   <div class="ts-doc-tabs__panel is-active" data-doc-matrix-panel data-doc-matrix-version="default" data-doc-matrix-integration="html" markdown="1">
 
@@ -61,17 +94,20 @@ trackswitch.js ships one browser-ready JavaScript bundle for all player versions
 <trackswitch-player>
   <script type="application/json">
     {
-      "ui": [
-        {
-          "type": "trackGroup",
-          "trackGroup": [
-            {
-              "title": "Track 1",
-              "sources": [{ "src": "track1.mp3", "type": "audio/mpeg" }]
-            }
-          ]
-        }
-      ]
+      "media": {
+        "drums": { "type": "audio", "src": "drums.mp3", "title": "Drums" },
+        "bass": { "type": "audio", "src": "bass.mp3", "title": "Bass" },
+        "synth": { "type": "audio", "src": "synth.mp3", "title": "Synth" }
+      },
+      "views": [
+        { "type": "waveform", "sourceTracks": "audible" },
+        { "type": "trackList", "tracks": ["drums", "bass", "synth"] }
+      ],
+      "features": {
+        "globalVolume": true,
+        "trackVolumeControls": true,
+        "trackPanControls": true
+      }
     }
   </script>
 </trackswitch-player>
@@ -81,47 +117,60 @@ trackswitch.js ships one browser-ready JavaScript bundle for all player versions
   <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="default" data-doc-matrix-integration="esm" hidden markdown="1">
 
 ```ts
-import { defineTrackswitchDefaultElement, type TrackSwitchInit } from 'trackswitch';
+import {
+  defineTrackswitchDefaultElement,
+  type TrackSwitchInit,
+} from "trackswitch";
 
 const config: TrackSwitchInit = {
-  ui: [
-    {
-      type: 'trackGroup',
-      trackGroup: [
-        {
-          title: 'Track 1',
-          sources: [{ src: 'track1.mp3', type: 'audio/mpeg' }],
-        },
-      ],
-    },
+  media: {
+    drums: { type: "audio", src: "drums.mp3", title: "Drums" },
+    bass: { type: "audio", src: "bass.mp3", title: "Bass" },
+    synth: { type: "audio", src: "synth.mp3", title: "Synth" },
+  },
+  views: [
+    { type: "waveform", sourceTracks: "audible" },
+    { type: "trackList", tracks: ["drums", "bass", "synth"] },
   ],
+  features: {
+    globalVolume: true,
+    trackVolumeControls: true,
+    trackPanControls: true,
+  },
 };
 
 defineTrackswitchDefaultElement();
-document.querySelector('trackswitch-player')!.config = config;
+const player = document.querySelector("trackswitch-player") as HTMLElement & {
+  config: TrackSwitchInit;
+};
+player.config = config;
 ```
 
   </div>
   <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="default" data-doc-matrix-integration="react" hidden markdown="1">
 
 ```tsx
-import { useMemo } from 'react';
-import { TrackSwitchPlayer, type TrackSwitchInit } from 'trackswitch/react';
+import { useMemo } from "react";
+import type { TrackSwitchInit } from "trackswitch";
+import { TrackSwitchPlayer } from "trackswitch/react";
 
 export function ExamplePlayer() {
   const config = useMemo<TrackSwitchInit>(() => {
     return {
-      ui: [
-        {
-          type: 'trackGroup',
-          trackGroup: [
-            {
-              title: 'Track 1',
-              sources: [{ src: 'track1.mp3', type: 'audio/mpeg' }],
-            },
-          ],
-        },
+      media: {
+        drums: { type: "audio", src: "drums.mp3", title: "Drums" },
+        bass: { type: "audio", src: "bass.mp3", title: "Bass" },
+        synth: { type: "audio", src: "synth.mp3", title: "Synth" },
+      },
+      views: [
+        { type: "waveform", sourceTracks: "audible" },
+        { type: "trackList", tracks: ["drums", "bass", "synth"] },
       ],
+      features: {
+        globalVolume: true,
+        trackVolumeControls: true,
+        trackPanControls: true,
+      },
     };
   }, []);
 
@@ -134,20 +183,24 @@ export function ExamplePlayer() {
 
 ```vue
 <script setup lang="ts">
-import { TrackSwitchPlayer, type TrackSwitchInit } from 'trackswitch/vue';
+import type { TrackSwitchInit } from "trackswitch";
+import { TrackSwitchPlayer } from "trackswitch/vue";
 
 const config: TrackSwitchInit = {
-  ui: [
-    {
-      type: 'trackGroup',
-      trackGroup: [
-        {
-          title: 'Track 1',
-          sources: [{ src: 'track1.mp3', type: 'audio/mpeg' }],
-        },
-      ],
-    },
+  media: {
+    drums: { type: "audio", src: "drums.mp3", title: "Drums" },
+    bass: { type: "audio", src: "bass.mp3", title: "Bass" },
+    synth: { type: "audio", src: "synth.mp3", title: "Synth" },
+  },
+  views: [
+    { type: "waveform", sourceTracks: "audible" },
+    { type: "trackList", tracks: ["drums", "bass", "synth"] },
   ],
+  features: {
+    globalVolume: true,
+    trackVolumeControls: true,
+    trackPanControls: true,
+  },
 };
 </script>
 
@@ -157,144 +210,260 @@ const config: TrackSwitchInit = {
 ```
 
   </div>
-  <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="sync" data-doc-matrix-integration="html" hidden markdown="1">
+  <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="default" data-doc-matrix-integration="svelte" hidden markdown="1">
+
+```svelte
+<script lang="ts">
+  import {
+    useTrackswitch,
+    type TrackswitchSvelteOptions,
+  } from "trackswitch/svelte";
+
+  const options: TrackswitchSvelteOptions = {
+    config: {
+      media: {
+        drums: { type: "audio", src: "drums.mp3", title: "Drums" },
+        bass: { type: "audio", src: "bass.mp3", title: "Bass" },
+        synth: { type: "audio", src: "synth.mp3", title: "Synth" },
+      },
+      views: [
+        { type: "waveform", sourceTracks: "audible" },
+        { type: "trackList", tracks: ["drums", "bass", "synth"] },
+      ],
+      features: {
+        globalVolume: true,
+        trackVolumeControls: true,
+        trackPanControls: true,
+      },
+    },
+  };
+</script>
+
+<trackswitch-player use:useTrackswitch={options} class="trackswitch-host" />
+```
+
+  </div>
+  <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="aligned" data-doc-matrix-integration="html" hidden markdown="1">
 
 ```html
 <script src="dist/js/trackswitch.js"></script>
 
-<trackswitch-sync-player>
+<trackswitch-player>
   <script type="application/json">
     {
-      "ui": [
-        {
-          "type": "trackGroup",
-          "trackGroup": [
-            {
-              "title": "Track 1",
-              "sources": [{ "src": "track1.mp3", "type": "audio/mpeg" }],
-              "alignment": { "column": "track_1_time" }
-            },
-            {
-              "title": "Track 2",
-              "sources": [{ "src": "track2.mp3", "type": "audio/mpeg" }],
-              "alignment": { "column": "track_2_time" }
-            }
-          ]
+      "media": {
+        "score": { "type": "musicxml", "src": "score.musicxml" },
+        "notes": { "type": "midi", "src": "notes.mid" },
+        "takeA": {
+          "type": "audio",
+          "src": "take-a.wav",
+          "srcSynchronized": { "src": "take-a-synced.wav", "timeline": "takeA" },
+          "title": "Take A"
+        },
+        "takeB": {
+          "type": "audio",
+          "src": "take-b.wav",
+          "srcSynchronized": { "src": "take-b-synced.wav", "timeline": "takeB" },
+          "title": "Take B"
         }
-      ],
+      },
       "alignment": {
-        "csv": "alignment.csv",
-        "referenceTimeColumn": "track_1_time"
+        "src": "alignment.csv",
+        "referenceTimeline": "score",
+        "timelines": {
+          "score": "measure",
+          "notes": "midi_seconds",
+          "takeA": "take_a_seconds",
+          "takeB": "take_b_seconds"
+        },
+        "outside": "clamp"
+      },
+      "markers": {
+        "sections": {
+          "src": "sections.csv",
+          "timeline": "score",
+          "timeCol": "measure",
+          "labelCol": "section"
+        }
+      },
+      "views": [
+        { "type": "sheetMusic", "mediaID": "score" },
+        { "type": "midi", "mediaID": "notes", "timer": true },
+        {
+          "type": "waveform",
+          "sourceTracks": ["takeA"],
+          "timer": true,
+          "alignedPlayhead": true,
+          "markerLayers": [
+            { "set": "sections", "color": "#ed8c01" },
+            { "set": "alignment", "color": "#777", "foldToReference": true }
+          ]
+        },
+        { "type": "waveform", "sourceTracks": ["takeB"], "timer": true },
+        { "type": "warpingMatrix", "x": "takeA", "y": "takeB" },
+        { "type": "trackList", "tracks": ["takeA", "takeB"] }
+      ],
+      "features": {
+        "exclusiveSolo": true,
+        "looping": true,
+        "globalVolume": true
       }
     }
   </script>
-</trackswitch-sync-player>
+</trackswitch-player>
 ```
 
   </div>
-  <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="sync" data-doc-matrix-integration="esm" hidden markdown="1">
+  <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="aligned" data-doc-matrix-integration="esm" hidden markdown="1">
 
 ```ts
-import { defineTrackSwitchSyncPlayerElement, type TrackSwitchInit } from 'trackswitch';
+import {
+  defineTrackswitchDefaultElement,
+  type TrackSwitchInit,
+} from "trackswitch";
 
 const config: TrackSwitchInit = {
-  ui: [
-    {
-      type: 'trackGroup',
-      trackGroup: [
-        {
-          title: 'Track 1',
-          sources: [{ src: 'track1.mp3', type: 'audio/mpeg' }],
-          alignment: { column: 'track_1_time' },
-        },
-        {
-          title: 'Track 2',
-          sources: [{ src: 'track2.mp3', type: 'audio/mpeg' }],
-          alignment: { column: 'track_2_time' },
-        },
-      ],
-    },
-  ],
-  alignment: {
-    csv: 'alignment.csv',
-    referenceTimeColumn: 'track_1_time',
+  media: {
+    score: { type: "musicxml", src: "score.musicxml" },
+    takeA: { type: "audio", src: "take-a.wav", title: "Take A" },
+    takeB: { type: "audio", src: "take-b.wav", title: "Take B" },
   },
+  alignment: {
+    src: "alignment.csv",
+    referenceTimeline: "score",
+    timelines: {
+      score: "measure",
+      takeA: "take_a_seconds",
+      takeB: "take_b_seconds",
+    },
+    outside: "clamp",
+  },
+  views: [
+    { type: "sheetMusic", mediaID: "score" },
+    { type: "waveform", sourceTracks: ["takeA"], alignedPlayhead: true },
+    { type: "waveform", sourceTracks: ["takeB"], alignedPlayhead: true },
+    { type: "warpingMatrix", x: "takeA", y: "takeB" },
+    { type: "trackList", tracks: ["takeA", "takeB"] },
+  ],
+  features: { exclusiveSolo: true, looping: true },
 };
 
-defineTrackSwitchSyncPlayerElement();
-document.querySelector('trackswitch-sync-player')!.config = config;
+defineTrackswitchDefaultElement();
+const player = document.querySelector("trackswitch-player") as HTMLElement & {
+  config: TrackSwitchInit;
+};
+player.config = config;
 ```
 
   </div>
-  <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="sync" data-doc-matrix-integration="react" hidden markdown="1">
+  <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="aligned" data-doc-matrix-integration="react" hidden markdown="1">
 
 ```tsx
-import { TrackSwitchSyncPlayer, type TrackSwitchInit } from 'trackswitch/react';
+import { useMemo } from "react";
+import type { TrackSwitchInit } from "trackswitch";
+import { TrackSwitchPlayer } from "trackswitch/react";
 
-const config: TrackSwitchInit = {
-  ui: [
-    {
-      type: 'trackGroup',
-      trackGroup: [
-        {
-          title: 'Track 1',
-          sources: [{ src: 'track1.mp3', type: 'audio/mpeg' }],
-          alignment: { column: 'track_1_time' },
-        },
-        {
-          title: 'Track 2',
-          sources: [{ src: 'track2.mp3', type: 'audio/mpeg' }],
-          alignment: { column: 'track_2_time' },
-        },
-      ],
+export function AlignedPlayer() {
+  const config = useMemo<TrackSwitchInit>(() => ({
+    media: {
+      score: { type: "musicxml", src: "score.musicxml" },
+      takeA: { type: "audio", src: "take-a.wav", title: "Take A" },
+      takeB: { type: "audio", src: "take-b.wav", title: "Take B" },
     },
-  ],
-  alignment: {
-    csv: 'alignment.csv',
-    referenceTimeColumn: 'track_1_time',
-  },
-};
+    alignment: {
+      src: "alignment.csv",
+      referenceTimeline: "score",
+      timelines: {
+        score: "measure",
+        takeA: "take_a_seconds",
+        takeB: "take_b_seconds",
+      },
+    },
+    views: [
+      { type: "sheetMusic", mediaID: "score" },
+      { type: "waveform", sourceTracks: ["takeA"], alignedPlayhead: true },
+      { type: "waveform", sourceTracks: ["takeB"], alignedPlayhead: true },
+      { type: "trackList", tracks: ["takeA", "takeB"] },
+    ],
+    features: { exclusiveSolo: true, looping: true },
+  }), []);
 
-export function ExamplePlayer() {
-  return <TrackSwitchSyncPlayer config={config} className="trackswitch-host" />;
+  return <TrackSwitchPlayer config={config} />;
 }
 ```
 
   </div>
-  <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="sync" data-doc-matrix-integration="vue" hidden markdown="1">
+  <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="aligned" data-doc-matrix-integration="vue" hidden markdown="1">
 
 ```vue
 <script setup lang="ts">
-import { TrackSwitchSyncPlayer, type TrackSwitchInit } from 'trackswitch/vue';
+import type { TrackSwitchInit } from "trackswitch";
+import { TrackSwitchPlayer } from "trackswitch/vue";
 
 const config: TrackSwitchInit = {
-  ui: [
-    {
-      type: 'trackGroup',
-      trackGroup: [
-        {
-          title: 'Track 1',
-          sources: [{ src: 'track1.mp3', type: 'audio/mpeg' }],
-          alignment: { column: 'track_1_time' },
-        },
-        {
-          title: 'Track 2',
-          sources: [{ src: 'track2.mp3', type: 'audio/mpeg' }],
-          alignment: { column: 'track_2_time' },
-        },
-      ],
-    },
-  ],
-  alignment: {
-    csv: 'alignment.csv',
-    referenceTimeColumn: 'track_1_time',
+  media: {
+    score: { type: "musicxml", src: "score.musicxml" },
+    takeA: { type: "audio", src: "take-a.wav", title: "Take A" },
+    takeB: { type: "audio", src: "take-b.wav", title: "Take B" },
   },
+  alignment: {
+    src: "alignment.csv",
+    referenceTimeline: "score",
+    timelines: {
+      score: "measure",
+      takeA: "take_a_seconds",
+      takeB: "take_b_seconds",
+    },
+  },
+  views: [
+    { type: "sheetMusic", mediaID: "score" },
+    { type: "waveform", sourceTracks: ["takeA"], alignedPlayhead: true },
+    { type: "waveform", sourceTracks: ["takeB"], alignedPlayhead: true },
+    { type: "trackList", tracks: ["takeA", "takeB"] },
+  ],
+  features: { exclusiveSolo: true, looping: true },
 };
 </script>
 
 <template>
-  <TrackSwitchSyncPlayer :config="config" class="trackswitch-host" />
+  <TrackSwitchPlayer :config="config" />
 </template>
+```
+
+  </div>
+  <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="aligned" data-doc-matrix-integration="svelte" hidden markdown="1">
+
+```svelte
+<script lang="ts">
+  import { useTrackswitch } from "trackswitch/svelte";
+  import type { TrackSwitchInit } from "trackswitch";
+
+  const config: TrackSwitchInit = {
+    media: {
+      score: { type: "musicxml", src: "score.musicxml" },
+      takeA: { type: "audio", src: "take-a.wav", title: "Take A" },
+      takeB: { type: "audio", src: "take-b.wav", title: "Take B" },
+    },
+    alignment: {
+      src: "alignment.csv",
+      referenceTimeline: "score",
+      timelines: {
+        score: "measure",
+        takeA: "take_a_seconds",
+        takeB: "take_b_seconds",
+      },
+    },
+    views: [
+      { type: "sheetMusic", mediaID: "score" },
+      { type: "waveform", sourceTracks: ["takeA"], alignedPlayhead: true },
+      { type: "waveform", sourceTracks: ["takeB"], alignedPlayhead: true },
+      { type: "trackList", tracks: ["takeA", "takeB"] },
+    ],
+    features: { exclusiveSolo: true, looping: true },
+  };
+</script>
+
+<trackswitch-player use:useTrackswitch={{ config }} />
 ```
 
   </div>
@@ -319,29 +488,32 @@ const config: TrackSwitchInit = {
 import {
   defineTrackSwitchSyncInteractiveElement,
   type InteractiveTrackSwitchInit,
-} from 'trackswitch/interactive';
+} from "trackswitch/interactive";
 
 const config: InteractiveTrackSwitchInit = {
-  workerUrl: 'dist/js/trackswitch-interactive-worker.js',
+  workerUrl: "dist/js/trackswitch-interactive-worker.js",
 };
 
 defineTrackSwitchSyncInteractiveElement();
-document.querySelector('trackswitch-sync-interactive')!.config = config;
+const player = document.querySelector("trackswitch-sync-interactive") as HTMLElement & {
+  config: InteractiveTrackSwitchInit;
+};
+player.config = config;
 ```
 
   </div>
   <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="interactive" data-doc-matrix-integration="react" hidden markdown="1">
 
 ```tsx
-import { TrackSwitchSyncInteractive } from 'trackswitch/react';
-import type { InteractiveTrackSwitchInit } from 'trackswitch/interactive';
+import { TrackSwitchSyncInteractive } from "trackswitch/react";
+import type { InteractiveTrackSwitchInit } from "trackswitch/interactive";
 
 const config: InteractiveTrackSwitchInit = {
-  workerUrl: 'dist/js/trackswitch-interactive-worker.js',
+  workerUrl: "dist/js/trackswitch-interactive-worker.js",
 };
 
-export function ExamplePlayer() {
-  return <TrackSwitchSyncInteractive config={config} className="trackswitch-host" />;
+export function InteractivePlayer() {
+  return <TrackSwitchSyncInteractive config={config} />;
 }
 ```
 
@@ -350,775 +522,534 @@ export function ExamplePlayer() {
 
 ```vue
 <script setup lang="ts">
-import { TrackSwitchSyncInteractive } from 'trackswitch/vue';
-import type { InteractiveTrackSwitchInit } from 'trackswitch/interactive';
+import { TrackSwitchSyncInteractive } from "trackswitch/vue";
+import type { InteractiveTrackSwitchInit } from "trackswitch/interactive";
 
 const config: InteractiveTrackSwitchInit = {
-  workerUrl: 'dist/js/trackswitch-interactive-worker.js',
+  workerUrl: "dist/js/trackswitch-interactive-worker.js",
 };
 </script>
 
 <template>
-  <TrackSwitchSyncInteractive :config="config" class="trackswitch-host" />
+  <TrackSwitchSyncInteractive :config="config" />
 </template>
 ```
 
   </div>
-</div>
+  <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="interactive" data-doc-matrix-integration="svelte" hidden markdown="1">
 
-## Full Options Reference {#full-options-reference}
+```svelte
+<script lang="ts">
+  import { useTrackswitch } from "trackswitch/svelte";
+  import type { InteractiveTrackSwitchInit } from "trackswitch/interactive";
 
-<div class="ts-doc-tabs" data-doc-matrix data-doc-matrix-version="default" markdown="1">
-  <div class="ts-doc-tabs__list ts-doc-tabs__list--versions" aria-label="Player version">
-    <button class="ts-doc-tabs__tab is-active" type="button" aria-pressed="true" data-doc-matrix-control="version" data-doc-matrix-value="default">Default</button>
-    <button class="ts-doc-tabs__tab" type="button" aria-pressed="false" data-doc-matrix-control="version" data-doc-matrix-value="sync">Sync</button>
-    <button class="ts-doc-tabs__tab" type="button" aria-pressed="false" data-doc-matrix-control="version" data-doc-matrix-value="interactive">Interactive Sync</button>
-  </div>
-  <div class="ts-doc-tabs__panel is-active" data-doc-matrix-panel data-doc-matrix-version="default" markdown="1">
+  const config: InteractiveTrackSwitchInit = {
+    workerUrl: "dist/js/trackswitch-interactive-worker.js",
+  };
+</script>
 
-```javascript
-TrackSwitch.createDefaultTrackSwitch(rootElement, {
-  presetNames: ['Full Mix', 'Strings', 'Rhythm'],
-  ui: [
-    {
-      type: 'image',
-      src: 'cover.jpg',
-      seekable: true,
-      seekMarginLeft: 5,
-      seekMarginRight: 5,
-      style: 'margin: 0;',
-    },
-    {
-      type: 'text',
-      text: 'Choose which parts of the arrangement you want to hear.',
-      bold: true,
-      italic: false,
-      fontSize: 18,
-      align: 'center',
-      style: 'margin: 0;',
-    },
-    {
-      type: 'waveform',
-      height: 160,
-      waveformBarWidth: 2,
-      maxZoom: 5,
-      waveformSource: 'audible',
-      playbackFollowMode: 'center',
-      timer: false,
-      seekMarginLeft: 3,
-      seekMarginRight: 4,
-      style: 'margin: 0;',
-    },
-    {
-      type: 'trackGroup',
-      rowHeight: 44,
-      trackGroup: [
-        {
-          title: 'Violins',
-          solo: true,
-          volume: 0.9,
-          pan: -0.2,
-          image: 'violins.png',
-          style: 'border-left: 3px solid #4f8dc9;',
-          presets: [0, 1],
-          sources: [
-            { src: 'violins.mp3', type: 'audio/mpeg', startOffsetMs: 0, endOffsetMs: 0 },
-            { src: 'violins.ogg', type: 'audio/ogg' },
-          ],
-        },
-        {
-          title: 'Drums',
-          solo: false,
-          volume: 1,
-          pan: 0,
-          image: 'drums.png',
-          style: 'border-left: 3px solid #ed8c01;',
-          presets: [0, 2],
-          sources: [{ src: 'drums.mp3', type: 'audio/mpeg', startOffsetMs: -120, endOffsetMs: 250 }],
-        },
-      ],
-    },
-    {
-      type: 'sheetMusic',
-      src: 'score.musicxml',
-      maxWidth: 960,
-      maxHeight: 360,
-      renderScale: 0.75,
-      followPlayback: true,
-      cursorColor: '#999999',
-      cursorAlpha: 0.1,
-      style: 'margin: 0;',
-    },
-  ],
-  features: {
-    exclusiveSolo: false,
-    muteOtherPlayerInstances: true,
-    globalVolume: true,
-    trackVolumeControls: true,
-    trackPanControls: true,
-    repeat: false,
-    tabView: false,
-    iosAudioUnlock: true,
-    keyboard: true,
-    looping: true,
-    seekBar: true,
-    timer: true,
-    presets: true,
-    customizablePanelOrder: true,
-  },
-});
-```
-
-  </div>
-  <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="sync" hidden markdown="1">
-
-
-```javascript
-TrackSwitch.createTrackSwitchSyncPlayer(rootElement, {
-  ui: [
-    {
-      type: 'image',
-      src: 'score-overview.jpg',
-      seekable: false,
-      seekMarginLeft: 0,
-      seekMarginRight: 0,
-      style: 'margin: 0;',
-    },
-    {
-      type: 'perTrackImage',
-      seekable: true,
-      seekMarginLeft: 4,
-      seekMarginRight: 4,
-      style: 'margin: 0;',
-    },
-    {
-      type: 'text',
-      text: 'Compare aligned tracks on the shared score timeline.',
-      bold: true,
-      fontSize: 18,
-      align: 'center',
-      style: 'margin: 0;',
-    },
-    {
-      type: 'waveform',
-      height: 160,
-      waveformBarWidth: 3,
-      maxZoom: 8,
-      waveformSource: 0,
-      playbackFollowMode: 'jump',
-      timer: true,
-      alignedPlayhead: true,
-      showAlignmentPoints: true,
-      seekMarginLeft: 3,
-      seekMarginRight: 4,
-      style: 'margin: 0;',
-    },
-    {
-      type: 'trackGroup',
-      rowHeight: 44,
-      trackGroup: [
-        {
-          title: 'Track 1',
-          solo: true,
-          volume: 1,
-          pan: 0,
-          image: 'track1.png',
-          style: 'border-left: 3px solid #4f8dc9;',
-          sources: [{ src: 'track1.mp3', type: 'audio/mpeg', startOffsetMs: 0, endOffsetMs: 0 }],
-          alignment: {
-            column: 'track_1_time',
-            synchronizedSources: [
-              { src: 'track1-synced.mp3', type: 'audio/mpeg', startOffsetMs: 0, endOffsetMs: 0 },
-            ],
-          },
-        },
-        {
-          title: 'Track 2',
-          solo: false,
-          volume: 0.92,
-          pan: 0.1,
-          image: 'track2.png',
-          style: 'border-left: 3px solid #6c757d;',
-          sources: [{ src: 'track2.mp3', type: 'audio/mpeg', startOffsetMs: 50, endOffsetMs: 0 }],
-          alignment: {
-            column: 'track_2_time',
-            synchronizedSources: [{ src: 'track2-synced.mp3', type: 'audio/mpeg' }],
-          },
-        },
-      ],
-    },
-    {
-      type: 'sheetMusic',
-      src: 'score.musicxml',
-      measureColumn: 'measure',
-      maxWidth: 960,
-      maxHeight: 360,
-      renderScale: 0.75,
-      followPlayback: true,
-      cursorColor: '#999999',
-      cursorAlpha: 0.1,
-      style: 'margin: 0;',
-    },
-    {
-      type: 'warpingMatrix',
-      height: 240,
-      tempoSmoothingSeconds: 5,
-      bpm: 'infer_score',
-      style: 'margin: 0;',
-    },
-  ],
-  alignment: {
-    csv: 'alignment.csv',
-    referenceTimeColumn: 'score_time_sec',
-    referenceTimeColumnSync: 'synced_time_sec',
-    outOfRange: 'clamp',
-  },
-  features: {
-    muteOtherPlayerInstances: true,
-    globalVolume: true,
-    trackVolumeControls: true,
-    trackPanControls: true,
-    repeat: false,
-    tabView: false,
-    iosAudioUnlock: true,
-    keyboard: true,
-    looping: true,
-    seekBar: true,
-    timer: true,
-    presets: false,
-    customizablePanelOrder: false,
-  },
-});
-```
-
-  </div>
-  <div class="ts-doc-tabs__panel" data-doc-matrix-panel data-doc-matrix-version="interactive" hidden markdown="1">
-
-```javascript
-TrackSwitch.createTrackSwitchSyncInteractive(rootElement, {
-  workerUrl: 'dist/js/trackswitch-interactive-worker.js',
-});
+<trackswitch-sync-interactive
+  use:useTrackswitch={{ config, variant: "sync-interactive" }}
+/>
 ```
 
   </div>
 </div>
 
-## Configuration {#player-wide-settings}
+## Configuration shape
 
-### `ui` {#ui}
+The top-level keys are:
 
-`ui` is required. It decides which sections appear in the player and in what order they appear.
+| Key | Required | Description |
+| --- | --- | --- |
+| `media` | yes | Named audio, MIDI, and MusicXML resources. At least one audio entry is required. |
+| `views` | yes | Ordered visual surfaces. At least one view is required. |
+| `alignment` | no | Correspondence data connecting two or more timelines. |
+| `markers` | no | Named annotation-marker CSV files. |
+| `presets` | no | Named groups of audio tracks. |
+| `features` | no | Player control and interaction switches. |
 
-Use it to add any of these section types:
+Unknown keys are rejected. The old `ui`, `trackGroup`, `sources`, `presetNames`, and
+separate default/sync schemas are no longer supported.
 
-- `trackGroup`
-- `image`
-- `perTrackImage`
-- `text`
-- `waveform`
-- `midi`
-- `sheetMusic`
-- `warpingMatrix`
+## Data
 
-At least one `trackGroup` section is required because that is where the tracks live.
+Data keys define the player model. Views reference these IDs later.
 
-### `presetNames` {#presetnames}
+### `media`
 
-Use `presetNames` to create ensembles and name your track combinations.
+`media` is a map of stable IDs to source entries. Audio media become playable tracks.
+MIDI and MusicXML media are visual resources and do not create audio output.
 
-Example:
-
-```javascript
-presetNames: ['Full Mix', 'Vocals Only', 'Backing Track']
+```json
+{
+  "media": {
+    "violin": {
+      "type": "audio",
+      "src": "violin.mp3",
+      "title": "Violin",
+      "image": "violin.png",
+      "solo": true,
+      "volume": 0.9,
+      "pan": -0.2,
+      "startOffsetMs": 100,
+      "endOffsetMs": 50
+    },
+    "notes": { "type": "midi", "src": "notes.mid" },
+    "score": { "type": "musicxml", "src": "score.musicxml" }
+  }
+}
 ```
 
-Notes:
-
-- Preset numbers start at `0`.
-- Presets only appear in the ui when you have at least two usable preset choices.
-- Tracks decide which presets they belong to through each track's `presets` setting.
-- If you use presets, `presetNames` assigns names to preset IDs in numerical order.
-- If `features.exclusiveSolo` is `true`, presets are disabled.
-
-### `features` {#features}
+Audio media options:
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `exclusiveSolo?` | `boolean` | `false` | Listen to one track at a time only instead of mixing several tracks together. |
-| `muteOtherPlayerInstances?` | `boolean` | `true` | Stops another player on the same page when this one starts playing. |
-| `globalVolume?` | `boolean` | `false` | Shows a main volume control for the whole player. |
+| `type` | `"audio"` | - | Marks the entry as a playable audio track. |
+| `src` | `string` | - | Audio file URL. |
+| `title?` | `string` | media ID | Name shown in track lists. |
+| `image?` | `string` | none | Image used by `perTrackImage` and track-based visuals. |
+| `solo?` | `boolean` | `false` | Initial on/off state for this track. |
+| `volume?` | `number` | `1` | Initial track volume. |
+| `pan?` | `number` | `0` | Initial stereo pan. |
+| `startOffsetMs?` | `number` | `0` | Trims or pads the beginning. Positive trims; negative adds silence. |
+| `endOffsetMs?` | `number` | `0` | Trims or pads the end. Positive trims; negative adds silence. |
+| `srcSynchronized?` | `object` | none | Optional pre-warped audio source for aligned playback. |
+| `style?` | `string` | none | Inline CSS for that track row. |
+
+`srcSynchronized` names an already synchronized audio file and the local timeline it
+belongs to:
+
+```json
+{
+  "srcSynchronized": { "src": "violin-synchronized.wav", "timeline": "violin" }
+}
+```
+
+MIDI and MusicXML entries accept only `type` and `src`:
+
+```json
+{
+  "media": {
+    "notes": { "type": "midi", "src": "notes.mid" },
+    "score": { "type": "musicxml", "src": "score.musicxml" }
+  }
+}
+```
+
+### `alignment`
+
+Use `alignment` when media do not share one timeline. The CSV contains corresponding
+positions across abstract timelines.
+
+```json
+{
+  "alignment": {
+    "src": "alignment.csv",
+    "referenceTimeline": "score",
+    "timelines": {
+      "score": "measure",
+      "notes": "midi_seconds",
+      "takeA": "take_a_seconds",
+      "takeB": "take_b_seconds"
+    },
+    "outside": "clamp",
+    "duplicatePlacements": "average"
+  }
+}
+```
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `src` | `string` | - | CSV file containing timing correspondences. |
+| `referenceTimeline` | `string` | - | Timeline used by the main timer, seek bar, loop points, and shared navigation. |
+| `timelines` | `Record<string, string>` | - | Maps timeline IDs to CSV column names. |
+| `outside?` | `"clamp" \| "linear" \| "error"` | `"error"` | Behavior when projection reaches an unmapped range. |
+| `duplicatePlacements?` | `"average" \| "error"` | `"error"` | Behavior when multiple rows map to the same timeline position. |
+
+Timeline IDs usually match media IDs. If a timeline ID names a MusicXML media entry, it is
+displayed in measures. Audio, MIDI, and standalone timelines use seconds. `referenceTimeline`
+must be one of the keys in `timelines`.
+
+### `markers`
+
+Markers add sparse authored positions to the player. Use them for musical sections,
+analysis events, lyrics, beats, or any other meaningful points in time.
+
+```json
+{
+  "markers": {
+    "sections": {
+      "src": "sections.csv",
+      "timeline": "takeA",
+      "timeCol": "start",
+      "labelCol": "label"
+    }
+  }
+}
+```
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `src` | `string` | - | CSV file containing marker data. |
+| `timeline?` | `string` | reference timeline | Timeline used by `timeCol`. |
+| `timeCol` | `string` | - | CSV column containing marker positions. |
+| `labelCol?` | `string` | none | CSV column containing marker labels. |
+
+Previous/next marker navigation uses only annotation sets authored on tracks that are
+currently audible. Track selection and per-track volume changes update the available
+navigation targets immediately.
+
+Views render marker sets through `markerLayers`:
+
+```json
+{
+  "type": "waveform",
+  "sourceTracks": ["takeA"],
+  "markerLayers": [
+    { "set": "sections", "color": "#ed8c01", "line": "dashed" },
+    { "set": "alignment", "color": "#777", "foldToReference": true }
+  ]
+}
+```
+
+`set` names a configured marker set. The special `alignment` set exists only when an
+`alignment` block is configured. `foldToReference` draws connectors from the current view
+timeline back to the reference timeline, which is useful for showing warping points.
+
+Marker layer options:
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `set` | `string` | - | Marker set ID, or the implicit `alignment` set. |
+| `color?` | `string` | current color | Marker color. |
+| `line?` | `"solid" \| "dashed"` | `"dashed"` | Marker line style. |
+| `foldToReference?` | `boolean` | `false` | Draw timeline-to-reference connectors where applicable. |
+
+### `presets`
+
+Presets define named track groups. They are useful for switching between full mix,
+instrument families, or analysis conditions.
+
+```json
+{
+  "presets": {
+    "all": { "label": "All tracks", "tracks": ["violin", "bass", "drums"] },
+    "rhythm": { "label": "Rhythm", "tracks": ["bass", "drums"] }
+  }
+}
+```
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `label?` | `string` | preset ID | Name shown in the UI. |
+| `tracks` | `string[]` | - | Audio media IDs included in the preset. |
+
+Presets are disabled when `features.exclusiveSolo` is `true`.
+
+## Views
+
+Views render in declaration order. Every view has a `type`; most views accept optional
+`style`. `image`, `perTrackImage`, `waveform`, and `midi` views can be seekable surfaces
+and accept `seekMarginLeft`, `seekMarginRight`, and `markerLayers`.
+
+### `image`
+
+Shows one static image, such as cover art, a diagram, or a time-aligned illustration.
+
+```json
+{
+  "type": "image",
+  "src": "cover.png",
+  "seekable": true,
+  "seekMarginLeft": 3,
+  "seekMarginRight": 3,
+  "markerLayers": [{ "set": "sections", "line": "solid" }]
+}
+```
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `src` | `string` | - | Image file URL. |
+| `seekable?` | `boolean` | `false` | Allows clicking or dragging the image to seek. |
+| `seekMarginLeft?` | `number` | `0` | Non-seekable margin on the left, in percent. |
+| `seekMarginRight?` | `number` | `0` | Non-seekable margin on the right, in percent. |
+| `markerLayers?` | `MarkerLayerConfig[]` | none | Marker layers rendered over the seek surface. |
+| `style?` | `string` | none | Inline CSS for this view. |
+
+### `perTrackImage`
+
+Shows the `image` of the active audio track. It is intended for exclusive-solo players.
+
+```json
+{
+  "type": "perTrackImage",
+  "seekable": true,
+  "markerLayers": [{ "set": "sections" }]
+}
+```
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `seekable?` | `boolean` | `false` | Allows clicking or dragging the current track image to seek. |
+| `seekMarginLeft?` | `number` | `0` | Non-seekable margin on the left, in percent. |
+| `seekMarginRight?` | `number` | `0` | Non-seekable margin on the right, in percent. |
+| `markerLayers?` | `MarkerLayerConfig[]` | none | Marker layers rendered over the seek surface. |
+| `style?` | `string` | none | Inline CSS for this view. |
+
+### `waveform`
+
+Shows an interactive waveform. In a normal multitrack player, it can represent all
+currently audible tracks. In an aligned player, a fixed-track waveform uses that track's
+local timeline.
+
+```json
+{
+  "type": "waveform",
+  "sourceTracks": ["takeA"],
+  "height": 120,
+  "waveformBarWidth": 1,
+  "maxZoom": 5,
+  "playbackFollowMode": "center",
+  "timeAxis": "individual",
+  "timer": true,
+  "alignedPlayhead": true,
+  "markerLayers": [{ "set": "sections", "color": "#ed8c01" }]
+}
+```
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `sourceTracks?` | `"audible" \| string[]` | `"audible"` | Chooses the audio tracks represented by the waveform. |
+| `height?` | `number` | `150` | Waveform height in pixels. |
+| `waveformBarWidth?` | `number` | `1` | Thickness of waveform bars. |
+| `maxZoom?` | `number` | `5` | Smallest visible interval in seconds. Smaller values allow tighter zoom. |
+| `playbackFollowMode?` | `"off" \| "center" \| "jump"` | `"off"` | How the view follows playback. |
+| `timeAxis?` | `"shared" \| "individual"` | `"shared"` | Uses the longest audio duration for comparable fixed-track waveforms, or expands each fixed-track waveform to its own duration. |
+| `timer?` | `boolean` | `false` | Shows a local timer inside the waveform. |
+| `alignedPlayhead?` | `boolean` | `false` | Draws reference-to-local playhead geometry in aligned views. |
+| `markerLayers?` | `MarkerLayerConfig[]` | none | Marker layers rendered over the waveform. |
+
+When `alignment` is configured, `sourceTracks` is required and must name exactly one
+track. `"audible"` and multi-track fixed waveforms are only valid when all audio shares
+one timeline. `timeAxis: "individual"` is available only for aligned, single-track
+waveforms. In shared mode, the region after a shorter track ends is shaded in both the
+waveform and zoom overview.
+
+### `midi`
+
+Shows a MIDI file as a piano-roll visualization. MIDI files are visual only.
+
+```json
+{
+  "type": "midi",
+  "mediaID": "notes",
+  "height": 180,
+  "maxZoom": 5,
+  "playbackFollowMode": "center",
+  "timer": true
+}
+```
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `mediaID` | `string` | - | ID of a `media` entry with `type: "midi"`. |
+| `height?` | `number` | `180` | Piano-roll height in pixels. |
+| `maxZoom?` | `number` | `5` | Smallest visible interval in seconds. |
+| `playbackFollowMode?` | `"off" \| "center" \| "jump"` | `"off"` | How the MIDI view follows playback. |
+| `timer?` | `boolean` | `false` | Shows a local timer inside the MIDI view. |
+| `seekMarginLeft?` | `number` | `0` | Non-seekable margin on the left, in percent. |
+| `seekMarginRight?` | `number` | `0` | Non-seekable margin on the right, in percent. |
+| `markerLayers?` | `MarkerLayerConfig[]` | none | Marker layers rendered over the piano roll. |
+| `style?` | `string` | none | Inline CSS for this view. |
+
+`mediaID` must name a `media` entry with `type: "midi"`. If the same ID is declared in
+`alignment.timelines`, the piano roll seeks, follows, loops, and displays markers on its
+own local timeline.
+
+### `sheetMusic`
+
+Shows a MusicXML score.
+
+```json
+{
+  "type": "sheetMusic",
+  "mediaID": "score",
+  "maxWidth": 1000,
+  "maxHeight": 370,
+  "renderScale": 0.7,
+  "followPlayback": true,
+  "cursorColor": "#999999",
+  "cursorAlpha": 0.4
+}
+```
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `mediaID` | `string` | - | ID of a `media` entry with `type: "musicxml"`. |
+| `maxWidth?` | `number` | `1000` | Maximum score width in pixels. |
+| `maxHeight?` | `number` | `380` | Maximum score height in pixels. |
+| `renderScale?` | `number` | `0.7` | Scale passed to the score renderer. |
+| `followPlayback?` | `boolean` | `true` | Keeps the score view moving with playback. |
+| `cursorColor?` | `string` | `"#999999"` | Playback cursor color. |
+| `cursorAlpha?` | `number` | `0.4` | Playback cursor opacity from `0` to `1`. |
+| `style?` | `string` | none | Inline CSS for this view. |
+
+`mediaID` must name a `media` entry with `type: "musicxml"`. If that ID is declared in
+`alignment.timelines`, score following and measure seeking use the aligned timeline.
+
+### `warpingMatrix`
+
+Shows the relationship between two aligned timelines.
+
+```json
+{
+  "type": "warpingMatrix",
+  "x": "takeA",
+  "y": "takeB",
+  "height": 220,
+  "tempoSmoothingSeconds": 5
+}
+```
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `x` | `string` | - | Audio timeline ID for the horizontal axis. |
+| `y` | `string` | - | Audio timeline ID for the vertical axis. |
+| `height?` | `number` | auto | Chart height in pixels. |
+| `tempoSmoothingSeconds?` | `number` | none | Smoothing window for local tempo-deviation display. |
+| `style?` | `string` | none | Inline CSS for this view. |
+
+`x` and `y` must name timelines declared in `alignment.timelines`.
+
+### `text`
+
+Adds a plain text section.
+
+```json
+{
+  "type": "text",
+  "text": "Compare the two performances",
+  "bold": true,
+  "italic": false,
+  "fontSize": 18,
+  "align": "center"
+}
+```
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `text` | `string` | - | Text to show. |
+| `bold?` | `boolean` | `false` | Renders the text in bold. |
+| `italic?` | `boolean` | `false` | Renders the text in italic. |
+| `fontSize?` | `number` | inherited | Font size in pixels. |
+| `align?` | `"left" \| "center" \| "right"` | `"center"` | Horizontal text alignment. |
+| `style?` | `string` | none | Inline CSS for this view. |
+
+The text is plain text, not HTML.
+
+### `trackList`
+
+Shows audio tracks and track controls.
+
+```json
+{
+  "type": "trackList",
+  "tracks": ["takeA", "takeB"],
+  "rowHeight": 52
+}
+```
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `tracks` | `string[]` | - | Audio media IDs shown in this list. |
+| `rowHeight?` | `number` | auto | Track row height in pixels. |
+
+`tracks` contains audio media IDs. Use multiple `trackList` views if you want separate
+track groups in different parts of the layout.
+
+## Features
+
+`features` controls optional player behavior and UI controls. Omitted options use the
+defaults below.
+
+```json
+{
+  "features": {
+    "exclusiveSolo": false,
+    "muteOtherPlayerInstances": true,
+    "globalVolume": true,
+    "trackVolumeControls": true,
+    "trackPanControls": true,
+    "customizablePanelOrder": false,
+    "repeat": false,
+    "tabView": false,
+    "iosAudioUnlock": true,
+    "keyboard": true,
+    "looping": true,
+    "seekBar": true,
+    "timer": true
+  }
+}
+```
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `exclusiveSolo?` | `boolean` | `false` | Allows only one track to be active at a time. Useful for comparing alternate performances or stems. |
+| `muteOtherPlayerInstances?` | `boolean` | `true` | Stops other TrackSwitch players on the same page when this one starts playback. |
+| `globalVolume?` | `boolean` | `false` | Shows one master volume control for the whole player. |
 | `trackVolumeControls?` | `boolean` | `false` | Shows per-track volume controls. |
-| `trackPanControls?` | `boolean` | `false` | Shows per-track left-right pan controls. |
-| `customizablePanelOrder?` | `boolean` | `false` | Lets listeners rearrange the visible UI elements. Affects the visible sections on the page, not the track order itself. |
-| `repeat?` | `boolean` | `false` | Starts with repeat already turned on. |
-| `tabView?` | `boolean` | `false` | Changes the look of the track rows to a tab-like style. |
-| `iosAudioUnlock?` | `boolean` | `true` | Helps playback start more reliably on iPhone and iPad. Recommended to leave this on. |
-| `keyboard?` | `boolean` | `true` | Enable keyboard shortcuts. |
-| `looping?` | `boolean` | `false` | Show loop tools and allow A/B looping. |
-| `seekBar?` | `boolean` | `true` | Show the main seekbar. |
-| `timer?` | `boolean` | `true` | Show the main time display. |
-| `presets?` | `boolean` | `true` | Show preset switching UI element when presets are available. |
+| `trackPanControls?` | `boolean` | `false` | Shows per-track left/right pan controls. |
+| `customizablePanelOrder?` | `boolean` | `false` | Lets listeners rearrange visible view panels. This affects view order, not track order. |
+| `repeat?` | `boolean` | `false` | Starts playback with repeat enabled. |
+| `tabView?` | `boolean` | `false` | Renders track rows with a tab-like presentation. |
+| `iosAudioUnlock?` | `boolean` | `true` | Helps playback start reliably on iPhone and iPad. Leave this on unless you control the unlock flow yourself. |
+| `keyboard?` | `boolean` | `true` | Enables keyboard shortcuts. |
+| `looping?` | `boolean` | `false` | Shows A/B loop tools and enables loop interactions. |
+| `seekBar?` | `boolean` | `true` | Shows the main seek bar. |
+| `timer?` | `boolean` | `true` | Shows the main time display. |
 
 Unknown feature keys are rejected.
 
-### `alignment` {#alignment}
+## Keyboard and loop controls
 
-Use `alignment` only with sync or interactive sync modes. Default-mode players reject this block.
-
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `csv` | `string` | `-` | The timing data file used to connect the different performances. |
-| `referenceTimeColumn` | `string` | `-` | The csv column to determine the main shared timeline used by the player. A usual setup would be to align tracks to a reference timeline calculated from the score. |
-| `referenceTimeColumnSync?` | `string` | none | The csv column to determine the shared timeline when synchronized playback is turned on in sync mode. |
-| `outOfRange?` | `'clamp' | 'linear'` | `'clamp'` | What the player should do when playback reaches a part of the timing map that has no matching value. |
-
-## Track Settings {#track-settings}
-
-### `trackGroup` {#trackgroup}
-
-Use `type: 'trackGroup'` to add one or more tracks to the player.
-
-Example:
-
-```javascript
-{
-  type: 'trackGroup',
-  rowHeight: 44,
-  trackGroup: [
-    {
-      title: 'Drums',
-      image: 'drums.png',
-      presets: [0, 2],
-      sources: [{ src: 'drums.mp3' }],
-    },
-  ],
-}
-```
-
-Section options:
-
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `rowHeight?` | `number` | none | Sets the height of the track rows. |
-| `trackGroup` | `object[]` | `-` | The list of tracks shown in this section. |
-
-Notes:
-
-- You can use more than one `trackGroup` section.
-- `ui` order controls where each `trackGroup` appears on the page.
-
-### Track Options {#track-options}
-
-Each entry inside `trackGroup` can use these options:
-
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `title?` | `string` | none | Name shown in the track list. |
-| `solo?` | `boolean` | `false` | Starting on/off state for that track. |
-| `volume?` | `number` | `1` | Starting track volume. Starts at `1` if you do not set it. |
-| `pan?` | `number` | `0` | Starting left-right placement. Starts at `0` if you do not set it. |
-| `image?` | `string` | none | Image used by `perTrackImage` and other track-based visuals. |
-| `presets?` | `number[]` | none | Decides which presets include this track. |
-| `sources` | `object[]` | `-` | Audio files for this track. |
-| `alignment?` | `object` | none | Alignment settings for this track in a sync player. |
-| `markers?` | `object` | none | Loads timestamped markers for this track from a CSV file. |
-| `style?` | `string` | none | Lets you give that track row its own visual styling. |
-
-### Audio Source Options {#audio-source-options}
-
-Each entry inside `sources` and `alignment.synchronizedSources` can use these options:
-
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `src` | `string` | `-` | Audio file to use. |
-| `type?` | `string` | none | Optional file-type hint. If you omit it, trackswitch.js recognizes these source file extensions automatically: `.aac`, `.aif`, `.aiff`, `.au`, `.flac`, `.m4a`, `.mp1`, `.mp2`, `.mp3`, `.mp4`, `.mpeg`, `.mpg`, `.oga`, `.ogg`, `.wav`, `.webm`. |
-| `startOffsetMs?` | `number` | `0` | Trims or pads the beginning of the file. Positive values trim. Negative values add silence. |
-| `endOffsetMs?` | `number` | `0` | Trims or pads the end of the file. Positive values trim. Negative values add silence. |
-
-Notes:
-
-- Every track needs at least one `src`.
-- If you list several source files, the player uses the first one that works for the listener's browser.
-- If `type` is omitted and the file extension is not in the table above, the player asks the browser about `audio/<extension>`.
-
-### Track Alignment Options {#track-alignment-options}
-
-In sync mode, each track can also use an `alignment` block:
-
-```javascript
-trackGroup: [
-    {
-      title: 'Track 1',
-      sources: [{ src: 'track1.mp3' }],
-      alignment: {
-        column: 'track_1_time',
-        synchronizedSources: [{ src: 'track1-synced.mp3' }],
-      }
-    },
-  ],
-```
-
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `column?` | `string` | none | The timing-data column for that performance. Required in sync mode. |
-| `synchronizedSources?` | `object[]` | none | Extra audio files used when synchronized playback is turned on. |
-
-Notes:
-
-- `synchronizedSources` are what make mixed synced playback possible.
-- Sync is only available when the player also has a shared sync timeline through `referenceTimeColumnSync`.
-
-### Track Marker Options {#track-marker-options}
-
-Add one `markers` block to a track to load its timestamped marker data from CSV:
-
-```javascript
-{
-  title: 'Track 1',
-  sources: [{ src: 'track1.mp3' }],
-  markers: {
-    csv: 'track1-markers.csv',
-    timeColumn: 'position_seconds',
-    labelColumn: 'annotation',
-  },
-}
-```
-
-```csv
-position_seconds,annotation
-12.5,First entrance
-42.75,
-78.2,Texture change
-```
-
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `csv` | `string` | `-` | URL of the marker CSV. |
-| `timeColumn` | `string` | `-` | CSV column containing local track time in seconds. |
-| `labelColumn?` | `string` | none | CSV column containing marker labels. Empty cells stay empty. |
-
-Notes:
-
-- Column names have no defaults. `timeColumn` is always required.
-- Without `labelColumn`, labels are the chronological marker numbers `1`, `2`, `3`, and so on. With `labelColumn`, the CSV value is always used, including an empty value.
-- IDs and numeric labels are assigned after chronological sorting. Rows at the same time keep their CSV order.
-- Marker times use the track's local playable timeline and must stay within its effective duration. Invalid files, missing columns, non-numeric times, negative times, and out-of-range times stop player loading with an error.
-- Marker data is loaded independently of its presentation. Add a `markers` block to each supported UI element where the markers should be visible.
-- On visible marker surfaces, waveforms use the tracks selected by `waveformSource`, per-track images use the current track, and global images and MIDI views merge the selected tracks with audible per-track volume.
-- When at least one track configures markers, the main control bar adds previous/next marker buttons. Equal mapped times are one navigation stop.
-- Right-drag loop selection can snap its moving endpoint to a marker within 12 screen pixels. Its starting point remains exact.
-
-#### UI Marker Display Options
-
-The optional `markers` block on `image`, `perTrackImage`, `waveform`, and `midi` elements makes track markers visible on that element:
-
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `color?` | CSS color string | `black` | Full-opacity marker color on hover, focus, or touch activation. |
-| `lineStyle?` | `'solid' \| 'dashed'` | `'dashed'` | Style of the vertical marker line. |
-
-Markers rest as translucent gray. Hovering, focusing, or pressing one reveals its label and configured highlight color. Activating a marker seeks directly to it. An element without a `markers` block does not render markers.
-
-## Visualizations {#visualizations}
-
-### `text` {#text}
-
-Use `type: 'text'` to add a plain text section to the player.
-
-Example:
-
-```javascript
-{
-  type: 'text',
-  text: 'Choose which parts of the arrangement you want to hear.',
-  bold: true,
-  italic: false,
-  fontSize: 18,
-  align: 'center',
-  style: 'margin: 12px 0;',
-}
-```
-
-Section options:
-
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `text` | `string` | `-` | The text to show. |
-| `bold?` | `boolean` | `false` | Makes the text bold. |
-| `italic?` | `boolean` | `false` | Makes the text italic. |
-| `fontSize?` | `number` | none | Sets the text size in pixels. |
-| `align?` | `'left' | 'center' | 'right'` | `'center'` | Sets horizontal text alignment. |
-| `style?` | `string` | none | Lets you fine-tune the look or spacing of the section with CSS. |
-
-Notes:
-
-- The text is plain text only. It is not interpreted as HTML.
-
-### `image` {#image}
-
-Use `type: 'image'` for one main image, such as cover art, a diagram, or a screenshot.
-
-Example:
-
-```javascript
-{
-  type: 'image',
-  src: 'cover.jpg',
-  seekable: true,
-  seekMarginLeft: 5,
-  seekMarginRight: 5,
-  markers: {
-    color: '#ed8c01',
-    lineStyle: 'dashed',
-  },
-  style: 'margin: 12px auto;',
-}
-```
-
-Section options:
-
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `src` | `string` | `-` | The image file to show. |
-| `seekable?` | `boolean` | `false` | Lets listeners click the image to jump to a different point in the audio. |
-| `markers?` | `object` | none | Shows track markers and configures their appearance on this image. |
-| `seekMarginLeft?` | `number` | `0` | Leaves a non-seekable area on the left side of the image. |
-| `seekMarginRight?` | `number` | `0` | Leaves a non-seekable area on the right side of the image. |
-| `style?` | `string` | none | Lets you fine-tune the look of the section with CSS. |
-
-### `perTrackImage` {#pertrackimage}
-
-Use `type: 'perTrackImage'` to show the image for the currently active track.
-
-Example:
-
-```javascript
-{
-  type: 'perTrackImage',
-  seekable: false,
-  markers: {
-    color: '#ed8c01',
-    lineStyle: 'dashed',
-  },
-  style: 'margin: 12px auto;',
-}
-```
-
-Section options:
-
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `seekable?` | `boolean` | `false` | Lets listeners click the current track image to jump in time. |
-| `markers?` | `object` | none | Shows the current track's markers and configures their appearance. |
-| `seekMarginLeft?` | `number` | `0` | Leaves a non-seekable area on the left side of the image. |
-| `seekMarginRight?` | `number` | `0` | Leaves a non-seekable area on the right side of the image. |
-| `style?` | `string` | none | Lets you fine-tune the look or spacing of the section with CSS. |
-
-Notes:
-
-- Only works if `exclusiveSolo` is `true`.
-- This section uses each track's `image` attribute.
-
-### `waveform` {#waveform}
-
-Use `type: 'waveform'` to show an interactive waveform.
-
-Example:
-
-```javascript
-{
-  type: 'waveform',
-  height: 150,
-  waveformBarWidth: 2,
-  maxZoom: 5,
-  waveformSource: 'audible',
-  playbackFollowMode: 'center',
-  timer: true,
-  markers: {
-    color: '#ed8c01',
-    lineStyle: 'dashed',
-  },
-  style: 'margin: 16px 0;',
-}
-```
-
-Section options:
-
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `height?` | `number` | `150` | Height of the waveform. |
-| `waveformBarWidth?` | `number` | `1` | Thickness of the waveform bars. |
-| `maxZoom?` | `number` | `5` | The closest zoom level listeners can reach, in seconds. Smaller numbers allow tighter zoom. |
-| `waveformSource?` | `'audible' | number | number[]` | `'audible'` | Chooses which sound the waveform represents. |
-| `playbackFollowMode?` | `'off' | 'center' | 'jump'` | `'off'` | Decides whether the waveform view follows playback automatically. |
-| `timeAxis?` | `'shared' | 'individual'` | `'shared'` | In a sync player, uses either the longest audio duration for comparable fixed-track waveforms or each track's own duration. Requires a numeric `waveformSource`. |
-| `timer?` | `boolean` | Standard: `false`; Sync: `true` | Shows a small time label inside the waveform panel. |
-| `alignedPlayhead?` | `boolean` | `false` | Draws a diagonal Z-shaped indicator that shows where the reference timeline position is relative to this track's local playhead. Only has an effect in sync mode and requires `waveformSource` to be a track index (number). |
-| `showAlignmentPoints?` | `boolean` | `false` | Draws a thin dashed Z-shaped line for every alignment anchor point that exists, showing the full warping path across the waveform. Only has an effect in sync mode and requires `waveformSource` to be a track index (number). |
-| `markers?` | `object` | none | Shows markers from the tracks selected by `waveformSource` and configures their appearance. |
-| `seekMarginLeft?` | `number` | `0` | Leaves a non-seekable area on the left side. |
-| `seekMarginRight?` | `number` | `0` | Leaves a non-seekable area on the right side. |
-| `style?` | `string` | none | Lets you fine-tune the look or spacing of the section with CSS. |
-
-Notes:
-
-- If you leave out `timer`, the waveform timer is off in a standard player and on in a sync player.
-- In shared mode, the region after a shorter track has ended is shaded in the waveform and zoom overview. Individual mode removes that region and expands the track to its own time axis.
-- `timeAxis` only affects fixed-track waveforms in sync mode. Using `individual` outside sync mode or without a numeric `waveformSource` is invalid.
-- When listeners zoom in, the waveform shows a small overview map for quick navigation.
-
-### `midi` {#midi}
-
-Use `type: 'midi'` to show a MIDI file as a piano-roll visualization. MIDI files are only visual; they do not add playback tracks or change audio output.
-
-Example:
-
-```javascript
-{
-  type: 'midi',
-  src: 'notes.mid',
-  alignmentColumn: 'time_notes',
-  height: 180,
-  maxZoom: 5,
-  playbackFollowMode: 'center',
-  timer: true,
-  markers: {
-    color: '#ed8c01',
-    lineStyle: 'dashed',
-  },
-  style: 'margin: 16px 0;',
-}
-```
-
-Section options:
-
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `src` | `string` | - | MIDI file to visualize. |
-| `alignmentColumn?` | `string` | none | Alignment CSV column containing this MIDI file's local seconds. Used by sync players for mapped playback heads, timers, following, loops, and seeking. |
-| `height?` | `number` | `180` | Height of the MIDI view. |
-| `maxZoom?` | `number` | `5` | The closest zoom level listeners can reach, in seconds. Smaller numbers allow tighter zoom. |
-| `playbackFollowMode?` | `'off' | 'center' | 'jump'` | `'off'` | Decides whether the MIDI view follows playback automatically. |
-| `timer?` | `boolean` | `false` | Shows a small time label inside the MIDI panel. |
-| `markers?` | `object` | none | Shows the active tracks' markers and configures their appearance. |
-| `seekMarginLeft?` | `number` | `0` | Leaves a non-seekable area on the left side. |
-| `seekMarginRight?` | `number` | `0` | Leaves a non-seekable area on the right side. |
-| `style?` | `string` | none | Lets you fine-tune the look or spacing of the section with CSS. |
-
-Notes:
-
-- MIDI note timing is read directly from the file in seconds. Standard players use the main player timeline; sync players use the MIDI file duration as the MIDI view's local timeline.
-- The visible pitch range is calculated from the notes in the file with two semitones of padding above and below.
-- Clicking or dragging the MIDI view seeks the audio player, like waveform sections.
-- MIDI files with no note events are treated as load errors.
-
-### `sheetMusic` {#sheetmusic}
-
-Use `type: 'sheetMusic'` to show a MusicXML score.
-
-Example:
-
-```javascript
-{
-  type: 'sheetMusic',
-  src: 'score.musicxml',
-  measureColumn: 'measure',
-  maxWidth: 960,
-  maxHeight: 360,
-  renderScale: 0.75,
-  followPlayback: true,
-  cursorColor: '#999999',
-  cursorAlpha: 0.1,
-  style: 'margin: 20px auto;',
-}
-```
-
-Section options:
-
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `src` | `string` | `-` | The MusicXML file to show. |
-| `measureColumn?` | `string` | none | The column in the alignment data that contains measure numbers for score following. |
-| `maxWidth?` | `number` | `1000` | The widest the score area should become. |
-| `maxHeight?` | `number` | `380` | The tallest the score area should become. |
-| `renderScale?` | `number` | `0.7` | Determines the size of rendered score elements. |
-| `followPlayback?` | `boolean` | `true` | Keeps the score view moving with playback. |
-| `cursorColor?` | `string` | `'#999999'` | Color of the playback follow cursor. |
-| `cursorAlpha?` | `number` | `0.4` | Transparency of the playback follow cursor. Values below `0` become `0`; values above `1` become `1`. |
-| `style?` | `string` | none | Lets you fine-tune the look or spacing of the section with CSS. |
-
-Notes:
-
-- If `measureColumn` is set and matching alignment data is available, listeners can click measures to jump through the music.
-- In a standard player, `measureColumn` can use `init.alignment` as timing CSV metadata for score following. Full alignment features such as track alignment, aligned waveform overlays, and warping matrices still require the sync player.
-
-### `warpingMatrix` {#warpingmatrix}
-
-Use `type: 'warpingMatrix'` to show interactive warping path and local tempo deviation graphs in sync mode.
-
-Example:
-
-```javascript
-{
-  type: 'warpingMatrix',
-  height: 240,
-  tempoSmoothingSeconds: 5,
-  bpm: 'infer_score',
-  style: 'margin: 12px 0;',
-}
-```
-
-Section options:
-
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `height?` | `number` | auto | Height of the chart area. |
-| `tempoSmoothingSeconds?` | `number` | `5` | How much the local tempo deviation graph should be smoothed. Tempo Deviation is computed as a central differences variant of the warping path. Larger values give a smoother curve. |
-| `bpm?` | `number | 'infer_score' | null` | `null` | Controls whether the left tempo axis is shown as BPM. Use a positive number for a fixed global BPM, `'infer_score'` to infer it from the score dynamically (changing BPM also supported), or `null` to hide the BPM axis and show only tempo percent. |
-| `style?` | `string` | none | Lets you fine-tune the look or spacing of the section with CSS. |
-
-Notes:
-
-- This section is only useful in sync mode.
-- It shows two views: the timing relationship between the active track and the reference timeline, and the local tempo deviation of the active track over time.
-- This section is only enabled when synchronized playback is off in sync mode.
-- `bpm: 'infer_score'` requires at least one `sheetMusic` ui element in the player.
-- Positive `height`, `tempoSmoothingSeconds`, and numeric `bpm` values are used as given. Invalid values are ignored.
-
-## Keyboard and Loop Controls {#keyboard-and-loop-controls}
-
-When `features.keyboard` is on, you can use keyboard shortcuts:
+When `features.keyboard` is on, these shortcuts are available:
 
 | Keys | Action |
 | --- | --- |
-| `F1` | Open or close the shortcut help panel |
-| `Space` | Play or pause |
-| `Escape` | Stop and return to the start |
-| `R` | Toggle repeat |
-| `Left / Right` | Jump backward or forward by 2 seconds |
-| `Shift + Left / Shift + Right` | Jump backward or forward by 5 seconds |
-| `Home` | Go to the start |
-| `Up / Down` | Change global volume when `globalVolume` is on |
-| `1` to `0` | Control tracks 1 to 10 |
+| `F1` | Open or close the shortcut help panel. |
+| `Space` | Play or pause. |
+| `Escape` | Stop and return to the start. |
+| `R` | Toggle repeat. |
+| `Left` / `Right` | Jump backward or forward by 2 seconds. |
+| `Shift + Left` / `Shift + Right` | Jump backward or forward by 5 seconds. |
+| `Home` | Go to the start. |
+| `Up` / `Down` | Change global volume when `globalVolume` is on. |
+| `1` to `0` | Control tracks 1 to 10. |
 
-When `features.looping` is on, you can also use:
+When `features.looping` is on, these additional shortcuts are available:
 
 | Keys | Action |
 | --- | --- |
-| `A` | Set loop point A |
-| `B` | Set loop point B |
-| `L` | Turn the loop on or off |
-| `C` | Clear the loop |
+| `A` | Set loop point A. |
+| `B` | Set loop point B. |
+| `L` | Turn the loop on or off. |
+| `C` | Clear the loop. |
 
-Looping is also available through the loop buttons. On seekable controls, loop regions can be marked directly using right-click on mouse.
+Looping is also available through the loop buttons. On seekable controls, loop regions can
+be marked directly with right-click on mouse.
 
-## Things to Check {#things-to-check}
+## Things to check
 
-- `ui` must contain at least one `trackGroup`.
-- Every track must have at least one audio file in `sources`.
-- Seekable `image`, `perTrackImage`, and `waveform` sections need `seekMarginLeft + seekMarginRight` to stay below `100`.
-- `perTrackImage` is meant for setups where one track is active at a time (`exclusiveSolo: true`).
-- Presets are only shown in the UI when you have at least two preset choices.
-- `sheetMusic.measureColumn` only works for clickable measure syncing when matching alignment data is also available.
-- `warpingMatrix` works only when synchronized playback is off in sync mode, not default mode.
-- In sync mode, each track needs its own `alignment.column`.
+- `media` must contain at least one audio entry.
+- `views` must contain at least one view.
+- Every ID referenced by `trackList`, `waveform.sourceTracks`, presets, or view `mediaID`
+  must exist in `media`.
+- `alignment.referenceTimeline` must be one of the keys in `alignment.timelines`.
+- Timeline IDs used by `srcSynchronized`, marker sets, MIDI views, sheet music views, and
+  warping matrices must match the IDs declared in `alignment.timelines`.
+- Seekable `image`, `perTrackImage`, `waveform`, and `midi` views need
+  `seekMarginLeft + seekMarginRight` below `100`.
+- `perTrackImage` is meant for setups where one track is active at a time
+  (`exclusiveSolo: true`).
+- `warpingMatrix` requires an `alignment` block.

@@ -1536,6 +1536,7 @@ export function updateWarpingMatrix(ctx: any, host: any, context: any): any {
 			return;
 		}
 
+		host.wrapper.classList.remove("warping-matrix-preview");
 		host.wrapper.style.display = "block";
 		this.ensureWarpingLayout(host);
 		this.applyWarpingMatrixContext(host, context);
@@ -1550,6 +1551,39 @@ export function updateWarpingMatrix(ctx: any, host: any, context: any): any {
 
 		this.updateWarpingMatrixPlaybackState(host, context);
 	}.call(ctx, host, context);
+}
+
+export function drawDummyWarpingMatrices(ctx: any): any {
+	return function (this: any) {
+		const previewContext = {
+			enabled: true,
+			syncEnabled: false,
+			referenceDuration: 100,
+			currentReferenceTime: 0,
+			currentScoreBpm: null,
+			columnOrder: ["preview"],
+			trackSeries: [
+				{
+					trackIndex: -1,
+					columnKey: "preview",
+					trackDuration: 100,
+					points: [
+						{ referenceTime: 0, trackTime: 0 },
+						{ referenceTime: 18, trackTime: 15 },
+						{ referenceTime: 40, trackTime: 44 },
+						{ referenceTime: 64, trackTime: 58 },
+						{ referenceTime: 82, trackTime: 87 },
+						{ referenceTime: 100, trackTime: 100 },
+					],
+				},
+			],
+		};
+
+		this.warpingMatrixHosts.forEach((host: WarpingMatrixHostMetadata) => {
+			this.updateWarpingMatrix(host, previewContext);
+			host.wrapper.classList.add("warping-matrix-preview");
+		});
+	}.call(ctx);
 }
 
 export function renderWarpingMatrixPathPlot(

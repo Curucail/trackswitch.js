@@ -1,5 +1,4 @@
 import type { MarkerLayerConfig, ResolvedMarkerSet } from "../domain/types";
-import { readMarkerLayersAttribute } from "../shared/marker-display";
 import type { Marker, MarkerSet } from "../timeline/marker";
 import type { ProjectionService } from "../timeline/projection";
 import type { TimelineId } from "../timeline/timeline";
@@ -22,12 +21,14 @@ export interface MarkerRenderData {
 	referenceTimeline: TimelineId;
 	projection: ProjectionService | null;
 	getSeekTimelineContext: SeekTimelineContextResolver;
+	formatReferenceValue(value: number): string;
 }
 
 interface MarkerRendererContext {
 	root: HTMLElement;
 	waveformSeekSurfaces: Array<{ seekWrap: HTMLElement }>;
 	midiSeekSurfaces: MidiSeekSurfaceMetadata[];
+	getSeekMarkerLayers(seekWrap: HTMLElement): MarkerLayerConfig[];
 }
 
 function resolveMarkerReferenceTime(
@@ -47,7 +48,10 @@ function resolveMarkerReferenceTime(
 
 function resolvePlacement(
 	referenceTime: number | null,
-	timeline: { duration: number; fromReferenceTime(referenceTime: number): number },
+	timeline: {
+		duration: number;
+		fromReferenceTime(referenceTime: number): number;
+	},
 ): MarkerPlacement | null {
 	if (
 		referenceTime === null ||
@@ -65,9 +69,9 @@ function resolvePlacement(
 	return { referenceTime, surfaceTime, duration: timeline.duration };
 }
 
-function createMarkerAriaLabel(marker: Marker, referenceTime: number): string {
+function createMarkerAriaLabel(marker: Marker, referenceTime: string): string {
 	const label = marker.label ? `, ${marker.label}` : "";
-	return `Marker ${marker.id}${label}, ${referenceTime.toFixed(2)}s`;
+	return `Marker ${marker.id}${label}, ${referenceTime}`;
 }
 
 function renderMarkerLayer(
@@ -91,7 +95,9 @@ function renderMarkerLayer(
 		return;
 	}
 
-	entries.sort((left, right) => left.placement.surfaceTime - right.placement.surfaceTime);
+	entries.sort(
+		(left, right) => left.placement.surfaceTime - right.placement.surfaceTime,
+	);
 
 	const layerElement = seekWrap.ownerDocument.createElement("div");
 	layerElement.className = "timeline-marker-layer";
@@ -104,7 +110,10 @@ function renderMarkerLayer(
 		button.type = "button";
 		button.className = `timeline-marker timeline-marker-${layer.line ?? "dashed"}`;
 		button.tabIndex = index === 0 ? 0 : -1;
-		const ariaLabel = createMarkerAriaLabel(entry.marker, entry.placement.referenceTime);
+		const ariaLabel = createMarkerAriaLabel(
+			entry.marker,
+			data.formatReferenceValue(entry.placement.referenceTime),
+		);
 		button.setAttribute("aria-label", ariaLabel);
 		button.title = ariaLabel;
 		button.setAttribute("data-marker-id", entry.marker.id);
@@ -112,7 +121,10 @@ function renderMarkerLayer(
 			"data-marker-reference-time",
 			String(entry.placement.referenceTime),
 		);
-		button.setAttribute("data-marker-surface-time", String(entry.placement.surfaceTime));
+		button.setAttribute(
+			"data-marker-surface-time",
+			String(entry.placement.surfaceTime),
+		);
 		button.style.setProperty(
 			"--ts-marker-position",
 			`${(entry.placement.surfaceTime / entry.placement.duration) * 100}%`,
@@ -137,12 +149,18 @@ function renderMarkerLayer(
 	seekWrap.appendChild(layerElement);
 }
 
-function renderConfiguredLayers(seekWrap: HTMLElement, data: MarkerRenderData): void {
-	seekWrap.querySelectorAll(":scope > .timeline-marker-layer").forEach((existing) => {
-		existing.remove();
-	});
+function renderConfiguredLayers(
+	ctx: MarkerRendererContext,
+	seekWrap: HTMLElement,
+	data: MarkerRenderData,
+): void {
+	seekWrap
+		.querySelectorAll(":scope > .timeline-marker-layer")
+		.forEach((existing) => {
+			existing.remove();
+		});
 
-	const layers = readMarkerLayersAttribute(seekWrap);
+	const layers = ctx.getSeekMarkerLayers(seekWrap);
 	layers.forEach((layer) => {
 		if (layer.set === "alignment") {
 			// Alignment sets never generate DOM — drawn on canvas via foldToReference.
@@ -163,31 +181,20 @@ export function renderTimelineMarkers(
 	data: MarkerRenderData,
 ): void {
 	ctx.waveformSeekSurfaces.forEach((surface) => {
-		renderConfiguredLayers(surface.seekWrap, data);
+		renderConfiguredLayers(ctx, surface.seekWrap, data);
 	});
 
 	ctx.midiSeekSurfaces.forEach((surface) => {
-		renderConfiguredLayers(surface.seekWrap, data);
+		renderConfiguredLayers(ctx, surface.seekWrap, data);
 	});
 
 	ctx.root
 		.querySelectorAll(".seekable-img-wrap > .seekwrap")
 		.forEach((candidate) => {
 			if (candidate instanceof HTMLElement) {
-				renderConfiguredLayers(candidate, data);
+				renderConfiguredLayers(ctx, candidate, data);
 			}
 		});
-}
-
-/** All markers across every annotation set (not the implicit alignment set), for navigation. */
-export function collectAnnotationMarkers(
-	markerSets: ReadonlyMap<string, ResolvedMarkerSet>,
-): Marker[] {
-	const markers: Marker[] = [];
-	markerSets.forEach((resolved) => {
-		markers.push(...resolved.markerSet.markers);
-	});
-	return markers;
 }
 
 export function updateMarkerNavigationControls(

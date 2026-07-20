@@ -68,6 +68,7 @@ export function updateSeekWrapVisuals(
 	duration: number,
 	loop: LoopState,
 	loopingEnabled: boolean,
+	formatValue: (value: number) => string = String,
 ): void {
 	const safeDuration = sanitizeDuration(duration);
 	const safePosition =
@@ -86,7 +87,17 @@ export function updateSeekWrapVisuals(
 				clampPercent(seekRatio * 100),
 			);
 		}
+		seekhead.setAttribute(
+			"aria-label",
+			`Playhead ${formatValue(safePosition)}`,
+		);
+		seekhead.title = formatValue(safePosition);
 	}
+	geometryRoot.setAttribute("role", "slider");
+	geometryRoot.setAttribute("aria-valuemin", "0");
+	geometryRoot.setAttribute("aria-valuemax", String(safeDuration));
+	geometryRoot.setAttribute("aria-valuenow", String(safePosition));
+	geometryRoot.setAttribute("aria-valuetext", formatValue(safePosition));
 
 	if (!loopingEnabled) {
 		return;
@@ -99,6 +110,8 @@ export function updateSeekWrapVisuals(
 		);
 		setPercentProperty(geometryRoot, "--ts-loop-marker-a", pointAPerc);
 		setDisplay(markerA, "block");
+		markerA.setAttribute("aria-label", `Loop A ${formatValue(loop.pointA)}`);
+		(markerA as HTMLElement).title = formatValue(loop.pointA);
 	} else if (markerA) {
 		setDisplay(markerA, "none");
 	}
@@ -110,6 +123,8 @@ export function updateSeekWrapVisuals(
 		);
 		setPercentProperty(geometryRoot, "--ts-loop-marker-b", pointBPerc);
 		setDisplay(markerB, "block");
+		markerB.setAttribute("aria-label", `Loop B ${formatValue(loop.pointB)}`);
+		(markerB as HTMLElement).title = formatValue(loop.pointB);
 	} else if (markerB) {
 		setDisplay(markerB, "none");
 	}

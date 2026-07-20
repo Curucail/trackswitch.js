@@ -6,6 +6,19 @@ import type {
 	TrackSwitchUiState,
 } from "../domain/types";
 import type { TrackSwitchControllerImpl } from "./player-controller";
+import { markerPlacement } from "../timeline/marker";
+import { IMPLICIT_REFERENCE_TIMELINE } from "../timeline/timeline";
+
+function runtimeValue(
+	controller: TrackSwitchControllerImpl,
+	marker: typeof controller.runtimeMarkers.playhead | null,
+	fallback: number | null,
+): number | null {
+	if (!marker) return null;
+	const timeline =
+		controller.alignment?.referenceTimeline ?? IMPLICIT_REFERENCE_TIMELINE;
+	return markerPlacement(marker, timeline) ?? fallback;
+}
 
 export function createTrackStateSnapshot(runtime: TrackRuntime): TrackState {
 	return {
@@ -35,16 +48,29 @@ export function createControllerSnapshot(
 export function createUiState(
 	controller: TrackSwitchControllerImpl,
 ): TrackSwitchUiState {
+	const position = runtimeValue(
+		controller,
+		controller.runtimeMarkers.playhead,
+		controller.state.position,
+	) as number;
 	return {
 		playing: controller.state.playing,
 		repeat: controller.state.repeat,
-		position: controller.state.position,
+		position,
 		longestDuration: controller.longestDuration,
 		syncEnabled: controller.globalSyncEnabled,
 		syncAvailable: controller.isGlobalSyncAvailable(),
 		loop: {
-			pointA: controller.state.loop.pointA,
-			pointB: controller.state.loop.pointB,
+			pointA: runtimeValue(
+				controller,
+				controller.runtimeMarkers.loopA,
+				controller.state.loop.pointA,
+			),
+			pointB: runtimeValue(
+				controller,
+				controller.runtimeMarkers.loopB,
+				controller.state.loop.pointB,
+			),
 			enabled: controller.state.loop.enabled,
 		},
 	};
@@ -54,7 +80,12 @@ export function createPositionEventPayload(
 	controller: TrackSwitchControllerImpl,
 ): TrackSwitchEventMap["position"] {
 	return {
-		position: controller.state.position,
+		position:
+			runtimeValue(
+				controller,
+				controller.runtimeMarkers.playhead,
+				controller.state.position,
+			) ?? 0,
 		duration: controller.longestDuration,
 	};
 }

@@ -1,5 +1,6 @@
 import type {
 	TrackRuntime,
+	TrackSwitchWaveformViewConfig,
 	WaveformPlaybackFollowMode,
 	WaveformSourceIndex,
 	WaveformTimeAxis,
@@ -10,10 +11,8 @@ import type {
 } from "../engine/waveform-engine";
 import { sanitizeInlineStyle } from "../shared/dom";
 import { formatSecondsToHHMMSSmmm } from "../shared/format";
-import { copyMarkerDisplayAttributes } from "../shared/marker-display";
 import { clampPercent } from "../shared/math";
 import {
-	parseWaveformSource,
 	resolveFixedWaveformTrackIndex,
 	resolveWaveformTrackIndices,
 	serializeWaveformSource,
@@ -75,8 +74,6 @@ interface WaveformSeekSurfaceMetadata {
 }
 
 const MIN_WAVEFORM_ZOOM = MIN_TIMELINE_ZOOM;
-const DEFAULT_MAX_WAVEFORM_ZOOM_SECONDS = 5;
-const WAVEFORM_TILE_WIDTH_PX = 1024;
 const WAVEFORM_TILE_PEAK_CACHE_LIMIT = 64;
 function buildSeekWrap(leftPercent: number, rightPercent: number): string {
 	return (
@@ -102,15 +99,6 @@ function sanitizeDuration(value: number): number {
 	return sanitizeTimelineDuration(value);
 }
 
-function parseWaveformBarWidth(value: string | null, fallback: number): number {
-	const parsed = Number(value);
-	if (!Number.isFinite(parsed) || parsed < 1) {
-		return fallback;
-	}
-
-	return Math.max(1, Math.floor(parsed));
-}
-
 function isWaveformTrackAudible(
 	ctx: any,
 	runtimes: TrackRuntime[],
@@ -132,76 +120,6 @@ function isWaveformTrackAudible(
 	}
 
 	return !!ctx.features.exclusiveSolo;
-}
-
-function parseWaveformTimerEnabled(
-	value: string | null,
-	alignmentMode: boolean,
-): boolean {
-	if (value === null) {
-		return alignmentMode;
-	}
-
-	return value.trim().toLowerCase() === "true";
-}
-
-function parseWaveformAlignedPlayheadEnabled(value: string | null): boolean {
-	if (value === null) {
-		return false;
-	}
-
-	return value.trim().toLowerCase() === "true";
-}
-
-function parseWaveformShowAlignmentPointsEnabled(
-	value: string | null,
-): boolean {
-	if (value === null) {
-		return false;
-	}
-
-	return value.trim().toLowerCase() === "true";
-}
-
-function parseWaveformMaxZoom(value: string | null): number {
-	if (value === null) {
-		return DEFAULT_MAX_WAVEFORM_ZOOM_SECONDS;
-	}
-
-	const trimmed = value.trim();
-	if (!trimmed) {
-		return DEFAULT_MAX_WAVEFORM_ZOOM_SECONDS;
-	}
-
-	const parsed = Number(trimmed);
-	if (!Number.isFinite(parsed)) {
-		return DEFAULT_MAX_WAVEFORM_ZOOM_SECONDS;
-	}
-
-	return parsed;
-}
-
-function parseWaveformPlaybackFollowMode(
-	value: string | null,
-): WaveformPlaybackFollowMode {
-	const normalized =
-		typeof value === "string" ? value.trim().toLowerCase() : "";
-
-	if (normalized === "center" || normalized === "jump") {
-		return normalized;
-	}
-
-	return "off";
-}
-
-function parseWaveformTimeAxis(value: string | null): WaveformTimeAxis {
-	if (value === "shared" || value === "individual") {
-		return value;
-	}
-
-	throw new Error(
-		"Invalid waveform time axis metadata: expected 'shared' or 'individual'.",
-	);
 }
 
 function resolveWaveformColor(element: HTMLElement): string {
@@ -599,31 +517,18 @@ export function wrapWaveformCanvases(ctx: any): any {
 				return;
 			}
 
-			const waveformSource = parseWaveformSource(
-				canvasElement.getAttribute("data-waveform-source"),
-			);
-			const barWidth = parseWaveformBarWidth(
-				canvasElement.getAttribute("data-waveform-bar-width"),
-				1,
-			);
-			const maxZoomSeconds = parseWaveformMaxZoom(
-				canvasElement.getAttribute("data-waveform-max-zoom"),
-			);
-			const playbackFollowMode = parseWaveformPlaybackFollowMode(
-				canvasElement.getAttribute("data-waveform-playback-follow-mode"),
-			);
-			const timeAxis = parseWaveformTimeAxis(
-				canvasElement.getAttribute("data-waveform-time-axis"),
-			);
-			const timerEnabled = parseWaveformTimerEnabled(
-				canvasElement.getAttribute("data-waveform-timer"),
-				this.isAlignmentMode(),
-			);
-			const alignedPlayhead = parseWaveformAlignedPlayheadEnabled(
-				canvasElement.getAttribute("data-waveform-aligned-playhead"),
-			);
-			const showAlignmentPoints = parseWaveformShowAlignmentPointsEnabled(
-				canvasElement.getAttribute("data-waveform-show-alignment-points"),
+			const definition = this.getConfiguredViewHost(canvasElement);
+			if (definition.view.type !== "waveform") return;
+			const config = definition.view as TrackSwitchWaveformViewConfig;
+			const waveformSource = definition.waveformSource ?? "audible";
+			const barWidth = config.waveformBarWidth ?? 1;
+			const maxZoomSeconds = config.maxZoom ?? 5;
+			const playbackFollowMode = config.playbackFollowMode ?? "off";
+			const timeAxis = config.timeAxis ?? "shared";
+			const timerEnabled = config.timer ?? this.isAlignmentMode();
+			const alignedPlayhead = config.alignedPlayhead === true;
+			const showAlignmentPoints = !!config.markerLayers?.some(
+				(layer) => layer.set === "alignment" && layer.foldToReference,
 			);
 			const originalHeight = canvasElement.height;
 
@@ -631,8 +536,7 @@ export function wrapWaveformCanvases(ctx: any): any {
 			wrapper.className = "waveform-wrap ts-stack-section";
 			wrapper.setAttribute(
 				"style",
-				sanitizeInlineStyle(canvasElement.getAttribute("data-waveform-style")) +
-					"; display: block;",
+				sanitizeInlineStyle(config.style) + "; display: block;",
 			);
 			const scrollContainer = document.createElement("div");
 			scrollContainer.className = "waveform-scroll";
@@ -653,13 +557,16 @@ export function wrapWaveformCanvases(ctx: any): any {
 			surface.insertAdjacentHTML(
 				"beforeend",
 				buildSeekWrap(
-					clampPercent(canvasElement.getAttribute("data-seek-margin-left")),
-					clampPercent(canvasElement.getAttribute("data-seek-margin-right")),
+					clampPercent(config.seekMarginLeft),
+					clampPercent(config.seekMarginRight),
 				),
 			);
 
-			const tileLayer = document.createElement("div");
-			tileLayer.className = "waveform-tile-layer";
+			// One viewport-sized canvas slides over the virtual waveform surface.
+			// This keeps zoom independent of browser canvas limits without creating a
+			// DOM node per tile.
+			const tileLayer = document.createElement("canvas");
+			tileLayer.className = "waveform waveform-tile waveform-tile-layer";
 			const endedRegion = document.createElement("div");
 			endedRegion.className = "waveform-ended-region";
 			const seekWrap = surface.querySelector(".seekwrap");
@@ -676,12 +583,8 @@ export function wrapWaveformCanvases(ctx: any): any {
 			canvasElement.remove();
 
 			if (seekWrap instanceof HTMLElement) {
-				copyMarkerDisplayAttributes(canvasElement, seekWrap);
+				this.registerSeekMarkerLayers(seekWrap, config.markerLayers);
 				seekWrap.setAttribute("data-seek-surface", "waveform");
-				seekWrap.setAttribute(
-					"data-waveform-source",
-					serializeWaveformSource(waveformSource),
-				);
 				const timingNode = timerEnabled
 					? this.createWaveformTimingNode(overlay)
 					: null;
@@ -738,7 +641,7 @@ export function wrapWaveformCanvases(ctx: any): any {
 							canvas: HTMLCanvasElement;
 							lastDrawKey: string | null;
 						}
-					>(),
+					>([[0, { canvas: tileLayer, lastDrawKey: null }]]),
 					normalizationPeak: 1,
 					normalizationCacheKey: null,
 					tilePeakCache: new Map<string, WaveformPeakBuckets>(),
@@ -839,73 +742,28 @@ export function forEachVisibleWaveformTile(
 			surfaceWidth,
 			scrollLeft + viewportWidth + bufferPx,
 		);
-		const tileWidth = WAVEFORM_TILE_WIDTH_PX;
-		const firstTile = Math.max(0, Math.floor(visibleStart / tileWidth));
-		const lastTile = Math.max(
-			firstTile,
-			Math.floor(Math.max(0, visibleEnd - 1) / tileWidth),
+		const tileRecord = surfaceMetadata.tiles.get(0);
+		if (!tileRecord) return;
+		const tileCanvas = tileRecord.canvas;
+		const tileStartPx = Math.floor(visibleStart);
+		const tileCssWidth = Math.max(1, Math.ceil(visibleEnd - visibleStart));
+		const tileCssHeight = Math.max(
+			1,
+			Math.round(surfaceMetadata.originalHeight),
 		);
-
-		const needed = new Set<number>();
-		for (let tileIndex = firstTile; tileIndex <= lastTile; tileIndex += 1) {
-			const tileStartPx = tileIndex * tileWidth;
-			if (tileStartPx >= surfaceWidth) {
-				break;
-			}
-
-			const tileCssWidth = Math.max(
-				1,
-				Math.min(tileWidth, surfaceWidth - tileStartPx),
-			);
-			let tileRecord = surfaceMetadata.tiles.get(tileIndex);
-			let isNew = false;
-			if (!tileRecord) {
-				const tileCanvas = document.createElement("canvas");
-				tileCanvas.classList.add("waveform", "waveform-tile");
-				surfaceMetadata.tileLayer.appendChild(tileCanvas);
-				tileRecord = { canvas: tileCanvas, lastDrawKey: null };
-				surfaceMetadata.tiles.set(tileIndex, tileRecord);
-				isNew = true;
-			}
-
-			const tileCanvas = tileRecord.canvas;
-			const tileCssHeight = Math.max(
-				1,
-				Math.round(surfaceMetadata.originalHeight),
-			);
-
-			tileCanvas.style.left = `${tileStartPx}px`;
-			tileCanvas.style.width = `${tileCssWidth}px`;
-			tileCanvas.style.height = `${tileCssHeight}px`;
-
-			const renderBarWidth = Math.max(1, Math.round(surfaceMetadata.barWidth));
-			callback({
-				tileIndex,
-				tileStartPx,
-				tileCssWidth,
-				tileCssHeight,
-				surfaceWidth,
-				canvas: tileCanvas,
-				renderBarWidth,
-				isNew,
-				record: tileRecord,
-			});
-			needed.add(tileIndex);
-		}
-
-		const existingTileIndexes = Array.from(
-			surfaceMetadata.tiles.keys(),
-		) as number[];
-		existingTileIndexes.forEach((tileIndex: number) => {
-			if (needed.has(tileIndex)) {
-				return;
-			}
-
-			const tileRecord = surfaceMetadata.tiles.get(tileIndex);
-			if (tileRecord) {
-				tileRecord.canvas.remove();
-			}
-			surfaceMetadata.tiles.delete(tileIndex);
+		tileCanvas.style.left = `${tileStartPx}px`;
+		tileCanvas.style.width = `${tileCssWidth}px`;
+		tileCanvas.style.height = `${tileCssHeight}px`;
+		callback({
+			tileIndex: 0,
+			tileStartPx,
+			tileCssWidth,
+			tileCssHeight,
+			surfaceWidth,
+			canvas: tileCanvas,
+			renderBarWidth: Math.max(1, Math.round(surfaceMetadata.barWidth)),
+			isNew: false,
+			record: tileRecord,
 		});
 	}.call(ctx, surfaceMetadata, callback);
 }

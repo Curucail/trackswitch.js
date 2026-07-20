@@ -59,6 +59,7 @@ export function applyTrackProperties(ctx: TrackSwitchControllerImpl): void {
 		ctx.getWaveformTimelineContext(),
 	);
 	ctx.renderMarkerLayers();
+	ctx.updateMarkerNavigation();
 
 	ctx.runtimes.forEach((runtime, index) => {
 		ctx.emit("trackState", createTrackStateEventPayload(index, runtime));
@@ -66,6 +67,7 @@ export function applyTrackProperties(ctx: TrackSwitchControllerImpl): void {
 }
 
 export function updateMainControls(ctx: TrackSwitchControllerImpl): void {
+	ctx.synchronizeRuntimeMarkers();
 	const uiState = createUiState(ctx);
 	const suppressWaveformPlaybackFollow =
 		shouldSuppressWaveformPlaybackFollow(ctx);
@@ -98,6 +100,7 @@ export function updateMainControls(ctx: TrackSwitchControllerImpl): void {
 }
 
 export function updatePlaybackPositionUi(ctx: TrackSwitchControllerImpl): void {
+	ctx.synchronizeRuntimeMarkers();
 	const uiState = createUiState(ctx);
 	const suppressWaveformPlaybackFollow =
 		shouldSuppressWaveformPlaybackFollow(ctx);

@@ -3,10 +3,7 @@ import { mapTime } from "../shared/alignment";
 import { closestInRoot, getOwnerWindow } from "../shared/dom";
 import { clamp } from "../shared/math";
 import { getSeekMetrics } from "../shared/seek";
-import {
-	parseWaveformSource,
-	resolveFixedWaveformTrackIndex,
-} from "../shared/waveform-source";
+import { resolveFixedWaveformTrackIndex } from "../shared/waveform-source";
 import { snapLoopEndToMarker } from "./marker-actions";
 
 interface SeekTimelineContext {
@@ -743,7 +740,7 @@ export function isFixedWaveformLocalAxisEnabled(ctx: any): any {
 	return function (this: any) {
 		return (
 			this.isAlignmentMode() &&
-			!!this.alignmentContext &&
+			!!this.alignment &&
 			!this.globalSyncEnabled
 		);
 	}.call(ctx);
@@ -772,12 +769,14 @@ export function getSeekTimelineContext(ctx: any, seekingElement: any): any {
 			return referenceContext;
 		}
 
-		const waveformSource = parseWaveformSource(
-			seekingElement.getAttribute("data-waveform-source"),
-		);
+		const waveformSurface = this.renderer.findWaveformSurface(seekingElement);
+		if (!waveformSurface) {
+			return referenceContext;
+		}
+
 		const trackIndex = resolveFixedWaveformTrackIndex(
 			this.runtimes.length,
-			waveformSource,
+			waveformSurface.waveformSource,
 		);
 		if (trackIndex === null) {
 			return referenceContext;
@@ -801,9 +800,8 @@ export function getSeekTimelineContext(ctx: any, seekingElement: any): any {
 					longestTrackDuration = d;
 			}
 		}
-		const waveformSurface = this.renderer.findWaveformSurface(seekingElement);
 		const axisDuration =
-			waveformSurface?.timeAxis === "individual"
+			waveformSurface.timeAxis === "individual"
 				? trackDuration
 				: longestTrackDuration;
 
@@ -950,11 +948,7 @@ export function getWaveformTimelineContext(ctx: any): any {
 			getTrackAlignmentPoints: (
 				trackIndex: number,
 			): Array<{ referenceTime: number; trackTime: number }> => {
-				if (!this.alignmentContext) return [];
-				return (
-					this.alignmentContext.warpingSeriesByTrack.get(trackIndex)?.points ??
-					[]
-				);
+				return this.getTrackAlignmentPoints(trackIndex);
 			},
 		};
 	}.call(ctx);
@@ -962,7 +956,7 @@ export function getWaveformTimelineContext(ctx: any): any {
 
 export function getWaveformTimelineProjector(ctx: any): any {
 	return function (this: any) {
-		if (!this.isAlignmentMode() || !this.alignmentContext) {
+		if (!this.isAlignmentMode() || !this.alignment) {
 			return undefined;
 		}
 

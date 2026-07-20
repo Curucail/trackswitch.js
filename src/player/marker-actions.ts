@@ -1,13 +1,16 @@
-import { collectAnnotationMarkers } from "../ui/render-markers";
 import { IMPLICIT_REFERENCE_TIMELINE } from "../timeline/timeline";
 import type { ControllerPointerEvent } from "../shared/seek";
 import type { TrackSwitchControllerImpl } from "./player-controller";
+import { moveRuntimeMarker } from "../timeline/marker";
 
 const MARKER_TIME_EPSILON = 0.000001;
 const MARKER_SNAP_DISTANCE_PX = 12;
 const MARKER_PREVIOUS_JUMP_MARGIN = 0.8;
 
-export function renderMarkerLayers(controller: TrackSwitchControllerImpl): void {
+export function renderMarkerLayers(
+	controller: TrackSwitchControllerImpl,
+): void {
+	synchronizeRuntimeMarkers(controller);
 	const referenceTimeline =
 		controller.alignment?.referenceTimeline ?? IMPLICIT_REFERENCE_TIMELINE;
 
@@ -16,8 +19,36 @@ export function renderMarkerLayers(controller: TrackSwitchControllerImpl): void 
 		alignmentMarkerSet: controller.alignment?.markerSet ?? null,
 		referenceTimeline,
 		projection: controller.alignment?.projection ?? null,
-		getSeekTimelineContext: (seekWrap) => controller.getSeekTimelineContext(seekWrap),
+		getSeekTimelineContext: (seekWrap) =>
+			controller.getSeekTimelineContext(seekWrap),
+		formatReferenceValue: (value) =>
+			controller.renderer.formatReferenceTimelineValue(value),
 	});
+}
+
+export function synchronizeRuntimeMarkers(
+	controller: TrackSwitchControllerImpl,
+): void {
+	const timeline =
+		controller.alignment?.referenceTimeline ?? IMPLICIT_REFERENCE_TIMELINE;
+	controller.runtimeMarkers = moveRuntimeMarker(
+		controller.runtimeMarkers,
+		"playhead",
+		timeline,
+		controller.state.position,
+	);
+	controller.runtimeMarkers = moveRuntimeMarker(
+		controller.runtimeMarkers,
+		"loopA",
+		timeline,
+		controller.state.loop.pointA,
+	);
+	controller.runtimeMarkers = moveRuntimeMarker(
+		controller.runtimeMarkers,
+		"loopB",
+		timeline,
+		controller.state.loop.pointB,
+	);
 }
 
 export function getNavigationMarkerTimes(
@@ -26,27 +57,58 @@ export function getNavigationMarkerTimes(
 	const referenceTimeline =
 		controller.alignment?.referenceTimeline ?? IMPLICIT_REFERENCE_TIMELINE;
 	const projection = controller.alignment?.projection ?? null;
+	const anySelectedTrack = controller.runtimes.some(
+		(runtime) => runtime.state.solo,
+	);
+	const noSoloFallbackIsAudible =
+		controller.features.exclusiveSolo &&
+		!(controller.isAlignmentMode() && controller.globalSyncEnabled);
+	const audibleTrackIds = new Set(
+		controller.runtimes
+			.filter(
+				(runtime) =>
+					runtime.state.volume > 0 &&
+					(anySelectedTrack
+						? runtime.state.solo
+						: noSoloFallbackIsAudible),
+			)
+			.map((runtime) => runtime.definition.id),
+	);
 
 	const times: number[] = [];
-	collectAnnotationMarkers(controller.markerSets).forEach((marker) => {
-		const time = projection
-			? projection.projectMarker(marker, referenceTimeline)
-			: (marker.placements.get(referenceTimeline) ?? null);
+	controller.markerSets.forEach((resolved) => {
+		const isSharedTimeline =
+			!controller.alignment && resolved.timeline === IMPLICIT_REFERENCE_TIMELINE;
 		if (
-			time !== null &&
-			Number.isFinite(time) &&
-			time >= 0 &&
-			time <= controller.longestDuration
+			!audibleTrackIds.has(resolved.timeline) &&
+			!(isSharedTimeline && audibleTrackIds.size > 0)
 		) {
-			times.push(time);
+			return;
 		}
+
+		resolved.markerSet.markers.forEach((marker) => {
+			const time = projection
+				? projection.projectMarker(marker, referenceTimeline)
+				: (marker.placements.values().next().value ?? null);
+			if (
+				time !== null &&
+				Number.isFinite(time) &&
+				time >= 0 &&
+				time <= controller.longestDuration
+			) {
+				times.push(time);
+			}
+		});
 	});
 	times.sort((left, right) => left - right);
 
 	const unique: number[] = [];
 	times.forEach((time) => {
 		const previous = unique[unique.length - 1];
-		if (previous === undefined || Math.abs(previous - time) > MARKER_TIME_EPSILON) {
+		if (
+			previous === undefined ||
+			Math.abs(previous - time) > MARKER_TIME_EPSILON
+		) {
 			unique.push(time);
 		}
 	});
@@ -76,7 +138,9 @@ function getMarkerNavigationTargets(controller: TrackSwitchControllerImpl): {
 	return { previous: previous, next: next };
 }
 
-export function updateMarkerNavigation(controller: TrackSwitchControllerImpl): void {
+export function updateMarkerNavigation(
+	controller: TrackSwitchControllerImpl,
+): void {
 	const targets = getMarkerNavigationTargets(controller);
 	controller.renderer.updateMarkerNavigationControls(
 		targets.previous !== null,
@@ -99,12 +163,25 @@ export function activateTimelineMarker(
 	controller: TrackSwitchControllerImpl,
 	markerElement: HTMLElement,
 ): void {
-	const referenceTime = Number(
-		markerElement.getAttribute("data-marker-reference-time"),
+	const seekWrap = markerElement.closest(".seekwrap");
+	if (!(seekWrap instanceof HTMLElement)) {
+		return;
+	}
+
+	const surfaceTime = Number(
+		markerElement.getAttribute("data-marker-surface-time"),
 	);
+	if (!Number.isFinite(surfaceTime)) {
+		return;
+	}
+
+	const referenceTime = controller
+		.getSeekTimelineContext(seekWrap)
+		.toReferenceTime(surfaceTime);
 	if (!Number.isFinite(referenceTime)) {
 		return;
 	}
+
 	controller.seekTo(referenceTime);
 }
 

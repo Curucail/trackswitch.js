@@ -57,8 +57,12 @@ export type {
 	TrackSwitchWarpingMatrixViewConfig,
 	TrackSwitchWaveformViewConfig,
 	WaveformSource,
+	WaveformTimeAxis,
 } from "./domain/types";
-export type { TrackswitchDomEventName, TrackswitchPlayerElement } from "./element";
+export type {
+	TrackswitchDomEventName,
+	TrackswitchPlayerElement,
+} from "./element";
 export {
 	createInitialPlayerState,
 	createInteractiveTrackSwitch,

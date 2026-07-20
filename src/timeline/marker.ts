@@ -61,3 +61,84 @@ export function withPlacement(
 	next.set(timeline, value);
 	return { ...marker, placements: next };
 }
+
+export const RUNTIME_MARKER_SET_ID = markerSetId("$runtime");
+export const PLAYHEAD_MARKER_ID = "$playhead";
+export const LOOP_A_MARKER_ID = "$loop:a";
+export const LOOP_B_MARKER_ID = "$loop:b";
+
+/**
+ * The player-owned markers. Playback code still exposes numeric positions through
+ * the public snapshot API, but these markers are the canonical projection/display
+ * representation and travel through the same graph as authored markers.
+ */
+export interface RuntimeMarkerSet {
+	readonly set: MarkerSet;
+	readonly playhead: Marker;
+	readonly loopA: Marker | null;
+	readonly loopB: Marker | null;
+}
+
+export function createRuntimeMarkerSet(
+	referenceTimeline: TimelineId,
+	position = 0,
+): RuntimeMarkerSet {
+	const playhead = createMarker(
+		PLAYHEAD_MARKER_ID,
+		RUNTIME_MARKER_SET_ID,
+		new Map([[referenceTimeline, position]]),
+		"Playhead",
+	);
+	return {
+		set: {
+			id: RUNTIME_MARKER_SET_ID,
+			markerType: "runtime",
+			markers: [playhead],
+		},
+		playhead,
+		loopA: null,
+		loopB: null,
+	};
+}
+
+export function moveRuntimeMarker(
+	state: RuntimeMarkerSet,
+	marker: "playhead" | "loopA" | "loopB",
+	referenceTimeline: TimelineId,
+	value: number | null,
+): RuntimeMarkerSet {
+	const id =
+		marker === "playhead"
+			? PLAYHEAD_MARKER_ID
+			: marker === "loopA"
+				? LOOP_A_MARKER_ID
+				: LOOP_B_MARKER_ID;
+	const label =
+		marker === "playhead"
+			? "Playhead"
+			: marker === "loopA"
+				? "Loop A"
+				: "Loop B";
+	const current = state[marker];
+	const next =
+		value === null
+			? null
+			: current
+				? withPlacement(current, referenceTimeline, value)
+				: createMarker(
+						id,
+						RUNTIME_MARKER_SET_ID,
+						new Map([[referenceTimeline, value]]),
+						label,
+					);
+	const updated = { ...state, [marker]: next } as RuntimeMarkerSet;
+	return {
+		...updated,
+		set: {
+			...state.set,
+			markers: [updated.playhead, updated.loopA, updated.loopB].filter(
+				(entry): entry is Marker => entry !== null,
+			),
+		},
+	};
+}

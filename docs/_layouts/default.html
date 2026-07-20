@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="{{ '/css/style.css' | relative_url }}" />
 </head>
 
-<body{% if page.url == '/' %} class="home-page"{% elsif page.url == '/documentation.html' %} class="docs-page docs-page--config"{% elsif page.url == '/examples.html' %} class="docs-page docs-page--narrow"{% elsif page.url == '/citation.html' %} class="docs-page docs-page--cite"{% endif %}>
+<body{% if page.body_class %} class="{{ page.body_class }}"{% elsif page.url == '/' %} class="home-page"{% elsif page.url == '/documentation.html' %} class="docs-page docs-page--config"{% elsif page.url == '/examples.html' %} class="docs-page docs-page--narrow"{% elsif page.url == '/citation.html' %} class="docs-page docs-page--cite"{% endif %}>
   {% unless page.url == '/' %}
   <header class="site-masthead">
     <div class="site-masthead__inner">
@@ -53,7 +53,7 @@
   {% else %}
   <script src="{{ '/js/docs-code-snippets.js' | relative_url }}"></script>
   {% endif %}
-  {% if page.url == '/documentation.html' %}
+  {% if page.toc_script or page.url == '/documentation.html' %}
   <script src="{{ '/js/configuration-toc.js' | relative_url }}"></script>
   {% endif %}
 </body>

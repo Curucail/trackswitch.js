@@ -1,6 +1,15 @@
-import type { Marker, MarkerSet, MarkerSetId as BrandedMarkerSetId } from "../timeline/marker";
+import type {
+	Marker,
+	MarkerSet,
+	MarkerSetId as BrandedMarkerSetId,
+	RuntimeMarkerSet,
+} from "../timeline/marker";
 import type { ProjectionService } from "../timeline/projection";
-import type { ReferenceExtent, TimelineId } from "../timeline/timeline";
+import type {
+	ReferenceExtent,
+	Timeline,
+	TimelineId,
+} from "../timeline/timeline";
 
 export type LoopMarker = "A" | "B";
 export type AlignmentOutOfRangeMode = "clamp" | "linear" | "error";
@@ -23,10 +32,7 @@ export type WaveformSource = "audible" | TrackId[];
  */
 export type WaveformSourceIndex = "audible" | number | number[];
 
-/**
- * Whether a waveform surface follows its own track's clock or the reference clock.
- * Derived from alignment + sourceTracks at normalization time (no longer configurable).
- */
+/** Whether a fixed-track waveform uses the shared duration or its own duration. */
 export type WaveformTimeAxis = "shared" | "individual";
 
 // ═══════════ config: data ═══════════
@@ -137,6 +143,7 @@ export interface TrackSwitchWaveformViewConfig {
 	waveformBarWidth?: number;
 	maxZoom?: number;
 	playbackFollowMode?: WaveformPlaybackFollowMode;
+	timeAxis?: WaveformTimeAxis;
 	timer?: boolean;
 	alignedPlayhead?: boolean;
 	markerLayers?: MarkerLayerConfig[];
@@ -254,6 +261,7 @@ export interface TrackDefinition {
 
 export interface ResolvedAlignment {
 	referenceTimeline: TimelineId;
+	timelines: ReadonlyMap<TimelineId, Timeline>;
 	outOfRange: AlignmentOutOfRangeMode;
 	markerSet: MarkerSet;
 	projection: ProjectionService;
@@ -429,3 +437,4 @@ export interface TrackSwitchUiState {
 }
 
 export type { Marker, MarkerSet };
+export type { RuntimeMarkerSet };

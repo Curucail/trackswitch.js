@@ -1,6 +1,9 @@
 import type { TrackRuntime } from "../domain/types";
 import { clamp } from "../shared/math";
-import type { WarpingMatrixDataPoint, WarpingMatrixRenderContext } from "../ui/view-renderer";
+import type {
+	WarpingMatrixDataPoint,
+	WarpingMatrixRenderContext,
+} from "../ui/view-renderer";
 import { timelineId } from "../timeline/timeline";
 import { buildResolvedAlignment } from "./alignment-context";
 
@@ -109,9 +112,14 @@ export function applyGlobalSyncState(ctx: any, syncOn: boolean): void {
 	ctx.updateMainControls();
 }
 
-export function setRuntimeActiveVariant(ctx: any, runtime: any, variant: any): boolean {
+export function setRuntimeActiveVariant(
+	ctx: any,
+	runtime: any,
+	variant: any,
+): boolean {
 	void ctx;
-	const source = variant === "synced" ? runtime.syncedSource : runtime.baseSource;
+	const source =
+		variant === "synced" ? runtime.syncedSource : runtime.baseSource;
 	if (!source?.buffer) {
 		return false;
 	}
@@ -124,20 +132,32 @@ export function setRuntimeActiveVariant(ctx: any, runtime: any, variant: any): b
 	return true;
 }
 
-export function shouldBypassAlignmentMapping(ctx: any, trackIndex: any): boolean {
+export function shouldBypassAlignmentMapping(
+	ctx: any,
+	trackIndex: any,
+): boolean {
 	const runtime = ctx.runtimes[trackIndex];
-	return !!runtime && runtime.activeVariant === "synced" && !!runtime.syncedSource;
+	return (
+		!!runtime && runtime.activeVariant === "synced" && !!runtime.syncedSource
+	);
 }
 
-export async function initializeAlignmentMode(ctx: any): Promise<string | null> {
+export async function initializeAlignmentMode(
+	ctx: any,
+): Promise<string | null> {
 	if (!ctx.alignmentConfig) {
 		return "Sync mode requires init.alignment configuration.";
 	}
 
 	try {
-		ctx.alignment = await buildResolvedAlignment(ctx.alignmentConfig);
+		ctx.alignment = await buildResolvedAlignment(
+			ctx.alignmentConfig,
+			ctx.media,
+		);
 	} catch (error) {
-		return error instanceof Error ? error.message : "Failed to build alignment mappings.";
+		return error instanceof Error
+			? error.message
+			: "Failed to build alignment mappings.";
 	}
 
 	ctx.globalSyncEnabled = false;
@@ -145,11 +165,21 @@ export async function initializeAlignmentMode(ctx: any): Promise<string | null> 
 	ctx.preSyncSoloTrackIndex = null;
 	ctx.setEffectiveSoloMode(true);
 	ctx.longestDuration = ctx.alignment.referenceExtent.end;
+	const referenceDefinition = ctx.alignment.timelines.get(
+		ctx.alignment.referenceTimeline,
+	);
+	ctx.renderer.setReferenceTimelineUnit(referenceDefinition?.unit ?? "seconds");
 
 	const activeTrackIndex = ctx.getActiveSoloTrackIndex();
 	if (activeTrackIndex >= 0) {
-		const mappedTrackTime = ctx.referenceToTrackTime(activeTrackIndex, ctx.state.position);
-		const mappedReferenceTime = ctx.trackToReferenceTime(activeTrackIndex, mappedTrackTime);
+		const mappedTrackTime = ctx.referenceToTrackTime(
+			activeTrackIndex,
+			ctx.state.position,
+		);
+		const mappedReferenceTime = ctx.trackToReferenceTime(
+			activeTrackIndex,
+			mappedTrackTime,
+		);
 		ctx.dispatch({
 			type: "set-position",
 			position: clamp(mappedReferenceTime, 0, ctx.longestDuration),
@@ -187,7 +217,9 @@ export function getTrackAlignmentPoints(
 	return points;
 }
 
-export function getWarpingMatrixContext(ctx: any): WarpingMatrixRenderContext | undefined {
+export function getWarpingMatrixContext(
+	ctx: any,
+): WarpingMatrixRenderContext | undefined {
 	const view = ctx.warpingMatrixView;
 	if (!ctx.isAlignmentMode() || !view || !ctx.alignment) {
 		return undefined;
@@ -227,10 +259,17 @@ export function getWarpingMatrixContext(ctx: any): WarpingMatrixRenderContext | 
 		...points.map((point) => point.referenceTime),
 		0,
 	);
-	const trackDuration = Math.max(yDuration, ...points.map((point) => point.trackTime), 0);
+	const trackDuration = Math.max(
+		yDuration,
+		...points.map((point) => point.trackTime),
+		0,
+	);
 
 	const currentReferenceTime = clamp(
-		ctx.alignment.projection.canProject(ctx.alignment.referenceTimeline, xTimeline)
+		ctx.alignment.projection.canProject(
+			ctx.alignment.referenceTimeline,
+			xTimeline,
+		)
 			? ctx.alignment.projection.project(
 					ctx.state.position,
 					ctx.alignment.referenceTimeline,
@@ -261,7 +300,9 @@ export function getWarpingMatrixContext(ctx: any): WarpingMatrixRenderContext | 
 
 export function getAudibleTrackIndexesForWarpingMatrix(ctx: any): number[] {
 	const selected = ctx.runtimes
-		.map((runtime: TrackRuntime, index: number) => (runtime.state.solo ? index : -1))
+		.map((runtime: TrackRuntime, index: number) =>
+			runtime.state.solo ? index : -1,
+		)
 		.filter((index: number) => index >= 0);
 
 	if (selected.length > 0) {
@@ -295,7 +336,9 @@ export function isGlobalSyncAvailable(ctx: any): boolean {
 		return false;
 	}
 
-	return ctx.runtimes.some((runtime: TrackRuntime) => ctx.hasSyncedVariant(runtime));
+	return ctx.runtimes.some((runtime: TrackRuntime) =>
+		ctx.hasSyncedVariant(runtime),
+	);
 }
 
 export function getAlignmentPlaybackTrackIndex(ctx: any): number {
@@ -328,7 +371,10 @@ export function currentPlaybackReferencePosition(ctx: any): number {
 		return rawPlaybackPosition;
 	}
 
-	return ctx.trackToReferenceTime(ctx.alignmentPlaybackTrackIndex, rawPlaybackPosition);
+	return ctx.trackToReferenceTime(
+		ctx.alignmentPlaybackTrackIndex,
+		rawPlaybackPosition,
+	);
 }
 
 export function referenceToTrackTime(
@@ -349,7 +395,12 @@ export function referenceToTrackTime(
 	}
 
 	const trackTimeline = timelineId(runtime.definition.id);
-	if (!ctx.alignment.projection.canProject(ctx.alignment.referenceTimeline, trackTimeline)) {
+	if (
+		!ctx.alignment.projection.canProject(
+			ctx.alignment.referenceTimeline,
+			trackTimeline,
+		)
+	) {
 		return referenceTime;
 	}
 
@@ -360,7 +411,11 @@ export function referenceToTrackTime(
 	);
 }
 
-export function trackToReferenceTime(ctx: any, trackIndex: number, trackTime: number): number {
+export function trackToReferenceTime(
+	ctx: any,
+	trackIndex: number,
+	trackTime: number,
+): number {
 	if (!ctx.alignment) {
 		return trackTime;
 	}
@@ -374,7 +429,12 @@ export function trackToReferenceTime(ctx: any, trackIndex: number, trackTime: nu
 	}
 
 	const trackTimeline = timelineId(runtime.definition.id);
-	if (!ctx.alignment.projection.canProject(trackTimeline, ctx.alignment.referenceTimeline)) {
+	if (
+		!ctx.alignment.projection.canProject(
+			trackTimeline,
+			ctx.alignment.referenceTimeline,
+		)
+	) {
 		return trackTime;
 	}
 
@@ -385,7 +445,10 @@ export function trackToReferenceTime(ctx: any, trackIndex: number, trackTime: nu
 	);
 }
 
-export function handleAlignmentTrackSwitch(ctx: any, nextActiveTrackIndex: number): void {
+export function handleAlignmentTrackSwitch(
+	ctx: any,
+	nextActiveTrackIndex: number,
+): void {
 	if (!ctx.alignment || nextActiveTrackIndex < 0) {
 		return;
 	}
@@ -393,7 +456,10 @@ export function handleAlignmentTrackSwitch(ctx: any, nextActiveTrackIndex: numbe
 	const referenceAtSwitch = ctx.state.playing
 		? ctx.currentPlaybackReferencePosition()
 		: ctx.state.position;
-	const mappedTrackTime = ctx.referenceToTrackTime(nextActiveTrackIndex, referenceAtSwitch);
+	const mappedTrackTime = ctx.referenceToTrackTime(
+		nextActiveTrackIndex,
+		referenceAtSwitch,
+	);
 	const mappedReferenceTime = clamp(
 		ctx.trackToReferenceTime(nextActiveTrackIndex, mappedTrackTime),
 		0,

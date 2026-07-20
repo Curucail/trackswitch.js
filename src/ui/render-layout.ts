@@ -1,19 +1,16 @@
-import type { ScaleContinuousNumeric, ScaleLinear, Selection } from "d3";
 import type {
 	AudioDownloadSizeInfo,
 	TrackListGroup,
 	TrackRuntime,
+	TrackSwitchSheetMusicViewConfig,
+	TrackSwitchTextViewConfig,
 } from "../domain/types";
 import {
 	escapeHtml,
 	getDeepActiveElement,
 	sanitizeInlineStyle,
 } from "../shared/dom";
-import {
-	formatBytesToHumanReadable,
-	formatSecondsToHHMMSSmmm,
-} from "../shared/format";
-import { copyMarkerDisplayAttributes } from "../shared/marker-display";
+import { formatBytesToHumanReadable } from "../shared/format";
 import { clampPercent } from "../shared/math";
 import { getHostIconSlot, renderIconSlotHtml, setHostIcon } from "./icons";
 
@@ -325,92 +322,6 @@ function applySoloIconState(
 	}
 
 	setHostIcon(soloButton, "circle-check");
-}
-
-function parseSheetMusicString(value: string | null): string {
-	return typeof value === "string" ? value.trim() : "";
-}
-
-function parseSheetMusicCursorColor(value: string | null): string {
-	const raw = parseSheetMusicString(value);
-	return raw || "#999999";
-}
-
-function parseSheetMusicCursorAlpha(value: string | null): number {
-	if (value === null) {
-		return 0.4;
-	}
-
-	const parsed = Number(value);
-	if (!Number.isFinite(parsed)) {
-		return 0.4;
-	}
-
-	if (parsed < 0) {
-		return 0;
-	}
-
-	if (parsed > 1) {
-		return 1;
-	}
-
-	return parsed;
-}
-
-function parseSheetMusicMaxHeight(value: string | null): number | null {
-	return parseRoundedPositiveIntegerAttribute(value) ?? 380;
-}
-
-function parseSheetMusicMaxWidth(value: string | null): number | null {
-	return parseRoundedPositiveIntegerAttribute(value) ?? 1000;
-}
-
-function parseRoundedPositiveIntegerAttribute(
-	value: string | null,
-): number | null {
-	if (value === null) {
-		return null;
-	}
-
-	const parsed = Number(value);
-	if (!Number.isFinite(parsed) || parsed < 1) {
-		return null;
-	}
-
-	return Math.max(1, Math.round(parsed));
-}
-
-function parseSheetMusicRenderScale(value: string | null): number | null {
-	if (value === null) {
-		return 0.7;
-	}
-
-	const parsed = Number(value);
-	if (!Number.isFinite(parsed) || parsed <= 0) {
-		return 0.7;
-	}
-
-	return parsed;
-}
-
-function parseSheetMusicFollowPlayback(value: string | null): boolean {
-	if (value === null) {
-		return true;
-	}
-
-	return parseSheetMusicString(value).toLowerCase() !== "false";
-}
-
-function parseTextAlign(value: string | null): "left" | "center" | "right" {
-	if (value === "left" || value === "right") {
-		return value;
-	}
-
-	return "center";
-}
-
-function parseTextFontSize(value: string | null): number | null {
-	return parseRoundedPositiveIntegerAttribute(value);
 }
 
 function buildTrackShortcutAction(
@@ -865,29 +776,21 @@ export function prepareTextPanels(ctx: any): any {
 			if (!(hostElement instanceof HTMLElement)) {
 				return;
 			}
+			const definition = this.getConfiguredViewHost(hostElement);
+			if (definition.view.type !== "text") return;
+			const config = definition.view as TrackSwitchTextViewConfig;
 
 			hostElement.classList.add("ts-stack-section");
 			hostElement.setAttribute(
 				"style",
-				sanitizeInlineStyle(hostElement.getAttribute("data-ts-text-style")) +
-					"; display: block;",
+				sanitizeInlineStyle(config.style) + "; display: block;",
 			);
-			hostElement.style.textAlign = parseTextAlign(
-				hostElement.getAttribute("data-ts-text-align"),
-			);
+			hostElement.style.textAlign = config.align ?? "center";
 			hostElement.style.cursor = "default";
-			hostElement.style.fontWeight =
-				hostElement.getAttribute("data-ts-text-bold") === "true"
-					? "700"
-					: "400";
-			hostElement.style.fontStyle =
-				hostElement.getAttribute("data-ts-text-italic") === "true"
-					? "italic"
-					: "normal";
+			hostElement.style.fontWeight = config.bold ? "700" : "400";
+			hostElement.style.fontStyle = config.italic ? "italic" : "normal";
 
-			const fontSize = parseTextFontSize(
-				hostElement.getAttribute("data-ts-text-font-size"),
-			);
+			const fontSize = config.fontSize ?? null;
 			if (fontSize !== null) {
 				hostElement.style.fontSize = `${fontSize}px`;
 			} else {
@@ -1161,6 +1064,13 @@ export function wrapSeekableImages(ctx: any): any {
 			if (candidate.parentElement?.classList.contains("seekable-img-wrap")) {
 				return;
 			}
+			const definition = this.getConfiguredViewHost(candidate);
+			if (
+				definition.view.type !== "image" &&
+				definition.view.type !== "perTrackImage"
+			)
+				return;
+			const config = definition.view;
 
 			const section = document.createElement("div");
 			section.className = "seekable-section ts-stack-section";
@@ -1169,8 +1079,7 @@ export function wrapSeekableImages(ctx: any): any {
 			wrapper.className = "seekable-img-wrap";
 			wrapper.setAttribute(
 				"style",
-				sanitizeInlineStyle(candidate.getAttribute("data-style")) +
-					"; display: block;",
+				sanitizeInlineStyle(config.style) + "; display: block;",
 			);
 
 			const parent = candidate.parentElement;
@@ -1185,15 +1094,14 @@ export function wrapSeekableImages(ctx: any): any {
 			wrapper.insertAdjacentHTML(
 				"beforeend",
 				buildSeekWrap(
-					clampPercent(candidate.getAttribute("data-seek-margin-left")),
-					clampPercent(candidate.getAttribute("data-seek-margin-right")),
+					clampPercent(config.seekMarginLeft),
+					clampPercent(config.seekMarginRight),
 				),
 			);
 			const seekWrap = wrapper.querySelector(":scope > .seekwrap");
 			if (seekWrap instanceof HTMLElement) {
-				copyMarkerDisplayAttributes(candidate, seekWrap);
-				const perTrack =
-					candidate.getAttribute("data-per-track-image") === "true";
+				this.registerSeekMarkerLayers(seekWrap, config.markerLayers);
+				const perTrack = config.type === "perTrackImage";
 				seekWrap.setAttribute(
 					"data-marker-image-scope",
 					perTrack ? "per-track" : "global",
@@ -1215,6 +1123,9 @@ export function wrapSheetMusicContainers(ctx: any): any {
 			if (!(hostElement instanceof HTMLElement)) {
 				return;
 			}
+			const definition = this.getConfiguredViewHost(hostElement);
+			if (definition.view.type !== "sheetMusic") return;
+			const config = definition.view as TrackSwitchSheetMusicViewConfig;
 
 			let wrapper: HTMLElement | null = hostElement.closest(
 				".sheetmusic-wrap",
@@ -1226,9 +1137,7 @@ export function wrapSheetMusicContainers(ctx: any): any {
 				wrapper.className = "sheetmusic-wrap ts-stack-section";
 				wrapper.setAttribute(
 					"style",
-					`${sanitizeInlineStyle(
-						hostElement.getAttribute("data-sheetmusic-style"),
-					)}; display: block;`,
+					`${sanitizeInlineStyle(config.style)}; display: block;`,
 				);
 
 				scrollContainer = document.createElement("div");
@@ -1253,9 +1162,7 @@ export function wrapSheetMusicContainers(ctx: any): any {
 				return;
 			}
 
-			const maxWidth = parseSheetMusicMaxWidth(
-				hostElement.getAttribute("data-sheetmusic-max-width"),
-			);
+			const maxWidth = config.maxWidth ?? null;
 			if (maxWidth !== null) {
 				wrapper.style.width = "100%";
 				wrapper.style.maxWidth = `${maxWidth}px`;
@@ -1272,9 +1179,7 @@ export function wrapSheetMusicContainers(ctx: any): any {
 				wrapper.removeAttribute("data-sheetmusic-max-width-applied");
 			}
 
-			const maxHeight = parseSheetMusicMaxHeight(
-				hostElement.getAttribute("data-sheetmusic-max-height"),
-			);
+			const maxHeight = config.maxHeight ?? null;
 			if (maxHeight !== null) {
 				scrollContainer.style.maxHeight = `${maxHeight}px`;
 				scrollContainer.style.height = `${maxHeight}px`;
@@ -1287,9 +1192,7 @@ export function wrapSheetMusicContainers(ctx: any): any {
 				wrapper.classList.remove("sheetmusic-scrollable");
 			}
 
-			const source = parseSheetMusicString(
-				hostElement.getAttribute("data-sheetmusic-src"),
-			);
+			const source = definition.source ?? null;
 			if (!source) {
 				return;
 			}
@@ -1298,21 +1201,11 @@ export function wrapSheetMusicContainers(ctx: any): any {
 				host: hostElement,
 				scrollContainer: scrollContainer,
 				source: source,
-				measureColumn: parseSheetMusicString(
-					hostElement.getAttribute("data-sheetmusic-measure-column"),
-				),
-				renderScale: parseSheetMusicRenderScale(
-					hostElement.getAttribute("data-sheetmusic-render-scale"),
-				),
-				followPlayback: parseSheetMusicFollowPlayback(
-					hostElement.getAttribute("data-sheetmusic-follow-playback"),
-				),
-				cursorColor: parseSheetMusicCursorColor(
-					hostElement.getAttribute("data-sheetmusic-cursor-color"),
-				),
-				cursorAlpha: parseSheetMusicCursorAlpha(
-					hostElement.getAttribute("data-sheetmusic-cursor-alpha"),
-				),
+				measureColumn: definition.alignmentTimeline?.trim() || null,
+				renderScale: config.renderScale ?? null,
+				followPlayback: config.followPlayback ?? true,
+				cursorColor: config.cursorColor ?? "#999999",
+				cursorAlpha: config.cursorAlpha ?? 0.4,
 			});
 		});
 	}.call(ctx);
@@ -1799,11 +1692,12 @@ export function updateTiming(
 ): any {
 	return function (this: any, position: any, longestDuration: any) {
 		this.queryAll(".timing .time").forEach((node: HTMLElement) => {
-			node.textContent = formatSecondsToHHMMSSmmm(position);
+			node.textContent = this.formatReferenceTimelineValue(position);
 		});
 
 		this.queryAll(".timing .length").forEach((node: HTMLElement) => {
-			node.textContent = formatSecondsToHHMMSSmmm(longestDuration);
+			node.textContent = this.formatReferenceTimelineValue(longestDuration);
 		});
 	}.call(ctx, position, longestDuration);
 }
+import type { ScaleContinuousNumeric, ScaleLinear, Selection } from "d3";
