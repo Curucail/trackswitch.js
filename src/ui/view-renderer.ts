@@ -1,12 +1,12 @@
 import type { ScaleLinear, Selection } from "d3";
 import type {
 	AudioDownloadSizeInfo,
-	NormalizedTrackGroupLayout,
+	TrackListGroup,
 	TrackRuntime,
 	TrackSwitchFeatures,
 	TrackSwitchUiState,
 	WaveformPlaybackFollowMode,
-	WaveformSource,
+	WaveformSourceIndex,
 	WaveformTimeAxis,
 } from "../domain/types";
 import type {
@@ -14,7 +14,7 @@ import type {
 	WaveformEngine,
 } from "../engine/waveform-engine";
 import * as viewRendererCore from "./render-layout";
-import type { MarkerPlacementResolver } from "./render-markers";
+import type { MarkerRenderData } from "./render-markers";
 import * as viewRendererMarkers from "./render-markers";
 import type {
 	MidiSeekSurfaceMetadata,
@@ -22,6 +22,7 @@ import type {
 } from "./render-midi";
 import * as viewRendererMidi from "./render-midi";
 import * as viewRendererSeek from "./render-seek";
+import * as viewRendererWarping from "./render-warping-matrix";
 import * as viewRendererWaveform from "./render-waveforms";
 
 type SvgSelection = Selection<SVGSVGElement, unknown, null, undefined>;
@@ -83,7 +84,7 @@ interface WaveformSeekSurfaceMetadata {
 	tileLayer: HTMLElement;
 	endedRegion: HTMLElement;
 	seekWrap: HTMLElement;
-	waveformSource: WaveformSource;
+	waveformSource: WaveformSourceIndex;
 	playbackFollowMode: WaveformPlaybackFollowMode;
 	timeAxis: WaveformTimeAxis;
 	originalHeight: number;
@@ -237,7 +238,6 @@ interface WarpingMatrixHostMetadata {
 	trackSeries: WarpingMatrixTrackSeries[];
 	matrixTrackDuration: number;
 	configuredHeight: number | null;
-	configuredBpm: number | "infer_score" | null;
 	tempoWindowSeconds: number;
 	tempoSmoothingSeconds: number;
 	colorByColumn: Map<string, string>;
@@ -264,8 +264,10 @@ interface PanelDragState {
 export class ViewRenderer {
 	public readonly root: HTMLElement;
 	public readonly features: TrackSwitchFeatures;
-	public presetNames: string[];
-	public trackGroups: NormalizedTrackGroupLayout[];
+	public presetEntries: Array<{ id: string; label: string }>;
+	public trackGroups: TrackListGroup[];
+	public hasMarkers = false;
+	public hasAlignment = false;
 
 	public readonly waveformSeekSurfaces: WaveformSeekSurfaceMetadata[] = [];
 	public readonly midiSeekSurfaces: MidiSeekSurfaceMetadata[] = [];
@@ -287,24 +289,24 @@ export class ViewRenderer {
 	constructor(
 		root: HTMLElement,
 		features: TrackSwitchFeatures,
-		presetNames: string[],
-		trackGroups: NormalizedTrackGroupLayout[] = [],
+		presetEntries: Array<{ id: string; label: string }>,
+		trackGroups: TrackListGroup[] = [],
 		onWarpingMatrixSeek?: (referenceTime: number) => void,
 		resolveWarpingMatrixScoreBpm?: (referenceTime: number) => number | null,
 	) {
 		this.root = root;
 		this.features = features;
-		this.presetNames = presetNames;
+		this.presetEntries = presetEntries;
 		this.trackGroups = trackGroups;
 		this.onWarpingMatrixSeek = onWarpingMatrixSeek;
 		this.resolveWarpingMatrixScoreBpm = resolveWarpingMatrixScoreBpm;
 	}
 
 	public updateConfig(
-		presetNames: string[],
-		trackGroups: NormalizedTrackGroupLayout[],
+		presetEntries: Array<{ id: string; label: string }>,
+		trackGroups: TrackListGroup[],
 	): void {
-		this.presetNames = presetNames;
+		this.presetEntries = presetEntries;
 		this.trackGroups = trackGroups;
 	}
 
@@ -317,46 +319,56 @@ export class ViewRenderer {
 	}
 
 	public isAlignmentMode(): boolean {
-		return false;
+		return this.hasAlignment;
 	}
 
 	public getWarpingMatrixPathStrokeWidth(): number {
-		return 3;
+		return viewRendererWarping.getWarpingMatrixPathStrokeWidth(this);
 	}
 
 	public getWarpingMatrixLocalTempoWindowSeconds(
 		host: WarpingMatrixHostMetadata,
 	): number {
-		return host.tempoWindowSeconds;
+		return viewRendererWarping.getWarpingMatrixLocalTempoWindowSeconds(
+			this,
+			host,
+		);
 	}
 
 	public getWarpingMatrixLocalTempoSmoothingSeconds(
 		host: WarpingMatrixHostMetadata,
 	): number {
-		return host.tempoSmoothingSeconds;
+		return viewRendererWarping.getWarpingMatrixLocalTempoSmoothingSeconds(
+			this,
+			host,
+		);
 	}
 
 	public updateWarpingMatrixTempoControlLabels(
 		host: WarpingMatrixHostMetadata,
 	): void {
-		void host;
+		viewRendererWarping.updateWarpingMatrixTempoControlLabels(this, host);
 	}
 
 	public persistWarpingMatrixTempoControls(
 		host: WarpingMatrixHostMetadata,
 	): void {
-		void host;
+		viewRendererWarping.persistWarpingMatrixTempoControls(this, host);
 	}
 
 	public getWarpingMatrixSquarePlotSize(plot: WarpingMatrixPlotState): number {
-		return Math.max(1, Math.min(plot.innerWidth, plot.innerHeight));
+		return viewRendererWarping.getWarpingMatrixSquarePlotSize(this, plot);
 	}
 
 	public resolveWarpingMatrixColumnColor(
-		_columnKey: string,
-		_columnOrder: string[],
+		columnKey: string,
+		columnOrder: string[],
 	): string {
-		return "#ED8C01";
+		return viewRendererWarping.resolveWarpingMatrixColumnColor(
+			this,
+			columnKey,
+			columnOrder,
+		);
 	}
 
 	initialize(runtimes: TrackRuntime[]): void {
@@ -416,17 +428,8 @@ export class ViewRenderer {
 		viewRendererCore.wrapSeekableImages(this);
 	}
 
-	public renderTimelineMarkers(
-		runtimes: TrackRuntime[],
-		activeMarkerRuntimes: TrackRuntime[],
-		resolvePlacement: MarkerPlacementResolver,
-	): void {
-		viewRendererMarkers.renderTimelineMarkers(
-			this,
-			runtimes,
-			activeMarkerRuntimes,
-			resolvePlacement,
-		);
+	public renderTimelineMarkers(data: MarkerRenderData): void {
+		viewRendererMarkers.renderTimelineMarkers(this, data);
 	}
 
 	public updateMarkerNavigationControls(
@@ -457,7 +460,7 @@ export class ViewRenderer {
 	}
 
 	public wrapWarpingMatrixContainers(): void {
-		return;
+		viewRendererWarping.wrapWarpingMatrixContainers(this);
 	}
 
 	public createWarpingMatrixPlotState(
@@ -465,10 +468,12 @@ export class ViewRenderer {
 		width: number,
 		height: number,
 	): WarpingMatrixPlotState {
-		void plotHost;
-		void width;
-		void height;
-		throw new Error("warpingMatrix requires the sync player variant.");
+		return viewRendererWarping.createWarpingMatrixPlotState(
+			this,
+			plotHost,
+			width,
+			height,
+		);
 	}
 
 	public createWarpingTempoPlotState(
@@ -476,10 +481,12 @@ export class ViewRenderer {
 		width: number,
 		height: number,
 	): WarpingTempoPlotState {
-		void plotHost;
-		void width;
-		void height;
-		throw new Error("warpingMatrix requires the sync player variant.");
+		return viewRendererWarping.createWarpingTempoPlotState(
+			this,
+			plotHost,
+			width,
+			height,
+		);
 	}
 
 	public applyWarpingMatrixPlotDimensions(
@@ -487,9 +494,12 @@ export class ViewRenderer {
 		width: number,
 		height: number,
 	): void {
-		void plot;
-		void width;
-		void height;
+		viewRendererWarping.applyWarpingMatrixPlotDimensions(
+			this,
+			plot,
+			width,
+			height,
+		);
 	}
 
 	public applyWarpingTempoPlotDimensions(
@@ -497,9 +507,12 @@ export class ViewRenderer {
 		width: number,
 		height: number,
 	): void {
-		void plot;
-		void width;
-		void height;
+		viewRendererWarping.applyWarpingTempoPlotDimensions(
+			this,
+			plot,
+			width,
+			height,
+		);
 	}
 
 	public isPointerInsidePlotArea(
@@ -510,138 +523,130 @@ export class ViewRenderer {
 		clientX: number,
 		clientY: number,
 	): boolean {
-		void plotHost;
-		void margins;
-		void innerWidth;
-		void innerHeight;
-		void clientX;
-		void clientY;
-		return false;
+		return viewRendererWarping.isPointerInsidePlotArea(
+			this,
+			plotHost,
+			margins,
+			innerWidth,
+			innerHeight,
+			clientX,
+			clientY,
+		);
 	}
 
 	public onWarpingMatrixPointerDown(
 		host: WarpingMatrixHostMetadata,
 		event: PointerEvent,
 	): void {
-		void host;
-		void event;
+		viewRendererWarping.onWarpingMatrixPointerDown(this, host, event);
 	}
 
 	public onWarpingMatrixPointerMove(
 		host: WarpingMatrixHostMetadata,
 		event: PointerEvent,
 	): void {
-		void host;
-		void event;
+		viewRendererWarping.onWarpingMatrixPointerMove(this, host, event);
 	}
 
 	public onWarpingMatrixPointerUp(
 		host: WarpingMatrixHostMetadata,
 		event: PointerEvent,
 	): void {
-		void host;
-		void event;
+		viewRendererWarping.onWarpingMatrixPointerUp(this, host, event);
 	}
 
 	public seekWarpingMatrixFromPointerX(
 		host: WarpingMatrixHostMetadata,
 		clientX: number,
 	): void {
-		void host;
-		void clientX;
+		viewRendererWarping.seekWarpingMatrixFromPointerX(this, host, clientX);
 	}
 
 	public onWarpingTempoPointerDown(
 		host: WarpingMatrixHostMetadata,
 		event: PointerEvent,
 	): void {
-		void host;
-		void event;
+		viewRendererWarping.onWarpingTempoPointerDown(this, host, event);
 	}
 
 	public onWarpingTempoWheel(
 		host: WarpingMatrixHostMetadata,
 		event: WheelEvent,
 	): void {
-		void host;
-		void event;
+		viewRendererWarping.onWarpingTempoWheel(this, host, event);
 	}
 
 	public seekWarpingMatrixFromTempoPointerX(
 		host: WarpingMatrixHostMetadata,
 		clientX: number,
 	): void {
-		void host;
-		void clientX;
+		viewRendererWarping.seekWarpingMatrixFromTempoPointerX(this, host, clientX);
 	}
 
 	public getPrimaryWarpingSeriesData(
 		host: WarpingMatrixHostMetadata,
 	): WarpingMatrixPathSeriesData | null {
-		void host;
-		return null;
+		return viewRendererWarping.getPrimaryWarpingSeriesData(this, host);
 	}
 
 	public getPrimaryTempoSeries(
 		host: WarpingMatrixHostMetadata,
 	): WarpingMatrixTempoPoint[] {
-		void host;
-		return [];
+		return viewRendererWarping.getPrimaryTempoSeries(this, host);
 	}
 
 	public getPrimaryTempoSeriesData(
 		host: WarpingMatrixHostMetadata,
 	): WarpingMatrixTempoSeriesData | null {
-		void host;
-		return null;
+		return viewRendererWarping.getPrimaryTempoSeriesData(this, host);
 	}
 
 	public ensureWarpingLayout(host: WarpingMatrixHostMetadata): void {
-		void host;
+		viewRendererWarping.ensureWarpingLayout(this, host);
 	}
 
 	public applyWarpingMatrixContext(
 		host: WarpingMatrixHostMetadata,
 		context: WarpingMatrixRenderContext,
 	): void {
-		void host;
-		void context;
+		viewRendererWarping.applyWarpingMatrixContext(this, host, context);
 	}
 
 	public updateWarpingMatrix(
 		host: WarpingMatrixHostMetadata,
 		context: WarpingMatrixRenderContext | undefined,
 	): void {
-		void host;
-		void context;
+		viewRendererWarping.updateWarpingMatrix(this, host, context);
 	}
 
 	public updateWarpingMatrixPlaybackState(
 		host: WarpingMatrixHostMetadata,
 		context: WarpingMatrixRenderContext | undefined,
 	): void {
-		void host;
-		void context;
+		viewRendererWarping.updateWarpingMatrixPlaybackState(this, host, context);
 	}
 
 	public setWarpingMatrixVisible(visible: boolean): void {
-		void visible;
+		viewRendererWarping.setWarpingMatrixVisible(this, visible);
 	}
 
 	public renderWarpingMatrixPathPlot(
 		host: WarpingMatrixHostMetadata,
 		pathStrokeWidth: number,
 	): void {
-		void host;
-		void pathStrokeWidth;
+		viewRendererWarping.renderWarpingMatrixPathPlot(
+			this,
+			host,
+			pathStrokeWidth,
+		);
 	}
 
 	public renderWarpingMatrixPlayhead(host: WarpingMatrixHostMetadata): void {
-		void host;
+		viewRendererWarping.renderWarpingMatrixPlayhead(this, host);
 	}
 
 	public renderWarpingMatrixTempoPlot(host: WarpingMatrixHostMetadata): void {
-		void host;
+		viewRendererWarping.renderWarpingMatrixTempoPlot(this, host);
 	}
 
 	public resolveCenteredWarpingWindow(
@@ -660,34 +665,44 @@ export class ViewRenderer {
 		trackSeries: WarpingMatrixTrackSeries[],
 		referenceDuration: number,
 	): WarpingMatrixMatrixData {
-		void trackSeries;
-		void referenceDuration;
-		return { byColumn: new Map() };
+		return viewRendererWarping.buildWarpingMatrixData(
+			this,
+			trackSeries,
+			referenceDuration,
+		);
 	}
 
 	public buildWarpingTempoData(
 		matrixData: WarpingMatrixMatrixData | null,
 		smoothingSeconds: number,
 	): WarpingMatrixTempoData {
-		void matrixData;
-		void smoothingSeconds;
-		return { byColumn: new Map() };
+		return viewRendererWarping.buildWarpingTempoData(
+			this,
+			matrixData,
+			smoothingSeconds,
+		);
 	}
 
 	public interpolateWarpingTrackTime(
 		points: WarpingMatrixPathPoint[],
 		referenceTime: number,
 	): number {
-		void points;
-		return referenceTime;
+		return viewRendererWarping.interpolateWarpingTrackTime(
+			this,
+			points,
+			referenceTime,
+		);
 	}
 
 	public interpolateWarpingReferenceTime(
 		pointsByTrackTime: WarpingMatrixPathPoint[],
 		trackTime: number,
 	): number {
-		void pointsByTrackTime;
-		return trackTime;
+		return viewRendererWarping.interpolateWarpingReferenceTime(
+			this,
+			pointsByTrackTime,
+			trackTime,
+		);
 	}
 
 	public createWaveformTimingNode(overlay: HTMLElement): HTMLElement {
@@ -996,7 +1011,7 @@ export class ViewRenderer {
 
 	public getWaveformSourceRuntimes(
 		runtimes: TrackRuntime[],
-		waveformSource: WaveformSource,
+		waveformSource: WaveformSourceIndex,
 	): TrackRuntime[] {
 		return viewRendererWaveform.getWaveformSourceRuntimes(
 			this,
@@ -1007,7 +1022,7 @@ export class ViewRenderer {
 
 	public resolveWaveformTrackIndex(
 		runtimes: TrackRuntime[],
-		waveformSource: WaveformSource,
+		waveformSource: WaveformSourceIndex,
 	): number | null {
 		return viewRendererWaveform.resolveWaveformTrackIndex(
 			this,
@@ -1063,7 +1078,7 @@ export class ViewRenderer {
 
 	public getLongestWaveformSourceDuration(
 		runtimes: TrackRuntime[],
-		waveformSource: WaveformSource,
+		waveformSource: WaveformSourceIndex,
 	): number {
 		return viewRendererWaveform.getLongestWaveformSourceDuration(
 			this,

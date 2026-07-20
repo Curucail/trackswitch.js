@@ -416,7 +416,7 @@ export class AudioEngine {
 		runtime.sourceIndex = runtime.baseSource.sourceIndex;
 		runtime.waveformSummary = runtime.baseSource.waveformSummary;
 
-		const alignmentSources = runtime.definition.alignment?.synchronizedSources;
+		const alignmentSources = runtime.definition.syncedSources;
 		const shouldLoadSyncedSources =
 			this.alignmentEnabled &&
 			Array.isArray(alignmentSources) &&
@@ -509,7 +509,7 @@ export class AudioEngine {
 			);
 
 			const alignmentSources =
-				runtime.definition.alignment?.synchronizedSources;
+				runtime.definition.syncedSources;
 			const shouldLoadSyncedSources =
 				this.alignmentEnabled &&
 				Array.isArray(alignmentSources) &&

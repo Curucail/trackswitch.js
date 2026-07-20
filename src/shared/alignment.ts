@@ -125,7 +125,7 @@ export function buildColumnTimeMapping(
 export function resolveAlignmentOutOfRangeMode(
 	mode: AlignmentOutOfRangeMode | undefined,
 ): AlignmentOutOfRangeMode {
-	return mode === "linear" ? "linear" : "clamp";
+	return mode === "linear" || mode === "error" ? mode : "clamp";
 }
 
 export function mapTime(
@@ -145,18 +145,35 @@ export function mapTime(
 	const first = points[0];
 	const last = points[points.length - 1];
 
-	if (time <= first.x) {
+	if (time < first.x) {
+		if (outOfRange === "error") {
+			throw new Error(
+				`Value ${time} is outside the mapped range [${first.x}, ${last.x}].`,
+			);
+		}
 		if (outOfRange === "clamp") {
 			return first.y;
 		}
 		return extrapolateFromStart(points, time);
 	}
 
-	if (time >= last.x) {
+	if (time > last.x) {
+		if (outOfRange === "error") {
+			throw new Error(
+				`Value ${time} is outside the mapped range [${first.x}, ${last.x}].`,
+			);
+		}
 		if (outOfRange === "clamp") {
 			return last.y;
 		}
 		return extrapolateFromEnd(points, time);
+	}
+
+	if (time === first.x) {
+		return first.y;
+	}
+	if (time === last.x) {
+		return last.y;
 	}
 
 	const rightIndex = firstIndexGreaterOrEqual(points, time);

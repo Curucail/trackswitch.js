@@ -1,7 +1,7 @@
 import type {
 	TrackRuntime,
 	WaveformPlaybackFollowMode,
-	WaveformSource,
+	WaveformSourceIndex,
 	WaveformTimeAxis,
 } from "../domain/types";
 import type {
@@ -40,7 +40,7 @@ interface WaveformSeekSurfaceMetadata {
 	tileLayer: HTMLElement;
 	endedRegion: HTMLElement;
 	seekWrap: HTMLElement;
-	waveformSource: WaveformSource;
+	waveformSource: WaveformSourceIndex;
 	playbackFollowMode: WaveformPlaybackFollowMode;
 	timeAxis: WaveformTimeAxis;
 	originalHeight: number;

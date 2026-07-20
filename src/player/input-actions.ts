@@ -1,5 +1,4 @@
 import { closestInRoot, eventTargetAsElement } from "../shared/dom";
-import { parseStrictNonNegativeInt } from "../shared/preset";
 import { getSeekMetrics, isPrimaryInput } from "../shared/seek";
 import {
 	finalizeRightClickLoopSelection,
@@ -538,12 +537,7 @@ export function onPreset(ctx: any, event: any): any {
 			return;
 		}
 
-		let presetIndex = parseStrictNonNegativeInt(selector.value || "0");
-		if (!Number.isFinite(presetIndex)) {
-			presetIndex = 0;
-		}
-
-		this.applyPreset(presetIndex);
+		this.applyPreset(selector.value);
 	}.call(ctx, event);
 }
 
@@ -557,12 +551,8 @@ export function onPresetScroll(ctx: any, event: any): any {
 			return;
 		}
 
-		let currentIndex = parseStrictNonNegativeInt(selector.value || "0");
-		if (!Number.isFinite(currentIndex)) {
-			currentIndex = 0;
-		}
-
 		const maxIndex = selector.options.length - 1;
+		let currentIndex = selector.selectedIndex;
 		const deltaY =
 			(event as unknown as { deltaY?: number }).deltaY ??
 			event.originalEvent?.deltaY ??
@@ -574,7 +564,7 @@ export function onPresetScroll(ctx: any, event: any): any {
 			currentIndex = Math.max(currentIndex - 1, 0);
 		}
 
-		selector.value = String(currentIndex);
+		selector.selectedIndex = currentIndex;
 		selector.dispatchEvent(new Event("change", { bubbles: true }));
 	}.call(ctx, event);
 }

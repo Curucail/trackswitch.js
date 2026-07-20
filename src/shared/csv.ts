@@ -24,8 +24,13 @@ export function parseCsvRecords(
 		transformHeader: options.transformHeader,
 	});
 
-	if (parsed.errors.length > 0) {
-		throw new Error(formatPapaErrors(parsed.errors));
+	// A single-column file has no delimiter to detect; Papa still parses it
+	// correctly and only notes that it fell back to the default. Not fatal.
+	const fatalErrors = parsed.errors.filter(
+		(error) => error.code !== "UndetectableDelimiter",
+	);
+	if (fatalErrors.length > 0) {
+		throw new Error(formatPapaErrors(fatalErrors));
 	}
 
 	const headers = Array.isArray(parsed.meta.fields)

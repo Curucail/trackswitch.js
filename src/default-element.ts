@@ -5,7 +5,7 @@ import type {
 	TrackSwitchEventName,
 	TrackSwitchInit,
 } from "./domain/types";
-import { createDefaultTrackSwitch } from "./player/default-factory";
+import { createTrackSwitch } from "./player/factory";
 import { ensureTrackSwitchStyles } from "./shared/styles";
 
 export type TrackswitchDomEventName =
@@ -232,7 +232,7 @@ export class TrackswitchPlayer extends TrackswitchPlayerBase {
 		rootElement: HTMLElement,
 		init: TrackSwitchInit,
 	): TrackSwitchController {
-		return createDefaultTrackSwitch(rootElement, init);
+		return createTrackSwitch(rootElement, init);
 	}
 }
 

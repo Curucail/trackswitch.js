@@ -1,7 +1,7 @@
 import type { ScaleContinuousNumeric, ScaleLinear, Selection } from "d3";
 import type {
 	AudioDownloadSizeInfo,
-	NormalizedTrackGroupLayout,
+	TrackListGroup,
 	TrackRuntime,
 } from "../domain/types";
 import {
@@ -589,24 +589,24 @@ export function initialize(ctx: any, runtimes: any): any {
 export function buildMainControlHtml(ctx: any, runtimes: any): any {
 	return function (this: any, runtimes: any) {
 		let presetDropdownHtml = "";
-		if (this.features.presets && this.presetNames.length >= 2) {
+		if (this.presetEntries.length >= 2) {
 			presetDropdownHtml +=
 				'<li class="preset-selector-wrap"><select class="preset-selector" title="Select Preset">';
-			for (let i = 0; i < this.presetNames.length; i += 1) {
-				presetDropdownHtml +=
-					'<option value="' +
-					i +
-					'"' +
-					(i === 0 ? " selected" : "") +
-					">" +
-					escapeHtml(this.presetNames[i]) +
-					"</option>";
-			}
+			this.presetEntries.forEach(
+				(preset: { id: string; label: string }, i: number) => {
+					presetDropdownHtml +=
+						'<option value="' +
+						escapeHtml(preset.id) +
+						'"' +
+						(i === 0 ? " selected" : "") +
+						">" +
+						escapeHtml(preset.label) +
+						"</option>";
+				},
+			);
 			presetDropdownHtml += "</select></li>";
 		}
-		const hasMarkers = runtimes.some(
-			(runtime: TrackRuntime) => !!runtime.definition.markers,
-		);
+		const hasMarkers = this.hasMarkers;
 
 		return (
 			'<div class="overlay overlay-activation"><span class="activate">Activate' +
@@ -702,7 +702,7 @@ export function shouldRenderGlobalSync(ctx: any, runtimes: any): any {
 		}
 
 		return runtimes.some((runtime: TrackRuntime) => {
-			const sources = runtime.definition.alignment?.synchronizedSources;
+			const sources = runtime.definition.syncedSources;
 			return Array.isArray(sources) && sources.length > 0;
 		});
 	}.call(ctx, runtimes);
@@ -819,13 +819,15 @@ export function renderTrackList(ctx: any, runtimes: any): any {
 			return;
 		}
 
-		this.trackGroups.forEach((group: NormalizedTrackGroupLayout) => {
+		this.trackGroups.forEach((group: TrackListGroup) => {
 			const list = document.createElement("ul");
 			list.className = "track_list";
 			list.setAttribute("data-track-group-index", String(group.groupIndex));
 
-			for (let offset = 0; offset < group.trackCount; offset += 1) {
-				const trackIndex = group.startTrackIndex + offset;
+			for (const trackId of group.trackIds) {
+				const trackIndex = runtimes.findIndex(
+					(runtime: TrackRuntime) => runtime.definition.id === trackId,
+				);
 				const runtime = runtimes[trackIndex];
 				if (!runtime) {
 					continue;
@@ -1786,7 +1788,7 @@ export function destroy(ctx: any): any {
 
 export function getPresetCount(ctx: any): any {
 	return function (this: any) {
-		return this.presetNames.length;
+		return this.presetEntries.length;
 	}.call(ctx);
 }
 

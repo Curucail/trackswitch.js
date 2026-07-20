@@ -15,7 +15,6 @@ import type {
 } from "./domain/types";
 import type { TrackswitchDomEventName, TrackswitchPlayer } from "./element";
 import {
-	defineTrackSwitchSyncPlayerElement,
 	defineTrackswitchDefaultElement,
 	TRACKSWITCH_DOM_EVENTS,
 } from "./element";
@@ -80,7 +79,6 @@ function addTrackswitchListener<K extends keyof TrackSwitchEventProps>(
 
 function defineTrackSwitchElementForTag(tagName: string): void {
 	if (tagName === "trackswitch-sync-player") {
-		defineTrackSwitchSyncPlayerElement();
 		return;
 	}
 

@@ -1,4 +1,4 @@
-import type { WaveformSource } from "../domain/types";
+import type { WaveformSourceIndex } from "../domain/types";
 
 function normalizeTrackIndex(value: unknown): number | null {
 	if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
@@ -9,8 +9,8 @@ function normalizeTrackIndex(value: unknown): number | null {
 }
 
 export function normalizeWaveformSource(
-	value: WaveformSource | undefined,
-): WaveformSource {
+	value: WaveformSourceIndex | undefined,
+): WaveformSourceIndex {
 	if (value === "audible" || value === undefined) {
 		return "audible";
 	}
@@ -37,7 +37,7 @@ export function normalizeWaveformSource(
 }
 
 export function serializeWaveformSource(
-	value: WaveformSource | undefined,
+	value: WaveformSourceIndex | undefined,
 ): string {
 	const normalized = normalizeWaveformSource(value);
 	return Array.isArray(normalized)
@@ -45,7 +45,7 @@ export function serializeWaveformSource(
 		: String(normalized);
 }
 
-export function parseWaveformSource(value: string | null): WaveformSource {
+export function parseWaveformSource(value: string | null): WaveformSourceIndex {
 	const raw = typeof value === "string" ? value.trim() : "";
 	if (!raw || raw === "audible") {
 		return "audible";
@@ -73,7 +73,7 @@ export function parseWaveformSource(value: string | null): WaveformSource {
 
 export function resolveFixedWaveformTrackIndex(
 	runtimesLength: number,
-	waveformSource: WaveformSource,
+	waveformSource: WaveformSourceIndex,
 ): number | null {
 	if (waveformSource === "audible" || Array.isArray(waveformSource)) {
 		return null;
@@ -86,7 +86,7 @@ export function resolveFixedWaveformTrackIndex(
 
 export function resolveWaveformTrackIndices(
 	runtimesLength: number,
-	waveformSource: WaveformSource,
+	waveformSource: WaveformSourceIndex,
 ): number[] {
 	if (waveformSource === "audible") {
 		return Array.from({ length: runtimesLength }, (_value, index) => index);

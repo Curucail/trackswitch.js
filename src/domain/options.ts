@@ -14,7 +14,6 @@ export const defaultFeatures: Readonly<TrackSwitchFeatures> = {
 	looping: false,
 	seekBar: true,
 	timer: true,
-	presets: true,
 };
 
 const featureKeys = new Set<keyof TrackSwitchFeatures>(
@@ -51,10 +50,6 @@ export function normalizeFeatures(
 		...defaultFeatures,
 		...(features ?? {}),
 	};
-
-	if (normalized.exclusiveSolo) {
-		normalized.presets = false;
-	}
 
 	return normalized;
 }

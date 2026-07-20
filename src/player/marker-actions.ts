@@ -1,80 +1,52 @@
-import type { TrackMarker, TrackRuntime } from "../domain/types";
+import { collectAnnotationMarkers } from "../ui/render-markers";
+import { IMPLICIT_REFERENCE_TIMELINE } from "../timeline/timeline";
 import type { ControllerPointerEvent } from "../shared/seek";
-import type { MarkerPlacement } from "../ui/render-markers";
 import type { TrackSwitchControllerImpl } from "./player-controller";
 
 const MARKER_TIME_EPSILON = 0.000001;
 const MARKER_SNAP_DISTANCE_PX = 12;
 const MARKER_PREVIOUS_JUMP_MARGIN = 0.8;
 
-export function getActiveMarkerRuntimes(
-	controller: TrackSwitchControllerImpl,
-): TrackRuntime[] {
-	return controller.runtimes.filter(
-		(runtime) => runtime.state.solo && runtime.state.volume > 0,
-	);
-}
+export function renderMarkerLayers(controller: TrackSwitchControllerImpl): void {
+	const referenceTimeline =
+		controller.alignment?.referenceTimeline ?? IMPLICIT_REFERENCE_TIMELINE;
 
-export function getMarkerReferenceTime(
-	controller: TrackSwitchControllerImpl,
-	marker: TrackMarker,
-): number {
-	return controller.trackToReferenceTime(marker.trackIndex, marker.time);
-}
-
-export function resolveMarkerPlacement(
-	controller: TrackSwitchControllerImpl,
-	seekWrap: HTMLElement,
-	marker: TrackMarker,
-): MarkerPlacement | null {
-	const referenceTime = getMarkerReferenceTime(controller, marker);
-	const timeline = controller.getSeekTimelineContext(seekWrap);
-	if (!Number.isFinite(referenceTime) || timeline.duration <= 0) {
-		return null;
-	}
-
-	return {
-		referenceTime: referenceTime,
-		surfaceTime: timeline.fromReferenceTime(referenceTime),
-		duration: timeline.duration,
-	};
-}
-
-export function renderMarkerLayers(
-	controller: TrackSwitchControllerImpl,
-): void {
-	controller.renderer.renderTimelineMarkers(
-		controller.runtimes,
-		getActiveMarkerRuntimes(controller),
-		(seekWrap, marker) => resolveMarkerPlacement(controller, seekWrap, marker),
-	);
+	controller.renderer.renderTimelineMarkers({
+		markerSets: controller.markerSets,
+		alignmentMarkerSet: controller.alignment?.markerSet ?? null,
+		referenceTimeline,
+		projection: controller.alignment?.projection ?? null,
+		getSeekTimelineContext: (seekWrap) => controller.getSeekTimelineContext(seekWrap),
+	});
 }
 
 export function getNavigationMarkerTimes(
 	controller: TrackSwitchControllerImpl,
 ): number[] {
+	const referenceTimeline =
+		controller.alignment?.referenceTimeline ?? IMPLICIT_REFERENCE_TIMELINE;
+	const projection = controller.alignment?.projection ?? null;
+
 	const times: number[] = [];
-	getActiveMarkerRuntimes(controller).forEach((runtime) => {
-		runtime.markers.forEach((marker) => {
-			const time = getMarkerReferenceTime(controller, marker);
-			if (
-				Number.isFinite(time) &&
-				time >= 0 &&
-				time <= controller.longestDuration
-			) {
-				times.push(time);
-			}
-		});
+	collectAnnotationMarkers(controller.markerSets).forEach((marker) => {
+		const time = projection
+			? projection.projectMarker(marker, referenceTimeline)
+			: (marker.placements.get(referenceTimeline) ?? null);
+		if (
+			time !== null &&
+			Number.isFinite(time) &&
+			time >= 0 &&
+			time <= controller.longestDuration
+		) {
+			times.push(time);
+		}
 	});
 	times.sort((left, right) => left - right);
 
 	const unique: number[] = [];
 	times.forEach((time) => {
 		const previous = unique[unique.length - 1];
-		if (
-			previous === undefined ||
-			Math.abs(previous - time) > MARKER_TIME_EPSILON
-		) {
+		if (previous === undefined || Math.abs(previous - time) > MARKER_TIME_EPSILON) {
 			unique.push(time);
 		}
 	});
@@ -104,9 +76,7 @@ function getMarkerNavigationTargets(controller: TrackSwitchControllerImpl): {
 	return { previous: previous, next: next };
 }
 
-export function updateMarkerNavigation(
-	controller: TrackSwitchControllerImpl,
-): void {
+export function updateMarkerNavigation(controller: TrackSwitchControllerImpl): void {
 	const targets = getMarkerNavigationTargets(controller);
 	controller.renderer.updateMarkerNavigationControls(
 		targets.previous !== null,

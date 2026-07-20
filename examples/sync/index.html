@@ -26,14 +26,56 @@
 
 <body>
     <a class="back-link" href="/examples/">Back to examples</a>
-    <trackswitch-sync-player id="player" style="display: block; width: 50%; margin: 0 auto;">
+    <trackswitch-player id="player" style="display: block; width: 50%; margin: 0 auto;">
         <script type="application/json">
             {
-                "ui": [
+                "media": {
+                    "score": { "type": "musicxml", "src": "data/Schubert_D911-03.xml" },
+                    "midi":  { "type": "midi",     "src": "data/Schubert_D911-03.mid" },
+                    "hu33": {
+                        "type": "audio",
+                        "title": "Schubert: Winterreise, D. 911: No. 3 - HU33",
+                        "src": "data/Schubert_D911-03_HU33.wav",
+                        "srcSynchronized": { "src": "data/Schubert_D911-03_HU33.wav", "timeline": "reference" }
+                    },
+                    "sc06": {
+                        "type": "audio",
+                        "title": "Schubert: Winterreise, D. 911: No. 3 - SC06",
+                        "src": "data/Schubert_D911-03_SC06.wav",
+                        "srcSynchronized": { "src": "data/Schubert_D911-03_SC06_syncronized.wav", "timeline": "reference" }
+                    }
+                },
+                "alignment": {
+                    "src": "data/alignment.csv",
+                    "referenceTimeline": "reference",
+                    "timelines": {
+                        "reference": "time_sync_reference",
+                        "score": "measure_Schubert_D911-03_2",
+                        "midi": "time_Schubert_D911-03",
+                        "hu33": "time_Schubert_D911-03_HU33",
+                        "sc06": "time_Schubert_D911-03_SC06"
+                    },
+                    "outside": "clamp",
+                    "duplicatePlacements": "average"
+                },
+                "markers": {
+                    "hu33Measures": {
+                        "src": "data/HU33-markers.csv",
+                        "timeline": "hu33",
+                        "timeCol": "start",
+                        "labelCol": "label"
+                    },
+                    "sc06Structure": {
+                        "src": "data/SC06-markers.csv",
+                        "timeline": "sc06",
+                        "timeCol": "start",
+                        "labelCol": "structure"
+                    }
+                },
+                "views": [
                     {
                         "type": "sheetMusic",
-                        "src": "data/Schubert_D911-03.xml",
-                        "measureColumn": "measure_Schubert_D911-03_2",
+                        "mediaID": "score",
                         "maxHeight": 370,
                         "maxWidth": 1000,
                         "renderScale": 0.7,
@@ -43,86 +85,37 @@
                     },
                     {
                         "type": "midi",
-                        "src": "data/Schubert_D911-03.mid",
-                        "alignmentColumn": "time_Schubert_D911-03",
+                        "mediaID": "midi",
                         "height": 180,
                         "maxZoom": 5,
                         "playbackFollowMode": "center",
-                        "timer": true,
-                        "markers": {
-                            "color": "#ed8c01",
-                            "lineStyle": "dashed"
-                        }
+                        "timer": true
                     },
                     {
                         "type": "waveform",
-                        "waveformSource": 0,
+                        "sourceTracks": ["hu33"],
                         "waveformBarWidth": 1,
                         "height": 100,
                         "timer": true,
                         "alignedPlayhead": true,
-                        "showAlignmentPoints": false,
-                        "markers": {
-                            "color": "#ed8c01",
-                            "lineStyle": "dashed"
-                        }
-                    },
-                    {
-                        "type": "waveform",
-                        "waveformSource": 1,
-                        "waveformBarWidth": 1,
-                        "height": 100,
-                        "timer": true,
-                        "alignedPlayhead": true,
-                        "showAlignmentPoints": false,
-                        "markers": {
-                            "color": "#ed8c01",
-                            "lineStyle": "dashed"
-                        }
-                    },
-                    {
-                        "type": "warpingMatrix",
-                        "height": 200,
-                        "bpm": null
-                    },
-                    {
-                        "type": "trackGroup",
-                        "trackGroup": [
-                            {
-                                "title": "Schubert: Winterreise, D. 911: No. 3 - HU33",
-                                "sources": [{ "src": "data/Schubert_D911-03_HU33.wav" }],
-                                "alignment": {
-                                    "synchronizedSources": [{ "src": "data/Schubert_D911-03_HU33.wav" }],
-                                    "column": "time_Schubert_D911-03_HU33"
-                                },
-                                "markers": {
-                                    "csv": "data/HU33-markers.csv",
-                                    "timeColumn": "start",
-                                    "labelColumn": "label"
-                                }
-                            },
-                            {
-                                "title": "Schubert: Winterreise, D. 911: No. 3 - SC06",
-                                "sources": [{ "src": "data/Schubert_D911-03_SC06.wav" }],
-                                "alignment": {
-                                    "synchronizedSources": [{ "src": "data/Schubert_D911-03_SC06_syncronized.wav" }],
-                                    "column": "time_Schubert_D911-03_SC06"
-                                },
-                                "markers": {
-                                    "csv": "data/SC06-markers.csv",
-                                    "timeColumn": "start",
-                                    "labelColumn": "structure"
-                                }
-                            }
+                        "markerLayers": [
+                            { "set": "hu33Measures", "color": "#ed8c01", "line": "dashed" }
                         ]
-                    }
+                    },
+                    {
+                        "type": "waveform",
+                        "sourceTracks": ["sc06"],
+                        "waveformBarWidth": 1,
+                        "height": 100,
+                        "timer": true,
+                        "alignedPlayhead": true,
+                        "markerLayers": [
+                            { "set": "sc06Structure", "color": "#ed8c01", "line": "dashed" }
+                        ]
+                    },
+                    { "type": "warpingMatrix", "x": "hu33", "y": "sc06", "height": 200 },
+                    { "type": "trackList", "tracks": ["hu33", "sc06"] }
                 ],
-                "alignment": {
-                    "csv": "data/alignment.csv",
-                    "referenceTimeColumn": "time_sync_reference",
-                    "referenceTimeColumnSync": "time_sync_reference",
-                    "outOfRange": "clamp"
-                },
                 "features": {
                     "repeat": false,
                     "timer": true,
@@ -132,7 +125,6 @@
                     "keyboard": true,
                     "globalVolume": true,
                     "looping": true,
-                    "presets": false,
                     "customizablePanelOrder": false,
                     "tabView": false,
                     "iosAudioUnlock": true,
@@ -140,7 +132,7 @@
                 }
             }
         </script>
-    </trackswitch-sync-player>
+    </trackswitch-player>
 
     <script type="module" src="../../src/browser.ts"></script>
 </body>

@@ -1,37 +1,57 @@
 import { normalizeTrackSwitchConfig } from "../config/normalize-init";
-import { injectConfiguredUiElements } from "../config/ui-elements";
+import { injectConfiguredViews, type ViewNormalizeContext } from "../config/ui-elements";
 import { normalizeFeatures } from "../domain/options";
 import { createTrackRuntime } from "../domain/runtime";
 import { createInitialPlayerState } from "../domain/state";
 import type {
 	NormalizedTrackSwitchConfig,
+	ResolvedAlignment,
 	TrackRuntime,
 	TrackSwitchFeatures,
 	TrackSwitchInit,
 } from "../domain/types";
-import { loadRuntimeMarkers } from "../shared/markers";
 import { clamp } from "../shared/math";
-import { derivePresetNames } from "../shared/preset";
+import { IMPLICIT_REFERENCE_TIMELINE } from "../timeline/timeline";
+import { buildResolvedAlignment } from "./alignment-context";
+import { loadMarkerSets } from "./marker-sets";
 import type { TrackSwitchControllerImpl } from "./player-controller";
 
 function resolveControllerFeatures(
 	config: NormalizedTrackSwitchConfig,
 ): TrackSwitchFeatures {
 	const features = normalizeFeatures(config.features);
-	if (config.variant === "sync") {
+	if (config.alignment) {
 		features.exclusiveSolo = true;
-		features.presets = false;
 	}
 	return features;
+}
+
+function buildPresetEntries(
+	config: NormalizedTrackSwitchConfig,
+): Array<{ id: string; label: string }> {
+	return Object.entries(config.presets).map(([id, preset]) => ({
+		id,
+		label: preset.label ?? id,
+	}));
+}
+
+function buildViewContext(config: NormalizedTrackSwitchConfig): ViewNormalizeContext {
+	return {
+		media: config.media,
+		trackIds: config.tracks.map((track) => track.id),
+		markerSetIds: new Set(Object.keys(config.markers)),
+		hasAlignment: !!config.alignment,
+		alignmentTimelines: new Set(
+			config.alignment ? Object.keys(config.alignment.timelines) : [],
+		),
+	};
 }
 
 function createRuntimes(
 	config: NormalizedTrackSwitchConfig,
 	features: TrackSwitchFeatures,
 ): TrackRuntime[] {
-	const runtimes = config.tracks.map((track, index) =>
-		createTrackRuntime(track, index),
-	);
+	const runtimes = config.tracks.map((track, index) => createTrackRuntime(track, index));
 
 	const hasAnySelectedTrack = runtimes.some((runtime) => runtime.state.solo);
 	if (!hasAnySelectedTrack && runtimes.length > 0) {
@@ -69,18 +89,13 @@ function canReuseLoadedRuntimes(
 	);
 }
 
-function applyFeatures(
-	target: TrackSwitchFeatures,
-	source: TrackSwitchFeatures,
-): void {
+function applyFeatures(target: TrackSwitchFeatures, source: TrackSwitchFeatures): void {
 	(Object.keys(source) as Array<keyof TrackSwitchFeatures>).forEach((key) => {
 		target[key] = source[key];
 	});
 }
 
-function resetTransientInteractionState(
-	controller: TrackSwitchControllerImpl,
-): void {
+function resetTransientInteractionState(controller: TrackSwitchControllerImpl): void {
 	if (controller.resizeDebounceTimer) {
 		clearTimeout(controller.resizeDebounceTimer);
 		controller.resizeDebounceTimer = null;
@@ -100,23 +115,24 @@ function resetTransientInteractionState(
 	controller.shortcutHelpOpen = false;
 }
 
+function applyFirstPresetOrTrackProperties(controller: TrackSwitchControllerImpl): void {
+	const firstPresetId = Object.keys(controller.presets)[0];
+	if (firstPresetId) {
+		controller.applyPreset(firstPresetId);
+	} else {
+		controller.applyTrackProperties();
+	}
+}
+
 function restoreAudioPreservingState(
 	controller: TrackSwitchControllerImpl,
 	previousPosition: number,
 	wasPlaying: boolean,
 ): void {
-	controller.state.position = clamp(
-		previousPosition,
-		0,
-		controller.longestDuration,
-	);
+	controller.state.position = clamp(previousPosition, 0, controller.longestDuration);
 	controller.audioEngine.setMasterVolume(controller.state.volume);
 
-	if (controller.presetCount > 0) {
-		controller.applyPreset(0);
-	} else {
-		controller.applyTrackProperties();
-	}
+	applyFirstPresetOrTrackProperties(controller);
 
 	if (wasPlaying) {
 		controller.startAudio(controller.state.position);
@@ -124,9 +140,7 @@ function restoreAudioPreservingState(
 	}
 
 	controller.updateMainControls();
-	controller.emit("loaded", {
-		longestDuration: controller.longestDuration,
-	});
+	controller.emit("loaded", { longestDuration: controller.longestDuration });
 }
 
 async function applyAudioPreservingConfig(
@@ -149,13 +163,11 @@ async function applyAudioPreservingConfig(
 	controller.inputBinder.unbind();
 	applyFeatures(controller.features, features);
 
-	injectConfiguredUiElements(controller.root, config.ui);
+	injectConfiguredViews(controller.root, config.views, buildViewContext(config));
 
-	const presetNames = controller.features.presets
-		? derivePresetNames(config)
-		: [];
-	controller.renderer.updateConfig(presetNames, config.trackGroups);
-	controller.presetCount = presetNames.length;
+	controller.presets = config.presets;
+	controller.markersConfig = config.markers;
+	controller.renderer.updateConfig(buildPresetEntries(config), buildTrackGroups(config));
 	controller.effectiveSingleSoloMode = controller.isAlignmentMode()
 		? true
 		: controller.features.exclusiveSolo;
@@ -165,17 +177,18 @@ async function applyAudioPreservingConfig(
 	controller.inputBinder.bind();
 	controller.longestDuration = controller.findLongestDuration();
 
-	if (controller.isAlignmentMode()) {
-		const alignmentContext = controller.alignmentContext as {
-			baseAxis: { referenceDuration: number };
-		} | null;
-		if (alignmentContext) {
-			controller.longestDuration = alignmentContext.baseAxis.referenceDuration;
-		}
+	if (controller.alignment) {
+		controller.longestDuration = controller.alignment.referenceExtent.end;
 		controller.setEffectiveSoloMode(true);
 	} else if (controller.features.exclusiveSolo) {
 		controller.setEffectiveSoloMode(true);
 	}
+
+	controller.markerSets = await loadMarkerSets(
+		controller.markersConfig,
+		controller.alignment?.referenceTimeline ?? IMPLICIT_REFERENCE_TIMELINE,
+		controller.alignment?.projection ?? null,
+	);
 
 	restoreAudioPreservingState(controller, previousPosition, wasPlaying);
 	await controller.initializeSheetMusic();
@@ -184,6 +197,23 @@ async function applyAudioPreservingConfig(
 		controller.isAlignmentMode(),
 	);
 	controller.updateMainControls();
+}
+
+function buildTrackGroups(config: NormalizedTrackSwitchConfig) {
+	let groupIndex = 0;
+	const groups: Array<{
+		groupIndex: number;
+		trackIds: string[];
+		rowHeight: number | undefined;
+	}> = [];
+	config.views.forEach((view) => {
+		if (view.type !== "trackList") {
+			return;
+		}
+		groups.push({ groupIndex, trackIds: view.tracks, rowHeight: view.rowHeight });
+		groupIndex += 1;
+	});
+	return groups;
 }
 
 function getHotReloadErrorMessage(error: unknown): string {
@@ -197,36 +227,6 @@ function getHotReloadErrorMessage(error: unknown): string {
 		: "Unexpected error while updating TrackSwitch.";
 }
 
-async function buildStagedAlignmentContext(
-	controller: TrackSwitchControllerImpl,
-	config: NormalizedTrackSwitchConfig,
-	runtimes: TrackRuntime[],
-): Promise<unknown | null> {
-	if (!controller.isAlignmentMode()) {
-		return null;
-	}
-
-	const previousRuntimes = controller.runtimes;
-	const previousAlignmentConfig = controller.alignmentConfig;
-	const previousAlignmentCsvRequest = controller.alignmentCsvRequest;
-
-	controller.runtimes = runtimes;
-	controller.alignmentConfig = config.alignment;
-	controller.alignmentCsvRequest = null;
-
-	try {
-		const alignmentContext = await controller.buildAlignmentContext();
-		if (typeof alignmentContext === "string") {
-			throw new Error(alignmentContext);
-		}
-		return alignmentContext;
-	} finally {
-		controller.runtimes = previousRuntimes;
-		controller.alignmentConfig = previousAlignmentConfig;
-		controller.alignmentCsvRequest = previousAlignmentCsvRequest;
-	}
-}
-
 async function updateConfigNow(
 	controller: TrackSwitchControllerImpl,
 	nextInit: TrackSwitchInit,
@@ -235,18 +235,14 @@ async function updateConfigNow(
 		throw new Error("TrackSwitch controller has already been destroyed.");
 	}
 	if (!controller.isLoaded) {
-		throw new Error(
-			"TrackSwitch hot reload requires the player to be loaded first.",
-		);
+		throw new Error("TrackSwitch hot reload requires the player to be loaded first.");
 	}
 
 	let stagedRuntimes: TrackRuntime[] | null = null;
 	let committed = false;
 
 	try {
-		const nextConfig = normalizeTrackSwitchConfig(nextInit, {
-			variant: controller.variant,
-		});
+		const nextConfig = normalizeTrackSwitchConfig(nextInit);
 		const nextFeatures = resolveControllerFeatures(nextConfig);
 
 		if (canReuseLoadedRuntimes(controller, nextConfig)) {
@@ -260,22 +256,20 @@ async function updateConfigNow(
 
 		nextRuntimes.forEach((runtime: TrackRuntime) => {
 			if (runtime.baseSource.buffer) {
-				runtime.baseSource.waveformSummary =
-					controller.waveformEngine.createSummary(runtime.baseSource.buffer);
+				runtime.baseSource.waveformSummary = controller.waveformEngine.createSummary(
+					runtime.baseSource.buffer,
+				);
 			}
 
 			if (runtime.syncedSource?.buffer) {
-				runtime.syncedSource.waveformSummary =
-					controller.waveformEngine.createSummary(runtime.syncedSource.buffer);
+				runtime.syncedSource.waveformSummary = controller.waveformEngine.createSummary(
+					runtime.syncedSource.buffer,
+				);
 			}
 
 			const activeSource =
-				runtime.activeVariant === "synced"
-					? runtime.syncedSource
-					: runtime.baseSource;
-			runtime.waveformSummary = activeSource
-				? activeSource.waveformSummary
-				: null;
+				runtime.activeVariant === "synced" ? runtime.syncedSource : runtime.baseSource;
+			runtime.waveformSummary = activeSource ? activeSource.waveformSummary : null;
 		});
 
 		const erroredTracks = nextRuntimes.filter((runtime) => runtime.errored);
@@ -284,22 +278,15 @@ async function updateConfigNow(
 			throw new Error("One or more audio files failed to load.");
 		}
 
-		const markerLoadAbortController = new AbortController();
-		controller.markerLoadAbortController?.abort();
-		controller.markerLoadAbortController = markerLoadAbortController;
-		try {
-			await loadRuntimeMarkers(nextRuntimes, markerLoadAbortController.signal);
-		} finally {
-			if (controller.markerLoadAbortController === markerLoadAbortController) {
-				controller.markerLoadAbortController = null;
-			}
-		}
-
-		const stagedAlignmentContext = await buildStagedAlignmentContext(
-			controller,
-			nextConfig,
-			nextRuntimes,
+		const stagedAlignment: ResolvedAlignment | null = nextConfig.alignment
+			? await buildResolvedAlignment(nextConfig.alignment)
+			: null;
+		const stagedMarkerSets = await loadMarkerSets(
+			nextConfig.markers,
+			stagedAlignment?.referenceTimeline ?? IMPLICIT_REFERENCE_TIMELINE,
+			stagedAlignment?.projection ?? null,
 		);
+
 		const wasPlaying = controller.state.playing;
 		const previousPosition = wasPlaying
 			? controller.currentPlaybackReferencePosition()
@@ -320,17 +307,18 @@ async function updateConfigNow(
 		controller.inputBinder.unbind();
 		applyFeatures(controller.features, nextFeatures);
 
-		injectConfiguredUiElements(controller.root, nextConfig.ui);
+		injectConfiguredViews(controller.root, nextConfig.views, buildViewContext(nextConfig));
 
-		const presetNames = controller.features.presets
-			? derivePresetNames(nextConfig)
-			: [];
-		controller.renderer.updateConfig(presetNames, nextConfig.trackGroups);
 		controller.runtimes = nextRuntimes;
-		controller.presetCount = presetNames.length;
+		controller.presets = nextConfig.presets;
+		controller.markersConfig = nextConfig.markers;
+		controller.markerSets = stagedMarkerSets;
+		controller.renderer.updateConfig(
+			buildPresetEntries(nextConfig),
+			buildTrackGroups(nextConfig),
+		);
 		controller.alignmentConfig = nextConfig.alignment;
-		controller.alignmentCsvRequest = null;
-		controller.alignmentContext = null;
+		controller.alignment = stagedAlignment;
 		controller.alignmentPlaybackTrackIndex = null;
 		controller.globalSyncEnabled = false;
 		controller.syncLockedTrackIndexes.clear();
@@ -351,16 +339,8 @@ async function updateConfigNow(
 		controller.inputBinder.bind();
 		controller.longestDuration = controller.findLongestDuration();
 
-		if (controller.isAlignmentMode()) {
-			controller.alignmentContext =
-				stagedAlignmentContext as typeof controller.alignmentContext;
-			const alignmentContext = controller.alignmentContext as {
-				baseAxis: { referenceDuration: number };
-			} | null;
-			if (alignmentContext) {
-				controller.longestDuration =
-					alignmentContext.baseAxis.referenceDuration;
-			}
+		if (controller.alignment) {
+			controller.longestDuration = controller.alignment.referenceExtent.end;
 			controller.setEffectiveSoloMode(true);
 		}
 
@@ -397,11 +377,7 @@ async function updateConfigNow(
 			controller.state.loop.pointB = pointA;
 		}
 
-		if (controller.presetCount > 0) {
-			controller.applyPreset(0);
-		} else {
-			controller.applyTrackProperties();
-		}
+		applyFirstPresetOrTrackProperties(controller);
 		controller.audioEngine.setMasterVolume(controller.state.volume);
 		controller.prefetchAudioDownloadSize();
 
@@ -411,9 +387,7 @@ async function updateConfigNow(
 		}
 
 		controller.updateMainControls();
-		controller.emit("loaded", {
-			longestDuration: controller.longestDuration,
-		});
+		controller.emit("loaded", { longestDuration: controller.longestDuration });
 	} catch (error) {
 		if (stagedRuntimes && !committed) {
 			controller.audioEngine.disconnectRuntimes(stagedRuntimes);
@@ -424,17 +398,13 @@ async function updateConfigNow(
 	}
 }
 
-const configUpdateQueues = new WeakMap<
-	TrackSwitchControllerImpl,
-	Promise<void>
->();
+const configUpdateQueues = new WeakMap<TrackSwitchControllerImpl, Promise<void>>();
 
 export async function updateConfig(
 	controller: TrackSwitchControllerImpl,
 	nextInit: TrackSwitchInit,
 ): Promise<void> {
-	const previousUpdate =
-		configUpdateQueues.get(controller) || Promise.resolve();
+	const previousUpdate = configUpdateQueues.get(controller) || Promise.resolve();
 	const nextUpdate = previousUpdate
 		.catch(() => {
 			// Keep later config updates from being blocked by an earlier failure.

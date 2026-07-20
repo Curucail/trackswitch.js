@@ -1,8 +1,9 @@
 import type {
+	MediaConfig,
 	TrackSwitchController,
-	TrackSwitchUiConfig,
+	TrackSwitchViewConfig,
 } from "../domain/types";
-import { createTrackSwitchSyncPlayer } from "../player/alignment-factory";
+import { createTrackSwitch } from "../player/factory";
 import { parseNumericCsv } from "../shared/alignment";
 import { renderIconSlotHtml } from "../ui/icons";
 import {
@@ -498,8 +499,6 @@ export class InteractiveTrackSwitchControllerImpl
 
 		const columnMaps = this.buildAlignmentColumnMaps();
 		const referenceColumnName = columnMaps.timeColumnByFileId[referenceFile.id];
-		const warpingMatrixBpm =
-			referenceFile.type === "musicxml" ? "infer_score" : null;
 
 		// Encode CSV as data URL for the existing alignment system
 		const csvDataUrl = `data:text/csv;base64,${btoa(this.state.alignmentResult.csv)}`;
@@ -509,9 +508,13 @@ export class InteractiveTrackSwitchControllerImpl
 				entry,
 			]),
 		);
+		const syncTimelineColumn =
+			this.state.alignmentResult.syncReferenceTimeColumn || undefined;
 
-		// Build UI array
-		const uiElements: TrackSwitchUiConfig = [];
+		const media: MediaConfig = {};
+		const timelines: Record<string, string> = {};
+		const views: TrackSwitchViewConfig[] = [];
+		const audioTrackIds: string[] = [];
 
 		// Add sheet music for MusicXML files
 		for (const file of this.state.files) {
@@ -521,11 +524,13 @@ export class InteractiveTrackSwitchControllerImpl
 				}
 				const xmlBlob = new Blob([file.xmlText], { type: "application/xml" });
 				const xmlUrl = URL.createObjectURL(xmlBlob);
-				uiElements.push({
+				const columnName = columnMaps.timeColumnByFileId[file.id];
+				media[columnName] = { type: "musicxml", src: xmlUrl };
+				timelines[columnName] = columnName;
+				views.push({
 					type: "sheetMusic",
-					src: xmlUrl,
+					mediaID: columnName,
 					renderScale: 0.65,
-					measureColumn: columnMaps.measureColumnByFileId[file.id],
 					followPlayback: true,
 				});
 			}
@@ -538,10 +543,12 @@ export class InteractiveTrackSwitchControllerImpl
 					type: file.file.type || "audio/midi",
 				});
 				const midiUrl = URL.createObjectURL(midiBlob);
-				uiElements.push({
+				const columnName = columnMaps.timeColumnByFileId[file.id];
+				media[columnName] = { type: "midi", src: midiUrl };
+				timelines[columnName] = columnName;
+				views.push({
 					type: "midi",
-					src: midiUrl,
-					alignmentColumn: columnMaps.timeColumnByFileId[file.id],
+					mediaID: columnName,
 					height: 180,
 					maxZoom: 5,
 					playbackFollowMode: "center",
@@ -550,46 +557,40 @@ export class InteractiveTrackSwitchControllerImpl
 			}
 		}
 
-		// Add one waveform + one trackGroup per audio file.
-		// waveformSource is the global track index (sequential across all trackGroups).
-		let audioTrackCount = 0;
+		// Add one waveform per audio file, tracked in a single trackList.
 		for (const file of this.state.files) {
 			if (file.type === "audio") {
 				const audioBlob = new Blob([file.file], { type: file.file.type });
 				const audioUrl = URL.createObjectURL(audioBlob);
 				const columnName = columnMaps.timeColumnByFileId[file.id];
 
-				uiElements.push({
+				media[columnName] = {
+					type: "audio",
+					title: fileNameToDisplayTitle(file.name),
+					src: audioUrl,
+					srcSynchronized: this.buildSynchronizedSourceForFile(
+						file,
+						audioUrl,
+						synchronizedAudioByFileId,
+						syncTimelineColumn,
+					),
+				};
+				timelines[columnName] = columnName;
+				audioTrackIds.push(columnName);
+
+				views.push({
 					type: "waveform",
+					sourceTracks: [columnName],
 					height: 100,
-					waveformSource: audioTrackCount,
 					alignedPlayhead: this.state.waveformAlignedPlayhead,
-					showAlignmentPoints: this.state.waveformShowAlignmentPoints,
+					markerLayers: this.state.waveformShowAlignmentPoints
+						? [{ set: "alignment", foldToReference: true }]
+						: undefined,
 				});
-
-				uiElements.push({
-					type: "trackGroup",
-					trackGroup: [
-						{
-							title: fileNameToDisplayTitle(file.name),
-							sources: [{ src: audioUrl, type: file.file.type }],
-							alignment: {
-								column: columnName,
-								synchronizedSources: this.buildSynchronizedSourcesForFile(
-									file,
-									audioUrl,
-									synchronizedAudioByFileId,
-								),
-							},
-						},
-					],
-				});
-
-				audioTrackCount++;
 			}
 		}
 
-		if (audioTrackCount === 0) {
+		if (audioTrackIds.length === 0) {
 			this.state.computationError =
 				"No audio tracks to play. Add at least one audio file.";
 			this.state.computationStatus = "error";
@@ -597,10 +598,19 @@ export class InteractiveTrackSwitchControllerImpl
 			return;
 		}
 
-		uiElements.push({
-			type: "warpingMatrix",
-			bpm: warpingMatrixBpm,
-		});
+		if (syncTimelineColumn) {
+			timelines[syncTimelineColumn] = syncTimelineColumn;
+		}
+
+		if (audioTrackIds.length >= 2) {
+			views.push({
+				type: "warpingMatrix",
+				x: audioTrackIds[0],
+				y: audioTrackIds[1],
+			});
+		}
+
+		views.push({ type: "trackList", tracks: audioTrackIds });
 
 		const playerInit = {
 			features: {
@@ -612,14 +622,14 @@ export class InteractiveTrackSwitchControllerImpl
 				trackPanControls: true,
 				looping: true,
 			},
+			media,
 			alignment: {
-				csv: csvDataUrl,
-				referenceTimeColumn: referenceColumnName,
-				referenceTimeColumnSync:
-					this.state.alignmentResult.syncReferenceTimeColumn || undefined,
-				outOfRange: "clamp" as const,
+				src: csvDataUrl,
+				referenceTimeline: referenceColumnName,
+				timelines,
+				outside: "clamp" as const,
 			},
-			ui: uiElements,
+			views,
 		};
 
 		// Clear and mount
@@ -628,10 +638,7 @@ export class InteractiveTrackSwitchControllerImpl
 		this.rootElement.classList.remove("ts-interactive-setup");
 
 		try {
-			this.innerController = createTrackSwitchSyncPlayer(
-				this.rootElement,
-				playerInit,
-			);
+			this.innerController = createTrackSwitch(this.rootElement, playerInit);
 			this.applyWarpingMatrixVisibility();
 
 			// Load the player
@@ -970,20 +977,21 @@ export class InteractiveTrackSwitchControllerImpl
 		return buildUniqueAlignmentColumnMaps(this.state.files);
 	}
 
-	private buildSynchronizedSourcesForFile(
+	private buildSynchronizedSourceForFile(
 		file: InteractiveFile,
 		baseAudioUrl: string,
 		synchronizedAudioByFileId: Map<
 			string,
 			{ objectUrl: string; mimeType: string }
 		>,
-	): Array<{ src: string; type: string }> | undefined {
-		if (!this.state.alignmentResult?.syncReferenceTimeColumn) {
+		syncTimelineColumn: string | undefined,
+	): { src: string; timeline: string } | undefined {
+		if (!syncTimelineColumn) {
 			return undefined;
 		}
 
 		if (file.id === this.state.referenceFileId) {
-			return [{ src: baseAudioUrl, type: file.file.type || "audio/wav" }];
+			return { src: baseAudioUrl, timeline: syncTimelineColumn };
 		}
 
 		const synchronizedAudio = synchronizedAudioByFileId.get(file.id);
@@ -991,9 +999,7 @@ export class InteractiveTrackSwitchControllerImpl
 			return undefined;
 		}
 
-		return [
-			{ src: synchronizedAudio.objectUrl, type: synchronizedAudio.mimeType },
-		];
+		return { src: synchronizedAudio.objectUrl, timeline: syncTimelineColumn };
 	}
 
 	private createAlignmentResult(

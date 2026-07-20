@@ -1,47 +1,40 @@
-import type { TrackMarkerDisplayConfig } from "../domain/types";
+import type { MarkerLayerConfig } from "../domain/types";
 
-const markerDisplayAttributes = [
-	"data-timeline-markers",
-	"data-marker-color",
-	"data-marker-line-style",
-] as const;
+const MARKER_LAYERS_ATTRIBUTE = "data-marker-layers";
 
-export function setMarkerDisplayAttributes(
+export function setMarkerLayersAttribute(
 	element: HTMLElement,
-	config: TrackMarkerDisplayConfig | undefined,
+	layers: MarkerLayerConfig[] | undefined,
 ): void {
-	if (!config) {
+	if (!layers || layers.length === 0) {
 		return;
 	}
 
-	element.setAttribute("data-timeline-markers", "true");
-	element.setAttribute("data-marker-color", String(config.color));
-	element.setAttribute("data-marker-line-style", String(config.lineStyle));
+	element.setAttribute(MARKER_LAYERS_ATTRIBUTE, JSON.stringify(layers));
 }
 
 export function copyMarkerDisplayAttributes(
 	source: HTMLElement,
 	target: HTMLElement,
 ): void {
-	markerDisplayAttributes.forEach((attribute) => {
-		const value = source.getAttribute(attribute);
-		if (value !== null) {
-			target.setAttribute(attribute, value);
-		}
-	});
+	const value = source.getAttribute(MARKER_LAYERS_ATTRIBUTE);
+	if (value !== null) {
+		target.setAttribute(MARKER_LAYERS_ATTRIBUTE, value);
+	}
 }
 
-export function readMarkerDisplayConfig(
+export function readMarkerLayersAttribute(
 	element: HTMLElement,
-): Required<TrackMarkerDisplayConfig> | null {
-	if (element.getAttribute("data-timeline-markers") !== "true") {
-		return null;
+): MarkerLayerConfig[] {
+	const raw = element.getAttribute(MARKER_LAYERS_ATTRIBUTE);
+	if (!raw) {
+		return [];
 	}
 
-	return {
-		color: element.getAttribute("data-marker-color") as string,
-		lineStyle: element.getAttribute(
-			"data-marker-line-style",
-		) as Required<TrackMarkerDisplayConfig>["lineStyle"],
-	};
+	try {
+		const parsed = JSON.parse(raw);
+		return Array.isArray(parsed) ? (parsed as MarkerLayerConfig[]) : [];
+	} catch (_error) {
+		return [];
+	}
 }

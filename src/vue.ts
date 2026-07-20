@@ -14,7 +14,6 @@ import type {
 } from "./domain/types";
 import type { TrackswitchDomEventName, TrackswitchPlayer } from "./element";
 import {
-	defineTrackSwitchSyncPlayerElement,
 	defineTrackswitchDefaultElement,
 	TRACKSWITCH_DOM_EVENTS,
 } from "./element";
@@ -92,7 +91,6 @@ function createTrackSwitchVueComponent(
 
 			onMounted(() => {
 				if (tagName === "trackswitch-sync-player") {
-					defineTrackSwitchSyncPlayerElement();
 				} else {
 					defineTrackswitchDefaultElement();
 				}

@@ -5,7 +5,6 @@ import type {
 } from "./domain/types";
 import type { TrackswitchDomEventName, TrackswitchPlayer } from "./element";
 import {
-	defineTrackSwitchSyncPlayerElement,
 	defineTrackswitchDefaultElement,
 	TRACKSWITCH_DOM_EVENTS,
 } from "./element";
@@ -55,7 +54,6 @@ function defineElementForVariant(
 	variant: TrackswitchSvelteVariant | undefined,
 ): void {
 	if (variant === "sync") {
-		defineTrackSwitchSyncPlayerElement();
 		return;
 	}
 

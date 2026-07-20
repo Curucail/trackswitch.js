@@ -28,25 +28,49 @@
     <trackswitch-player id="player" style="display: block; width: 50%; margin: 0 auto;">
         <script type="application/json">
             {
-                "presetNames": ["All Tracks", "Violins & Synths", "Drums & Bass", "Drums Only"],
-                "ui": [
+                "media": {
+                    "violins": { "type": "audio", "title": "Violins", "image": "data/violins.png", "src": "data/violins.mp3" },
+                    "synths":  { "type": "audio", "title": "Synths",  "image": "data/synth.png",   "src": "data/synth.mp3" },
+                    "bass":    { "type": "audio", "title": "Bass",    "image": "data/bass.png",    "src": "data/bass.mp3" },
+                    "drums":   { "type": "audio", "title": "Drums",   "image": "data/drums.png",   "src": "data/drums.mp3" }
+                },
+                "markers": {
+                    "violinsCues": {
+                        "src": "data/violins-markers.csv",
+                        "timeline": "violins",
+                        "timeCol": "position_seconds",
+                        "labelCol": "annotation"
+                    },
+                    "synthCues": {
+                        "src": "data/synth-markers.csv",
+                        "timeline": "synths",
+                        "timeCol": "cue_at"
+                    }
+                },
+                "presets": {
+                    "all":       { "label": "All Tracks",       "tracks": ["violins", "synths", "bass", "drums"] },
+                    "strings":   { "label": "Violins & Synths", "tracks": ["violins", "synths"] },
+                    "rhythm":    { "label": "Drums & Bass",     "tracks": ["bass", "drums"] },
+                    "drumsOnly": { "label": "Drums Only",       "tracks": ["drums"] }
+                },
+                "views": [
                     {
                         "type": "image",
                         "src": "data/cover.png",
                         "seekable": true,
-                        "markers": {
-                            "color": "#ed8c01",
-                            "lineStyle": "solid"
-                        }
+                        "markerLayers": [
+                            { "set": "violinsCues", "color": "#ed8c01", "line": "solid" },
+                            { "set": "synthCues", "color": "#ed8c01", "line": "solid" }
+                        ]
                     },
                     {
                         "type": "waveform",
                         "height": 150,
                         "waveformBarWidth": 1,
-                        "markers": {
-                            "color": "#ed8c01",
-                            "lineStyle": "solid"
-                        }
+                        "markerLayers": [
+                            { "set": "violinsCues", "color": "#ed8c01", "line": "solid" },
+                            { "set": "synthCues", "color": "#ed8c01", "line": "solid" }
+                        ]
                     },
                     {
                         "type": "text",
@@ -56,42 +80,8 @@
                         "fontSize": 32
                     },
                     {
-                        "type": "trackGroup",
-                        "trackGroup": [
-                            {
-                                "title": "Violins",
-                                "image": "data/violins.png",
-                                "presets": [0, 1],
-                                "sources": [{ "src": "data/violins.mp3" }],
-                                "markers": {
-                                    "csv": "data/violins-markers.csv",
-                                    "timeColumn": "position_seconds",
-                                    "labelColumn": "annotation"
-                                }
-                            },
-                            {
-                                "title": "Synths",
-                                "image": "data/synth.png",
-                                "presets": [0, 1],
-                                "sources": [{ "src": "data/synth.mp3" }],
-                                "markers": {
-                                    "csv": "data/synth-markers.csv",
-                                    "timeColumn": "cue_at"
-                                }
-                            },
-                            {
-                                "title": "Bass",
-                                "image": "data/bass.png",
-                                "presets": [0, 2],
-                                "sources": [{ "src": "data/bass.mp3" }]
-                            },
-                            {
-                                "title": "Drums",
-                                "image": "data/drums.png",
-                                "presets": [0, 2, 3],
-                                "sources": [{ "src": "data/drums.mp3" }]
-                            }
-                        ]
+                        "type": "trackList",
+                        "tracks": ["violins", "synths", "bass", "drums"]
                     }
                 ],
                 "features": {
@@ -106,14 +96,13 @@
                     "looping": true,
                     "seekBar": true,
                     "timer": true,
-                    "presets": true,
                     "customizablePanelOrder": false,
                     "muteOtherPlayerInstances": true
                 }
             }
         </script>
     </trackswitch-player>
-    
+
     <script type="module" src="../../src/browser.ts"></script>
 </body>
 

@@ -1,4 +1,4 @@
-import type { TrackSwitchFeatures } from "../domain/types";
+import type { PresetsConfig, TrackSwitchFeatures } from "../domain/types";
 import {
 	eventTargetAsElement,
 	getDeepActiveElement,
@@ -8,7 +8,7 @@ import type { ControllerPointerEvent } from "../shared/seek";
 
 export interface InputController {
 	eventNamespace: string;
-	presetCount: number;
+	presets: PresetsConfig;
 	setKeyboardActive(): void;
 	openShortcutHelp(): void;
 	toggleShortcutHelp(): void;
@@ -555,7 +555,7 @@ export class InputBinder {
 			this.bindTrackMixControlPropagation();
 		}
 
-		if (this.features.presets && this.controller.presetCount >= 2) {
+		if (Object.keys(this.controller.presets).length >= 2) {
 			this.bindPresetControls();
 		}
 

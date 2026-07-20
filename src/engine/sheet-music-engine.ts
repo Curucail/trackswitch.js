@@ -281,7 +281,7 @@ export class SheetMusicEngine {
 				? projectedSegmentsByAxis.sync
 				: projectedSegmentsByAxis.base;
 		} catch (error) {
-			entry.fallbackTempoBpm = resolveOsmdFallbackTempo(entry);
+			entry.fallbackTempoBpm = null;
 			entry.projectedTempoSegmentsByAxis = {
 				base: null,
 				sync: null,
@@ -323,33 +323,6 @@ function resolveEntryReferenceBpm(
 		(entry.fallbackTempoBpm as number) > 0
 	) {
 		return entry.fallbackTempoBpm;
-	}
-
-	return resolveOsmdFallbackTempo(entry);
-}
-
-function resolveOsmdFallbackTempo(entry: SheetMusicEntryModel): number | null {
-	const sheet = entry.osmd?.Sheet as
-		| {
-				DefaultStartTempoInBpm?: unknown;
-				getExpressionsStartTempoInBPM?: () => unknown;
-		  }
-		| undefined;
-	if (!sheet) {
-		return null;
-	}
-
-	const expressionsTempo =
-		typeof sheet.getExpressionsStartTempoInBPM === "function"
-			? Number(sheet.getExpressionsStartTempoInBPM())
-			: Number.NaN;
-	if (Number.isFinite(expressionsTempo) && expressionsTempo > 0) {
-		return expressionsTempo;
-	}
-
-	const defaultTempo = Number(sheet.DefaultStartTempoInBpm);
-	if (Number.isFinite(defaultTempo) && defaultTempo > 0) {
-		return defaultTempo;
 	}
 
 	return null;

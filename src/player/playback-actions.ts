@@ -2,7 +2,8 @@ import { playerStateReducer } from "../domain/state";
 import type { TrackRuntime } from "../domain/types";
 import { clamp } from "../shared/math";
 import { getSeekMetrics } from "../shared/seek";
-import { loadRuntimeMarkers } from "../shared/markers";
+import { IMPLICIT_REFERENCE_TIMELINE } from "../timeline/timeline";
+import { loadMarkerSets } from "./marker-sets";
 import { pauseOtherControllers, unregisterController } from "./player-registry";
 
 function getLoadErrorMessage(error: unknown): string {
@@ -67,7 +68,6 @@ export function load(ctx: any): any {
 				};
 				runtime.syncedSource = null;
 				runtime.waveformSummary = null;
-				runtime.markers = [];
 			});
 
 			await this.audioEngine.loadTracks(this.runtimes);
@@ -109,29 +109,26 @@ export function load(ctx: any): any {
 			}
 
 			this.longestDuration = this.findLongestDuration();
-			this.alignmentContext = null;
+			this.alignment = null;
 			this.alignmentPlaybackTrackIndex = null;
-			const markerLoadAbortController = new AbortController();
-			this.markerLoadAbortController?.abort();
-			this.markerLoadAbortController = markerLoadAbortController;
-			try {
-				await loadRuntimeMarkers(
-					this.runtimes,
-					markerLoadAbortController.signal,
-				);
-			} finally {
-				if (this.markerLoadAbortController === markerLoadAbortController) {
-					this.markerLoadAbortController = null;
-				}
-			}
 
-			if (this.isAlignmentMode()) {
+			if (this.alignmentConfig) {
 				const alignmentError = await this.initializeAlignmentMode();
 				if (alignmentError) {
 					this.handleError(alignmentError);
 					return;
 				}
 			}
+
+			if (this.isDestroyed) {
+				return;
+			}
+
+			this.markerSets = await loadMarkerSets(
+				this.markersConfig,
+				this.alignment?.referenceTimeline ?? IMPLICIT_REFERENCE_TIMELINE,
+				this.alignment?.projection ?? null,
+			);
 
 			if (this.isDestroyed) {
 				return;
@@ -199,11 +196,6 @@ export function destroy(ctx: any): any {
 		this.pinchZoomState = null;
 		this.pendingWaveformTouchSeek = null;
 		this.waveformMinimapDragState = null;
-		this.markerLoadAbortController?.abort();
-		this.markerLoadAbortController = null;
-		this.runtimes.forEach((runtime: TrackRuntime) => {
-			runtime.markers = [];
-		});
 
 		if (this.state.playing) {
 			this.stopAudio();
@@ -559,7 +551,7 @@ export function toggleSolo(ctx: any, trackIndex: any, exclusive: any): any {
 		const nextActiveTrackIndex = this.getActiveSoloTrackIndex();
 		const shouldHandleAlignmentSwitch =
 			this.isAlignmentMode() &&
-			this.alignmentContext &&
+			this.alignment &&
 			this.effectiveSingleSoloMode &&
 			previousActiveTrackIndex !== nextActiveTrackIndex &&
 			nextActiveTrackIndex >= 0;
@@ -572,19 +564,20 @@ export function toggleSolo(ctx: any, trackIndex: any, exclusive: any): any {
 	}.call(ctx, trackIndex, exclusive);
 }
 
-export function applyPreset(ctx: any, presetIndex: any): any {
-	return function (this: any, presetIndex: any) {
-		if (!this.features.presets) {
+export function applyPreset(ctx: any, presetId: any): any {
+	return function (this: any, presetId: string) {
+		const preset = this.presets[presetId];
+		if (!preset) {
 			return;
 		}
 
+		const trackIds = new Set(preset.tracks);
 		this.runtimes.forEach((runtime: TrackRuntime) => {
-			const presets = runtime.definition.presets ?? [];
-			runtime.state.solo = presets.indexOf(presetIndex) !== -1;
+			runtime.state.solo = trackIds.has(runtime.definition.id);
 		});
 
 		this.applyTrackProperties();
-	}.call(ctx, presetIndex);
+	}.call(ctx, presetId);
 }
 
 export function initializeSheetMusic(ctx: any): any {
@@ -667,7 +660,7 @@ export function startAudio(
 		let enginePosition = requestedPosition;
 		let nextReferencePosition = requestedPosition;
 
-		if (this.isAlignmentMode() && this.alignmentContext) {
+		if (this.isAlignmentMode() && this.alignment) {
 			const activeTrackIndex = this.getAlignmentPlaybackTrackIndex();
 			if (activeTrackIndex < 0) {
 				return;
@@ -820,7 +813,7 @@ export function handleError(ctx: any, message: any): any {
 	return function (this: any, message: any) {
 		this.isLoaded = false;
 		this.isLoading = false;
-		this.alignmentContext = null;
+		this.alignment = null;
 		this.alignmentPlaybackTrackIndex = null;
 		this.globalSyncEnabled = false;
 		this.syncLockedTrackIndexes.clear();

@@ -2,11 +2,16 @@ import { normalizeFeatures } from "../domain/options";
 import { createTrackRuntime } from "../domain/runtime";
 import { createInitialPlayerState, type PlayerAction } from "../domain/state";
 import type {
+	AlignmentConfig,
 	AudioDownloadSizeInfo,
 	LoopMarker,
+	MarkersConfig,
 	NormalizedTrackSwitchConfig,
 	PlayerState,
-	TrackAlignmentConfig,
+	PresetsConfig,
+	ResolvedAlignment,
+	ResolvedMarkerSet,
+	TrackListGroup,
 	TrackRuntime,
 	TrackSourceVariant,
 	TrackSwitchController,
@@ -16,6 +21,7 @@ import type {
 	TrackSwitchFeatures,
 	TrackSwitchInit,
 	TrackSwitchSnapshot,
+	TrackSwitchWarpingMatrixViewConfig,
 } from "../domain/types";
 import { AudioEngine } from "../engine/audio-engine";
 import type { SheetMusicMeasureMapsByAxis } from "../engine/sheet-music/types";
@@ -25,15 +31,15 @@ import {
 	WaveformEngine,
 } from "../engine/waveform-engine";
 import { InputBinder, type InputController } from "../input/dom-event-binder";
-import { loadNumericCsv, type ParsedNumericCsv } from "../shared/alignment";
-import { buildMeasureMapFromColumns } from "../shared/measure-map";
-import { derivePresetNames } from "../shared/preset";
+import type { MeasureMapPoint } from "../shared/measure-map";
 import type { ControllerPointerEvent } from "../shared/seek";
+import { timelineId } from "../timeline/timeline";
 import {
 	ViewRenderer,
 	type WarpingMatrixRenderContext,
 	type WaveformTimelineContext,
 } from "../ui/view-renderer";
+import * as controllerAlignment from "./alignment-actions";
 import * as controllerEvents from "./event-emitter";
 import * as controllerHotReload from "./hot-reload-actions";
 import * as controllerInput from "./input-actions";
@@ -42,8 +48,6 @@ import * as controllerPlayback from "./playback-actions";
 import { allocateInstanceId, registerController } from "./player-registry";
 import * as controllerSeek from "./seek-actions";
 import * as controllerUi from "./ui-sync";
-
-type AlignmentReferenceAxisKey = "base" | "sync";
 
 interface SeekTimelineContext {
 	duration: number;
@@ -73,16 +77,16 @@ export class TrackSwitchControllerImpl
 	implements TrackSwitchController, InputController
 {
 	public readonly root: HTMLElement;
-	public readonly variant: NormalizedTrackSwitchConfig["variant"];
 	public readonly features: TrackSwitchFeatures;
 	public readonly audioEngine: AudioEngine;
 	public readonly waveformEngine: WaveformEngine;
 	public readonly sheetMusicEngine: SheetMusicEngine;
 	public readonly renderer: ViewRenderer;
 	public readonly inputBinder: InputBinder;
-	public alignmentConfig: NormalizedTrackSwitchConfig["alignment"];
-	public alignmentCsvRequest: Promise<ParsedNumericCsv> | null = null;
-	public markerLoadAbortController: AbortController | null = null;
+	public alignmentConfig: AlignmentConfig | undefined;
+	public markersConfig: MarkersConfig;
+	public presets: PresetsConfig;
+	public readonly warpingMatrixView: TrackSwitchWarpingMatrixViewConfig | null;
 
 	public state: PlayerState;
 	public longestDuration = 0;
@@ -107,7 +111,8 @@ export class TrackSwitchControllerImpl
 	public readonly touchSeekMoveThresholdPx = 10;
 
 	public iOSPlaybackUnlocked = false;
-	public alignmentContext: unknown | null = null;
+	public alignment: ResolvedAlignment | null = null;
+	public markerSets: Map<string, ResolvedMarkerSet> = new Map();
 	public alignmentPlaybackTrackIndex: number | null = null;
 	public globalSyncEnabled = false;
 	public effectiveSingleSoloMode = false;
@@ -126,7 +131,6 @@ export class TrackSwitchControllerImpl
 
 	public readonly eventNamespace: string;
 	public readonly instanceId: number;
-	public presetCount: number;
 	public shortcutHelpOpen = false;
 	public audioDownloadSizeInfo: AudioDownloadSizeInfo = {
 		status: "calculating",
@@ -138,24 +142,25 @@ export class TrackSwitchControllerImpl
 
 	constructor(rootElement: HTMLElement, config: NormalizedTrackSwitchConfig) {
 		this.root = rootElement;
-		this.variant = config.variant;
 		this.alignmentConfig = config.alignment;
+		this.markersConfig = config.markers;
+		this.presets = config.presets;
+		this.warpingMatrixView =
+			(config.views.find(
+				(view) => view.type === "warpingMatrix",
+			) as TrackSwitchWarpingMatrixViewConfig | undefined) ?? null;
 		this.features = normalizeFeatures(config.features);
-		if (this.variant === "sync") {
+		if (this.alignmentConfig) {
 			this.features.exclusiveSolo = true;
-			this.features.presets = false;
 		}
-		this.effectiveSingleSoloMode =
-			this.variant === "sync" ? true : this.features.exclusiveSolo;
+		this.effectiveSingleSoloMode = this.features.exclusiveSolo;
 		this.state = createInitialPlayerState(this.features.repeat);
 
 		this.runtimes = config.tracks.map((track, index) =>
 			createTrackRuntime(track, index),
 		);
 
-		const hasAnySelectedTrack = this.runtimes.some(
-			(runtime) => runtime.state.solo,
-		);
+		const hasAnySelectedTrack = this.runtimes.some((runtime) => runtime.state.solo);
 		if (!hasAnySelectedTrack && this.runtimes.length > 0) {
 			if (this.features.exclusiveSolo) {
 				this.runtimes[0].state.solo = true;
@@ -172,27 +177,31 @@ export class TrackSwitchControllerImpl
 			}
 		}
 
-		const presetNames = !this.features.presets ? [] : derivePresetNames(config);
-		this.presetCount = presetNames.length;
+		const presetEntries = Object.entries(this.presets).map(([id, preset]) => ({
+			id,
+			label: preset.label ?? id,
+		}));
 
-		this.audioEngine = new AudioEngine(
-			this.features,
-			this.state.volume,
-			this.isAlignmentMode(),
-		);
+		this.audioEngine = new AudioEngine(this.features, this.state.volume, !!this.alignmentConfig);
 		this.waveformEngine = new WaveformEngine();
 		this.sheetMusicEngine = new SheetMusicEngine((referenceTime) => {
 			this.seekTo(referenceTime);
 		});
-		this.renderer = this.createRenderer(
+		this.renderer = new ViewRenderer(
 			this.root,
 			this.features,
-			presetNames,
-			config.trackGroups,
+			presetEntries,
+			this.buildTrackGroups(config),
+			(referenceTime) => {
+				this.seekTo(referenceTime);
+			},
+			(referenceTime) => this.sheetMusicEngine.resolveReferenceBpm(referenceTime),
 		);
+		this.renderer.hasAlignment = !!this.alignmentConfig;
+		this.renderer.hasMarkers =
+			Object.keys(this.markersConfig).length > 0 || !!this.alignmentConfig;
 
 		this.instanceId = allocateInstanceId();
-
 		this.eventNamespace = ".trackswitch." + this.instanceId;
 
 		this.renderer.initialize(this.runtimes);
@@ -202,8 +211,9 @@ export class TrackSwitchControllerImpl
 		this.inputBinder.bind();
 		this.prefetchAudioDownloadSize();
 
-		if (this.presetCount > 0) {
-			this.applyPreset(0);
+		const firstPresetId = Object.keys(this.presets)[0];
+		if (firstPresetId) {
+			this.applyPreset(firstPresetId);
 		} else {
 			this.applyTrackProperties();
 		}
@@ -216,24 +226,21 @@ export class TrackSwitchControllerImpl
 		registerController(this);
 	}
 
-	protected createRenderer(
-		root: HTMLElement,
-		features: TrackSwitchFeatures,
-		presetNames: string[],
-		trackGroups: NormalizedTrackSwitchConfig["trackGroups"],
-	): ViewRenderer {
-		return new ViewRenderer(
-			root,
-			features,
-			presetNames,
-			trackGroups,
-			(referenceTime) => {
-				this.seekTo(referenceTime);
-			},
-			(referenceTime) => {
-				return this.sheetMusicEngine.resolveReferenceBpm(referenceTime);
-			},
-		);
+	private buildTrackGroups(config: NormalizedTrackSwitchConfig): TrackListGroup[] {
+		let groupIndex = 0;
+		const groups: TrackListGroup[] = [];
+		config.views.forEach((view) => {
+			if (view.type !== "trackList") {
+				return;
+			}
+			groups.push({
+				groupIndex: groupIndex,
+				trackIds: view.tracks,
+				rowHeight: view.rowHeight,
+			});
+			groupIndex += 1;
+		});
+		return groups;
 	}
 
 	async load(): Promise<void> {
@@ -304,8 +311,8 @@ export class TrackSwitchControllerImpl
 		controllerPlayback.toggleSolo(this, trackIndex, exclusive);
 	}
 
-	applyPreset(presetIndex: number): void {
-		controllerPlayback.applyPreset(this, presetIndex);
+	applyPreset(presetId: string): void {
+		controllerPlayback.applyPreset(this, presetId);
 	}
 
 	getState(): TrackSwitchSnapshot {
@@ -564,11 +571,7 @@ export class TrackSwitchControllerImpl
 		event: ControllerPointerEvent,
 		seekWrap: HTMLElement | null,
 	): boolean {
-		return controllerSeek.tryStartPendingWaveformTouchSeek(
-			this,
-			event,
-			seekWrap,
-		);
+		return controllerSeek.tryStartPendingWaveformTouchSeek(this, event, seekWrap);
 	}
 
 	public tryActivatePendingWaveformTouchSeek(
@@ -625,62 +628,38 @@ export class TrackSwitchControllerImpl
 	}
 
 	public isAlignmentMode(): boolean {
-		return false;
+		return controllerAlignment.isAlignmentMode(this);
 	}
 
 	public hasSyncedVariant(runtime: TrackRuntime): boolean {
-		return !!runtime.syncedSource && !!runtime.syncedSource.buffer;
+		return controllerAlignment.hasSyncedVariant(this, runtime);
 	}
 
 	public isTrackSyncLocked(trackIndex: number): boolean {
-		void trackIndex;
-		return false;
+		return controllerAlignment.isTrackSyncLocked(this, trackIndex);
 	}
 
 	public setEffectiveSoloMode(singleSoloMode: boolean): void {
-		this.effectiveSingleSoloMode = singleSoloMode;
-
-		if (!singleSoloMode || this.runtimes.length === 0) {
-			return;
-		}
-
-		const previousSoloIndex = this.getActiveSoloTrackIndex();
-		const targetSoloIndex = previousSoloIndex >= 0 ? previousSoloIndex : 0;
-
-		this.runtimes.forEach((runtime, index) => {
-			runtime.state.solo = index === targetSoloIndex;
-		});
+		controllerAlignment.setEffectiveSoloMode(this, singleSoloMode);
 	}
 
 	public toggleGlobalSync(): void {
-		return;
+		controllerAlignment.toggleGlobalSync(this);
 	}
 
 	public applyGlobalSyncState(syncOn: boolean): void {
-		void syncOn;
+		controllerAlignment.applyGlobalSyncState(this, syncOn);
 	}
 
 	public setRuntimeActiveVariant(
 		runtime: TrackRuntime,
 		variant: TrackSourceVariant,
 	): boolean {
-		const source =
-			variant === "synced" ? runtime.syncedSource : runtime.baseSource;
-		if (!source?.buffer) {
-			return false;
-		}
-
-		runtime.activeVariant = variant;
-		runtime.buffer = source.buffer;
-		runtime.timing = source.timing;
-		runtime.sourceIndex = source.sourceIndex;
-		runtime.waveformSummary = source.waveformSummary;
-		return true;
+		return controllerAlignment.setRuntimeActiveVariant(this, runtime, variant);
 	}
 
 	public shouldBypassAlignmentMapping(trackIndex: number): boolean {
-		void trackIndex;
-		return false;
+		return controllerAlignment.shouldBypassAlignmentMapping(this, trackIndex);
 	}
 
 	public applyTrackProperties(): void {
@@ -711,46 +690,31 @@ export class TrackSwitchControllerImpl
 		return controllerPlayback.initializeSheetMusic(this);
 	}
 
+	/** `measureColumn` here is the score's mediaID (see config/ui-elements.ts injectSheetMusic). */
 	public buildSheetMusicMeasureMaps(
 		measureColumn: string,
 		source: string,
 	): Promise<SheetMusicMeasureMapsByAxis> {
 		void source;
-		if (!measureColumn) {
-			return Promise.resolve({
-				base: null,
-				sync: null,
-			});
+		if (!measureColumn || !this.alignment) {
+			return Promise.resolve({ base: null, sync: null });
 		}
 
-		if (!this.alignmentConfig) {
-			return Promise.reject(
-				new Error(
-					"Sheet music measure sync requires init.alignment when sheetMusic.measureColumn is set.",
-				),
-			);
-		}
+		const scoreTimeline = timelineId(measureColumn);
+		const referenceTimeline = this.alignment.referenceTimeline;
+		const points: MeasureMapPoint[] = [];
 
-		return this.loadAlignmentCsv().then((parsedCsv) => {
-			const referenceTimeColumn = this.resolveReferenceTimeColumn(
-				this.alignmentConfig as TrackAlignmentConfig,
-			);
-			if (!referenceTimeColumn) {
-				throw new Error(
-					"Sheet music measure sync requires alignment.referenceTimeColumn when sheetMusic.measureColumn is set.",
-				);
+		for (const marker of this.alignment.markerSet.markers) {
+			const start = marker.placements.get(referenceTimeline);
+			const measure = marker.placements.get(scoreTimeline);
+			if (start !== undefined && measure !== undefined) {
+				points.push({ start, measure });
 			}
+		}
 
-			return {
-				base: buildMeasureMapFromColumns(
-					parsedCsv.rows,
-					parsedCsv.headers,
-					referenceTimeColumn,
-					measureColumn,
-				),
-				sync: null,
-			};
-		});
+		points.sort((a, b) => (a.start === b.start ? a.measure - b.measure : a.start - b.start));
+
+		return Promise.resolve({ base: points.length > 0 ? points : null, sync: null });
 	}
 
 	public dispatch(action: PlayerAction): void {
@@ -793,157 +757,35 @@ export class TrackSwitchControllerImpl
 	}
 
 	public async initializeAlignmentMode(): Promise<string | null> {
-		return "Sync mode requires the sync player variant.";
-	}
-
-	public async buildAlignmentContext(): Promise<unknown | string> {
-		return "Sync mode requires the sync player variant.";
-	}
-
-	public loadAlignmentCsv(): Promise<ParsedNumericCsv> {
-		if (
-			!this.alignmentConfig?.csv ||
-			typeof this.alignmentConfig.csv !== "string"
-		) {
-			return Promise.reject(
-				new Error(
-					"Sheet music measure sync requires alignment.csv when sheetMusic.measureColumn is set.",
-				),
-			);
-		}
-
-		if (!this.alignmentCsvRequest) {
-			this.alignmentCsvRequest = loadNumericCsv(this.alignmentConfig.csv).catch(
-				(error) => {
-					this.alignmentCsvRequest = null;
-					throw error;
-				},
-			);
-		}
-
-		return this.alignmentCsvRequest;
-	}
-
-	public collectUniqueAlignmentColumns(
-		mappingByTrack: Map<number, string>,
-	): string[] {
-		const seenColumns = new Set<string>();
-		const uniqueColumns: string[] = [];
-
-		for (const [, rawColumn] of mappingByTrack) {
-			const column = String(rawColumn || "").trim();
-			if (!column || seenColumns.has(column)) {
-				continue;
-			}
-
-			seenColumns.add(column);
-			uniqueColumns.push(column);
-		}
-
-		return uniqueColumns;
+		return controllerAlignment.initializeAlignmentMode(this);
 	}
 
 	public getWarpingMatrixContext(): WarpingMatrixRenderContext | undefined {
-		return undefined;
+		return controllerAlignment.getWarpingMatrixContext(this);
 	}
 
 	public getAudibleTrackIndexesForWarpingMatrix(): number[] {
-		return this.runtimes.map((_runtime, index) => index);
-	}
-
-	public resolveReferenceTimeColumn(config: {
-		referenceTimeColumn?: string;
-	}): string | null {
-		const configuredReferenceTimeColumn =
-			typeof config.referenceTimeColumn === "string"
-				? config.referenceTimeColumn.trim()
-				: "";
-
-		return configuredReferenceTimeColumn || null;
-	}
-
-	public resolveReferenceTimeColumnSync(config: {
-		referenceTimeColumnSync?: string;
-	}): string | null {
-		const configuredReferenceTimeColumnSync =
-			typeof config.referenceTimeColumnSync === "string"
-				? config.referenceTimeColumnSync.trim()
-				: "";
-
-		return configuredReferenceTimeColumnSync || null;
-	}
-
-	public resolveReferenceDuration(
-		rows: Array<Record<string, number>>,
-		referenceTimeColumn: string,
-	): number | string {
-		let maxReference = Number.NEGATIVE_INFINITY;
-
-		rows.forEach((row: Record<string, unknown>) => {
-			const value = Number(row[referenceTimeColumn]);
-			if (Number.isFinite(value) && value > maxReference) {
-				maxReference = value;
-			}
-		});
-
-		if (!Number.isFinite(maxReference)) {
-			return (
-				"Alignment CSV does not contain valid numeric values for referenceTimeColumn: " +
-				referenceTimeColumn
-			);
-		}
-
-		return Math.max(0, maxReference);
-	}
-
-	public resolveAlignmentMappingsByTrack(
-		_config: unknown,
-	): Map<number, string> | string {
-		return "Sync mode requires the sync player variant.";
+		return controllerAlignment.getAudibleTrackIndexesForWarpingMatrix(this);
 	}
 
 	public getActiveSoloTrackIndex(): number {
-		for (let index = 0; index < this.runtimes.length; index += 1) {
-			if (this.runtimes[index].state.solo) {
-				return index;
-			}
-		}
-
-		if (this.effectiveSingleSoloMode && this.runtimes.length > 0) {
-			return 0;
-		}
-
-		return -1;
-	}
-
-	public getActiveAlignmentAxisKey(): AlignmentReferenceAxisKey {
-		return "base";
+		return controllerAlignment.getActiveSoloTrackIndex(this);
 	}
 
 	public isSyncReferenceAxisActive(): boolean {
-		return false;
+		return controllerAlignment.isSyncReferenceAxisActive(this);
 	}
 
 	public isGlobalSyncAvailable(): boolean {
-		return false;
-	}
-
-	public mapAlignmentAxisTime(
-		time: number,
-		fromAxisKey: AlignmentReferenceAxisKey,
-		toAxisKey: AlignmentReferenceAxisKey,
-	): number {
-		void fromAxisKey;
-		void toAxisKey;
-		return Number.isFinite(time) ? time : 0;
+		return controllerAlignment.isGlobalSyncAvailable(this);
 	}
 
 	public getAlignmentPlaybackTrackIndex(): number {
-		return -1;
+		return controllerAlignment.getAlignmentPlaybackTrackIndex(this);
 	}
 
 	public currentPlaybackReferencePosition(): number {
-		return this.audioEngine.currentTime - this.state.startTime;
+		return controllerAlignment.currentPlaybackReferencePosition(this);
 	}
 
 	public isFixedWaveformLocalAxisEnabled(): boolean {
@@ -956,9 +798,7 @@ export class TrackSwitchControllerImpl
 		return controllerSeek.getSeekTimelineContext(this, seekingElement);
 	}
 
-	public getMidiTimelineContext(
-		midiSurface: unknown,
-	): SeekTimelineContext | null {
+	public getMidiTimelineContext(midiSurface: unknown): SeekTimelineContext | null {
 		return controllerSeek.getMidiTimelineContext(this, midiSurface);
 	}
 
@@ -970,21 +810,16 @@ export class TrackSwitchControllerImpl
 		return controllerSeek.getWaveformTimelineProjector(this);
 	}
 
-	public referenceToTrackTime(
-		trackIndex: number,
-		referenceTime: number,
-	): number {
-		void trackIndex;
-		return referenceTime;
+	public referenceToTrackTime(trackIndex: number, referenceTime: number): number {
+		return controllerAlignment.referenceToTrackTime(this, trackIndex, referenceTime);
 	}
 
 	public trackToReferenceTime(trackIndex: number, trackTime: number): number {
-		void trackIndex;
-		return trackTime;
+		return controllerAlignment.trackToReferenceTime(this, trackIndex, trackTime);
 	}
 
 	public handleAlignmentTrackSwitch(nextActiveTrackIndex: number): void {
-		void nextActiveTrackIndex;
+		controllerAlignment.handleAlignmentTrackSwitch(this, nextActiveTrackIndex);
 	}
 
 	public emit<K extends TrackSwitchEventName>(

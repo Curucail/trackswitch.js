@@ -1,278 +1,358 @@
-import { normalizeFeatures } from "../domain/options";
 import type {
-	NormalizedTrackGroupLayout,
+	AlignmentConfig,
+	MarkersConfig,
+	MediaConfig,
 	NormalizedTrackSwitchConfig,
+	PresetsConfig,
 	TrackDefinition,
+	TrackId,
+	TrackSourceDefinition,
 	TrackSwitchInit,
-	TrackSwitchUiElement,
-	TrackSwitchVariant,
-	TrackSwitchWaveformUiElement,
+	TrackSwitchViewConfig,
 } from "../domain/types";
-import { injectConfiguredUiElements, normalizeUiElement } from "./ui-elements";
+import {
+	injectConfiguredViews,
+	normalizeViewConfig,
+	type ViewNormalizeContext,
+} from "./ui-elements";
 import { assertAllowedKeys, toConfigRecord } from "./validation";
 
-const objectHasOwn = (
-	Object as unknown as {
-		hasOwn(object: object, property: PropertyKey): boolean;
-	}
-).hasOwn;
+export const MEDIA_REQUIRED_ERROR =
+	"TrackSwitch requires at least one media entry of type \"audio\".";
 
-export const TRACKS_REQUIRED_ERROR =
-	'TrackSwitch requires at least one ui entry with type "trackGroup" and non-empty trackGroup.';
-const initAllowedKeys = ["presetNames", "features", "alignment", "ui"] as const;
-const alignmentAllowedKeys = [
-	"csv",
-	"referenceTimeColumn",
-	"referenceTimeColumnSync",
-	"outOfRange",
+const initAllowedKeys = [
+	"media",
+	"alignment",
+	"markers",
+	"presets",
+	"views",
+	"features",
 ] as const;
-
-export interface NormalizeTrackSwitchOptions {
-	variant: TrackSwitchVariant;
-}
+const alignmentAllowedKeys = [
+	"src",
+	"referenceTimeline",
+	"timelines",
+	"outside",
+	"duplicatePlacements",
+] as const;
+const markerSetAllowedKeys = ["src", "timeline", "timeCol", "labelCol"] as const;
+const presetAllowedKeys = ["label", "tracks"] as const;
+const audioMediaAllowedKeys = [
+	"type",
+	"src",
+	"title",
+	"image",
+	"style",
+	"solo",
+	"volume",
+	"pan",
+	"startOffsetMs",
+	"endOffsetMs",
+	"srcSynchronized",
+] as const;
+const midiMediaAllowedKeys = ["type", "src"] as const;
+const musicxmlMediaAllowedKeys = ["type", "src"] as const;
+const synchronizedSourceAllowedKeys = ["src", "timeline"] as const;
 
 function validateInitKeys(init: TrackSwitchInit): void {
 	const initRecord = toConfigRecord(init, "init");
 	assertAllowedKeys(initRecord, initAllowedKeys, "init");
-
-	if (init.alignment === undefined) {
-		return;
-	}
-
-	const alignmentRecord = toConfigRecord(init.alignment, "alignment");
-	assertAllowedKeys(alignmentRecord, alignmentAllowedKeys, "alignment");
 }
 
-function hasValidTrackSources(track: TrackDefinition): boolean {
-	if (!Array.isArray(track.sources) || track.sources.length === 0) {
-		return false;
+function normalizeAlignmentConfig(
+	alignment: AlignmentConfig | undefined,
+): AlignmentConfig | undefined {
+	if (alignment === undefined) {
+		return undefined;
 	}
 
-	return track.sources.some(
-		(source) => typeof source.src === "string" && source.src.trim().length > 0,
+	const record = toConfigRecord(alignment, "alignment");
+	assertAllowedKeys(record, alignmentAllowedKeys, "alignment");
+
+	if (typeof alignment.src !== "string" || alignment.src.trim().length === 0) {
+		throw new Error("Invalid alignment configuration: src must be a non-empty string.");
+	}
+	if (
+		typeof alignment.referenceTimeline !== "string" ||
+		alignment.referenceTimeline.trim().length === 0
+	) {
+		throw new Error(
+			"Invalid alignment configuration: referenceTimeline must be a non-empty string.",
+		);
+	}
+	if (
+		!alignment.timelines ||
+		typeof alignment.timelines !== "object" ||
+		Array.isArray(alignment.timelines) ||
+		Object.keys(alignment.timelines).length === 0
+	) {
+		throw new Error(
+			"Invalid alignment configuration: timelines must be a non-empty object mapping timeline id to CSV column name.",
+		);
+	}
+	if (!(alignment.referenceTimeline in alignment.timelines)) {
+		throw new Error(
+			"Invalid alignment configuration: referenceTimeline must be one of the keys in timelines.",
+		);
+	}
+	if (
+		alignment.outside !== undefined &&
+		alignment.outside !== "clamp" &&
+		alignment.outside !== "linear" &&
+		alignment.outside !== "error"
+	) {
+		throw new Error(
+			"Invalid alignment configuration: outside must be 'clamp', 'linear', or 'error'.",
+		);
+	}
+	if (
+		alignment.duplicatePlacements !== undefined &&
+		alignment.duplicatePlacements !== "average" &&
+		alignment.duplicatePlacements !== "error"
+	) {
+		throw new Error(
+			"Invalid alignment configuration: duplicatePlacements must be 'average' or 'error'.",
+		);
+	}
+
+	return { ...alignment };
+}
+
+function normalizeMarkersConfig(
+	markers: MarkersConfig | undefined,
+	referenceTimeline: string | undefined,
+): MarkersConfig {
+	if (markers === undefined) {
+		return {};
+	}
+
+	const record = toConfigRecord(markers, "markers");
+	const normalized: MarkersConfig = {};
+
+	Object.entries(record).forEach(([setId, rawSet]) => {
+		const setRecord = toConfigRecord(rawSet, `markers.${setId}`);
+		assertAllowedKeys(setRecord, markerSetAllowedKeys, `markers.${setId}`);
+		const set = rawSet as MarkersConfig[string];
+
+		if (typeof set.src !== "string" || set.src.trim().length === 0) {
+			throw new Error(`Invalid markers.${setId} configuration: src must be a non-empty string.`);
+		}
+		if (typeof set.timeCol !== "string" || set.timeCol.trim().length === 0) {
+			throw new Error(
+				`Invalid markers.${setId} configuration: timeCol must be a non-empty string.`,
+			);
+		}
+		if (set.labelCol !== undefined && typeof set.labelCol !== "string") {
+			throw new Error(`Invalid markers.${setId} configuration: labelCol must be a string.`);
+		}
+		if (set.timeline !== undefined) {
+			if (typeof set.timeline !== "string" || set.timeline.trim().length === 0) {
+				throw new Error(
+					`Invalid markers.${setId} configuration: timeline must be a non-empty string.`,
+				);
+			}
+		} else if (referenceTimeline === undefined) {
+			// Omitting timeline with no alignment block is valid: there is one timeline.
+		}
+
+		normalized[setId] = { ...set };
+	});
+
+	return normalized;
+}
+
+function normalizePresetsConfig(
+	presets: PresetsConfig | undefined,
+	trackIds: ReadonlySet<TrackId>,
+): PresetsConfig {
+	if (presets === undefined) {
+		return {};
+	}
+
+	const record = toConfigRecord(presets, "presets");
+	const normalized: PresetsConfig = {};
+
+	Object.entries(record).forEach(([presetId, rawPreset]) => {
+		const presetRecord = toConfigRecord(rawPreset, `presets.${presetId}`);
+		assertAllowedKeys(presetRecord, presetAllowedKeys, `presets.${presetId}`);
+		const preset = rawPreset as PresetsConfig[string];
+
+		if (!Array.isArray(preset.tracks) || preset.tracks.length === 0) {
+			throw new Error(
+				`Invalid presets.${presetId} configuration: tracks must be a non-empty array of track ids.`,
+			);
+		}
+		preset.tracks.forEach((trackId) => {
+			if (!trackIds.has(trackId)) {
+				throw new Error(
+					`Invalid presets.${presetId} configuration: references unknown track id "${trackId}".`,
+				);
+			}
+		});
+
+		normalized[presetId] = { ...preset };
+	});
+
+	return normalized;
+}
+
+function normalizeSynchronizedSource(
+	mediaId: string,
+	srcSynchronized: unknown,
+): TrackSourceDefinition[] | undefined {
+	if (srcSynchronized === undefined) {
+		return undefined;
+	}
+
+	const record = toConfigRecord(srcSynchronized, `media.${mediaId}.srcSynchronized`);
+	assertAllowedKeys(
+		record,
+		synchronizedSourceAllowedKeys,
+		`media.${mediaId}.srcSynchronized`,
 	);
-}
 
-function resolveTracksFromUi(resolvedUi: TrackSwitchUiElement[] | undefined): {
-	tracks: TrackDefinition[];
-	trackGroups: NormalizedTrackGroupLayout[];
-} {
-	if (!resolvedUi || resolvedUi.length === 0) {
-		return { tracks: [], trackGroups: [] };
+	const synced = srcSynchronized as { src: unknown; timeline: unknown };
+	if (typeof synced.src !== "string" || synced.src.trim().length === 0) {
+		throw new Error(
+			`Invalid media.${mediaId}.srcSynchronized configuration: src must be a non-empty string.`,
+		);
+	}
+	if (typeof synced.timeline !== "string" || synced.timeline.trim().length === 0) {
+		throw new Error(
+			`Invalid media.${mediaId}.srcSynchronized configuration: timeline must be a non-empty string.`,
+		);
 	}
 
-	const tracks: TrackDefinition[] = [];
-	const trackGroups: NormalizedTrackGroupLayout[] = [];
-	let groupIndex = 0;
+	return [{ src: synced.src }];
+}
 
-	resolvedUi.forEach((entry) => {
-		if (entry.type !== "trackGroup") {
+function normalizeMediaConfig(media: MediaConfig | undefined): {
+	media: MediaConfig;
+	tracks: TrackDefinition[];
+} {
+	if (!media || typeof media !== "object" || Array.isArray(media)) {
+		throw new Error("Invalid init configuration: media must be an object.");
+	}
+
+	const normalizedMedia: MediaConfig = {};
+	const tracks: TrackDefinition[] = [];
+
+	Object.entries(media).forEach(([mediaId, rawEntry]) => {
+		const entryRecord = toConfigRecord(rawEntry, `media.${mediaId}`);
+		const type = entryRecord.type;
+
+		if (type === "audio") {
+			assertAllowedKeys(entryRecord, audioMediaAllowedKeys, `media.${mediaId}`);
+			const entry = rawEntry as Extract<MediaConfig[string], { type: "audio" }>;
+			if (typeof entry.src !== "string" || entry.src.trim().length === 0) {
+				throw new Error(`Invalid media.${mediaId} configuration: src must be a non-empty string.`);
+			}
+
+			normalizedMedia[mediaId] = { ...entry };
+			tracks.push({
+				id: mediaId,
+				title: entry.title,
+				image: entry.image,
+				style: entry.style,
+				solo: entry.solo,
+				volume: entry.volume,
+				pan: entry.pan,
+				sources: [
+					{
+						src: entry.src,
+						startOffsetMs: entry.startOffsetMs,
+						endOffsetMs: entry.endOffsetMs,
+					},
+				],
+				syncedSources: normalizeSynchronizedSource(mediaId, entry.srcSynchronized),
+			});
 			return;
 		}
 
-		if (!Array.isArray(entry.trackGroup) || entry.trackGroup.length === 0) {
-			throw new Error("Each ui trackGroup must contain at least one track.");
-		}
-
-		const startTrackIndex = tracks.length;
-		entry.trackGroup.forEach((track) => {
-			if (!hasValidTrackSources(track)) {
-				throw new Error(
-					"Each track in ui trackGroup must define at least one valid source src.",
-				);
+		if (type === "midi") {
+			assertAllowedKeys(entryRecord, midiMediaAllowedKeys, `media.${mediaId}`);
+			const entry = rawEntry as Extract<MediaConfig[string], { type: "midi" }>;
+			if (typeof entry.src !== "string" || entry.src.trim().length === 0) {
+				throw new Error(`Invalid media.${mediaId} configuration: src must be a non-empty string.`);
 			}
+			normalizedMedia[mediaId] = { ...entry };
+			return;
+		}
 
-			tracks.push(track);
-		});
+		if (type === "musicxml") {
+			assertAllowedKeys(entryRecord, musicxmlMediaAllowedKeys, `media.${mediaId}`);
+			const entry = rawEntry as Extract<MediaConfig[string], { type: "musicxml" }>;
+			if (typeof entry.src !== "string" || entry.src.trim().length === 0) {
+				throw new Error(`Invalid media.${mediaId} configuration: src must be a non-empty string.`);
+			}
+			normalizedMedia[mediaId] = { ...entry };
+			return;
+		}
 
-		trackGroups.push({
-			groupIndex: groupIndex,
-			startTrackIndex: startTrackIndex,
-			trackCount: entry.trackGroup.length,
-			rowHeight: entry.rowHeight,
-		});
-
-		groupIndex += 1;
+		throw new Error(
+			`Invalid media.${mediaId} configuration: type must be "audio", "midi", or "musicxml".`,
+		);
 	});
 
-	return { tracks, trackGroups };
+	return { media: normalizedMedia, tracks };
 }
 
-function hasPerTrackImageUi(
-	resolvedUi: TrackSwitchUiElement[] | undefined,
-): boolean {
-	if (!resolvedUi) {
-		return false;
-	}
-
-	return resolvedUi.some((entry) => entry.type === "perTrackImage");
-}
-
-function hasSheetMusicUi(
-	resolvedUi: TrackSwitchUiElement[] | undefined,
-): boolean {
-	if (!resolvedUi) {
-		return false;
-	}
-
-	return resolvedUi.some((entry) => entry.type === "sheetMusic");
-}
-
-function hasWarpingMatrixInferScoreBpm(
-	resolvedUi: TrackSwitchUiElement[] | undefined,
-): boolean {
-	if (!resolvedUi) {
-		return false;
-	}
-
-	return resolvedUi.some(
-		(entry) => entry.type === "warpingMatrix" && entry.bpm === "infer_score",
-	);
-}
-
-function assertNoFeatureMode(init: TrackSwitchInit): void {
-	if (
-		init.features &&
-		typeof init.features === "object" &&
-		objectHasOwn(init.features, "mode")
-	) {
-		throw new Error(
-			"Invalid feature key: mode. Use the default or sync TrackSwitch variant instead.",
-		);
-	}
-}
-
-function isAlignmentTrack(track: TrackDefinition): boolean {
-	return !!track.alignment;
-}
-
-function isAlignmentWaveform(
-	entry: TrackSwitchUiElement,
-): entry is TrackSwitchWaveformUiElement {
-	return (
-		entry.type === "waveform" &&
-		(!!entry.alignedPlayhead || !!entry.showAlignmentPoints)
-	);
-}
-
-function validateVariantConfig(
-	variant: TrackSwitchVariant,
+export function normalizeTrackSwitchConfig(
 	init: TrackSwitchInit,
-	resolvedUi: TrackSwitchUiElement[] | undefined,
-	tracks: TrackDefinition[],
-): void {
-	if (variant === "default") {
-		if (tracks.some(isAlignmentTrack)) {
-			throw new Error(
-				"Invalid default player configuration: track alignment config requires the sync player variant.",
-			);
-		}
-		if (resolvedUi?.some((entry) => entry.type === "warpingMatrix")) {
-			throw new Error(
-				"Invalid default player configuration: warpingMatrix requires the sync player variant.",
-			);
-		}
-		if (
-			resolvedUi?.some(
-				(entry) => entry.type === "waveform" && entry.timeAxis === "individual",
-			)
-		) {
-			throw new Error(
-				"Invalid default player configuration: waveform timeAxis 'individual' requires the sync player variant.",
-			);
-		}
-		if (resolvedUi?.some(isAlignmentWaveform)) {
-			throw new Error(
-				"Invalid default player configuration: aligned waveform options require the sync player variant.",
-			);
-		}
-		return;
+): NormalizedTrackSwitchConfig {
+	validateInitKeys(init);
+
+	const { media, tracks } = normalizeMediaConfig(init.media);
+	if (tracks.length === 0) {
+		throw new Error(MEDIA_REQUIRED_ERROR);
 	}
 
-	if (!init.alignment) {
-		throw new Error(
-			"Invalid sync player configuration: alignment config is required.",
-		);
+	const alignment = normalizeAlignmentConfig(init.alignment);
+	const markers = normalizeMarkersConfig(init.markers, alignment?.referenceTimeline);
+	const trackIdSet = new Set(tracks.map((track) => track.id));
+	const presets = normalizePresetsConfig(init.presets, trackIdSet);
+
+	const viewCtx: ViewNormalizeContext = {
+		media,
+		trackIds: tracks.map((track) => track.id),
+		markerSetIds: new Set(Object.keys(markers)),
+		hasAlignment: !!alignment,
+		alignmentTimelines: new Set(alignment ? Object.keys(alignment.timelines) : []),
+	};
+
+	if (!Array.isArray(init.views) || init.views.length === 0) {
+		throw new Error("Invalid init configuration: views must be a non-empty array.");
 	}
 
-	resolvedUi?.forEach((entry) => {
-		if (
-			entry.type === "waveform" &&
-			entry.timeAxis === "individual" &&
-			typeof entry.waveformSource !== "number"
-		) {
-			throw new Error(
-				"Invalid sync player configuration: waveform timeAxis 'individual' requires a numeric waveformSource.",
-			);
-		}
-	});
+	const views: TrackSwitchViewConfig[] = init.views.map((view) =>
+		normalizeViewConfig(view, viewCtx),
+	);
 
-	tracks.forEach((track) => {
-		const column = track.alignment?.column;
-		if (typeof column !== "string" || column.trim().length === 0) {
-			throw new Error(
-				"Invalid sync player configuration: each track requires alignment.column.",
-			);
-		}
-	});
+	return {
+		tracks,
+		media,
+		alignment,
+		markers,
+		presets,
+		features: init.features,
+		views,
+	};
 }
 
 export function normalizeInit(
 	root: HTMLElement,
 	init: TrackSwitchInit,
-	options: NormalizeTrackSwitchOptions,
 ): NormalizedTrackSwitchConfig {
-	const normalized = normalizeTrackSwitchConfig(init, options);
-	injectConfiguredUiElements(root, normalized.ui);
-	return normalized;
-}
-
-export function normalizeTrackSwitchConfig(
-	init: TrackSwitchInit,
-	options: NormalizeTrackSwitchOptions,
-): NormalizedTrackSwitchConfig {
-	validateInitKeys(init);
-	assertNoFeatureMode(init);
-
-	const resolvedUi = Array.isArray(init.ui)
-		? init.ui.map(normalizeUiElement)
-		: undefined;
-	const normalizedFeatures = normalizeFeatures(init.features);
-	const usesExclusiveSoloMode =
-		normalizedFeatures.exclusiveSolo || options.variant === "sync";
-	if (hasPerTrackImageUi(resolvedUi) && !usesExclusiveSoloMode) {
-		throw new Error(
-			"Invalid init configuration: perTrackImage requires features.exclusiveSolo to be true.",
-		);
-	}
-	if (
-		hasWarpingMatrixInferScoreBpm(resolvedUi) &&
-		!hasSheetMusicUi(resolvedUi)
-	) {
-		throw new Error(
-			'Invalid init configuration: ui.warpingMatrix bpm "infer_score" requires a sheetMusic ui element.',
-		);
-	}
-
-	const resolvedTrackData = resolveTracksFromUi(resolvedUi);
-	validateVariantConfig(
-		options.variant,
-		init,
-		resolvedUi,
-		resolvedTrackData.tracks,
-	);
-
-	if (resolvedTrackData.tracks.length === 0) {
-		throw new Error(TRACKS_REQUIRED_ERROR);
-	}
-
-	return {
-		variant: options.variant,
-		tracks: resolvedTrackData.tracks,
-		presetNames: init.presetNames,
-		features: init.features,
-		alignment: init.alignment,
-		ui: resolvedUi,
-		trackGroups: resolvedTrackData.trackGroups,
+	const normalized = normalizeTrackSwitchConfig(init);
+	const viewCtx: ViewNormalizeContext = {
+		media: normalized.media,
+		trackIds: normalized.tracks.map((track) => track.id),
+		markerSetIds: new Set(Object.keys(normalized.markers)),
+		hasAlignment: !!normalized.alignment,
+		alignmentTimelines: new Set(
+			normalized.alignment ? Object.keys(normalized.alignment.timelines) : [],
+		),
 	};
+	injectConfiguredViews(root, normalized.views, viewCtx);
+	return normalized;
 }

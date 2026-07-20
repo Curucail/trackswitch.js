@@ -1,10 +1,8 @@
-import type {
-	TrackMarker,
-	TrackRuntime,
-	WaveformSource,
-} from "../domain/types";
-import { formatSecondsToHHMMSSmmm } from "../shared/format";
-import { readMarkerDisplayConfig } from "../shared/marker-display";
+import type { MarkerLayerConfig, ResolvedMarkerSet } from "../domain/types";
+import { readMarkerLayersAttribute } from "../shared/marker-display";
+import type { Marker, MarkerSet } from "../timeline/marker";
+import type { ProjectionService } from "../timeline/projection";
+import type { TimelineId } from "../timeline/timeline";
 import type { MidiSeekSurfaceMetadata } from "./render-midi";
 
 export interface MarkerPlacement {
@@ -13,180 +11,183 @@ export interface MarkerPlacement {
 	duration: number;
 }
 
-export type MarkerPlacementResolver = (
-	seekWrap: HTMLElement,
-	marker: TrackMarker,
-) => MarkerPlacement | null;
+export type SeekTimelineContextResolver = (seekWrap: HTMLElement) => {
+	duration: number;
+	fromReferenceTime(referenceTime: number): number;
+};
 
-interface MarkerRenderEntry {
-	marker: TrackMarker;
-	trackTitle: string;
-	placement: MarkerPlacement;
+export interface MarkerRenderData {
+	markerSets: ReadonlyMap<string, ResolvedMarkerSet>;
+	alignmentMarkerSet: MarkerSet | null;
+	referenceTimeline: TimelineId;
+	projection: ProjectionService | null;
+	getSeekTimelineContext: SeekTimelineContextResolver;
 }
 
 interface MarkerRendererContext {
 	root: HTMLElement;
-	waveformSeekSurfaces: Array<{
-		seekWrap: HTMLElement;
-		waveformSource: WaveformSource;
-	}>;
+	waveformSeekSurfaces: Array<{ seekWrap: HTMLElement }>;
 	midiSeekSurfaces: MidiSeekSurfaceMetadata[];
-	getWaveformSourceRuntimes(
-		runtimes: TrackRuntime[],
-		waveformSource: WaveformSource,
-	): TrackRuntime[];
 }
 
-function resolveTrackTitle(runtime: TrackRuntime, trackIndex: number): string {
-	const configured = runtime.definition.title;
-	return typeof configured === "string" && configured.trim().length > 0
-		? configured.trim()
-		: `Track ${trackIndex + 1}`;
+function resolveMarkerReferenceTime(
+	marker: Marker,
+	data: MarkerRenderData,
+): number | null {
+	if (!data.projection) {
+		// No alignment block: exactly one timeline exists, so whatever single
+		// value the marker carries — regardless of the timeline id it's keyed
+		// under — already is the reference-equivalent position.
+		const values = Array.from(marker.placements.values());
+		return values.length > 0 ? values[0] : null;
+	}
+
+	return data.projection.projectMarker(marker, data.referenceTimeline);
 }
 
-function createMarkerAriaLabel(entry: MarkerRenderEntry): string {
-	const markerLabel = entry.marker.label ? `, ${entry.marker.label}` : "";
-	return `${entry.trackTitle}, marker ${entry.marker.id}${markerLabel}, ${formatSecondsToHHMMSSmmm(entry.marker.time)}`;
+function resolvePlacement(
+	referenceTime: number | null,
+	timeline: { duration: number; fromReferenceTime(referenceTime: number): number },
+): MarkerPlacement | null {
+	if (
+		referenceTime === null ||
+		!Number.isFinite(referenceTime) ||
+		timeline.duration <= 0
+	) {
+		return null;
+	}
+
+	const surfaceTime = timeline.fromReferenceTime(referenceTime);
+	if (surfaceTime < 0 || surfaceTime > timeline.duration) {
+		return null;
+	}
+
+	return { referenceTime, surfaceTime, duration: timeline.duration };
+}
+
+function createMarkerAriaLabel(marker: Marker, referenceTime: number): string {
+	const label = marker.label ? `, ${marker.label}` : "";
+	return `Marker ${marker.id}${label}, ${referenceTime.toFixed(2)}s`;
 }
 
 function renderMarkerLayer(
 	seekWrap: HTMLElement,
-	runtimes: TrackRuntime[],
-	markerRuntimes: TrackRuntime[],
-	resolvePlacement: MarkerPlacementResolver,
+	layer: MarkerLayerConfig,
+	markers: Marker[],
+	data: MarkerRenderData,
 ): void {
-	seekWrap.querySelector(":scope > .timeline-marker-layer")?.remove();
-	const display = readMarkerDisplayConfig(seekWrap);
-	if (!display) {
-		return;
-	}
+	const timeline = data.getSeekTimelineContext(seekWrap);
 
-	const entries: MarkerRenderEntry[] = [];
-	markerRuntimes.forEach((runtime) => {
-		const trackIndex = runtimes.indexOf(runtime);
-		if (trackIndex < 0) {
-			return;
+	const entries: Array<{ marker: Marker; placement: MarkerPlacement }> = [];
+	markers.forEach((marker) => {
+		const referenceTime = resolveMarkerReferenceTime(marker, data);
+		const placement = resolvePlacement(referenceTime, timeline);
+		if (placement) {
+			entries.push({ marker, placement });
 		}
-
-		const trackTitle = resolveTrackTitle(runtime, trackIndex);
-		runtime.markers.forEach((marker) => {
-			const placement = resolvePlacement(seekWrap, marker);
-			if (
-				!placement ||
-				!Number.isFinite(placement.surfaceTime) ||
-				!Number.isFinite(placement.duration) ||
-				placement.duration <= 0 ||
-				placement.surfaceTime < 0 ||
-				placement.surfaceTime > placement.duration
-			) {
-				return;
-			}
-
-			entries.push({ marker: marker, trackTitle: trackTitle, placement });
-		});
 	});
 
 	if (entries.length === 0) {
 		return;
 	}
 
-	entries.sort((left, right) => {
-		if (left.placement.surfaceTime !== right.placement.surfaceTime) {
-			return left.placement.surfaceTime - right.placement.surfaceTime;
-		}
-		if (left.marker.trackIndex !== right.marker.trackIndex) {
-			return left.marker.trackIndex - right.marker.trackIndex;
-		}
-		return left.marker.id - right.marker.id;
-	});
+	entries.sort((left, right) => left.placement.surfaceTime - right.placement.surfaceTime);
 
-	const layer = seekWrap.ownerDocument.createElement("div");
-	layer.className = "timeline-marker-layer";
-	layer.setAttribute("role", "group");
-	layer.setAttribute("aria-label", "Timeline markers");
+	const layerElement = seekWrap.ownerDocument.createElement("div");
+	layerElement.className = "timeline-marker-layer";
+	layerElement.setAttribute("role", "group");
+	layerElement.setAttribute("aria-label", "Timeline markers");
+	layerElement.setAttribute("data-marker-set", layer.set);
 
 	entries.forEach((entry, index) => {
-		const marker = seekWrap.ownerDocument.createElement("button");
-		marker.type = "button";
-		marker.className = `timeline-marker timeline-marker-${display.lineStyle}`;
-		marker.tabIndex = index === 0 ? 0 : -1;
-		marker.setAttribute("aria-label", createMarkerAriaLabel(entry));
-		marker.title = createMarkerAriaLabel(entry);
-		marker.setAttribute("data-marker-id", String(entry.marker.id));
-		marker.setAttribute(
-			"data-marker-track-index",
-			String(entry.marker.trackIndex),
-		);
-		marker.setAttribute(
+		const button = seekWrap.ownerDocument.createElement("button");
+		button.type = "button";
+		button.className = `timeline-marker timeline-marker-${layer.line ?? "dashed"}`;
+		button.tabIndex = index === 0 ? 0 : -1;
+		const ariaLabel = createMarkerAriaLabel(entry.marker, entry.placement.referenceTime);
+		button.setAttribute("aria-label", ariaLabel);
+		button.title = ariaLabel;
+		button.setAttribute("data-marker-id", entry.marker.id);
+		button.setAttribute(
 			"data-marker-reference-time",
 			String(entry.placement.referenceTime),
 		);
-		marker.setAttribute(
-			"data-marker-surface-time",
-			String(entry.placement.surfaceTime),
-		);
-		marker.style.setProperty(
+		button.setAttribute("data-marker-surface-time", String(entry.placement.surfaceTime));
+		button.style.setProperty(
 			"--ts-marker-position",
 			`${(entry.placement.surfaceTime / entry.placement.duration) * 100}%`,
 		);
 		if (entry.placement.surfaceTime / entry.placement.duration >= 0.75) {
-			marker.classList.add("timeline-marker-label-before");
+			button.classList.add("timeline-marker-label-before");
 		}
-		marker.style.setProperty("--ts-marker-highlight-color", display.color);
-
-		if (entry.marker.label.length > 0) {
-			const label = seekWrap.ownerDocument.createElement("span");
-			label.className = "timeline-marker-label";
-			label.textContent = entry.marker.label;
-			marker.appendChild(label);
+		if (layer.color) {
+			button.style.setProperty("--ts-marker-highlight-color", layer.color);
 		}
 
-		layer.appendChild(marker);
+		if (entry.marker.label) {
+			const labelNode = seekWrap.ownerDocument.createElement("span");
+			labelNode.className = "timeline-marker-label";
+			labelNode.textContent = entry.marker.label;
+			button.appendChild(labelNode);
+		}
+
+		layerElement.appendChild(button);
 	});
 
-	seekWrap.prepend(layer);
+	seekWrap.appendChild(layerElement);
+}
+
+function renderConfiguredLayers(seekWrap: HTMLElement, data: MarkerRenderData): void {
+	seekWrap.querySelectorAll(":scope > .timeline-marker-layer").forEach((existing) => {
+		existing.remove();
+	});
+
+	const layers = readMarkerLayersAttribute(seekWrap);
+	layers.forEach((layer) => {
+		if (layer.set === "alignment") {
+			// Alignment sets never generate DOM — drawn on canvas via foldToReference.
+			return;
+		}
+
+		const resolvedSet = data.markerSets.get(layer.set);
+		if (!resolvedSet) {
+			return;
+		}
+
+		renderMarkerLayer(seekWrap, layer, resolvedSet.markerSet.markers, data);
+	});
 }
 
 export function renderTimelineMarkers(
 	ctx: MarkerRendererContext,
-	runtimes: TrackRuntime[],
-	activeMarkerRuntimes: TrackRuntime[],
-	resolvePlacement: MarkerPlacementResolver,
+	data: MarkerRenderData,
 ): void {
 	ctx.waveformSeekSurfaces.forEach((surface) => {
-		renderMarkerLayer(
-			surface.seekWrap,
-			runtimes,
-			ctx.getWaveformSourceRuntimes(runtimes, surface.waveformSource),
-			resolvePlacement,
-		);
+		renderConfiguredLayers(surface.seekWrap, data);
 	});
 
 	ctx.midiSeekSurfaces.forEach((surface) => {
-		renderMarkerLayer(
-			surface.seekWrap,
-			runtimes,
-			activeMarkerRuntimes,
-			resolvePlacement,
-		);
+		renderConfiguredLayers(surface.seekWrap, data);
 	});
 
 	ctx.root
-		.querySelectorAll(".seekable-img-wrap > .seekwrap[data-marker-image-scope]")
+		.querySelectorAll(".seekable-img-wrap > .seekwrap")
 		.forEach((candidate) => {
-			if (!(candidate instanceof HTMLElement)) {
-				return;
+			if (candidate instanceof HTMLElement) {
+				renderConfiguredLayers(candidate, data);
 			}
-
-			const scope = candidate.getAttribute("data-marker-image-scope");
-			let imageRuntimes = activeMarkerRuntimes;
-			if (scope === "per-track") {
-				const selected = runtimes.filter((runtime) => runtime.state.solo);
-				imageRuntimes = selected.length === 1 ? selected : [];
-			}
-
-			renderMarkerLayer(candidate, runtimes, imageRuntimes, resolvePlacement);
 		});
+}
+
+/** All markers across every annotation set (not the implicit alignment set), for navigation. */
+export function collectAnnotationMarkers(
+	markerSets: ReadonlyMap<string, ResolvedMarkerSet>,
+): Marker[] {
+	const markers: Marker[] = [];
+	markerSets.forEach((resolved) => {
+		markers.push(...resolved.markerSet.markers);
+	});
+	return markers;
 }
 
 export function updateMarkerNavigationControls(
