@@ -612,10 +612,15 @@ export class InteractiveTrackSwitchControllerImpl
 
 		views.unshift({
 			type: "navigationBar",
-			seekBar: true,
-			timer: true,
-			globalVolume: true,
-			looping: true,
+			controls: [
+				"playback",
+				"globalVolume",
+				"markerNavigation",
+				"looping",
+				"sync",
+				"timer",
+				"seekBar",
+			],
 		});
 		views.push({
 			type: "trackList",

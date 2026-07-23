@@ -185,7 +185,7 @@ async function applyAudioPreservingConfig(
 	controller.navigationBar =
 		config.views.find((view) => view.type === "navigationBar") ?? null;
 	controller.audioEngine.setGlobalVolumeEnabled(
-		!!controller.navigationBar?.globalVolume,
+		!!controller.navigationBar?.controls.includes("globalVolume"),
 	);
 	controller.media = config.media;
 	controller.markersConfig = config.markers;
@@ -369,7 +369,7 @@ async function updateConfigNow(
 		controller.navigationBar =
 			nextConfig.views.find((view) => view.type === "navigationBar") ?? null;
 		controller.audioEngine.setGlobalVolumeEnabled(
-			!!controller.navigationBar?.globalVolume,
+			!!controller.navigationBar?.controls.includes("globalVolume"),
 		);
 		controller.markersConfig = nextConfig.markers;
 		controller.markerSets = stagedMarkerSets;

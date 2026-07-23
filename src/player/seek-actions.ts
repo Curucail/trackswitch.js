@@ -143,7 +143,10 @@ function updateDraggedLoopMarker(controller: any, event: any): boolean {
 }
 
 function updateRightClickLoopSelection(controller: any, event: any): boolean {
-	if (!controller.navigationBar?.looping || !controller.rightClickDragging) {
+	if (
+		!controller.navigationBar?.controls.includes("looping") ||
+		!controller.rightClickDragging
+	) {
 		return false;
 	}
 

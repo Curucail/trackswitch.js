@@ -18,19 +18,11 @@
 
 	.trackswitch .main-control .timing {
 		flex: 0 0 auto;
-		margin-left: 0;
+		margin-left: auto;
 		text-align: right;
 	}
 
-	.trackswitch
-		.main-control
-		ul.control:not(:has(> .settings-button))
-		> .timing {
-		margin-left: auto;
-	}
-
 	.trackswitch .main-control .seekwrap {
-		order: 100;
 		flex: 0 0 100%;
 		min-width: 0;
 		width: 100%;
@@ -46,7 +38,6 @@
 	}
 
 	.trackswitch .main-control .timing {
-		order: 200;
 		flex: 0 0 100%;
 		justify-content: center;
 		justify-self: center;
@@ -58,15 +49,7 @@
 		margin-left: 0;
 	}
 
-	.trackswitch
-		.main-control
-		ul.control:not(:has(> .settings-button))
-		> .timing {
-		margin-left: 0;
-	}
-
 	.trackswitch .main-control .seekwrap {
-		order: 300;
 		min-width: 0;
 	}
 }
@@ -100,10 +83,6 @@
 		touch-action: manipulation;
 		pointer-events: auto;
 	}
-
-	.trackswitch .main-control .sync-global.sync-after-loop {
-		order: 55;
-	}
 }
 
 @container ts-main-control (max-width: 500px) {
@@ -117,51 +96,29 @@
 	}
 
 	.trackswitch .main-control .playback-group {
-		order: 10;
 		grid-column: auto;
 		min-width: 0;
 	}
 
 	.trackswitch .main-control .volume {
-		order: 20;
 		grid-column: auto;
 		justify-self: end;
 		margin: 0;
 	}
 
 	.trackswitch .main-control .marker-navigation-group {
-		order: 25;
 		grid-column: auto;
 		justify-self: start;
 		margin: 0;
 	}
 
 	.trackswitch .main-control .loop-group {
-		order: 50;
 		grid-column: auto;
 		justify-self: end;
 		margin: 0;
 	}
 
-	.trackswitch
-		.main-control
-		ul.control:has(> .marker-navigation-group):has(> .loop-group)
-		> .marker-navigation-group {
-		grid-column: 1;
-		justify-self: start;
-	}
-
-	.trackswitch
-		.main-control
-		ul.control:has(> .marker-navigation-group):has(> .loop-group)
-		> .loop-group {
-		order: 30;
-		grid-column: 2;
-		justify-self: end;
-	}
-
 	.trackswitch .main-control .preset-selector-wrap {
-		order: 40;
 		grid-column: auto;
 		min-width: 0;
 		margin: 0;
@@ -172,82 +129,14 @@
 		grid-column: auto;
 	}
 
-	/* Keep preset left and looping right when both controls are enabled. */
-	.trackswitch .main-control
-		ul.control:has(> .preset-selector-wrap):has(> .loop-group)
-		> .preset-selector-wrap {
-		grid-column: 1;
-		justify-self: start;
-	}
-
-	.trackswitch
-		.main-control
-		ul.control:has(> .preset-selector-wrap):has(> .loop-group)
-		> .loop-group {
-		grid-column: 2;
-		justify-self: end;
-	}
-
-	/* In sync+loop layouts without presets, pin loop controls left and SYNC right. */
-	.trackswitch .main-control
-		ul.control:has(> .sync-after-loop):has(> .loop-group):not(
-			:has(> .preset-selector-wrap)
-		)
-		> .loop-group {
-		grid-column: 1;
-		justify-self: start;
-		margin: 0;
-	}
-
-	.trackswitch
-		.main-control
-		ul.control:has(> .sync-after-loop):has(> .loop-group):not(
-			:has(> .preset-selector-wrap)
-		)
-		> .sync-after-loop {
-		grid-column: 2;
-		justify-self: end;
-		margin: 0;
-	}
-
-	.trackswitch
-		.main-control
-		ul.control:has(> .marker-navigation-group):has(> .sync-after-loop):has(
-			> .loop-group
-		):not(:has(> .preset-selector-wrap))
-		> .loop-group {
-		order: 30;
-		grid-column: 2;
-		justify-self: end;
-	}
-
-	.trackswitch
-		.main-control
-		ul.control:has(> .marker-navigation-group):has(> .sync-after-loop):has(
-			> .loop-group
-		):not(:has(> .preset-selector-wrap))
-		> .sync-after-loop {
-		grid-column: 1 / -1;
-		justify-self: end;
-	}
-
 	.trackswitch .main-control .timing {
-		order: 200;
 		grid-column: 1 / -1;
 		justify-self: center;
 		margin: 0;
 		text-align: center;
 	}
 
-	.trackswitch
-		.main-control
-		ul.control:not(:has(> .settings-button))
-		> .timing {
-		margin-left: 0;
-	}
-
 	.trackswitch .main-control .seekwrap {
-		order: 300;
 		grid-column: 1 / -1;
 		width: 100%;
 		min-width: 0;

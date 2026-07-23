@@ -1,8 +1,7 @@
 /* MAIN CONTROL STYLES ------------------------------------------------------ */
 
-/* Desktop (default): auto-compacting flex layout
-   Row 1: playback | volume | loop | preset | seekbar | timing
-   Seekbar moves to row 2 (full width) if container is too narrow */
+/* Desktop (default): auto-compacting flex layout in configured control order.
+   Full-width controls wrap when the container is too narrow. */
 
 .trackswitch .main-control {
 	container-type: inline-size;
@@ -32,43 +31,9 @@
 	align-items: center;
 }
 
-.trackswitch .main-control .playback-group {
-	order: 10;
-}
-
-.trackswitch .main-control .sync-global {
-	order: 15;
-}
-
-.trackswitch .main-control .sync-global.sync-after-loop {
-	order: 35;
-}
-
-.trackswitch .main-control .volume {
-	order: 20;
-}
-
-.trackswitch .main-control .marker-navigation-group {
-	order: 25;
-}
-
-.trackswitch .main-control .loop-group {
-	order: 30;
-}
-
-.trackswitch .main-control .preset-selector-wrap {
-	order: 40;
-}
-
 .trackswitch .main-control .timing {
-	order: 90;
-	margin-left: 0;
-}
-
-@container ts-main-control (min-width: 1001px) {
-	.trackswitch .main-control ul.control:not(:has(> .seekwrap)) > .timing {
-		margin-left: auto;
-	}
+	margin-left: auto;
+	text-align: right;
 }
 
 .trackswitch .main-control .settings-button {
@@ -77,7 +42,6 @@
 }
 
 .trackswitch .main-control .seekwrap {
-	order: 50;
 	flex: 1 1 240px;
 }
 
@@ -248,6 +212,7 @@
 	display: flex;
 	align-items: center;
 	gap: var(--ts-main-control-loop-gap);
+	margin-right: -6px;
 }
 
 .trackswitch

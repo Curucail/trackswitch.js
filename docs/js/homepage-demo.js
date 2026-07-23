@@ -251,12 +251,17 @@
 	function buildNavigationBar(controls) {
 		return {
 			type: "navigationBar",
-			globalVolume: controls.globalVolume,
-			repeat: controls.repeatEnabled,
-			looping: controls.looping,
-			markerNavigation: controls.markerNavigation,
-			seekBar: controls.seekBar,
-			timer: controls.timer,
+			controls: [
+				"playback",
+				controls.globalVolume && "globalVolume",
+				controls.markerNavigation && "markerNavigation",
+				controls.looping && "looping",
+				"sync",
+				"presets",
+				controls.timer && "timer",
+				controls.seekBar && "seekBar",
+			].filter(Boolean),
+			repeatEnabled: controls.repeatEnabled,
 		};
 	}
 

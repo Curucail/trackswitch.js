@@ -145,6 +145,10 @@ function renderMarkerLayer(
 			"--ts-marker-position",
 			`${(entry.placement.surfaceTime / entry.placement.duration) * 100}%`,
 		);
+		button.style.setProperty(
+			"--ts-marker-line-width",
+			`${layer.lineWidth ?? 1}px`,
+		);
 		if (entry.placement.surfaceTime / entry.placement.duration >= 0.75) {
 			button.classList.add("timeline-marker-label-before");
 		}

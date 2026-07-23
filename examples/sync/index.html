@@ -75,12 +75,16 @@
                 "views": [
                     {
                         "type": "navigationBar",
-                        "repeat": false,
-                        "timer": true,
-                        "seekBar": true,
-                        "globalVolume": true,
-                        "looping": true,
-                        "markerNavigation": true
+                        "controls": [
+                            "playback",
+                            "globalVolume",
+                            "markerNavigation",
+                            "looping",
+                            "sync",
+                            "timer",
+                            "seekBar"
+                        ],
+                        "repeatEnabled": false
                     },
                     {
                         "type": "sheetMusic",

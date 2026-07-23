@@ -45,7 +45,10 @@ share the same timeline and can play simultaneously:
     "bass": { "type": "audio", "src": "bass.mp3", "title": "Bass" }
   },
   "views": [
-    { "type": "navigationBar" },
+    {
+      "type": "navigationBar",
+      "controls": ["playback", "markerNavigation", "timer", "seekBar"]
+    },
     { "type": "waveform", "sourceTracks": "audible" },
     { "type": "trackList", "tracks": ["drums", "bass"] }
   ]
@@ -102,7 +105,10 @@ method.
         "synth": { "type": "audio", "src": "synth.mp3", "title": "Synth" }
       },
       "views": [
-        { "type": "navigationBar", "globalVolume": true },
+        {
+          "type": "navigationBar",
+          "controls": ["playback", "globalVolume", "markerNavigation", "presets", "timer", "seekBar"]
+        },
         { "type": "waveform", "sourceTracks": "audible" },
         {
           "type": "trackList",
@@ -132,7 +138,10 @@ const config: TrackSwitchInit = {
     synth: { type: "audio", src: "synth.mp3", title: "Synth" },
   },
   views: [
-    { type: "navigationBar", globalVolume: true },
+    {
+      type: "navigationBar",
+      controls: ["playback", "globalVolume", "markerNavigation", "presets", "timer", "seekBar"],
+    },
     { type: "waveform", sourceTracks: "audible" },
     {
       type: "trackList",
@@ -167,7 +176,10 @@ export function ExamplePlayer() {
         synth: { type: "audio", src: "synth.mp3", title: "Synth" },
       },
       views: [
-        { type: "navigationBar", globalVolume: true },
+        {
+          type: "navigationBar",
+          controls: ["playback", "globalVolume", "markerNavigation", "presets", "timer", "seekBar"],
+        },
         { type: "waveform", sourceTracks: "audible" },
         {
           type: "trackList",
@@ -198,7 +210,10 @@ const config: TrackSwitchInit = {
     synth: { type: "audio", src: "synth.mp3", title: "Synth" },
   },
   views: [
-    { type: "navigationBar", globalVolume: true },
+    {
+      type: "navigationBar",
+      controls: ["playback", "globalVolume", "markerNavigation", "presets", "timer", "seekBar"],
+    },
     { type: "waveform", sourceTracks: "audible" },
     {
       type: "trackList",
@@ -233,7 +248,10 @@ const config: TrackSwitchInit = {
         synth: { type: "audio", src: "synth.mp3", title: "Synth" },
       },
       views: [
-        { type: "navigationBar", globalVolume: true },
+        {
+          type: "navigationBar",
+          controls: ["playback", "globalVolume", "markerNavigation", "presets", "timer", "seekBar"],
+        },
         { type: "waveform", sourceTracks: "audible" },
         {
           type: "trackList",
@@ -294,7 +312,10 @@ const config: TrackSwitchInit = {
         }
       },
       "views": [
-        { "type": "navigationBar", "looping": true, "globalVolume": true },
+        {
+          "type": "navigationBar",
+          "controls": ["playback", "globalVolume", "markerNavigation", "looping", "sync", "timer", "seekBar"]
+        },
         { "type": "sheetMusic", "mediaID": "score" },
         { "type": "midi", "mediaID": "notes", "timer": true },
         {
@@ -345,7 +366,10 @@ const config: TrackSwitchInit = {
     outside: "clamp",
   },
   views: [
-    { type: "navigationBar", looping: true },
+    {
+      type: "navigationBar",
+      controls: ["playback", "markerNavigation", "looping", "sync", "timer", "seekBar"],
+    },
     { type: "sheetMusic", mediaID: "score" },
     { type: "waveform", sourceTracks: ["takeA"], alignedPlayhead: true },
     { type: "waveform", sourceTracks: ["takeB"], alignedPlayhead: true },
@@ -387,7 +411,10 @@ export function AlignedPlayer() {
       },
     },
     views: [
-      { type: "navigationBar", looping: true },
+      {
+        type: "navigationBar",
+        controls: ["playback", "markerNavigation", "looping", "sync", "timer", "seekBar"],
+      },
       { type: "sheetMusic", mediaID: "score" },
       { type: "waveform", sourceTracks: ["takeA"], alignedPlayhead: true },
       { type: "waveform", sourceTracks: ["takeB"], alignedPlayhead: true },
@@ -424,7 +451,10 @@ const config: TrackSwitchInit = {
     },
   },
   views: [
-    { type: "navigationBar", looping: true },
+    {
+      type: "navigationBar",
+      controls: ["playback", "markerNavigation", "looping", "sync", "timer", "seekBar"],
+    },
     { type: "sheetMusic", mediaID: "score" },
     { type: "waveform", sourceTracks: ["takeA"], alignedPlayhead: true },
     { type: "waveform", sourceTracks: ["takeB"], alignedPlayhead: true },
@@ -463,7 +493,10 @@ const config: TrackSwitchInit = {
       },
     },
     views: [
-      { type: "navigationBar", looping: true },
+      {
+        type: "navigationBar",
+        controls: ["playback", "markerNavigation", "looping", "sync", "timer", "seekBar"],
+      },
       { type: "sheetMusic", mediaID: "score" },
       { type: "waveform", sourceTracks: ["takeA"], alignedPlayhead: true },
       { type: "waveform", sourceTracks: ["takeB"], alignedPlayhead: true },
@@ -728,7 +761,7 @@ Views render marker sets through `markerLayers`:
   "type": "waveform",
   "sourceTracks": ["takeA"],
   "markerLayers": [
-    { "set": "sections", "color": "#ed8c01", "line": "dashed" },
+    { "set": "sections", "color": "#ed8c01", "line": "dashed", "lineWidth": 2 },
     { "set": "alignment", "color": "#777", "foldToReference": true }
   ]
 }
@@ -745,6 +778,7 @@ Marker layer options:
 | `set` | `string` | - | Marker set ID, or the implicit `alignment` set. |
 | `color?` | `string` | current color | Marker color. |
 | `line?` | `"solid" \| "dashed"` | `"dashed"` | Marker line style. |
+| `lineWidth?` | `number` | `1` | Marker line width in CSS pixels. |
 | `foldToReference?` | `boolean` | `false` | Draw timeline-to-reference connectors where applicable. |
 
 ### `presets`
@@ -1001,23 +1035,27 @@ Shows the player-level playback and navigation controls.
 ```json
 {
   "type": "navigationBar",
-  "repeat": false,
-  "timer": true,
-  "seekBar": true,
-  "globalVolume": true,
-  "looping": true,
-  "markerNavigation": true
+  "controls": [
+    "playback",
+    "globalVolume",
+    "markerNavigation",
+    "looping",
+    "sync",
+    "presets",
+    "timer",
+    "seekBar"
+  ],
+  "repeatEnabled": false
 }
 ```
 
+Controls are rendered in the exact order given. `sync` is shown only when synchronized
+sources are available, and `presets` is shown only when at least two presets exist.
+
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `repeat?` | `boolean` | `false` | Starts playback with repeat enabled. |
-| `timer?` | `boolean` | `true` | Shows the main time display. |
-| `seekBar?` | `boolean` | `true` | Shows the main seek bar. |
-| `globalVolume?` | `boolean` | `false` | Shows one master volume control for the whole player. |
-| `looping?` | `boolean` | `false` | Shows A/B loop tools and enables loop interactions. |
-| `markerNavigation?` | `boolean` | `true` | Shows previous, direct-jump, and next annotation-marker controls. Controls remain disabled when no audible marker set is available. |
+| `controls` | `TrackSwitchNavigationBarControl[]` | - | Required ordered list of controls to show. Supported values are `"playback"`, `"globalVolume"`, `"markerNavigation"`, `"looping"`, `"sync"`, `"presets"`, `"timer"`, and `"seekBar"`. |
+| `repeatEnabled?` | `boolean` | `false` | Starts playback with repeat enabled. |
 
 ## Features
 
@@ -1061,10 +1099,10 @@ When `features.keyboard` is on, these shortcuts are available:
 | `Left` / `Right` | Jump backward or forward by 2 seconds. |
 | `Shift + Left` / `Shift + Right` | Jump backward or forward by 5 seconds. |
 | `Home` | Go to the start. |
-| `Up` / `Down` | Change global volume when `navigationBar.globalVolume` is on. |
+| `Up` / `Down` | Change global volume when `controls` includes `"globalVolume"`. |
 | `1` to `0` | Control tracks 1 to 10. |
 
-When `navigationBar.looping` is on, these additional shortcuts are available:
+When `controls` includes `"looping"`, these additional shortcuts are available:
 
 | Keys | Action |
 | --- | --- |

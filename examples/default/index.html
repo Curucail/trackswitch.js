@@ -56,25 +56,28 @@
                 "views": [
                     {
                         "type": "navigationBar",
-                        "globalVolume": true,
-                        "repeat": false,
-                        "looping": true,
-                        "markerNavigation": true,
-                        "seekBar": true,
-                        "timer": true
+                        "controls": [
+                            "playback",
+                            "globalVolume",
+                            "looping",
+                            "markerNavigation",
+                            "presets",
+                            "timer"
+                        ],
+                        "repeatEnabled": false
                     },
                     {
                         "type": "image",
                         "src": "data/cover.png",
                         "seekable": true,
                         "markerLayers": [
-                            { "set": "violinsCues", "color": "#ed8c01", "line": "solid" },
-                            { "set": "synthCues", "color": "#ed8c01", "line": "solid" }
+                            { "set": "violinsCues", "color": "#ed8c01", "line": "solid", "lineWidth": 4 },
+                            { "set": "synthCues", "color": "#ed8c01", "line": "solid", "lineWidth": 4 }
                         ]
                     },
                     {
                         "type": "waveform",
-                        "height": 150,
+                        "height": 100,
                         "waveformBarWidth": 1
                     },
                     {

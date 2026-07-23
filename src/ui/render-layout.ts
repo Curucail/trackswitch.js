@@ -2,6 +2,8 @@ import type {
 	AudioDownloadSizeInfo,
 	TrackListGroup,
 	TrackRuntime,
+	TrackSwitchNavigationBarControl,
+	TrackSwitchNavigationBarViewConfig,
 	TrackSwitchSheetMusicViewConfig,
 	TrackSwitchTextViewConfig,
 } from "../domain/types";
@@ -28,6 +30,13 @@ const TRACKSWITCH_ROOT_CLASSES = [
 	"sync-enabled",
 	"ts-panel-reorder-active",
 ] as const;
+
+function navigationBarHasControl(
+	navigationBar: TrackSwitchNavigationBarViewConfig | null,
+	control: TrackSwitchNavigationBarControl,
+): boolean {
+	return navigationBar?.controls.includes(control) ?? false;
+}
 
 function resetManagedRoot(root: HTMLElement): void {
 	TRACKSWITCH_ROOT_CLASSES.forEach((className) => {
@@ -339,10 +348,7 @@ function getShortcutHelpEntries(
 	features: {
 		exclusiveSolo: boolean;
 	},
-	navigationBar: {
-		globalVolume?: boolean;
-		looping?: boolean;
-	} | null,
+	navigationBar: TrackSwitchNavigationBarViewConfig | null,
 	trackCount: number,
 ): ShortcutHelpEntry[] {
 	const entries: ShortcutHelpEntry[] = [
@@ -361,14 +367,14 @@ function getShortcutHelpEntries(
 		},
 	];
 
-	if (navigationBar?.globalVolume) {
+	if (navigationBarHasControl(navigationBar, "globalVolume")) {
 		entries.push({
 			keys: "↑ / ↓",
 			action: "Increase or decrease the global volume by 10%.",
 		});
 	}
 
-	if (navigationBar?.looping) {
+	if (navigationBarHasControl(navigationBar, "looping")) {
 		entries.push(
 			{ keys: "A", action: "Set loop point A at the current position." },
 			{ keys: "B", action: "Set loop point B at the current position." },
@@ -384,10 +390,7 @@ function buildShortcutHelpHtml(
 	features: {
 		exclusiveSolo: boolean;
 	},
-	navigationBar: {
-		globalVolume?: boolean;
-		looping?: boolean;
-	} | null,
+	navigationBar: TrackSwitchNavigationBarViewConfig | null,
 	trackCount: number,
 ): string {
 	const entries = getShortcutHelpEntries(features, navigationBar, trackCount);
@@ -588,8 +591,10 @@ export function buildPlayerOverlayHtml(ctx: any, runtimes: any): any {
 				this.navigationBar,
 				runtimes.length,
 			) +
-			(this.navigationBar?.markerNavigation
-				? buildMarkerNavigationDialogHtml(!!this.navigationBar.looping)
+			(navigationBarHasControl(this.navigationBar, "markerNavigation")
+				? buildMarkerNavigationDialogHtml(
+						navigationBarHasControl(this.navigationBar, "looping"),
+					)
 				: "")
 		);
 	}.call(ctx, runtimes);
@@ -615,74 +620,92 @@ export function buildMainControlHtml(ctx: any, runtimes: any): any {
 			);
 			presetDropdownHtml += "</select></li>";
 		}
+
+		const controlHtml = (control: TrackSwitchNavigationBarControl): string => {
+			switch (control) {
+				case "playback":
+					return (
+						'<li class="playback-group">' +
+						'<ul class="playback-controls">' +
+						'<li class="playpause button" title="Play/Pause (Spacebar)">Play' +
+						renderIconSlotHtml("play") +
+						"</li>" +
+						'<li class="stop button" title="Stop (Esc)">Stop' +
+						renderIconSlotHtml("stop") +
+						"</li>" +
+						'<li class="repeat button" title="Repeat (R)">Repeat' +
+						renderIconSlotHtml("rotate-right") +
+						"</li>" +
+						"</ul>" +
+						"</li>"
+					);
+				case "globalVolume":
+					return (
+						'<li class="volume"><div class="volume-control"><i class="volume-icon">' +
+						renderIconSlotHtml("volume-high") +
+						"</i>" +
+						'<input type="range" class="volume-slider" min="0" max="100" value="100"></div></li>'
+					);
+				case "markerNavigation":
+					return (
+						'<li class="marker-navigation-group"><div class="marker-navigation-controls" role="group" aria-label="Marker navigation">' +
+						'<button type="button" class="marker-previous button" title="Previous marker" aria-label="Previous marker" disabled>' +
+						renderIconSlotHtml("marker-previous") +
+						"</button>" +
+						'<button type="button" class="marker-jump button" title="Jump to marker" aria-label="Jump to marker" disabled>' +
+						renderIconSlotHtml("marker-jump") +
+						"</button>" +
+						'<button type="button" class="marker-next button" title="Next marker" aria-label="Next marker" disabled>' +
+						renderIconSlotHtml("marker-next") +
+						"</button>" +
+						"</div></li>"
+					);
+				case "looping":
+					return (
+						'<li class="loop-group"><ul class="loop-controls">' +
+						'<li class="loop-a button" title="Set Loop Point A (A)" aria-label="Set Loop Point A">' +
+						renderIconSlotHtml("loop-a") +
+						"</li>" +
+						'<li class="loop-b button" title="Set Loop Point B (B)" aria-label="Set Loop Point B">' +
+						renderIconSlotHtml("loop-b") +
+						"</li>" +
+						'<li class="loop-toggle button" title="Toggle Loop On/Off (L)">Loop' +
+						renderIconSlotHtml("repeat") +
+						"</li>" +
+						'<li class="loop-clear button" title="Clear Loop Points (C)">Clear' +
+						renderIconSlotHtml("xmark") +
+						"</li>" +
+						"</ul></li>"
+					);
+				case "sync":
+					return this.shouldRenderGlobalSync(runtimes)
+						? '<li class="sync-global button" title="Use synchronized version">SYNC</li>'
+						: "";
+				case "presets":
+					return presetDropdownHtml;
+				case "timer":
+					return '<li class="timing"><span class="time">--:--:--:---</span> / <span class="length">--:--:--:---</span></li>';
+				case "seekBar":
+					return (
+						'<li class="seekwrap">' +
+						'<div class="seekbar">' +
+						'<div class="loop-region"></div>' +
+						'<div class="loop-marker marker-a"></div>' +
+						'<div class="loop-marker marker-b"></div>' +
+						'<div class="seekhead"></div>' +
+						"</div>" +
+						"</li>"
+					);
+			}
+		};
+
+		const controlsHtml =
+			this.navigationBar?.controls.map(controlHtml).join("") ?? "";
+
 		return (
 			'<div class="main-control ts-stack-section">' +
 			'<ul class="control">' +
-			'<li class="playback-group">' +
-			'<ul class="playback-controls">' +
-			'<li class="playpause button" title="Play/Pause (Spacebar)">Play' +
-			renderIconSlotHtml("play") +
-			"</li>" +
-			'<li class="stop button" title="Stop (Esc)">Stop' +
-			renderIconSlotHtml("stop") +
-			"</li>" +
-			'<li class="repeat button" title="Repeat (R)">Repeat' +
-			renderIconSlotHtml("rotate-right") +
-			"</li>" +
-			"</ul>" +
-			"</li>" +
-			(this.navigationBar?.globalVolume
-				? '<li class="volume"><div class="volume-control"><i class="volume-icon">' +
-					renderIconSlotHtml("volume-high") +
-					"</i>" +
-					'<input type="range" class="volume-slider" min="0" max="100" value="100"></div></li>'
-				: "") +
-			(this.navigationBar?.markerNavigation
-				? '<li class="marker-navigation-group"><div class="marker-navigation-controls" role="group" aria-label="Marker navigation">' +
-					'<button type="button" class="marker-previous button" title="Previous marker" aria-label="Previous marker" disabled>' +
-					renderIconSlotHtml("marker-previous") +
-					"</button>" +
-					'<button type="button" class="marker-jump button" title="Jump to marker" aria-label="Jump to marker" disabled>' +
-					renderIconSlotHtml("marker-jump") +
-					"</button>" +
-					'<button type="button" class="marker-next button" title="Next marker" aria-label="Next marker" disabled>' +
-					renderIconSlotHtml("marker-next") +
-					"</button>" +
-					"</div></li>"
-				: "") +
-			(this.navigationBar?.looping
-				? '<li class="loop-group"><ul class="loop-controls">' +
-					'<li class="loop-a button" title="Set Loop Point A (A)" aria-label="Set Loop Point A">' +
-					renderIconSlotHtml("loop-a") +
-					"</li>" +
-					'<li class="loop-b button" title="Set Loop Point B (B)" aria-label="Set Loop Point B">' +
-					renderIconSlotHtml("loop-b") +
-					"</li>" +
-					'<li class="loop-toggle button" title="Toggle Loop On/Off (L)">Loop' +
-					renderIconSlotHtml("repeat") +
-					"</li>" +
-					'<li class="loop-clear button" title="Clear Loop Points (C)">Clear' +
-					renderIconSlotHtml("xmark") +
-					"</li>" +
-					"</ul></li>"
-				: "") +
-			(this.shouldRenderGlobalSync(runtimes)
-				? '<li class="sync-global button sync-after-loop" title="Use synchronized version">SYNC</li>'
-				: "") +
-			presetDropdownHtml +
-			(this.navigationBar?.timer
-				? '<li class="timing"><span class="time">--:--:--:---</span> / <span class="length">--:--:--:---</span></li>'
-				: "") +
-			(this.navigationBar?.seekBar
-				? '<li class="seekwrap">' +
-					'<div class="seekbar">' +
-					'<div class="loop-region"></div>' +
-					'<div class="loop-marker marker-a"></div>' +
-					'<div class="loop-marker marker-b"></div>' +
-					'<div class="seekhead"></div>' +
-					"</div>" +
-					"</li>"
-				: "") +
+			controlsHtml +
 			"</ul>" +
 			"</div>"
 		);
@@ -1365,7 +1388,7 @@ export function updateMainControls(
 			this.updateWarpingMatrix(host, warpingMatrixContext);
 		});
 
-		if (!this.navigationBar?.looping) {
+		if (!navigationBarHasControl(this.navigationBar, "looping")) {
 			return;
 		}
 
@@ -1413,7 +1436,7 @@ export function updatePlaybackPosition(
 
 		this.applyFixedWaveformLocalSeekVisuals(state, waveformTimelineContext);
 
-		if (this.navigationBar?.timer) {
+		if (navigationBarHasControl(this.navigationBar, "timer")) {
 			this.updateTiming(state.position, state.longestDuration);
 		}
 

@@ -4,6 +4,7 @@ import type {
 	TrackId,
 	TrackSwitchImageViewConfig,
 	TrackSwitchMidiViewConfig,
+	TrackSwitchNavigationBarControl,
 	TrackSwitchNavigationBarViewConfig,
 	TrackSwitchPerTrackImageViewConfig,
 	TrackSwitchSheetMusicViewConfig,
@@ -79,12 +80,8 @@ const uiTrackListAllowedKeys = [
 ] as const;
 const uiNavigationBarAllowedKeys = [
 	"type",
-	"repeat",
-	"timer",
-	"seekBar",
-	"globalVolume",
-	"looping",
-	"markerNavigation",
+	"controls",
+	"repeatEnabled",
 ] as const;
 const uiSheetMusicAllowedKeys = [
 	"type",
@@ -118,6 +115,7 @@ const markerLayerAllowedKeys = [
 	"set",
 	"color",
 	"line",
+	"lineWidth",
 	"foldToReference",
 ] as const;
 
@@ -274,10 +272,22 @@ function normalizeMarkerLayers(
 			);
 		}
 
+		if (
+			layer.lineWidth !== undefined &&
+			(typeof layer.lineWidth !== "number" ||
+				!Number.isFinite(layer.lineWidth) ||
+				layer.lineWidth <= 0)
+		) {
+			throw new Error(
+				`Invalid ${label}.markerLayers configuration: lineWidth must be a positive finite number.`,
+			);
+		}
+
 		return {
 			set: layer.set,
 			color: layer.color,
 			line: layer.line ?? "dashed",
+			lineWidth: layer.lineWidth ?? 1,
 			foldToReference: !!layer.foldToReference,
 		};
 	});
@@ -591,15 +601,48 @@ function normalizeTrackListConfig(
 function normalizeNavigationBarConfig(
 	navigationBar: TrackSwitchNavigationBarViewConfig,
 ): TrackSwitchNavigationBarViewConfig {
+	if (!Array.isArray(navigationBar.controls)) {
+		throw new Error(
+			"Invalid navigationBar configuration: controls must be an array.",
+		);
+	}
+
+	const allowedControls = new Set<TrackSwitchNavigationBarControl>([
+		"playback",
+		"globalVolume",
+		"markerNavigation",
+		"looping",
+		"sync",
+		"presets",
+		"timer",
+		"seekBar",
+	]);
+	const seenControls = new Set<TrackSwitchNavigationBarControl>();
+	const controls = navigationBar.controls.map((control) => {
+		if (
+			typeof control !== "string" ||
+			!allowedControls.has(control as TrackSwitchNavigationBarControl)
+		) {
+			throw new Error(
+				`Invalid navigationBar configuration: unknown control "${String(control)}".`,
+			);
+		}
+
+		const normalizedControl = control as TrackSwitchNavigationBarControl;
+		if (seenControls.has(normalizedControl)) {
+			throw new Error(
+				`Invalid navigationBar configuration: duplicate control "${normalizedControl}".`,
+			);
+		}
+		seenControls.add(normalizedControl);
+		return normalizedControl;
+	});
+
 	return {
 		type: "navigationBar",
-		repeat: normalizeOptionalBoolean(navigationBar.repeat) ?? false,
-		timer: normalizeOptionalBoolean(navigationBar.timer) ?? true,
-		seekBar: normalizeOptionalBoolean(navigationBar.seekBar) ?? true,
-		globalVolume: normalizeOptionalBoolean(navigationBar.globalVolume) ?? false,
-		looping: normalizeOptionalBoolean(navigationBar.looping) ?? false,
-		markerNavigation:
-			normalizeOptionalBoolean(navigationBar.markerNavigation) ?? true,
+		controls,
+		repeatEnabled:
+			normalizeOptionalBoolean(navigationBar.repeatEnabled) ?? false,
 	};
 }
 

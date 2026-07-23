@@ -17,6 +17,7 @@
 .trackswitch .timeline-marker {
 	--ts-marker-position: 0%;
 	--ts-marker-highlight-color: var(--ts-color-accent);
+	--ts-marker-line-width: 1px;
 	position: absolute;
 	inset-block: 0;
 	left: var(--ts-marker-position);
@@ -54,7 +55,7 @@
 	top: 5px;
 	bottom: 0;
 	left: 50%;
-	width: 1px;
+	width: var(--ts-marker-line-width);
 	background: currentColor;
 	transform: translateX(-50%);
 }

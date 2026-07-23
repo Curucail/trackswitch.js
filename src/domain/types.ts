@@ -111,6 +111,8 @@ export interface MarkerLayerConfig {
 	set: MarkerSetId;
 	color?: string;
 	line?: MarkerLineStyle;
+	/** Marker line width in CSS pixels. */
+	lineWidth?: number;
 	/** Draw a connector from this timeline to the reference timeline. Ignored when the view's timeline IS the reference. */
 	foldToReference?: boolean;
 }
@@ -205,14 +207,20 @@ export interface TrackSwitchTrackListViewConfig {
 	trackPanControls?: boolean;
 }
 
+export type TrackSwitchNavigationBarControl =
+	| "playback"
+	| "globalVolume"
+	| "markerNavigation"
+	| "looping"
+	| "sync"
+	| "presets"
+	| "timer"
+	| "seekBar";
+
 export interface TrackSwitchNavigationBarViewConfig {
 	type: "navigationBar";
-	repeat?: boolean;
-	timer?: boolean;
-	seekBar?: boolean;
-	globalVolume?: boolean;
-	looping?: boolean;
-	markerNavigation?: boolean;
+	controls: TrackSwitchNavigationBarControl[];
+	repeatEnabled?: boolean;
 }
 
 export type TrackSwitchViewConfig =

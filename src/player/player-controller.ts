@@ -168,7 +168,7 @@ export class TrackSwitchControllerImpl
 			this.features.exclusiveSolo = true;
 		}
 		this.effectiveSingleSoloMode = this.features.exclusiveSolo;
-		this.state = createInitialPlayerState(!!this.navigationBar?.repeat);
+		this.state = createInitialPlayerState(!!this.navigationBar?.repeatEnabled);
 		this.runtimeMarkers = createRuntimeMarkerSet(IMPLICIT_REFERENCE_TIMELINE);
 
 		this.runtimes = config.tracks.map((track, index) =>
@@ -203,7 +203,7 @@ export class TrackSwitchControllerImpl
 			this.features,
 			this.state.volume,
 			!!this.alignmentConfig,
-			!!this.navigationBar?.globalVolume,
+			!!this.navigationBar?.controls.includes("globalVolume"),
 		);
 		this.waveformEngine = new WaveformEngine();
 		this.sheetMusicEngine = new SheetMusicEngine((referenceTime) => {

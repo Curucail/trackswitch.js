@@ -1274,7 +1274,7 @@ export class ViewRenderer {
 			position,
 			duration,
 			loop,
-			!!this.navigationBar?.looping,
+			!!this.navigationBar?.controls.includes("looping"),
 			formatValue,
 		);
 	}
