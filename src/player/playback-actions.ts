@@ -2,8 +2,8 @@ import { playerStateReducer } from "../domain/state";
 import type { TrackRuntime } from "../domain/types";
 import { clamp } from "../shared/math";
 import { getSeekMetrics } from "../shared/seek";
-import { IMPLICIT_REFERENCE_TIMELINE } from "../timeline/timeline";
 import { moveRuntimeMarker } from "../timeline/marker";
+import { IMPLICIT_REFERENCE_TIMELINE } from "../timeline/timeline";
 import { loadMarkerSets } from "./marker-sets";
 import { pauseOtherControllers, unregisterController } from "./player-registry";
 
@@ -129,6 +129,7 @@ export function load(ctx: any): any {
 				this.markersConfig,
 				this.alignment?.referenceTimeline ?? IMPLICIT_REFERENCE_TIMELINE,
 				this.alignment?.projection ?? null,
+				this.longestDuration,
 			);
 
 			if (this.isDestroyed) {

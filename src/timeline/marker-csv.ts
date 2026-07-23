@@ -1,6 +1,11 @@
 import { parseCsvRecords } from "../shared/csv";
-import { createMarkerId, markerSetId, type Marker, type MarkerSet } from "./marker";
-import { timelineId, type TimelineId } from "./timeline";
+import {
+	createMarkerId,
+	type Marker,
+	type MarkerSet,
+	markerSetId,
+} from "./marker";
+import { type TimelineId, timelineId } from "./timeline";
 
 export interface AlignmentCsvSpec {
 	kind: "alignment";
@@ -101,7 +106,12 @@ function parseAnnotationCsv(spec: AnnotationCsvSpec): MarkerSet {
 		const raw = row[spec.timeCol];
 		const value = typeof raw === "number" ? raw : Number(raw);
 
-		if (raw === undefined || raw === null || raw === "" || !Number.isFinite(value)) {
+		if (
+			raw === undefined ||
+			raw === null ||
+			raw === "" ||
+			!Number.isFinite(value)
+		) {
 			throw new Error(
 				`Marker set "${spec.setId}" has a non-numeric value in column "${spec.timeCol}" at row ${csvRow}.`,
 			);
@@ -111,7 +121,7 @@ function parseAnnotationCsv(spec: AnnotationCsvSpec): MarkerSet {
 		const label = spec.labelCol ? String(row[spec.labelCol] ?? "") : undefined;
 
 		return {
-			id: createMarkerId(setId, rowIndex),
+			id: String(rowIndex + 1),
 			set: setId,
 			placements,
 			label,

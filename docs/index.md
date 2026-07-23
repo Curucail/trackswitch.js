@@ -94,6 +94,10 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
           <span>Looping Controls</span>
           <input type="checkbox" name="looping" checked />
         </label>
+		<label class="ts-control-row">
+		  <span>Marker Navigation</span>
+		  <input type="checkbox" name="markerNavigation" checked />
+		</label>
         <label class="ts-control-row">
           <span>Global Volume</span>
           <input type="checkbox" name="globalVolume" checked />

@@ -22,6 +22,7 @@ export interface Marker {
 	readonly set: MarkerSetId;
 	readonly placements: ReadonlyMap<TimelineId, number>;
 	readonly label?: string;
+	readonly hidden?: boolean;
 }
 
 export interface MarkerSet {

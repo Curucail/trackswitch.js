@@ -7,6 +7,7 @@ export type TrackSwitchIconName =
 	| "loop-b"
 	| "play"
 	| "marker-previous"
+	| "marker-jump"
 	| "marker-next"
 	| "pause"
 	| "stop"
@@ -39,6 +40,8 @@ const ICON_SVG_BY_NAME: Record<TrackSwitchIconName, string> = {
 	play: '<svg class="ts-icon-svg" role="img" viewBox="32 36 416 440" aria-hidden="true"><path fill="currentColor" d="M91.2 36.9c-12.4-6.8-27.4-6.5-39.6 .7S32 57.9 32 72l0 368c0 14.1 7.5 27.2 19.6 34.4s27.2 7.5 39.6 .7l336-184c12.8-7 20.8-20.5 20.8-35.1s-8-28.1-20.8-35.1l-336-184z"></path></svg>',
 	"marker-previous":
 		'<svg class="ts-icon-svg" role="img" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11.2 5.2v13.6L2.5 12l8.7-6.8Zm10.3 0v13.6L12.8 12l8.7-6.8Z"></path></svg>',
+	"marker-jump":
+		'<svg class="ts-icon-svg" role="img" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5.8 2.5h12.4L13.1 9v12.5h-2.2V9L5.8 2.5Z"></path></svg>',
 	"marker-next":
 		'<svg class="ts-icon-svg" role="img" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12.8 5.2 21.5 12l-8.7 6.8V5.2Zm-10.3 0L11.2 12l-8.7 6.8V5.2Z"></path></svg>',
 	pause:

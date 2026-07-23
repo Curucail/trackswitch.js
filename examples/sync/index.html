@@ -26,7 +26,7 @@
 
 <body>
     <a class="back-link" href="/examples/">Back to examples</a>
-    <trackswitch-player id="player" style="display: block; width: 50%; margin: 0 auto;">
+    <trackswitch-player id="player" style="display: block; width: 45%; margin: 0 auto;">
         <script type="application/json">
             {
                 "media": {
@@ -84,14 +84,6 @@
                         "cursorAlpha": 0.4
                     },
                     {
-                        "type": "midi",
-                        "mediaID": "midi",
-                        "height": 180,
-                        "maxZoom": 5,
-                        "playbackFollowMode": "center",
-                        "timer": true
-                    },
-                    {
                         "type": "waveform",
                         "sourceTracks": ["hu33"],
                         "waveformBarWidth": 1,
@@ -113,7 +105,6 @@
                             { "set": "sc06Structure", "color": "#ed8c01", "line": "dashed" }
                         ]
                     },
-                    { "type": "warpingMatrix", "x": "hu33", "y": "sc06", "height": 200 },
                     { "type": "trackList", "tracks": ["hu33", "sc06"] }
                 ],
                 "features": {
@@ -125,6 +116,7 @@
                     "keyboard": true,
                     "globalVolume": true,
                     "looping": true,
+					"markerNavigation": true,
                     "customizablePanelOrder": false,
                     "tabView": false,
                     "iosAudioUnlock": true,

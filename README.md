@@ -57,6 +57,7 @@ Features
 - Play, pause, stop, seek, and repeat controls
 - Global volume control
 - Looping controls
+- Annotation marker navigation by previous/next or searchable set, ID, and label
 - Per-track solo, volume, and pan controls
 - Presets for common track combinations
 - (Seekable) images and per-track images

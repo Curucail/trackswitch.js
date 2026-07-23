@@ -122,6 +122,7 @@ function resetTransientInteractionState(
 	controller.pendingWaveformTouchSeek = null;
 	controller.waveformMinimapDragState = null;
 	controller.shortcutHelpOpen = false;
+	controller.markerNavigationDialogOpen = false;
 }
 
 function applyFirstPresetOrTrackProperties(
@@ -207,6 +208,7 @@ async function applyAudioPreservingConfig(
 		controller.markersConfig,
 		controller.alignment?.referenceTimeline ?? IMPLICIT_REFERENCE_TIMELINE,
 		controller.alignment?.projection ?? null,
+		controller.longestDuration,
 	);
 
 	restoreAudioPreservingState(controller, previousPosition, wasPlaying);
@@ -308,10 +310,23 @@ async function updateConfigNow(
 		const stagedAlignment: ResolvedAlignment | null = nextConfig.alignment
 			? await buildResolvedAlignment(nextConfig.alignment, nextConfig.media)
 			: null;
+		const stagedLongestDuration = stagedAlignment
+			? stagedAlignment.referenceExtent.end
+			: nextRuntimes.reduce(
+					(longest, runtime) =>
+						Math.max(
+							longest,
+							runtime.timing?.effectiveDuration ??
+								runtime.buffer?.duration ??
+								0,
+						),
+					0,
+				);
 		const stagedMarkerSets = await loadMarkerSets(
 			nextConfig.markers,
 			stagedAlignment?.referenceTimeline ?? IMPLICIT_REFERENCE_TIMELINE,
 			stagedAlignment?.projection ?? null,
+			stagedLongestDuration,
 		);
 
 		const wasPlaying = controller.state.playing;

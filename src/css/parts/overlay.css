@@ -22,6 +22,18 @@
 	}
 }
 
+@keyframes trackswitch-marker-dialog-fade {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
 .trackswitch .overlay {
 	background-color: var(--ts-color-overlay-dim-68);
 	position: absolute;
@@ -31,6 +43,258 @@
 
 .trackswitch .overlay.is-hidden {
 	display: none;
+}
+
+.trackswitch .marker-navigation-overlay {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 14px;
+	overflow: auto;
+}
+
+.trackswitch .marker-navigation-dialog {
+	background: var(--ts-color-surface-base);
+	width: min(460px, 100%);
+	max-height: 100%;
+	color: var(--ts-color-text-primary);
+	border-radius: 12px;
+	box-shadow: 0 8px 8px var(--ts-color-shadow-modal);
+	padding: 18px;
+	overflow: auto;
+	animation: trackswitch-marker-dialog-fade 180ms ease-out;
+}
+
+.trackswitch .marker-navigation-section-heading {
+	display: grid;
+	grid-template-columns: minmax(18px, 1fr) auto minmax(18px, 1fr);
+	align-items: center;
+	gap: 10px;
+	width: 100%;
+	color: var(--ts-color-text-primary);
+	font-family: var(--ts-font-ui);
+	font-size: 14px;
+	font-weight: 700;
+	line-height: 1.3;
+	text-align: center;
+	margin-bottom: 14px;
+}
+
+.trackswitch .marker-navigation-section-heading::before,
+.trackswitch .marker-navigation-section-heading::after {
+	content: "";
+	border-top: 1px solid var(--ts-color-border-mid-45);
+}
+
+.trackswitch .marker-navigation-field {
+	display: block;
+	width: 100%;
+	font-family: var(--ts-font-ui);
+	font-size: 13px;
+	line-height: 1.3;
+}
+
+.trackswitch .marker-navigation-jump-fields {
+	display: grid;
+	gap: 9px;
+}
+
+.trackswitch .marker-navigation-combobox {
+	width: 100%;
+	min-width: 0;
+}
+
+.trackswitch.trackswitch .marker-navigation-input {
+	border: 1px solid var(--ts-color-border-mid-70);
+	background: var(--ts-color-surface-raised-98);
+	width: 100%;
+	min-width: 0;
+	height: 34px;
+	color: var(--ts-color-text-primary);
+	border-radius: 6px;
+	padding: 6px 9px;
+	font-family: var(--ts-font-ui);
+	font-size: 13px;
+	line-height: 1.2;
+}
+
+.trackswitch.trackswitch .marker-navigation-input::placeholder {
+	color: var(--ts-color-text-secondary);
+	opacity: 1;
+}
+
+.trackswitch .marker-navigation-options {
+	position: fixed;
+	inset: auto;
+	margin: 0;
+	border: 1px solid var(--ts-color-border-mid-70);
+	background: var(--ts-color-surface-raised-98);
+	max-height: 196px;
+	border-radius: 6px;
+	padding: 0;
+	overflow-y: auto;
+}
+
+.trackswitch .marker-navigation-options::backdrop {
+	background: transparent;
+}
+
+.trackswitch .marker-navigation-option,
+.trackswitch .marker-navigation-options-more,
+.trackswitch .marker-navigation-options-empty {
+	padding: 8px 10px;
+	font-family: var(--ts-font-ui);
+	font-size: 13px;
+	line-height: 1.3;
+}
+
+.trackswitch .marker-navigation-option {
+	color: var(--ts-color-text-primary);
+	cursor: pointer;
+}
+
+.trackswitch .marker-navigation-option + .marker-navigation-option,
+.trackswitch .marker-navigation-option + .marker-navigation-options-more {
+	border-top: 1px solid var(--ts-color-border-mid-20);
+}
+
+.trackswitch .marker-navigation-option:hover,
+.trackswitch .marker-navigation-option.is-active,
+.trackswitch .marker-navigation-options-more:hover,
+.trackswitch .marker-navigation-options-more.is-active {
+	background: var(--ts-color-accent-soft-10);
+}
+
+.trackswitch.trackswitch .marker-navigation-options-more {
+	color: var(--ts-color-text-secondary);
+	cursor: pointer;
+	font-size: 16px;
+	font-weight: 700;
+	text-align: center;
+}
+
+.trackswitch.trackswitch .marker-navigation-option-heading {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 10px;
+	min-width: 0;
+}
+
+.trackswitch.trackswitch .marker-navigation-option-label {
+	min-width: 0;
+	font-weight: 600;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.trackswitch.trackswitch .marker-navigation-option-set {
+	flex: 0 0 auto;
+	color: var(--ts-color-text-primary);
+	font-size: 12px;
+	font-weight: 700;
+}
+
+.trackswitch.trackswitch .marker-navigation-option-metadata {
+	display: flex;
+	gap: 10px;
+	color: var(--ts-color-text-secondary);
+	font-size: 11px;
+	line-height: 1.25;
+	margin-top: 2px;
+}
+
+.trackswitch.trackswitch .marker-navigation-options-empty {
+	color: var(--ts-color-text-secondary);
+}
+
+.trackswitch.trackswitch .marker-navigation-input:focus-visible,
+.trackswitch.trackswitch .marker-navigation-ok:focus-visible {
+	outline: 2px solid var(--ts-color-accent);
+	outline-offset: 2px;
+}
+
+.trackswitch .marker-navigation-loop-fields {
+	border: 0;
+	margin: 16px 0 0;
+	padding: 14px 0 0;
+}
+
+.trackswitch .marker-navigation-loop-grid {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 8px;
+}
+
+.trackswitch .marker-navigation-loop-column {
+	display: grid;
+	grid-template-columns: 34px minmax(0, 1fr);
+	align-items: center;
+	gap: 8px;
+}
+
+.trackswitch .marker-navigation-loop-point {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	width: 34px;
+	height: 34px;
+	aspect-ratio: 1;
+	border: 1px solid var(--ts-color-border-mid-55);
+	background: var(--ts-color-surface-raised-86);
+	color: var(--ts-color-text-primary);
+	border-radius: 4px;
+	font-family: var(--ts-font-ui);
+	font-size: 12px;
+	font-weight: 700;
+}
+
+.trackswitch .marker-navigation-error {
+	min-height: 16px;
+	color: var(--ts-color-text-error);
+	font-family: var(--ts-font-ui);
+	font-size: 12px;
+	line-height: 1.35;
+	margin-top: 10px;
+	visibility: hidden;
+}
+
+.trackswitch .marker-navigation-error.is-visible {
+	visibility: visible;
+}
+
+.trackswitch .marker-navigation-dialog-actions {
+	display: flex;
+	justify-content: center;
+	margin-top: 8px;
+}
+
+.trackswitch.trackswitch .marker-navigation-ok {
+	border: 1px solid var(--ts-color-accent);
+	background: var(--ts-color-accent);
+	min-width: 72px;
+	min-height: 36px;
+	color: var(--ts-color-text-inverse);
+	border-radius: 6px;
+	padding: 8px 16px;
+	font-family: var(--ts-font-ui);
+	font-size: 13px;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+@container ts-player (max-width: 500px) {
+	.trackswitch .marker-navigation-dialog {
+		padding: 15px;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.trackswitch .marker-navigation-dialog {
+		animation: none;
+	}
 }
 
 .trackswitch.trackswitch .overlay-activation > span,

@@ -12,6 +12,7 @@ export const defaultFeatures: Readonly<TrackSwitchFeatures> = {
 	iosAudioUnlock: true,
 	keyboard: true,
 	looping: false,
+	markerNavigation: true,
 	seekBar: true,
 	timer: true,
 };

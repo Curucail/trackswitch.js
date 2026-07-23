@@ -20,8 +20,11 @@ import {
 } from "./input-track-controls";
 import {
 	activateTimelineMarker,
+	closeMarkerNavigationDialog,
 	moveTimelineMarkerFocus,
+	openMarkerNavigationDialog,
 	snapLoopStartToMarker,
+	submitMarkerNavigationDialog,
 } from "./marker-actions";
 import {
 	isKeyboardControllerActive,
@@ -38,6 +41,9 @@ export function openShortcutHelp(ctx: any): any {
 	return function (this: any) {
 		if (this.shortcutHelpOpen) {
 			return;
+		}
+		if (this.markerNavigationDialogOpen) {
+			closeMarkerNavigationDialog(this);
 		}
 
 		this.shortcutHelpOpen = true;
@@ -289,6 +295,75 @@ export function onAdjacentMarker(
 		this.setKeyboardActive();
 		this.seekToAdjacentMarker(direction);
 	}.call(ctx, event, direction);
+}
+
+export function onMarkerNavigationOpen(ctx: any, event: any): any {
+	return function (this: any, event: any) {
+		event.preventDefault();
+		event.stopPropagation();
+		this.setKeyboardActive();
+		openMarkerNavigationDialog(this);
+	}.call(ctx, event);
+}
+
+export function onMarkerNavigationOverlay(ctx: any, event: any): any {
+	return function (this: any, event: any) {
+		const target = eventTargetAsElement(event.target ?? null);
+		if (target?.closest(".marker-navigation-dialog")) {
+			return;
+		}
+		event.preventDefault();
+		event.stopPropagation();
+		closeMarkerNavigationDialog(this);
+	}.call(ctx, event);
+}
+
+export function onMarkerNavigationInput(ctx: any, event: any): any {
+	return function (this: any, event: any) {
+		const target = eventTargetAsElement(event.target ?? null);
+		this.renderer.handleMarkerNavigationInteraction(event.type, target);
+	}.call(ctx, event);
+}
+
+export function onMarkerNavigationSubmit(ctx: any, event: any): any {
+	return function (this: any, event: any) {
+		event.preventDefault();
+		event.stopPropagation();
+		if (!this.renderer.validateMarkerNavigationDialogSelections()) {
+			return;
+		}
+		submitMarkerNavigationDialog(
+			this,
+			this.renderer.readMarkerNavigationDialogValues(),
+		);
+	}.call(ctx, event);
+}
+
+export function onMarkerNavigationKeydown(ctx: any, event: any): any {
+	return function (this: any, event: any) {
+		const target = eventTargetAsElement(event.target ?? null);
+		if (
+			this.renderer.handleMarkerNavigationComboboxKeydown(
+				event.key ?? "",
+				target,
+			)
+		) {
+			event.preventDefault();
+			event.stopPropagation();
+			return;
+		}
+		if (event.key === "Escape") {
+			event.preventDefault();
+			event.stopPropagation();
+			closeMarkerNavigationDialog(this);
+			return;
+		}
+		if (event.key === "Tab") {
+			event.preventDefault();
+			event.stopPropagation();
+			this.renderer.trapMarkerNavigationDialogFocus(!!event.shiftKey);
+		}
+	}.call(ctx, event);
 }
 
 export function onWaveformMinimapStart(ctx: any, event: any): any {
@@ -652,7 +727,8 @@ export function onKeyboard(ctx: any, event: any): any {
 	return function (this: any, event: any) {
 		if (
 			!this.features.keyboard ||
-			!isKeyboardControllerActive(this.instanceId)
+			!isKeyboardControllerActive(this.instanceId) ||
+			this.markerNavigationDialogOpen
 		) {
 			return;
 		}

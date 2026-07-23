@@ -1,7 +1,7 @@
 import type {
+	MarkerSetId as BrandedMarkerSetId,
 	Marker,
 	MarkerSet,
-	MarkerSetId as BrandedMarkerSetId,
 	RuntimeMarkerSet,
 } from "../timeline/marker";
 import type { ProjectionService } from "../timeline/projection";
@@ -225,6 +225,7 @@ export interface TrackSwitchFeatures {
 	iosAudioUnlock: boolean;
 	keyboard: boolean;
 	looping: boolean;
+	markerNavigation: boolean;
 	seekBar: boolean;
 	timer: boolean;
 }
@@ -271,6 +272,7 @@ export interface ResolvedAlignment {
 export interface ResolvedMarkerSet {
 	id: BrandedMarkerSetId;
 	timeline: TimelineId;
+	hasLabels: boolean;
 	markerSet: MarkerSet;
 }
 
@@ -436,5 +438,4 @@ export interface TrackSwitchUiState {
 	loop: LoopState;
 }
 
-export type { Marker, MarkerSet };
-export type { RuntimeMarkerSet };
+export type { Marker, MarkerSet, RuntimeMarkerSet };

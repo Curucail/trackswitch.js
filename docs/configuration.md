@@ -700,6 +700,17 @@ Previous/next marker navigation uses only annotation sets authored on tracks tha
 currently audible. Track selection and per-track volume changes update the available
 navigation targets immediately.
 
+The jump and loop-point fields search every configured annotation set independently of
+audible track state. Each result identifies its marker set, numeric ID, label, and
+reference-timeline position.
+
+Annotation markers are numbered within each set in CSV source order, starting at `1`.
+Every set also has hidden boundary IDs: `0` seeks to the start of the reference axis and
+`N+1` seeks to its end, where `N` is the number of authored markers. Boundary markers are
+available to previous/next navigation but are not drawn in marker layers or offered in
+the searchable jump and loop-point fields.
+When a set has no `labelCol`, marker hover text identifies markers by numeric ID.
+
 Views render marker sets through `markerLayers`:
 
 ```json
@@ -987,6 +998,7 @@ defaults below.
     "iosAudioUnlock": true,
     "keyboard": true,
     "looping": true,
+	"markerNavigation": true,
     "seekBar": true,
     "timer": true
   }
@@ -1006,6 +1018,7 @@ defaults below.
 | `iosAudioUnlock?` | `boolean` | `true` | Helps playback start reliably on iPhone and iPad. Leave this on unless you control the unlock flow yourself. |
 | `keyboard?` | `boolean` | `true` | Enables keyboard shortcuts. |
 | `looping?` | `boolean` | `false` | Shows A/B loop tools and enables loop interactions. |
+| `markerNavigation?` | `boolean` | `true` | Shows previous, direct-jump, and next annotation-marker controls. Controls remain visible but disabled when no audible marker set is available. |
 | `seekBar?` | `boolean` | `true` | Shows the main seek bar. |
 | `timer?` | `boolean` | `true` | Shows the main time display. |
 

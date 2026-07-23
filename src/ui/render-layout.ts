@@ -421,6 +421,65 @@ function buildShortcutHelpHtml(
 	);
 }
 
+let markerNavigationDialogId = 0;
+
+function buildMarkerNavigationDialogHtml(looping: boolean): string {
+	const dialogId = ++markerNavigationDialogId;
+	const field = (className: string, label: string, fieldId: string): string => {
+		const inputId = `marker-navigation-${dialogId}-${fieldId}`;
+		const listboxId = `${inputId}-listbox`;
+		return (
+			'<div class="marker-navigation-field">' +
+			'<div class="marker-navigation-combobox">' +
+			'<input class="marker-navigation-input ' +
+			className +
+			'" id="' +
+			inputId +
+			'" type="text" role="combobox" aria-label="' +
+			escapeHtml(label) +
+			'" aria-autocomplete="list" aria-expanded="false" aria-controls="' +
+			listboxId +
+			'" autocomplete="off" placeholder="Search by marker set, ID, or label">' +
+			'<div class="marker-navigation-options" id="' +
+			listboxId +
+			'" role="listbox" popover="manual" aria-label="' +
+			escapeHtml(label) +
+			' suggestions"></div>' +
+			"</div></div>"
+		);
+	};
+
+	const loopHtml = looping
+		? '<fieldset class="marker-navigation-loop-fields" aria-label="Set loop points between markers">' +
+			'<div class="marker-navigation-section-heading">Set loop points between markers</div>' +
+			'<div class="marker-navigation-loop-grid">' +
+			'<div class="marker-navigation-loop-column"><span class="marker-navigation-loop-point">A</span>' +
+			field("marker-loop-a", "Loop point A marker", "loop-a") +
+			"</div>" +
+			'<div class="marker-navigation-loop-column"><span class="marker-navigation-loop-point">B</span>' +
+			field("marker-loop-b", "Loop point B marker", "loop-b") +
+			"</div>" +
+			"</div></fieldset>"
+		: "";
+
+	return (
+		'<div class="overlay marker-navigation-overlay is-hidden" aria-hidden="true">' +
+		'<form class="marker-navigation-dialog" role="dialog" aria-modal="true" aria-label="Jump to annotation marker" tabindex="-1">' +
+		'<div class="marker-navigation-section-heading">Jump to marker</div>' +
+		'<div class="marker-navigation-jump-fields">' +
+		field(
+			"marker-jump-target",
+			"Jump to marker by ID, label, or marker set",
+			"jump",
+		) +
+		"</div>" +
+		loopHtml +
+		'<p class="marker-navigation-error" role="alert" aria-live="assertive"></p>' +
+		'<div class="marker-navigation-dialog-actions"><button type="submit" class="marker-navigation-ok">Apply</button></div>' +
+		"</form></div>"
+	);
+}
+
 function renderOverlayDownloadInfoText(info: AudioDownloadSizeInfo): string {
 	if (info.status === "calculating") {
 		return "Expected download size for this player: calculating...";
@@ -517,8 +576,6 @@ export function buildMainControlHtml(ctx: any, runtimes: any): any {
 			);
 			presetDropdownHtml += "</select></li>";
 		}
-		const hasMarkers = this.hasMarkers;
-
 		return (
 			'<div class="overlay overlay-activation"><span class="activate">Activate' +
 			renderIconSlotHtml("power-off") +
@@ -536,6 +593,9 @@ export function buildMainControlHtml(ctx: any, runtimes: any): any {
 			"</p>" +
 			"</div>" +
 			buildShortcutHelpHtml(this.features, runtimes.length) +
+			(this.features.markerNavigation
+				? buildMarkerNavigationDialogHtml(this.features.looping)
+				: "") +
 			'<div class="main-control ts-stack-section">' +
 			'<ul class="control">' +
 			'<li class="playback-group">' +
@@ -557,10 +617,13 @@ export function buildMainControlHtml(ctx: any, runtimes: any): any {
 					"</i>" +
 					'<input type="range" class="volume-slider" min="0" max="100" value="100"></div></li>'
 				: "") +
-			(hasMarkers
+			(this.features.markerNavigation
 				? '<li class="marker-navigation-group"><div class="marker-navigation-controls" role="group" aria-label="Marker navigation">' +
 					'<button type="button" class="marker-previous button" title="Previous marker" aria-label="Previous marker" disabled>' +
 					renderIconSlotHtml("marker-previous") +
+					"</button>" +
+					'<button type="button" class="marker-jump button" title="Jump to marker" aria-label="Jump to marker" disabled>' +
+					renderIconSlotHtml("marker-jump") +
 					"</button>" +
 					'<button type="button" class="marker-next button" title="Next marker" aria-label="Next marker" disabled>' +
 					renderIconSlotHtml("marker-next") +
@@ -1700,4 +1763,5 @@ export function updateTiming(
 		});
 	}.call(ctx, position, longestDuration);
 }
+
 import type { ScaleContinuousNumeric, ScaleLinear, Selection } from "d3";

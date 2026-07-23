@@ -1,3 +1,4 @@
+import type { ViewNormalizeContext } from "../config/ui-elements";
 import { normalizeFeatures } from "../domain/options";
 import { createTrackRuntime } from "../domain/runtime";
 import { createInitialPlayerState, type PlayerAction } from "../domain/state";
@@ -6,6 +7,7 @@ import type {
 	AudioDownloadSizeInfo,
 	LoopMarker,
 	MarkersConfig,
+	MediaConfig,
 	NormalizedTrackSwitchConfig,
 	PlayerState,
 	PresetsConfig,
@@ -22,7 +24,6 @@ import type {
 	TrackSwitchInit,
 	TrackSwitchSnapshot,
 	TrackSwitchWarpingMatrixViewConfig,
-	MediaConfig,
 } from "../domain/types";
 import { AudioEngine } from "../engine/audio-engine";
 import type { SheetMusicMeasureMapsByAxis } from "../engine/sheet-music/types";
@@ -34,17 +35,16 @@ import {
 import { InputBinder, type InputController } from "../input/dom-event-binder";
 import type { MeasureMapPoint } from "../shared/measure-map";
 import type { ControllerPointerEvent } from "../shared/seek";
-import { IMPLICIT_REFERENCE_TIMELINE, timelineId } from "../timeline/timeline";
 import {
 	createRuntimeMarkerSet,
 	type RuntimeMarkerSet,
 } from "../timeline/marker";
+import { IMPLICIT_REFERENCE_TIMELINE, timelineId } from "../timeline/timeline";
 import {
 	ViewRenderer,
 	type WarpingMatrixRenderContext,
 	type WaveformTimelineContext,
 } from "../ui/view-renderer";
-import type { ViewNormalizeContext } from "../config/ui-elements";
 import * as controllerAlignment from "./alignment-actions";
 import * as controllerEvents from "./event-emitter";
 import * as controllerHotReload from "./hot-reload-actions";
@@ -140,6 +140,7 @@ export class TrackSwitchControllerImpl
 	public readonly eventNamespace: string;
 	public readonly instanceId: number;
 	public shortcutHelpOpen = false;
+	public markerNavigationDialogOpen = false;
 	public audioDownloadSizeInfo: AudioDownloadSizeInfo = {
 		status: "calculating",
 		totalBytes: null,
@@ -222,8 +223,6 @@ export class TrackSwitchControllerImpl
 			);
 		}
 		this.renderer.hasAlignment = !!this.alignmentConfig;
-		this.renderer.hasMarkers =
-			Object.keys(this.markersConfig).length > 0 || !!this.alignmentConfig;
 		const viewContext: ViewNormalizeContext = {
 			media: config.media,
 			trackIds: config.tracks.map((track) => track.id),
@@ -419,6 +418,26 @@ export class TrackSwitchControllerImpl
 		direction: "previous" | "next",
 	): void {
 		controllerInput.onAdjacentMarker(this, event, direction);
+	}
+
+	onMarkerNavigationOpen(event: ControllerPointerEvent): void {
+		controllerInput.onMarkerNavigationOpen(this, event);
+	}
+
+	onMarkerNavigationOverlay(event: ControllerPointerEvent): void {
+		controllerInput.onMarkerNavigationOverlay(this, event);
+	}
+
+	onMarkerNavigationInput(event: ControllerPointerEvent): void {
+		controllerInput.onMarkerNavigationInput(this, event);
+	}
+
+	onMarkerNavigationSubmit(event: ControllerPointerEvent): void {
+		controllerInput.onMarkerNavigationSubmit(this, event);
+	}
+
+	onMarkerNavigationKeydown(event: ControllerPointerEvent): void {
+		controllerInput.onMarkerNavigationKeydown(this, event);
 	}
 
 	onSeekStart(event: ControllerPointerEvent): void {

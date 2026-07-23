@@ -50,6 +50,11 @@ export interface InputController {
 		event: ControllerPointerEvent,
 		direction: "previous" | "next",
 	): void;
+	onMarkerNavigationOpen(event: ControllerPointerEvent): void;
+	onMarkerNavigationOverlay(event: ControllerPointerEvent): void;
+	onMarkerNavigationInput(event: ControllerPointerEvent): void;
+	onMarkerNavigationSubmit(event: ControllerPointerEvent): void;
+	onMarkerNavigationKeydown(event: ControllerPointerEvent): void;
 	onKeyboard(event: ControllerPointerEvent): void;
 	onResize(): void;
 }
@@ -280,6 +285,53 @@ export class InputBinder {
 		this.addPointerDelegatedListener(".seekwrap", (event) => {
 			this.controller.onSeekStart(event);
 		});
+	}
+
+	private bindMarkerNavigationControls(): void {
+		this.addDelegatedListener("click", ".marker-jump", (event) => {
+			this.controller.onMarkerNavigationOpen(event);
+		});
+		this.addDelegatedListener(
+			"click",
+			".marker-navigation-overlay",
+			(event) => {
+				this.controller.onMarkerNavigationOverlay(event);
+			},
+		);
+		this.addDelegatedListener("input", ".marker-navigation-input", (event) => {
+			this.controller.onMarkerNavigationInput(event);
+		});
+		this.addDelegatedListener(
+			"focusin",
+			".marker-navigation-input",
+			(event) => {
+				this.controller.onMarkerNavigationInput(event);
+			},
+		);
+		this.addDelegatedListener("click", ".marker-navigation-input", (event) => {
+			this.controller.onMarkerNavigationInput(event);
+		});
+		this.addDelegatedListener(
+			"click",
+			".marker-navigation-option, .marker-navigation-options-more",
+			(event) => {
+				this.controller.onMarkerNavigationInput(event);
+			},
+		);
+		this.addDelegatedListener(
+			"submit",
+			".marker-navigation-dialog",
+			(event) => {
+				this.controller.onMarkerNavigationSubmit(event);
+			},
+		);
+		this.addDelegatedListener(
+			"keydown",
+			".marker-navigation-dialog",
+			(event) => {
+				this.controller.onMarkerNavigationKeydown(event);
+			},
+		);
 	}
 
 	private bindPanelReorder(): void {
@@ -538,6 +590,9 @@ export class InputBinder {
 		this.bindKeyboardActivation();
 		this.bindSeekLifecycle();
 		this.bindTrackControls();
+		if (this.features.markerNavigation) {
+			this.bindMarkerNavigationControls();
+		}
 
 		if (this.features.globalVolume) {
 			this.bindGlobalVolumeControls();

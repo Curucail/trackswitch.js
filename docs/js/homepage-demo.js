@@ -241,6 +241,7 @@
 			iosAudioUnlock: controls.iosAudioUnlock,
 			keyboard: controls.keyboard,
 			looping: controls.looping,
+			markerNavigation: controls.markerNavigation,
 			seekBar: controls.seekBar,
 			timer: controls.timer,
 		};
@@ -260,7 +261,7 @@
 
 		function controls() {
 			var names = [
-				"looping", "globalVolume", "trackVolumeControls", "trackPanControls",
+				"looping", "markerNavigation", "globalVolume", "trackVolumeControls", "trackPanControls",
 				"customizablePanelOrder", "presets", "seekBar", "timer", "keyboard",
 				"waveform", "midi", "text", "alignedPlayhead", "showAlignmentPoints",
 				"markers", "sheetNotePreview", "warpingMatrix", "customImage",

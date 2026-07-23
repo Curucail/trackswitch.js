@@ -147,9 +147,12 @@ function normalizeMarkersConfig(
 				`Invalid markers.${setId} configuration: timeCol must be a non-empty string.`,
 			);
 		}
-		if (set.labelCol !== undefined && typeof set.labelCol !== "string") {
+		if (
+			set.labelCol !== undefined &&
+			(typeof set.labelCol !== "string" || set.labelCol.trim().length === 0)
+		) {
 			throw new Error(
-				`Invalid markers.${setId} configuration: labelCol must be a string.`,
+				`Invalid markers.${setId} configuration: labelCol must be a non-empty string.`,
 			);
 		}
 		if (set.timeline !== undefined) {

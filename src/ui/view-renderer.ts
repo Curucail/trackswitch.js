@@ -1,4 +1,5 @@
 import type { ScaleLinear, Selection } from "d3";
+import type { ViewNormalizeContext } from "../config/ui-elements";
 import type {
 	AudioDownloadSizeInfo,
 	MarkerLayerConfig,
@@ -6,18 +7,18 @@ import type {
 	TrackRuntime,
 	TrackSwitchFeatures,
 	TrackSwitchUiState,
+	TrackSwitchViewConfig,
 	WaveformPlaybackFollowMode,
 	WaveformSourceIndex,
 	WaveformTimeAxis,
-	TrackSwitchViewConfig,
 } from "../domain/types";
-import type { ViewNormalizeContext } from "../config/ui-elements";
-import { formatTimelineValue, type TimelineUnit } from "../timeline/timeline";
-import { formatSecondsToHHMMSSmmm } from "../shared/format";
 import type {
 	TrackTimelineProjector,
 	WaveformEngine,
 } from "../engine/waveform-engine";
+import { formatSecondsToHHMMSSmmm } from "../shared/format";
+import { formatTimelineValue, type TimelineUnit } from "../timeline/timeline";
+import { renderConfiguredViews } from "./render-configured-views";
 import * as viewRendererCore from "./render-layout";
 import type { MarkerRenderData } from "./render-markers";
 import * as viewRendererMarkers from "./render-markers";
@@ -29,7 +30,6 @@ import * as viewRendererMidi from "./render-midi";
 import * as viewRendererSeek from "./render-seek";
 import * as viewRendererWarping from "./render-warping-matrix";
 import * as viewRendererWaveform from "./render-waveforms";
-import { renderConfiguredViews } from "./render-configured-views";
 
 type SvgSelection = Selection<SVGSVGElement, unknown, null, undefined>;
 type GroupSelection = Selection<SVGGElement, unknown, null, undefined>;
@@ -279,7 +279,6 @@ export class ViewRenderer {
 	public readonly features: TrackSwitchFeatures;
 	public presetEntries: Array<{ id: string; label: string }>;
 	public trackGroups: TrackListGroup[];
-	public hasMarkers = false;
 	public hasAlignment = false;
 	public referenceTimelineUnit: TimelineUnit = "seconds";
 
@@ -498,12 +497,70 @@ export class ViewRenderer {
 	public updateMarkerNavigationControls(
 		canGoPrevious: boolean,
 		canGoNext: boolean,
+		canOpenDialog: boolean,
 	): void {
 		viewRendererMarkers.updateMarkerNavigationControls(
 			this.root,
 			canGoPrevious,
 			canGoNext,
+			canOpenDialog,
 		);
+	}
+
+	public openMarkerNavigationDialog(
+		sets: viewRendererMarkers.MarkerNavigationSetOption[],
+	): void {
+		viewRendererMarkers.openMarkerNavigationDialog(this.root, sets);
+	}
+
+	public closeMarkerNavigationDialog(): void {
+		viewRendererMarkers.closeMarkerNavigationDialog(this.root);
+	}
+
+	public updateMarkerNavigationDialogSets(
+		sets: viewRendererMarkers.MarkerNavigationSetOption[],
+	): void {
+		viewRendererMarkers.updateMarkerNavigationDialogSets(this.root, sets);
+	}
+
+	public handleMarkerNavigationInteraction(
+		eventType: string,
+		target: Element | null,
+	): void {
+		viewRendererMarkers.handleMarkerNavigationInteraction(
+			this.root,
+			eventType,
+			target,
+		);
+	}
+
+	public handleMarkerNavigationComboboxKeydown(
+		key: string,
+		target: Element | null,
+	): boolean {
+		return viewRendererMarkers.handleMarkerNavigationComboboxKeydown(
+			this.root,
+			key,
+			target,
+		);
+	}
+
+	public validateMarkerNavigationDialogSelections(): boolean {
+		return viewRendererMarkers.validateMarkerNavigationDialogSelections(
+			this.root,
+		);
+	}
+
+	public setMarkerNavigationDialogError(message: string): void {
+		viewRendererMarkers.setMarkerNavigationDialogError(this.root, message);
+	}
+
+	public readMarkerNavigationDialogValues(): viewRendererMarkers.MarkerNavigationDialogValues {
+		return viewRendererMarkers.readMarkerNavigationDialogValues(this.root);
+	}
+
+	public trapMarkerNavigationDialogFocus(shiftKey: boolean): void {
+		viewRendererMarkers.trapMarkerNavigationDialogFocus(this.root, shiftKey);
 	}
 
 	public wrapWaveformCanvases(): void {

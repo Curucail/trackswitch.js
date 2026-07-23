@@ -203,14 +203,14 @@
 .trackswitch .main-control .marker-navigation-controls {
 	display: flex;
 	align-items: center;
-	gap: var(--ts-main-control-loop-gap);
+	gap: 0;
 }
 
 .trackswitch .main-control .marker-navigation-controls > .button {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: var(--ts-main-control-large-button-size);
+	width: 17px;
 	height: var(--ts-main-control-large-button-size);
 	color: var(--ts-color-text-muted);
 	transition:
