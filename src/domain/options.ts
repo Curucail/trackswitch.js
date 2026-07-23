@@ -3,18 +3,10 @@ import type { TrackSwitchFeatures } from "./types";
 export const defaultFeatures: Readonly<TrackSwitchFeatures> = {
 	exclusiveSolo: false,
 	muteOtherPlayerInstances: true,
-	globalVolume: false,
-	trackVolumeControls: false,
-	trackPanControls: false,
 	customizablePanelOrder: false,
-	repeat: false,
 	tabView: false,
 	iosAudioUnlock: true,
 	keyboard: true,
-	looping: false,
-	markerNavigation: true,
-	seekBar: true,
-	timer: true,
 };
 
 const featureKeys = new Set<keyof TrackSwitchFeatures>(

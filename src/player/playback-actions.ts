@@ -239,7 +239,7 @@ export function play(ctx: any): any {
 		let startPosition = this.state.position;
 
 		if (
-			this.features.looping &&
+			this.navigationBar?.looping &&
 			this.state.loop.enabled &&
 			this.state.loop.pointA !== null &&
 			this.state.loop.pointB !== null &&
@@ -305,7 +305,7 @@ export function seekRelative(ctx: any, seconds: any): any {
 		nextPosition = clamp(nextPosition, 0, this.longestDuration);
 
 		if (
-			this.features.looping &&
+			this.navigationBar?.looping &&
 			this.state.loop.enabled &&
 			this.state.loop.pointA !== null &&
 			this.state.loop.pointB !== null
@@ -340,7 +340,7 @@ export function setRepeat(ctx: any, enabled: any): any {
 
 export function setVolume(ctx: any, volumeZeroToOne: any): any {
 	return function (this: any, volumeZeroToOne: any) {
-		if (!this.features.globalVolume) {
+		if (!this.navigationBar?.globalVolume) {
 			this.dispatch({ type: "set-volume", volume: 1 });
 			this.audioEngine.setMasterVolume(1);
 			this.renderer.setVolumeSlider(1);
@@ -405,7 +405,7 @@ export function setTrackPan(
 
 export function setLoopPoint(ctx: any, marker: any): any {
 	return function (this: any, marker: any) {
-		if (!this.features.looping) {
+		if (!this.navigationBar?.looping) {
 			return false;
 		}
 
@@ -478,7 +478,7 @@ export function activateLoopRange(ctx: any, loopA: any, loopB: any): any {
 
 export function toggleLoop(ctx: any): any {
 	return function (this: any) {
-		if (!this.features.looping) {
+		if (!this.navigationBar?.looping) {
 			return false;
 		}
 
@@ -760,7 +760,7 @@ export function monitorPosition(ctx: any): any {
 		}
 
 		if (
-			this.features.looping &&
+			this.navigationBar?.looping &&
 			this.state.loop.enabled &&
 			this.state.loop.pointB !== null &&
 			this.state.position >= this.state.loop.pointB &&

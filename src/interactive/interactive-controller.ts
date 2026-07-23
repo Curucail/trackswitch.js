@@ -610,17 +610,23 @@ export class InteractiveTrackSwitchControllerImpl
 			});
 		}
 
-		views.push({ type: "trackList", tracks: audioTrackIds });
+		views.unshift({
+			type: "navigationBar",
+			seekBar: true,
+			timer: true,
+			globalVolume: true,
+			looping: true,
+		});
+		views.push({
+			type: "trackList",
+			tracks: audioTrackIds,
+			trackVolumeControls: true,
+			trackPanControls: true,
+		});
 
 		const playerInit = {
 			features: {
-				seekBar: true,
-				timer: true,
 				keyboard: true,
-				globalVolume: true,
-				trackVolumeControls: true,
-				trackPanControls: true,
-				looping: true,
 			},
 			media,
 			alignment: {

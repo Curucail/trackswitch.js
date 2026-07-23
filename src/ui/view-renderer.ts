@@ -6,6 +6,7 @@ import type {
 	TrackListGroup,
 	TrackRuntime,
 	TrackSwitchFeatures,
+	TrackSwitchNavigationBarViewConfig,
 	TrackSwitchUiState,
 	TrackSwitchViewConfig,
 	WaveformPlaybackFollowMode,
@@ -279,6 +280,7 @@ export class ViewRenderer {
 	public readonly features: TrackSwitchFeatures;
 	public presetEntries: Array<{ id: string; label: string }>;
 	public trackGroups: TrackListGroup[];
+	public navigationBar: TrackSwitchNavigationBarViewConfig | null = null;
 	public hasAlignment = false;
 	public referenceTimelineUnit: TimelineUnit = "seconds";
 
@@ -335,6 +337,8 @@ export class ViewRenderer {
 		views: TrackSwitchViewConfig[],
 		context: ViewNormalizeContext,
 	): void {
+		this.navigationBar =
+			views.find((view) => view.type === "navigationBar") ?? null;
 		renderConfiguredViews(this, views, context);
 	}
 
@@ -437,6 +441,10 @@ export class ViewRenderer {
 		viewRendererCore.initialize(this, runtimes);
 	}
 
+	public buildPlayerOverlayHtml(runtimes: TrackRuntime[]): string {
+		return viewRendererCore.buildPlayerOverlayHtml(this, runtimes);
+	}
+
 	public buildMainControlHtml(runtimes: TrackRuntime[]): string {
 		return viewRendererCore.buildMainControlHtml(this, runtimes);
 	}
@@ -445,8 +453,15 @@ export class ViewRenderer {
 		return viewRendererCore.shouldRenderGlobalSync(this, runtimes);
 	}
 
-	public buildTrackRow(runtime: TrackRuntime, index: number): HTMLElement {
-		return viewRendererCore.buildTrackRow(this, runtime, index);
+	public buildTrackRow(
+		runtime: TrackRuntime,
+		index: number,
+		controls: {
+			trackVolumeControls: boolean;
+			trackPanControls: boolean;
+		},
+	): HTMLElement {
+		return viewRendererCore.buildTrackRow(this, runtime, index, controls);
 	}
 
 	public renderTrackList(runtimes: TrackRuntime[]): void {
@@ -1259,7 +1274,7 @@ export class ViewRenderer {
 			position,
 			duration,
 			loop,
-			this.features.looping,
+			!!this.navigationBar?.looping,
 			formatValue,
 		);
 	}

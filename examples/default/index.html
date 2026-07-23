@@ -55,6 +55,15 @@
                 },
                 "views": [
                     {
+                        "type": "navigationBar",
+                        "globalVolume": true,
+                        "repeat": false,
+                        "looping": true,
+                        "markerNavigation": true,
+                        "seekBar": true,
+                        "timer": true
+                    },
+                    {
                         "type": "image",
                         "src": "data/cover.png",
                         "seekable": true,
@@ -66,37 +75,20 @@
                     {
                         "type": "waveform",
                         "height": 150,
-                        "waveformBarWidth": 1,
-                        "markerLayers": [
-                            { "set": "violinsCues", "color": "#ed8c01", "line": "solid" },
-                            { "set": "synthCues", "color": "#ed8c01", "line": "solid" }
-                        ]
-                    },
-                    {
-                        "type": "text",
-                        "text": "TrackSwitch.js - Default Mode Example",
-                        "bold": false,
-                        "italic": false,
-                        "fontSize": 32
+                        "waveformBarWidth": 1
                     },
                     {
                         "type": "trackList",
-                        "tracks": ["violins", "synths", "bass", "drums"]
+                        "tracks": ["violins", "synths", "bass", "drums"],
+                        "trackVolumeControls": true,
+                        "trackPanControls": true
                     }
                 ],
                 "features": {
                     "exclusiveSolo": false,
-                    "globalVolume": true,
-                    "trackVolumeControls": true,
-                    "trackPanControls": true,
-                    "repeat": false,
                     "tabView": false,
                     "iosAudioUnlock": true,
                     "keyboard": true,
-                    "looping": true,
-					"markerNavigation": true,
-                    "seekBar": true,
-                    "timer": true,
                     "customizablePanelOrder": false,
                     "muteOtherPlayerInstances": true
                 }

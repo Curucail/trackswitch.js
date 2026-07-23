@@ -7,6 +7,13 @@
 	pointer-events: none;
 }
 
+.trackswitch
+	.timeline-marker-layer:has(
+		.timeline-marker:is(:hover, :focus-visible, :active, .is-active)
+	) {
+	z-index: 4;
+}
+
 .trackswitch .timeline-marker {
 	--ts-marker-position: 0%;
 	--ts-marker-highlight-color: var(--ts-color-accent);

@@ -70,6 +70,7 @@ export class AudioEngine {
 	private context: AudioContext | null;
 	private readonly features: TrackSwitchFeatures;
 	private readonly alignmentEnabled: boolean;
+	private globalVolumeEnabled: boolean;
 	private gainNodeMaster: GainNode | null;
 	private gainNodeVolume: GainNode | null;
 	private masterVolume: number;
@@ -78,9 +79,11 @@ export class AudioEngine {
 		features: TrackSwitchFeatures,
 		initialVolume: number,
 		alignmentEnabled = false,
+		globalVolumeEnabled = false,
 	) {
 		this.features = features;
 		this.alignmentEnabled = alignmentEnabled;
+		this.globalVolumeEnabled = globalVolumeEnabled;
 		this.context = null;
 		this.gainNodeMaster = null;
 		this.gainNodeVolume = null;
@@ -107,7 +110,7 @@ export class AudioEngine {
 
 		if (!this.gainNodeVolume) {
 			const volumeNode = this.context.createGain();
-			volumeNode.gain.value = this.features.globalVolume
+			volumeNode.gain.value = this.globalVolumeEnabled
 				? this.masterVolume
 				: 1.0;
 			volumeNode.connect(this.context.destination);
@@ -508,8 +511,7 @@ export class AudioEngine {
 				...this.filterPlayableSources(runtime.definition.sources || []),
 			);
 
-			const alignmentSources =
-				runtime.definition.syncedSources;
+			const alignmentSources = runtime.definition.syncedSources;
 			const shouldLoadSyncedSources =
 				this.alignmentEnabled &&
 				Array.isArray(alignmentSources) &&
@@ -657,9 +659,14 @@ export class AudioEngine {
 
 		const nextVolume = clamp01(volume);
 		this.masterVolume = nextVolume;
-		this.gainNodeVolume.gain.value = this.features.globalVolume
-			? nextVolume
-			: 1;
+		this.gainNodeVolume.gain.value = this.globalVolumeEnabled ? nextVolume : 1;
+	}
+
+	setGlobalVolumeEnabled(enabled: boolean): void {
+		this.globalVolumeEnabled = enabled;
+		if (this.gainNodeVolume) {
+			this.gainNodeVolume.gain.value = enabled ? this.masterVolume : 1;
+		}
 	}
 
 	applyTrackStateGains(

@@ -143,7 +143,7 @@ function updateDraggedLoopMarker(controller: any, event: any): boolean {
 }
 
 function updateRightClickLoopSelection(controller: any, event: any): boolean {
-	if (!controller.features.looping || !controller.rightClickDragging) {
+	if (!controller.navigationBar?.looping || !controller.rightClickDragging) {
 		return false;
 	}
 
@@ -739,9 +739,7 @@ export function trackIndexFromTarget(ctx: any, target: any): any {
 export function isFixedWaveformLocalAxisEnabled(ctx: any): any {
 	return function (this: any) {
 		return (
-			this.isAlignmentMode() &&
-			!!this.alignment &&
-			!this.globalSyncEnabled
+			this.isAlignmentMode() && !!this.alignment && !this.globalSyncEnabled
 		);
 	}.call(ctx);
 }

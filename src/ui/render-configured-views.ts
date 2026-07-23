@@ -75,6 +75,12 @@ function renderTrackList(root: HTMLElement, groupIndex: number): void {
 	root.appendChild(container);
 }
 
+function renderNavigationBar(root: HTMLElement): void {
+	const container = document.createElement("div");
+	container.className = "navigation-bar-host";
+	root.appendChild(container);
+}
+
 function renderText(
 	renderer: ConfiguredViewRenderer,
 	text: TrackSwitchTextViewConfig,
@@ -193,6 +199,10 @@ export function renderConfiguredViews(
 		if (entry.type === "trackList") {
 			renderTrackList(renderer.root, trackGroupIndex);
 			trackGroupIndex += 1;
+			return;
+		}
+		if (entry.type === "navigationBar") {
+			renderNavigationBar(renderer.root);
 			return;
 		}
 		if (entry.type === "image") {

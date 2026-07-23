@@ -201,6 +201,18 @@ export interface TrackSwitchTrackListViewConfig {
 	type: "trackList";
 	tracks: TrackId[];
 	rowHeight?: number;
+	trackVolumeControls?: boolean;
+	trackPanControls?: boolean;
+}
+
+export interface TrackSwitchNavigationBarViewConfig {
+	type: "navigationBar";
+	repeat?: boolean;
+	timer?: boolean;
+	seekBar?: boolean;
+	globalVolume?: boolean;
+	looping?: boolean;
+	markerNavigation?: boolean;
 }
 
 export type TrackSwitchViewConfig =
@@ -211,23 +223,16 @@ export type TrackSwitchViewConfig =
 	| TrackSwitchSheetMusicViewConfig
 	| TrackSwitchWarpingMatrixViewConfig
 	| TrackSwitchTextViewConfig
-	| TrackSwitchTrackListViewConfig;
+	| TrackSwitchTrackListViewConfig
+	| TrackSwitchNavigationBarViewConfig;
 
 export interface TrackSwitchFeatures {
 	exclusiveSolo: boolean;
 	muteOtherPlayerInstances: boolean;
-	globalVolume: boolean;
-	trackVolumeControls: boolean;
-	trackPanControls: boolean;
 	customizablePanelOrder: boolean;
-	repeat: boolean;
 	tabView: boolean;
 	iosAudioUnlock: boolean;
 	keyboard: boolean;
-	looping: boolean;
-	markerNavigation: boolean;
-	seekBar: boolean;
-	timer: boolean;
 }
 
 export interface TrackSwitchInit {
@@ -246,6 +251,8 @@ export interface TrackListGroup {
 	groupIndex: number;
 	trackIds: TrackId[];
 	rowHeight?: number;
+	trackVolumeControls: boolean;
+	trackPanControls: boolean;
 }
 
 export interface TrackDefinition {

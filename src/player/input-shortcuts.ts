@@ -64,14 +64,14 @@ const KEYBOARD_SHORTCUT_HANDLERS: Record<
 		return true;
 	},
 	ArrowUp: (controller) => {
-		if (!controller.features.globalVolume) {
+		if (!controller.navigationBar?.globalVolume) {
 			return false;
 		}
 		controller.setVolume(controller.state.volume + 0.1);
 		return true;
 	},
 	ArrowDown: (controller) => {
-		if (!controller.features.globalVolume) {
+		if (!controller.navigationBar?.globalVolume) {
 			return false;
 		}
 		controller.setVolume(controller.state.volume - 0.1);
@@ -97,84 +97,84 @@ const KEYBOARD_SHORTCUT_HANDLERS: Record<
 		return true;
 	},
 	a: (controller) => {
-		if (!controller.features.looping) {
+		if (!controller.navigationBar?.looping) {
 			return false;
 		}
 		controller.setLoopPoint("A");
 		return true;
 	},
 	A: (controller) => {
-		if (!controller.features.looping) {
+		if (!controller.navigationBar?.looping) {
 			return false;
 		}
 		controller.setLoopPoint("A");
 		return true;
 	},
 	KeyA: (controller) => {
-		if (!controller.features.looping) {
+		if (!controller.navigationBar?.looping) {
 			return false;
 		}
 		controller.setLoopPoint("A");
 		return true;
 	},
 	b: (controller) => {
-		if (!controller.features.looping) {
+		if (!controller.navigationBar?.looping) {
 			return false;
 		}
 		controller.setLoopPoint("B");
 		return true;
 	},
 	B: (controller) => {
-		if (!controller.features.looping) {
+		if (!controller.navigationBar?.looping) {
 			return false;
 		}
 		controller.setLoopPoint("B");
 		return true;
 	},
 	KeyB: (controller) => {
-		if (!controller.features.looping) {
+		if (!controller.navigationBar?.looping) {
 			return false;
 		}
 		controller.setLoopPoint("B");
 		return true;
 	},
 	l: (controller) => {
-		if (!controller.features.looping) {
+		if (!controller.navigationBar?.looping) {
 			return false;
 		}
 		controller.toggleLoop();
 		return true;
 	},
 	L: (controller) => {
-		if (!controller.features.looping) {
+		if (!controller.navigationBar?.looping) {
 			return false;
 		}
 		controller.toggleLoop();
 		return true;
 	},
 	KeyL: (controller) => {
-		if (!controller.features.looping) {
+		if (!controller.navigationBar?.looping) {
 			return false;
 		}
 		controller.toggleLoop();
 		return true;
 	},
 	c: (controller) => {
-		if (!controller.features.looping) {
+		if (!controller.navigationBar?.looping) {
 			return false;
 		}
 		controller.clearLoop();
 		return true;
 	},
 	C: (controller) => {
-		if (!controller.features.looping) {
+		if (!controller.navigationBar?.looping) {
 			return false;
 		}
 		controller.clearLoop();
 		return true;
 	},
 	KeyC: (controller) => {
-		if (!controller.features.looping) {
+		if (!controller.navigationBar?.looping) {
 			return false;
 		}
 		controller.clearLoop();

@@ -26,6 +26,7 @@ toc_script: true
   - [`warpingMatrix`](#warpingmatrix)
   - [`text`](#text)
   - [`trackList`](#tracklist)
+  - [`navigationBar`](#navigationbar)
 - [Features](#features)
 - [Keyboard and loop controls](#keyboard-and-loop-controls)
 - [Things to check](#things-to-check)
@@ -44,6 +45,7 @@ share the same timeline and can play simultaneously:
     "bass": { "type": "audio", "src": "bass.mp3", "title": "Bass" }
   },
   "views": [
+    { "type": "navigationBar" },
     { "type": "waveform", "sourceTracks": "audible" },
     { "type": "trackList", "tracks": ["drums", "bass"] }
   ]
@@ -58,9 +60,9 @@ positions, loops, markers, and visual cursors through the same alignment graph.
 
 The player configuration is split into data and views. Data describes what exists: audio tracks,
 visual media, abstract timelines, alignment data, annotation markers, presets, and
-player-wide feature switches. Views describe how that data should appear on the page:
-waveforms, images, MIDI piano rolls, sheet music, text, track lists, and warping
-visualizations.
+player-wide behavior switches. Views describe how that data should appear on the page:
+navigation controls, waveforms, images, MIDI piano rolls, sheet music, text, track lists,
+and warping visualizations.
 
 Markers are the central concept behind that graph. Alignment CSV rows become dense
 correspondence markers between timelines. Authored marker CSV files become annotation
@@ -100,14 +102,15 @@ method.
         "synth": { "type": "audio", "src": "synth.mp3", "title": "Synth" }
       },
       "views": [
+        { "type": "navigationBar", "globalVolume": true },
         { "type": "waveform", "sourceTracks": "audible" },
-        { "type": "trackList", "tracks": ["drums", "bass", "synth"] }
-      ],
-      "features": {
-        "globalVolume": true,
-        "trackVolumeControls": true,
-        "trackPanControls": true
-      }
+        {
+          "type": "trackList",
+          "tracks": ["drums", "bass", "synth"],
+          "trackVolumeControls": true,
+          "trackPanControls": true
+        }
+      ]
     }
   </script>
 </trackswitch-player>
@@ -129,14 +132,15 @@ const config: TrackSwitchInit = {
     synth: { type: "audio", src: "synth.mp3", title: "Synth" },
   },
   views: [
+    { type: "navigationBar", globalVolume: true },
     { type: "waveform", sourceTracks: "audible" },
-    { type: "trackList", tracks: ["drums", "bass", "synth"] },
+    {
+      type: "trackList",
+      tracks: ["drums", "bass", "synth"],
+      trackVolumeControls: true,
+      trackPanControls: true,
+    },
   ],
-  features: {
-    globalVolume: true,
-    trackVolumeControls: true,
-    trackPanControls: true,
-  },
 };
 
 defineTrackswitchDefaultElement();
@@ -163,14 +167,15 @@ export function ExamplePlayer() {
         synth: { type: "audio", src: "synth.mp3", title: "Synth" },
       },
       views: [
+        { type: "navigationBar", globalVolume: true },
         { type: "waveform", sourceTracks: "audible" },
-        { type: "trackList", tracks: ["drums", "bass", "synth"] },
+        {
+          type: "trackList",
+          tracks: ["drums", "bass", "synth"],
+          trackVolumeControls: true,
+          trackPanControls: true,
+        },
       ],
-      features: {
-        globalVolume: true,
-        trackVolumeControls: true,
-        trackPanControls: true,
-      },
     };
   }, []);
 
@@ -193,14 +198,15 @@ const config: TrackSwitchInit = {
     synth: { type: "audio", src: "synth.mp3", title: "Synth" },
   },
   views: [
+    { type: "navigationBar", globalVolume: true },
     { type: "waveform", sourceTracks: "audible" },
-    { type: "trackList", tracks: ["drums", "bass", "synth"] },
+    {
+      type: "trackList",
+      tracks: ["drums", "bass", "synth"],
+      trackVolumeControls: true,
+      trackPanControls: true,
+    },
   ],
-  features: {
-    globalVolume: true,
-    trackVolumeControls: true,
-    trackPanControls: true,
-  },
 };
 </script>
 
@@ -227,14 +233,15 @@ const config: TrackSwitchInit = {
         synth: { type: "audio", src: "synth.mp3", title: "Synth" },
       },
       views: [
+        { type: "navigationBar", globalVolume: true },
         { type: "waveform", sourceTracks: "audible" },
-        { type: "trackList", tracks: ["drums", "bass", "synth"] },
+        {
+          type: "trackList",
+          tracks: ["drums", "bass", "synth"],
+          trackVolumeControls: true,
+          trackPanControls: true,
+        },
       ],
-      features: {
-        globalVolume: true,
-        trackVolumeControls: true,
-        trackPanControls: true,
-      },
     },
   };
 </script>
@@ -287,6 +294,7 @@ const config: TrackSwitchInit = {
         }
       },
       "views": [
+        { "type": "navigationBar", "looping": true, "globalVolume": true },
         { "type": "sheetMusic", "mediaID": "score" },
         { "type": "midi", "mediaID": "notes", "timer": true },
         {
@@ -304,9 +312,7 @@ const config: TrackSwitchInit = {
         { "type": "trackList", "tracks": ["takeA", "takeB"] }
       ],
       "features": {
-        "exclusiveSolo": true,
-        "looping": true,
-        "globalVolume": true
+        "exclusiveSolo": true
       }
     }
   </script>
@@ -339,13 +345,14 @@ const config: TrackSwitchInit = {
     outside: "clamp",
   },
   views: [
+    { type: "navigationBar", looping: true },
     { type: "sheetMusic", mediaID: "score" },
     { type: "waveform", sourceTracks: ["takeA"], alignedPlayhead: true },
     { type: "waveform", sourceTracks: ["takeB"], alignedPlayhead: true },
     { type: "warpingMatrix", x: "takeA", y: "takeB" },
     { type: "trackList", tracks: ["takeA", "takeB"] },
   ],
-  features: { exclusiveSolo: true, looping: true },
+  features: { exclusiveSolo: true },
 };
 
 defineTrackswitchDefaultElement();
@@ -380,12 +387,13 @@ export function AlignedPlayer() {
       },
     },
     views: [
+      { type: "navigationBar", looping: true },
       { type: "sheetMusic", mediaID: "score" },
       { type: "waveform", sourceTracks: ["takeA"], alignedPlayhead: true },
       { type: "waveform", sourceTracks: ["takeB"], alignedPlayhead: true },
       { type: "trackList", tracks: ["takeA", "takeB"] },
     ],
-    features: { exclusiveSolo: true, looping: true },
+    features: { exclusiveSolo: true },
   }), []);
 
   return <TrackSwitchPlayer config={config} />;
@@ -416,12 +424,13 @@ const config: TrackSwitchInit = {
     },
   },
   views: [
+    { type: "navigationBar", looping: true },
     { type: "sheetMusic", mediaID: "score" },
     { type: "waveform", sourceTracks: ["takeA"], alignedPlayhead: true },
     { type: "waveform", sourceTracks: ["takeB"], alignedPlayhead: true },
     { type: "trackList", tracks: ["takeA", "takeB"] },
   ],
-  features: { exclusiveSolo: true, looping: true },
+  features: { exclusiveSolo: true },
 };
 </script>
 
@@ -454,12 +463,13 @@ const config: TrackSwitchInit = {
       },
     },
     views: [
+      { type: "navigationBar", looping: true },
       { type: "sheetMusic", mediaID: "score" },
       { type: "waveform", sourceTracks: ["takeA"], alignedPlayhead: true },
       { type: "waveform", sourceTracks: ["takeB"], alignedPlayhead: true },
       { type: "trackList", tracks: ["takeA", "takeB"] },
     ],
-    features: { exclusiveSolo: true, looping: true },
+    features: { exclusiveSolo: true },
   };
 </script>
 
@@ -967,7 +977,9 @@ Shows audio tracks and track controls.
 {
   "type": "trackList",
   "tracks": ["takeA", "takeB"],
-  "rowHeight": 52
+  "rowHeight": 52,
+  "trackVolumeControls": true,
+  "trackPanControls": true
 }
 ```
 
@@ -975,32 +987,52 @@ Shows audio tracks and track controls.
 | --- | --- | --- | --- |
 | `tracks` | `string[]` | - | Audio media IDs shown in this list. |
 | `rowHeight?` | `number` | auto | Track row height in pixels. |
+| `trackVolumeControls?` | `boolean` | `false` | Shows per-track volume controls in this list. |
+| `trackPanControls?` | `boolean` | `false` | Shows per-track left/right pan controls in this list. |
 
 `tracks` contains audio media IDs. Use multiple `trackList` views if you want separate
-track groups in different parts of the layout.
+track groups in different parts of the layout, with independent volume and pan control
+visibility.
+
+### `navigationBar`
+
+Shows the player-level playback and navigation controls.
+
+```json
+{
+  "type": "navigationBar",
+  "repeat": false,
+  "timer": true,
+  "seekBar": true,
+  "globalVolume": true,
+  "looping": true,
+  "markerNavigation": true
+}
+```
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `repeat?` | `boolean` | `false` | Starts playback with repeat enabled. |
+| `timer?` | `boolean` | `true` | Shows the main time display. |
+| `seekBar?` | `boolean` | `true` | Shows the main seek bar. |
+| `globalVolume?` | `boolean` | `false` | Shows one master volume control for the whole player. |
+| `looping?` | `boolean` | `false` | Shows A/B loop tools and enables loop interactions. |
+| `markerNavigation?` | `boolean` | `true` | Shows previous, direct-jump, and next annotation-marker controls. Controls remain disabled when no audible marker set is available. |
 
 ## Features
 
-`features` controls optional player behavior and UI controls. Omitted options use the
-defaults below.
+`features` controls optional player-wide behavior. View-specific controls belong to their
+view configuration. Omitted options use the defaults below.
 
 ```json
 {
   "features": {
     "exclusiveSolo": false,
     "muteOtherPlayerInstances": true,
-    "globalVolume": true,
-    "trackVolumeControls": true,
-    "trackPanControls": true,
     "customizablePanelOrder": false,
-    "repeat": false,
     "tabView": false,
     "iosAudioUnlock": true,
-    "keyboard": true,
-    "looping": true,
-	"markerNavigation": true,
-    "seekBar": true,
-    "timer": true
+    "keyboard": true
   }
 }
 ```
@@ -1009,18 +1041,10 @@ defaults below.
 | --- | --- | --- | --- |
 | `exclusiveSolo?` | `boolean` | `false` | Allows only one track to be active at a time. Useful for comparing alternate performances or stems. |
 | `muteOtherPlayerInstances?` | `boolean` | `true` | Stops other TrackSwitch players on the same page when this one starts playback. |
-| `globalVolume?` | `boolean` | `false` | Shows one master volume control for the whole player. |
-| `trackVolumeControls?` | `boolean` | `false` | Shows per-track volume controls. |
-| `trackPanControls?` | `boolean` | `false` | Shows per-track left/right pan controls. |
 | `customizablePanelOrder?` | `boolean` | `false` | Lets listeners rearrange visible view panels. This affects view order, not track order. |
-| `repeat?` | `boolean` | `false` | Starts playback with repeat enabled. |
 | `tabView?` | `boolean` | `false` | Renders track rows with a tab-like presentation. |
 | `iosAudioUnlock?` | `boolean` | `true` | Helps playback start reliably on iPhone and iPad. Leave this on unless you control the unlock flow yourself. |
 | `keyboard?` | `boolean` | `true` | Enables keyboard shortcuts. |
-| `looping?` | `boolean` | `false` | Shows A/B loop tools and enables loop interactions. |
-| `markerNavigation?` | `boolean` | `true` | Shows previous, direct-jump, and next annotation-marker controls. Controls remain visible but disabled when no audible marker set is available. |
-| `seekBar?` | `boolean` | `true` | Shows the main seek bar. |
-| `timer?` | `boolean` | `true` | Shows the main time display. |
 
 Unknown feature keys are rejected.
 
@@ -1037,10 +1061,10 @@ When `features.keyboard` is on, these shortcuts are available:
 | `Left` / `Right` | Jump backward or forward by 2 seconds. |
 | `Shift + Left` / `Shift + Right` | Jump backward or forward by 5 seconds. |
 | `Home` | Go to the start. |
-| `Up` / `Down` | Change global volume when `globalVolume` is on. |
+| `Up` / `Down` | Change global volume when `navigationBar.globalVolume` is on. |
 | `1` to `0` | Control tracks 1 to 10. |
 
-When `features.looping` is on, these additional shortcuts are available:
+When `navigationBar.looping` is on, these additional shortcuts are available:
 
 | Keys | Action |
 | --- | --- |
@@ -1056,6 +1080,7 @@ be marked directly with right-click on mouse.
 
 - `media` must contain at least one audio entry.
 - `views` must contain at least one view.
+- `views` may contain at most one `navigationBar`.
 - Every ID referenced by `trackList`, `waveform.sourceTracks`, presets, or view `mediaID`
   must exist in `media`.
 - `alignment.referenceTimeline` must be one of the keys in `alignment.timelines`.

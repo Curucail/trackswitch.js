@@ -22,6 +22,7 @@ import type {
 	TrackSwitchEventName,
 	TrackSwitchFeatures,
 	TrackSwitchInit,
+	TrackSwitchNavigationBarViewConfig,
 	TrackSwitchSnapshot,
 	TrackSwitchWarpingMatrixViewConfig,
 } from "../domain/types";
@@ -93,6 +94,7 @@ export class TrackSwitchControllerImpl
 	public markersConfig: MarkersConfig;
 	public media: MediaConfig;
 	public presets: PresetsConfig;
+	public navigationBar: TrackSwitchNavigationBarViewConfig | null;
 	public readonly warpingMatrixView: TrackSwitchWarpingMatrixViewConfig | null;
 
 	public state: PlayerState;
@@ -155,6 +157,8 @@ export class TrackSwitchControllerImpl
 		this.media = config.media;
 		this.markersConfig = config.markers;
 		this.presets = config.presets;
+		this.navigationBar =
+			config.views.find((view) => view.type === "navigationBar") ?? null;
 		this.warpingMatrixView =
 			(config.views.find((view) => view.type === "warpingMatrix") as
 				| TrackSwitchWarpingMatrixViewConfig
@@ -164,7 +168,7 @@ export class TrackSwitchControllerImpl
 			this.features.exclusiveSolo = true;
 		}
 		this.effectiveSingleSoloMode = this.features.exclusiveSolo;
-		this.state = createInitialPlayerState(this.features.repeat);
+		this.state = createInitialPlayerState(!!this.navigationBar?.repeat);
 		this.runtimeMarkers = createRuntimeMarkerSet(IMPLICIT_REFERENCE_TIMELINE);
 
 		this.runtimes = config.tracks.map((track, index) =>
@@ -199,6 +203,7 @@ export class TrackSwitchControllerImpl
 			this.features,
 			this.state.volume,
 			!!this.alignmentConfig,
+			!!this.navigationBar?.globalVolume,
 		);
 		this.waveformEngine = new WaveformEngine();
 		this.sheetMusicEngine = new SheetMusicEngine((referenceTime) => {
@@ -273,6 +278,8 @@ export class TrackSwitchControllerImpl
 				groupIndex: groupIndex,
 				trackIds: view.tracks,
 				rowHeight: view.rowHeight,
+				trackVolumeControls: !!view.trackVolumeControls,
+				trackPanControls: !!view.trackPanControls,
 			});
 			groupIndex += 1;
 		});

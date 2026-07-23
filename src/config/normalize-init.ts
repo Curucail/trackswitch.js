@@ -369,6 +369,11 @@ export function normalizeTrackSwitchConfig(
 	const views: TrackSwitchViewConfig[] = init.views.map((view) =>
 		normalizeViewConfig(view, viewCtx),
 	);
+	if (views.filter((view) => view.type === "navigationBar").length > 1) {
+		throw new Error(
+			"Invalid views configuration: only one navigationBar view is allowed.",
+		);
+	}
 
 	return {
 		tracks,

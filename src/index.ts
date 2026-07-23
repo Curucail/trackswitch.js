@@ -47,6 +47,7 @@ export type {
 	TrackSwitchImageViewConfig,
 	TrackSwitchInit,
 	TrackSwitchMidiViewConfig,
+	TrackSwitchNavigationBarViewConfig,
 	TrackSwitchPerTrackImageViewConfig,
 	TrackSwitchSheetMusicViewConfig,
 	TrackSwitchSnapshot,

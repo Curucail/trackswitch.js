@@ -74,7 +74,10 @@
 		views.push({
 			type: "trackList",
 			tracks: ["violins", "synths", "bass", "drums"],
+			trackVolumeControls: controls.trackVolumeControls,
+			trackPanControls: controls.trackPanControls,
 		});
+		views.unshift(buildNavigationBar(controls));
 
 		var config = {
 			media: media,
@@ -189,7 +192,13 @@
 		if (controls.warpingMatrix) {
 			views.push({ type: "warpingMatrix", x: "hu33", y: "sc06", height: 200 });
 		}
-		views.push({ type: "trackList", tracks: ["hu33", "sc06"] });
+		views.push({
+			type: "trackList",
+			tracks: ["hu33", "sc06"],
+			trackVolumeControls: controls.trackVolumeControls,
+			trackPanControls: controls.trackPanControls,
+		});
+		views.unshift(buildNavigationBar(controls));
 
 		var config = {
 			media: media,
@@ -232,14 +241,18 @@
 		return {
 			exclusiveSolo: aligned || controls.exclusiveSolo,
 			muteOtherPlayerInstances: controls.muteOtherPlayerInstances,
-			globalVolume: controls.globalVolume,
-			trackVolumeControls: controls.trackVolumeControls,
-			trackPanControls: controls.trackPanControls,
 			customizablePanelOrder: controls.customizablePanelOrder,
-			repeat: controls.repeatEnabled,
 			tabView: controls.tabView,
 			iosAudioUnlock: controls.iosAudioUnlock,
 			keyboard: controls.keyboard,
+		};
+	}
+
+	function buildNavigationBar(controls) {
+		return {
+			type: "navigationBar",
+			globalVolume: controls.globalVolume,
+			repeat: controls.repeatEnabled,
 			looping: controls.looping,
 			markerNavigation: controls.markerNavigation,
 			seekBar: controls.seekBar,

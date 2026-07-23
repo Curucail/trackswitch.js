@@ -74,6 +74,15 @@
                 },
                 "views": [
                     {
+                        "type": "navigationBar",
+                        "repeat": false,
+                        "timer": true,
+                        "seekBar": true,
+                        "globalVolume": true,
+                        "looping": true,
+                        "markerNavigation": true
+                    },
+                    {
                         "type": "sheetMusic",
                         "mediaID": "score",
                         "maxHeight": 370,
@@ -105,18 +114,15 @@
                             { "set": "sc06Structure", "color": "#ed8c01", "line": "dashed" }
                         ]
                     },
-                    { "type": "trackList", "tracks": ["hu33", "sc06"] }
+                    {
+                        "type": "trackList",
+                        "tracks": ["hu33", "sc06"],
+                        "trackVolumeControls": true,
+                        "trackPanControls": true
+                    }
                 ],
                 "features": {
-                    "repeat": false,
-                    "timer": true,
-                    "trackVolumeControls": true,
-                    "trackPanControls": true,
-                    "seekBar": true,
                     "keyboard": true,
-                    "globalVolume": true,
-                    "looping": true,
-					"markerNavigation": true,
                     "customizablePanelOrder": false,
                     "tabView": false,
                     "iosAudioUnlock": true,

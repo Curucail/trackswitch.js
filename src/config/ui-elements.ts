@@ -4,6 +4,7 @@ import type {
 	TrackId,
 	TrackSwitchImageViewConfig,
 	TrackSwitchMidiViewConfig,
+	TrackSwitchNavigationBarViewConfig,
 	TrackSwitchPerTrackImageViewConfig,
 	TrackSwitchSheetMusicViewConfig,
 	TrackSwitchTextAlign,
@@ -69,7 +70,22 @@ const uiMidiAllowedKeys = [
 	"seekMarginLeft",
 	"seekMarginRight",
 ] as const;
-const uiTrackListAllowedKeys = ["type", "tracks", "rowHeight"] as const;
+const uiTrackListAllowedKeys = [
+	"type",
+	"tracks",
+	"rowHeight",
+	"trackVolumeControls",
+	"trackPanControls",
+] as const;
+const uiNavigationBarAllowedKeys = [
+	"type",
+	"repeat",
+	"timer",
+	"seekBar",
+	"globalVolume",
+	"looping",
+	"markerNavigation",
+] as const;
 const uiSheetMusicAllowedKeys = [
 	"type",
 	"mediaID",
@@ -111,6 +127,7 @@ const uiAllowedKeysByType: Record<string, readonly string[]> = {
 	waveform: uiWaveformAllowedKeys,
 	midi: uiMidiAllowedKeys,
 	trackList: uiTrackListAllowedKeys,
+	navigationBar: uiNavigationBarAllowedKeys,
 	sheetMusic: uiSheetMusicAllowedKeys,
 	warpingMatrix: uiWarpingMatrixAllowedKeys,
 	text: uiTextAllowedKeys,
@@ -564,6 +581,25 @@ function normalizeTrackListConfig(
 	return {
 		...trackList,
 		rowHeight: normalizePositiveInteger(trackList.rowHeight),
+		trackVolumeControls:
+			normalizeOptionalBoolean(trackList.trackVolumeControls) ?? false,
+		trackPanControls:
+			normalizeOptionalBoolean(trackList.trackPanControls) ?? false,
+	};
+}
+
+function normalizeNavigationBarConfig(
+	navigationBar: TrackSwitchNavigationBarViewConfig,
+): TrackSwitchNavigationBarViewConfig {
+	return {
+		type: "navigationBar",
+		repeat: normalizeOptionalBoolean(navigationBar.repeat) ?? false,
+		timer: normalizeOptionalBoolean(navigationBar.timer) ?? true,
+		seekBar: normalizeOptionalBoolean(navigationBar.seekBar) ?? true,
+		globalVolume: normalizeOptionalBoolean(navigationBar.globalVolume) ?? false,
+		looping: normalizeOptionalBoolean(navigationBar.looping) ?? false,
+		markerNavigation:
+			normalizeOptionalBoolean(navigationBar.markerNavigation) ?? true,
 	};
 }
 
@@ -596,6 +632,8 @@ export function normalizeViewConfig(
 			return normalizeTextConfig(view);
 		case "trackList":
 			return normalizeTrackListConfig(view, ctx);
+		case "navigationBar":
+			return normalizeNavigationBarConfig(view);
 		case "image":
 			return normalizeImageConfig(view, ctx);
 		case "perTrackImage":

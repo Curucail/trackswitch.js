@@ -338,9 +338,11 @@ function buildTrackShortcutAction(
 function getShortcutHelpEntries(
 	features: {
 		exclusiveSolo: boolean;
-		globalVolume: boolean;
-		looping: boolean;
 	},
+	navigationBar: {
+		globalVolume?: boolean;
+		looping?: boolean;
+	} | null,
 	trackCount: number,
 ): ShortcutHelpEntry[] {
 	const entries: ShortcutHelpEntry[] = [
@@ -359,14 +361,14 @@ function getShortcutHelpEntries(
 		},
 	];
 
-	if (features.globalVolume) {
+	if (navigationBar?.globalVolume) {
 		entries.push({
 			keys: "↑ / ↓",
 			action: "Increase or decrease the global volume by 10%.",
 		});
 	}
 
-	if (features.looping) {
+	if (navigationBar?.looping) {
 		entries.push(
 			{ keys: "A", action: "Set loop point A at the current position." },
 			{ keys: "B", action: "Set loop point B at the current position." },
@@ -381,12 +383,14 @@ function getShortcutHelpEntries(
 function buildShortcutHelpHtml(
 	features: {
 		exclusiveSolo: boolean;
-		globalVolume: boolean;
-		looping: boolean;
 	},
+	navigationBar: {
+		globalVolume?: boolean;
+		looping?: boolean;
+	} | null,
 	trackCount: number,
 ): string {
-	const entries = getShortcutHelpEntries(features, trackCount);
+	const entries = getShortcutHelpEntries(features, navigationBar, trackCount);
 	const itemsHtml = entries
 		.map(
 			(entry: ShortcutHelpEntry, index: number) =>
@@ -525,12 +529,17 @@ export function initialize(ctx: any, runtimes: any): any {
 	return function (this: any, runtimes: any) {
 		this.root.classList.add("trackswitch");
 
-		if (!this.query(".main-control")) {
-			this.root.insertAdjacentHTML(
-				"afterbegin",
+		this.root.insertAdjacentHTML(
+			"afterbegin",
+			this.buildPlayerOverlayHtml(runtimes),
+		);
+		this.queryAll(".navigation-bar-host").forEach((host: HTMLElement) => {
+			host.insertAdjacentHTML(
+				"beforebegin",
 				this.buildMainControlHtml(runtimes),
 			);
-		}
+			host.remove();
+		});
 
 		this.wrapSeekableImages();
 		this.wrapWaveformCanvases();
@@ -556,6 +565,36 @@ export function initialize(ctx: any, runtimes: any): any {
 	}.call(ctx, runtimes);
 }
 
+export function buildPlayerOverlayHtml(ctx: any, runtimes: any): any {
+	return function (this: any, runtimes: any) {
+		return (
+			'<div class="overlay overlay-activation"><span class="activate">Activate' +
+			renderIconSlotHtml("power-off") +
+			"</span>" +
+			'<p id="overlaytext"></p>' +
+			'<p id="overlayinfo">' +
+			'<span class="info">Info' +
+			renderIconSlotHtml("circle-info") +
+			"</span>" +
+			'<span class="text">' +
+			"<strong>trackswitch.js</strong> - Open Source Multitrack Audio Player<br />" +
+			'<a href="https://github.com/audiolabs/trackswitch.js">https://github.com/audiolabs/trackswitch.js</a>' +
+			'<br /><br /><span class="overlay-download-info">Expected download size for this player: calculating...</span>' +
+			"</span>" +
+			"</p>" +
+			"</div>" +
+			buildShortcutHelpHtml(
+				this.features,
+				this.navigationBar,
+				runtimes.length,
+			) +
+			(this.navigationBar?.markerNavigation
+				? buildMarkerNavigationDialogHtml(!!this.navigationBar.looping)
+				: "")
+		);
+	}.call(ctx, runtimes);
+}
+
 export function buildMainControlHtml(ctx: any, runtimes: any): any {
 	return function (this: any, runtimes: any) {
 		let presetDropdownHtml = "";
@@ -577,25 +616,6 @@ export function buildMainControlHtml(ctx: any, runtimes: any): any {
 			presetDropdownHtml += "</select></li>";
 		}
 		return (
-			'<div class="overlay overlay-activation"><span class="activate">Activate' +
-			renderIconSlotHtml("power-off") +
-			"</span>" +
-			'<p id="overlaytext"></p>' +
-			'<p id="overlayinfo">' +
-			'<span class="info">Info' +
-			renderIconSlotHtml("circle-info") +
-			"</span>" +
-			'<span class="text">' +
-			"<strong>trackswitch.js</strong> - Open Source Multitrack Audio Player<br />" +
-			'<a href="https://github.com/audiolabs/trackswitch.js">https://github.com/audiolabs/trackswitch.js</a>' +
-			'<br /><br /><span class="overlay-download-info">Expected download size for this player: calculating...</span>' +
-			"</span>" +
-			"</p>" +
-			"</div>" +
-			buildShortcutHelpHtml(this.features, runtimes.length) +
-			(this.features.markerNavigation
-				? buildMarkerNavigationDialogHtml(this.features.looping)
-				: "") +
 			'<div class="main-control ts-stack-section">' +
 			'<ul class="control">' +
 			'<li class="playback-group">' +
@@ -611,13 +631,13 @@ export function buildMainControlHtml(ctx: any, runtimes: any): any {
 			"</li>" +
 			"</ul>" +
 			"</li>" +
-			(this.features.globalVolume
+			(this.navigationBar?.globalVolume
 				? '<li class="volume"><div class="volume-control"><i class="volume-icon">' +
 					renderIconSlotHtml("volume-high") +
 					"</i>" +
 					'<input type="range" class="volume-slider" min="0" max="100" value="100"></div></li>'
 				: "") +
-			(this.features.markerNavigation
+			(this.navigationBar?.markerNavigation
 				? '<li class="marker-navigation-group"><div class="marker-navigation-controls" role="group" aria-label="Marker navigation">' +
 					'<button type="button" class="marker-previous button" title="Previous marker" aria-label="Previous marker" disabled>' +
 					renderIconSlotHtml("marker-previous") +
@@ -630,7 +650,7 @@ export function buildMainControlHtml(ctx: any, runtimes: any): any {
 					"</button>" +
 					"</div></li>"
 				: "") +
-			(this.features.looping
+			(this.navigationBar?.looping
 				? '<li class="loop-group"><ul class="loop-controls">' +
 					'<li class="loop-a button" title="Set Loop Point A (A)" aria-label="Set Loop Point A">' +
 					renderIconSlotHtml("loop-a") +
@@ -650,10 +670,10 @@ export function buildMainControlHtml(ctx: any, runtimes: any): any {
 				? '<li class="sync-global button sync-after-loop" title="Use synchronized version">SYNC</li>'
 				: "") +
 			presetDropdownHtml +
-			(this.features.timer
+			(this.navigationBar?.timer
 				? '<li class="timing"><span class="time">--:--:--:---</span> / <span class="length">--:--:--:---</span></li>'
 				: "") +
-			(this.features.seekBar
+			(this.navigationBar?.seekBar
 				? '<li class="seekwrap">' +
 					'<div class="seekbar">' +
 					'<div class="loop-region"></div>' +
@@ -682,8 +702,13 @@ export function shouldRenderGlobalSync(ctx: any, runtimes: any): any {
 	}.call(ctx, runtimes);
 }
 
-export function buildTrackRow(ctx: any, runtime: any, index: any): any {
-	return function (this: any, runtime: any, index: any) {
+export function buildTrackRow(
+	ctx: any,
+	runtime: any,
+	index: any,
+	trackListOptions: any,
+): any {
+	return function (this: any, runtime: any, index: any, trackListOptions: any) {
 		const tabviewClass = this.features.tabView ? " tabs" : "";
 		const radioSoloClass = this.features.exclusiveSolo ? " radio" : "";
 		const wholeSoloClass = this.features.exclusiveSolo ? " solo" : "";
@@ -720,11 +745,14 @@ export function buildTrackRow(ctx: any, runtime: any, index: any): any {
 
 		track.appendChild(controls);
 
-		if (this.features.trackVolumeControls || this.features.trackPanControls) {
+		if (
+			trackListOptions.trackVolumeControls ||
+			trackListOptions.trackPanControls
+		) {
 			const mixControls = document.createElement("div");
 			mixControls.className = "track-mix-controls";
 
-			if (this.features.trackVolumeControls) {
+			if (trackListOptions.trackVolumeControls) {
 				const volumeControl = document.createElement("div");
 				volumeControl.className = "track-volume-control";
 
@@ -746,7 +774,7 @@ export function buildTrackRow(ctx: any, runtime: any, index: any): any {
 				mixControls.appendChild(volumeControl);
 			}
 
-			if (this.features.trackPanControls) {
+			if (trackListOptions.trackPanControls) {
 				const panControl = document.createElement("div");
 				panControl.className = "track-pan-control";
 
@@ -772,7 +800,7 @@ export function buildTrackRow(ctx: any, runtime: any, index: any): any {
 		}
 
 		return track;
-	}.call(ctx, runtime, index);
+	}.call(ctx, runtime, index, trackListOptions);
 }
 
 export function renderTrackList(ctx: any, runtimes: any): any {
@@ -786,7 +814,12 @@ export function renderTrackList(ctx: any, runtimes: any): any {
 			list.className = "track_list";
 
 			runtimes.forEach((runtime: TrackRuntime, index: number) => {
-				list.appendChild(this.buildTrackRow(runtime, index));
+				list.appendChild(
+					this.buildTrackRow(runtime, index, {
+						trackVolumeControls: false,
+						trackPanControls: false,
+					}),
+				);
 			});
 
 			this.root.appendChild(list);
@@ -807,7 +840,7 @@ export function renderTrackList(ctx: any, runtimes: any): any {
 					continue;
 				}
 
-				const row = this.buildTrackRow(runtime, trackIndex);
+				const row = this.buildTrackRow(runtime, trackIndex, group);
 				if (
 					typeof group.rowHeight === "number" &&
 					Number.isFinite(group.rowHeight) &&
@@ -1332,7 +1365,7 @@ export function updateMainControls(
 			this.updateWarpingMatrix(host, warpingMatrixContext);
 		});
 
-		if (!this.features.looping) {
+		if (!this.navigationBar?.looping) {
 			return;
 		}
 
@@ -1380,7 +1413,7 @@ export function updatePlaybackPosition(
 
 		this.applyFixedWaveformLocalSeekVisuals(state, waveformTimelineContext);
 
-		if (this.features.timer) {
+		if (this.navigationBar?.timer) {
 			this.updateTiming(state.position, state.longestDuration);
 		}
 
@@ -1411,67 +1444,64 @@ export function updateTrackControls(
 		syncEnabled: any,
 	) {
 		runtimes.forEach((runtime: TrackRuntime, index: number) => {
-			const row = this.query(`.track[data-track-index="${index}"]`);
-			if (!row) {
+			const rows = this.queryAll(`.track[data-track-index="${index}"]`);
+			if (rows.length === 0) {
 				return;
 			}
 
-			const solo = row.querySelector(".solo");
 			const isLocked =
 				!!syncLockedTrackIndexes && syncLockedTrackIndexes.has(index);
 
-			row.classList.toggle("solo", effectiveSingleSoloMode);
+			rows.forEach((row: HTMLElement) => {
+				const solo = row.querySelector(".solo");
+				row.classList.toggle("solo", effectiveSingleSoloMode);
 
-			if (solo instanceof HTMLElement) {
-				solo.classList.toggle("checked", runtime.state.solo);
-				solo.classList.toggle("disabled", isLocked);
-				solo.classList.toggle("radio", effectiveSingleSoloMode);
-				applySoloIconState(
-					solo,
-					runtime.state.solo,
-					effectiveSingleSoloMode,
-					!!syncEnabled,
-				);
-			}
+				if (solo instanceof HTMLElement) {
+					solo.classList.toggle("checked", runtime.state.solo);
+					solo.classList.toggle("disabled", isLocked);
+					solo.classList.toggle("radio", effectiveSingleSoloMode);
+					applySoloIconState(
+						solo,
+						runtime.state.solo,
+						effectiveSingleSoloMode,
+						!!syncEnabled,
+					);
+				}
 
-			if (
-				!this.features.trackVolumeControls &&
-				!this.features.trackPanControls
-			) {
-				return;
-			}
+				const trackVolumeSlider = row.querySelector(".track-volume-slider");
+				if (trackVolumeSlider instanceof HTMLInputElement) {
+					trackVolumeSlider.value = String(
+						Math.round(sanitizeVolume(runtime.state.volume) * 100),
+					);
+					trackVolumeSlider.disabled = isLocked;
+				}
 
-			if (this.features.trackVolumeControls) {
-				this.setTrackVolumeSlider(index, runtime.state.volume);
-			}
-			if (this.features.trackPanControls) {
-				this.setTrackPanSlider(index, panSupported ? runtime.state.pan : 0);
-			}
+				const trackPanSlider = row.querySelector(".track-pan-slider");
+				if (trackPanSlider instanceof HTMLInputElement) {
+					trackPanSlider.value = String(
+						Math.round(sanitizePan(panSupported ? runtime.state.pan : 0) * 100),
+					);
+					trackPanSlider.disabled = isLocked || !panSupported;
+				}
 
-			const trackVolumeSlider = row.querySelector(".track-volume-slider");
-			if (trackVolumeSlider instanceof HTMLInputElement) {
-				trackVolumeSlider.disabled = isLocked;
-			}
+				const trackVolumeIcon = row.querySelector(".track-volume-icon");
+				if (trackVolumeIcon instanceof HTMLElement) {
+					this.applyVolumeIconState(trackVolumeIcon, runtime.state.volume);
+				}
 
-			const trackPanSlider = row.querySelector(".track-pan-slider");
-			if (trackPanSlider instanceof HTMLInputElement) {
-				trackPanSlider.disabled = isLocked || !panSupported;
-			}
+				const trackControlGroup = row.querySelector(".track-mix-controls");
+				if (trackControlGroup) {
+					trackControlGroup.classList.toggle("disabled", isLocked);
+				}
 
-			const trackVolumeIcon = row.querySelector(".track-volume-icon");
-			if (trackVolumeIcon instanceof HTMLElement) {
-				this.applyVolumeIconState(trackVolumeIcon, runtime.state.volume);
-			}
-
-			const trackControlGroup = row.querySelector(".track-mix-controls");
-			if (trackControlGroup) {
-				trackControlGroup.classList.toggle("disabled", isLocked);
-			}
-
-			const trackPanControl = row.querySelector(".track-pan-control");
-			if (trackPanControl) {
-				trackPanControl.classList.toggle("disabled", isLocked || !panSupported);
-			}
+				const trackPanControl = row.querySelector(".track-pan-control");
+				if (trackPanControl) {
+					trackPanControl.classList.toggle(
+						"disabled",
+						isLocked || !panSupported,
+					);
+				}
+			});
 		});
 	}.call(
 		ctx,

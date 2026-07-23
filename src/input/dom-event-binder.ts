@@ -590,33 +590,17 @@ export class InputBinder {
 		this.bindKeyboardActivation();
 		this.bindSeekLifecycle();
 		this.bindTrackControls();
-		if (this.features.markerNavigation) {
-			this.bindMarkerNavigationControls();
-		}
-
-		if (this.features.globalVolume) {
-			this.bindGlobalVolumeControls();
-		}
-
-		if (this.features.trackVolumeControls) {
-			this.bindTrackVolumeControls();
-		}
-
-		if (this.features.trackPanControls) {
-			this.bindTrackPanControls();
-		}
-
-		if (this.features.trackVolumeControls || this.features.trackPanControls) {
-			this.bindTrackMixControlPropagation();
-		}
+		this.bindMarkerNavigationControls();
+		this.bindGlobalVolumeControls();
+		this.bindTrackVolumeControls();
+		this.bindTrackPanControls();
+		this.bindTrackMixControlPropagation();
 
 		if (Object.keys(this.controller.presets).length >= 2) {
 			this.bindPresetControls();
 		}
 
-		if (this.features.looping) {
-			this.bindLoopControls();
-		}
+		this.bindLoopControls();
 
 		if (this.features.keyboard) {
 			this.bindKeyboardShortcuts();

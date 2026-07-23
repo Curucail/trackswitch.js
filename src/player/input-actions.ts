@@ -171,7 +171,7 @@ export function onSeekStart(ctx: any, event: any): any {
 		}
 
 		if (
-			this.features.looping &&
+			this.navigationBar?.looping &&
 			event.type === "mousedown" &&
 			event.which === 3
 		) {
@@ -698,7 +698,7 @@ export function onClearLoop(ctx: any, event: any): any {
 export function onMarkerDragStart(ctx: any, event: any): any {
 	return function (this: any, event: any) {
 		if (
-			!this.features.looping ||
+			!this.navigationBar?.looping ||
 			!isPrimaryInput(event) ||
 			this.pinchZoomState
 		) {

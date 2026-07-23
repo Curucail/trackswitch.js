@@ -182,6 +182,11 @@ async function applyAudioPreservingConfig(
 	controller.renderer.renderViews(config.views, buildViewContext(config));
 
 	controller.presets = config.presets;
+	controller.navigationBar =
+		config.views.find((view) => view.type === "navigationBar") ?? null;
+	controller.audioEngine.setGlobalVolumeEnabled(
+		!!controller.navigationBar?.globalVolume,
+	);
 	controller.media = config.media;
 	controller.markersConfig = config.markers;
 	controller.renderer.updateConfig(
@@ -226,6 +231,8 @@ function buildTrackGroups(config: NormalizedTrackSwitchConfig) {
 		groupIndex: number;
 		trackIds: string[];
 		rowHeight: number | undefined;
+		trackVolumeControls: boolean;
+		trackPanControls: boolean;
 	}> = [];
 	config.views.forEach((view) => {
 		if (view.type !== "trackList") {
@@ -235,6 +242,8 @@ function buildTrackGroups(config: NormalizedTrackSwitchConfig) {
 			groupIndex,
 			trackIds: view.tracks,
 			rowHeight: view.rowHeight,
+			trackVolumeControls: !!view.trackVolumeControls,
+			trackPanControls: !!view.trackPanControls,
 		});
 		groupIndex += 1;
 	});
@@ -357,6 +366,11 @@ async function updateConfigNow(
 		controller.runtimes = nextRuntimes;
 		controller.media = nextConfig.media;
 		controller.presets = nextConfig.presets;
+		controller.navigationBar =
+			nextConfig.views.find((view) => view.type === "navigationBar") ?? null;
+		controller.audioEngine.setGlobalVolumeEnabled(
+			!!controller.navigationBar?.globalVolume,
+		);
 		controller.markersConfig = nextConfig.markers;
 		controller.markerSets = stagedMarkerSets;
 		controller.renderer.updateConfig(
