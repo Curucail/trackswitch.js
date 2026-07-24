@@ -113,6 +113,8 @@ export interface MarkerLayerConfig {
 	line?: MarkerLineStyle;
 	/** Marker line width in CSS pixels. */
 	lineWidth?: number;
+	/** Resting opacity (0–1) of markers in this layer. Defaults to the stylesheet's --ts-marker-opacity. */
+	opacity?: number;
 	/** Draw a connector from this timeline to the reference timeline. Ignored when the view's timeline IS the reference. */
 	foldToReference?: boolean;
 }

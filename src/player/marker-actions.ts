@@ -320,9 +320,7 @@ export function submitMarkerNavigationDialog(
 	const loopARequested = values.loopAMarker !== null;
 	const loopBRequested = values.loopBMarker !== null;
 	if (!jumpRequested && !loopARequested && !loopBRequested) {
-		controller.renderer.setMarkerNavigationDialogError(
-			"Choose a marker to jump to or choose both loop points.",
-		);
+		closeMarkerNavigationDialog(controller);
 		return;
 	}
 	if (loopARequested !== loopBRequested) {

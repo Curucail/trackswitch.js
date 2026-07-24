@@ -18,6 +18,8 @@
 	--ts-marker-position: 0%;
 	--ts-marker-highlight-color: var(--ts-color-accent);
 	--ts-marker-line-width: 1px;
+	--ts-marker-opacity: 0.45;
+	--ts-marker-active-opacity: 1;
 	position: absolute;
 	inset-block: 0;
 	left: var(--ts-marker-position);
@@ -26,7 +28,7 @@
 	height: 100%;
 	transform: translateX(-50%);
 	color: var(--ts-color-text-secondary);
-	opacity: 0.45;
+	opacity: var(--ts-marker-opacity);
 	cursor: pointer;
 	pointer-events: auto;
 	touch-action: manipulation;
@@ -70,7 +72,7 @@
 
 .trackswitch .timeline-marker:is(:hover, :focus-visible, :active, .is-active) {
 	color: var(--ts-marker-highlight-color);
-	opacity: 1;
+	opacity: var(--ts-marker-active-opacity);
 	z-index: 2;
 }
 

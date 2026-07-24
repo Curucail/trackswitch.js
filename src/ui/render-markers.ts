@@ -155,6 +155,9 @@ function renderMarkerLayer(
 		if (layer.color) {
 			button.style.setProperty("--ts-marker-highlight-color", layer.color);
 		}
+		if (layer.opacity !== undefined) {
+			button.style.setProperty("--ts-marker-opacity", String(layer.opacity));
+		}
 
 		if (entry.marker.label) {
 			const labelNode = seekWrap.ownerDocument.createElement("span");
@@ -812,7 +815,15 @@ export function openMarkerNavigationDialog(
 	resetMarkerNavigationDialogComboboxes(root);
 	overlay.classList.remove("is-hidden");
 	overlay.setAttribute("aria-hidden", "false");
+	const hasLoopFields = !!root.querySelector(".marker-navigation-loop-fields");
 	root.ownerDocument.defaultView?.requestAnimationFrame(() => {
+		if (!hasLoopFields) {
+			const jumpInput = root.querySelector(".marker-jump-target");
+			if (jumpInput instanceof HTMLInputElement) {
+				jumpInput.focus();
+				return;
+			}
+		}
 		const dialog = root.querySelector(".marker-navigation-dialog");
 		if (dialog instanceof HTMLElement) {
 			dialog.focus();

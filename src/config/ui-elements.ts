@@ -116,6 +116,7 @@ const markerLayerAllowedKeys = [
 	"color",
 	"line",
 	"lineWidth",
+	"opacity",
 	"foldToReference",
 ] as const;
 
@@ -283,11 +284,24 @@ function normalizeMarkerLayers(
 			);
 		}
 
+		if (
+			layer.opacity !== undefined &&
+			(typeof layer.opacity !== "number" ||
+				!Number.isFinite(layer.opacity) ||
+				layer.opacity < 0 ||
+				layer.opacity > 1)
+		) {
+			throw new Error(
+				`Invalid ${label}.markerLayers configuration: opacity must be a number between 0 and 1.`,
+			);
+		}
+
 		return {
 			set: layer.set,
 			color: layer.color,
 			line: layer.line ?? "dashed",
 			lineWidth: layer.lineWidth ?? 1,
+			opacity: layer.opacity,
 			foldToReference: !!layer.foldToReference,
 		};
 	});
