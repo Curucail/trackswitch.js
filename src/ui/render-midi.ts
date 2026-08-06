@@ -1,25 +1,37 @@
 import { Midi } from "@tonejs/midi";
-import type { WaveformPlaybackFollowMode } from "../domain/types";
-import { sanitizeInlineStyle } from "../shared/dom";
-import { formatSecondsToHHMMSSmmm } from "../shared/format";
-import { clampPercent } from "../shared/math";
+import type {
+	TrackSwitchMidiViewConfig,
+	TrackSwitchUiState,
+	WaveformPlaybackFollowMode,
+} from "../domain/types";
+import { applyCssOverrides } from "../shared/dom";
 import {
 	clampTimelineValue,
 	getTimelineMaximumZoom,
 	getTimelineSurfaceWidth,
 	getTimelineViewportState,
 	MIN_TIMELINE_ZOOM,
+	positionTileCanvas,
 	reflowTimelineSurface,
+	refreshTimelineViewportWidth,
+	resizeCanvasForCssSize,
 	resolveTimelineBaseWidth,
 	resolveTimelinePlaybackFollowScrollLeft,
+	resolveVisibleTileWindow,
 	sanitizeTimelineDuration,
 	setTimelineZoomForSurface,
 	updateTimelineMinimapViewport,
 } from "./timeline-surface";
+import type { ConfiguredViewHost, ViewRenderer } from "./view-renderer";
 
 const MIN_MIDI_ZOOM = MIN_TIMELINE_ZOOM;
 const MIDI_RANGE_PADDING = 2;
-const MIN_MIDI_NOTE_WIDTH = 36;
+const MIN_MIDI_NOTE_WIDTH = 1;
+/** Below this row height an outline would swallow the note body, so skip it. */
+const MIDI_NOTE_BORDER_MIN_HEIGHT = 4;
+/** A velocity bar is only legible once the note rect is at least this large. */
+const MIDI_VELOCITY_BAR_MIN_HEIGHT = 8;
+const MIDI_VELOCITY_BAR_MIN_WIDTH = 6;
 
 interface MidiNoteEvent {
 	midi: number;
@@ -29,15 +41,23 @@ interface MidiNoteEvent {
 	velocity: number;
 }
 
+interface MidiNoteColors {
+	fill: string;
+	border: string;
+	velocity: string;
+}
+
 export interface MidiSeekSurfaceMetadata {
 	wrapper: HTMLElement;
 	scrollContainer: HTMLElement;
 	surface: HTMLElement;
-	noteLayer: HTMLElement;
+	noteCanvas: HTMLCanvasElement;
 	overlay: HTMLElement;
 	seekWrap: HTMLElement;
 	source: string;
 	alignmentColumn: string | null;
+	/** The media entry this roll draws, which is also its timeline id. */
+	mediaId: string;
 	playbackFollowMode: WaveformPlaybackFollowMode;
 	originalHeight: number;
 	maxZoomSeconds: number;
@@ -48,18 +68,27 @@ export interface MidiSeekSurfaceMetadata {
 	zoomMinimapNode: HTMLElement;
 	zoomCanvas: HTMLCanvasElement;
 	zoomViewportNode: HTMLElement;
+	/** Parsed file, cached so the header is available for tick conversion. */
+	midi: Midi | null;
 	notes: MidiNoteEvent[];
 	minMidi: number;
 	maxMidi: number;
 	midiDurationSeconds: number;
+	/** Longest note in `notes`; lets the draw loop bound its backwards scan. */
+	maxNoteDuration: number;
+	noteColors: MidiNoteColors | null;
 	lastRenderKey: string | null;
 	lastMinimapKey: string | null;
+	lastPlaybackKey: string | null;
+	lastFollowScrollLeft: number | null;
 }
 
-export interface MidiTimelineContext {
+interface MidiTimelineContext {
 	duration: number;
 	toReferenceTime(timelineTime: number): number;
 	fromReferenceTime(referenceTime: number): number;
+	/** See `WaveformTimelineContext.getPlaybackPosition`. */
+	playbackPosition?(): number | null;
 }
 
 export type MidiTimelineContextResolver = (
@@ -74,42 +103,10 @@ function sanitizeDuration(value: number): number {
 	return sanitizeTimelineDuration(value);
 }
 
-function parseMidiPlaybackFollowMode(
-	value: string | null,
-): WaveformPlaybackFollowMode {
-	const normalized =
-		typeof value === "string" ? value.trim().toLowerCase() : "";
-
-	if (normalized === "center" || normalized === "jump") {
-		return normalized;
-	}
-
-	return "off";
-}
-
-function parseMidiBoolean(value: string | null): boolean {
-	return typeof value === "string" && value.trim().toLowerCase() === "true";
-}
-
-function parsePositiveFiniteNumber(
-	value: string | null,
-	fallback: number,
-): number {
-	const parsed = Number(value);
-	if (!Number.isFinite(parsed) || parsed <= 0) {
-		return fallback;
-	}
-
-	return parsed;
-}
-
-function buildSeekWrap(leftPercent: number, rightPercent: number): string {
+/** The player draws the piano roll itself, so the seek surface spans it exactly. */
+function buildSeekWrap(): string {
 	return (
-		'<div class="seekwrap" style="left: ' +
-		leftPercent +
-		"%; right: " +
-		rightPercent +
-		'%;">' +
+		'<div class="seekwrap">' +
 		'<div class="loop-region"></div>' +
 		'<div class="loop-marker marker-a"></div>' +
 		'<div class="loop-marker marker-b"></div>' +
@@ -140,31 +137,6 @@ function updateMidiMinimapViewport(surface: MidiSeekSurfaceMetadata): void {
 	updateTimelineMinimapViewport(surface);
 }
 
-function resizeCanvasForCssSize(
-	canvas: HTMLCanvasElement,
-	width: number,
-	height: number,
-): CanvasRenderingContext2D | null {
-	const ratio = Math.max(1, window.devicePixelRatio || 1);
-	const pixelWidth = Math.max(1, Math.round(width * ratio));
-	const pixelHeight = Math.max(1, Math.round(height * ratio));
-	if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
-		canvas.width = pixelWidth;
-		canvas.height = pixelHeight;
-	}
-	canvas.style.width = `${Math.max(1, Math.round(width))}px`;
-	canvas.style.height = `${Math.max(1, Math.round(height))}px`;
-
-	const context = canvas.getContext("2d");
-	if (!context) {
-		return null;
-	}
-
-	context.setTransform(ratio, 0, 0, ratio, 0, 0);
-	context.clearRect(0, 0, width, height);
-	return context;
-}
-
 function setMidiSurfaceWidth(
 	surface: MidiSeekSurfaceMetadata,
 	width?: number,
@@ -172,7 +144,7 @@ function setMidiSurfaceWidth(
 	const surfaceWidth = width ?? getMidiSurfaceWidth(surface);
 	surface.surface.style.width = `${surfaceWidth}px`;
 	surface.surface.style.height = `${surface.originalHeight}px`;
-	surface.noteLayer.style.height = `${surface.originalHeight}px`;
+	surface.noteCanvas.style.height = `${surface.originalHeight}px`;
 	updateMidiMinimapViewport(surface);
 }
 
@@ -242,18 +214,63 @@ function applyMidiNotes(
 	let minMidi = Number.POSITIVE_INFINITY;
 	let maxMidi = Number.NEGATIVE_INFINITY;
 	let durationSeconds = 0;
+	let maxNoteDuration = 0;
 	for (const note of notes) {
 		minMidi = Math.min(minMidi, note.midi);
 		maxMidi = Math.max(maxMidi, note.midi);
 		durationSeconds = Math.max(durationSeconds, note.time + note.duration);
+		maxNoteDuration = Math.max(maxNoteDuration, note.duration);
 	}
 
 	surface.notes = notes;
 	surface.minMidi = Math.floor(minMidi) - MIDI_RANGE_PADDING;
 	surface.maxMidi = Math.ceil(maxMidi) + MIDI_RANGE_PADDING;
 	surface.midiDurationSeconds = durationSeconds;
+	surface.maxNoteDuration = maxNoteDuration;
 	surface.lastRenderKey = null;
 	surface.lastMinimapKey = null;
+}
+
+function resolveMidiNoteColors(
+	surface: MidiSeekSurfaceMetadata,
+): MidiNoteColors {
+	if (surface.noteColors) {
+		return surface.noteColors;
+	}
+
+	const computed = getComputedStyle(surface.noteCanvas);
+	const read = (property: string, fallback: string): string =>
+		computed.getPropertyValue(property).trim() || fallback;
+	const colors: MidiNoteColors = {
+		fill: read("--midi-note-fill", "rgba(0, 0, 0, 0.3)"),
+		border: read("--midi-note-border", "rgba(0, 0, 0, 0.55)"),
+		velocity: read("--midi-note-color", "#000"),
+	};
+	surface.noteColors = colors;
+	return colors;
+}
+
+/**
+ * Index of the first note that can still overlap `startTime`. Notes are sorted
+ * by start time, so anything beginning more than `maxNoteDuration` earlier has
+ * certainly ended before the window opens.
+ */
+function findFirstVisibleNoteIndex(
+	notes: MidiNoteEvent[],
+	startTime: number,
+): number {
+	let low = 0;
+	let high = notes.length;
+	while (low < high) {
+		const middle = (low + high) >>> 1;
+		if (notes[middle].time < startTime) {
+			low = middle + 1;
+		} else {
+			high = middle;
+		}
+	}
+
+	return low;
 }
 
 function renderMidiMinimap(
@@ -303,62 +320,105 @@ function renderMidiMinimap(
 	updateMidiMinimapViewport(surface);
 }
 
+/**
+ * Draws the notes onto a single viewport-sized canvas that slides over the
+ * virtual surface, mirroring the waveform tile layer. Only the notes intersecting
+ * the buffered window are visited, so the cost tracks the viewport rather than
+ * the size of the MIDI file.
+ */
 function renderMidiNotes(
 	surface: MidiSeekSurfaceMetadata,
 	durationSeconds: number,
 ): void {
-	const surfaceWidth = getMidiSurfaceWidth(surface);
 	const height = surface.originalHeight;
 	const safeDuration = sanitizeDuration(durationSeconds);
+	const tileWindow = resolveVisibleTileWindow(surface, height);
+	positionTileCanvas(surface.noteCanvas, tileWindow);
+
+	const { tileStartPx, tileCssWidth, tileCssHeight, surfaceWidth } = tileWindow;
 	const renderKey = [
+		tileStartPx,
+		tileCssWidth,
+		tileCssHeight,
 		surfaceWidth,
-		height,
 		Math.round(safeDuration * 1000),
 		surface.notes.length,
 		surface.minMidi,
 		surface.maxMidi,
+		Math.max(1, window.devicePixelRatio || 1),
 	].join("#");
 	if (surface.lastRenderKey === renderKey) {
 		return;
 	}
 
-	surface.noteLayer.replaceChildren();
+	const context = resizeCanvasForCssSize(
+		surface.noteCanvas,
+		tileCssWidth,
+		tileCssHeight,
+	);
+	if (!context) {
+		return;
+	}
+
+	surface.lastRenderKey = renderKey;
+	if (safeDuration <= 0 || surfaceWidth <= 0) {
+		return;
+	}
+
+	// Draw in surface coordinates; the canvas only covers [tileStartPx, +width).
+	context.translate(-tileStartPx, 0);
+
+	const colors = resolveMidiNoteColors(surface);
 	const range = Math.max(1, surface.maxMidi - surface.minMidi + 1);
 	const rowHeight = height / range;
-	for (const note of surface.notes) {
-		if (safeDuration <= 0) {
+	const noteHeight = Math.max(3, rowHeight - 2);
+	const pixelsPerSecond = surfaceWidth / safeDuration;
+	const visibleStartTime = tileStartPx / pixelsPerSecond;
+	const visibleEndTime = (tileStartPx + tileCssWidth) / pixelsPerSecond;
+	const drawBorder = rowHeight >= MIDI_NOTE_BORDER_MIN_HEIGHT;
+	const drawVelocityBar = noteHeight >= MIDI_VELOCITY_BAR_MIN_HEIGHT;
+
+	context.lineWidth = 1;
+	context.strokeStyle = colors.border;
+
+	const notes = surface.notes;
+	const startIndex = findFirstVisibleNoteIndex(
+		notes,
+		visibleStartTime - surface.maxNoteDuration,
+	);
+	for (let index = startIndex; index < notes.length; index += 1) {
+		const note = notes[index];
+		if (note.time > visibleEndTime) {
+			break;
+		}
+
+		if (note.time + note.duration < visibleStartTime) {
 			continue;
 		}
 
-		const left = (note.time / safeDuration) * surfaceWidth;
+		const left = note.time * pixelsPerSecond;
 		const width = Math.max(
 			MIN_MIDI_NOTE_WIDTH,
-			(note.duration / safeDuration) * surfaceWidth,
+			note.duration * pixelsPerSecond,
 		);
-		const top = (surface.maxMidi - note.midi) * rowHeight;
-		const noteElement = document.createElement("div");
-		noteElement.className = "midi-note";
-		noteElement.style.left = `${left}px`;
-		noteElement.style.top = `${top + 1}px`;
-		noteElement.style.width = `${width}px`;
-		noteElement.style.height = `${Math.max(3, rowHeight - 2)}px`;
-		noteElement.style.setProperty(
-			"--ts-midi-note-velocity",
-			String(clampTime(note.velocity, 0, 1)),
-		);
+		const top = (surface.maxMidi - note.midi) * rowHeight + 1;
+		const velocity = clampTime(note.velocity, 0, 1);
 
-		const label = document.createElement("span");
-		label.className = "midi-note-label";
-		label.textContent = note.name;
-		noteElement.appendChild(label);
+		context.globalAlpha = 0.35 + velocity * 0.55;
+		context.fillStyle = colors.fill;
+		context.fillRect(left, top, width, noteHeight);
+		if (drawBorder) {
+			context.strokeRect(left + 0.5, top + 0.5, width - 1, noteHeight - 1);
+		}
 
-		const velocity = document.createElement("span");
-		velocity.className = "midi-note-velocity";
-		noteElement.appendChild(velocity);
-
-		surface.noteLayer.appendChild(noteElement);
+		if (drawVelocityBar && width >= MIDI_VELOCITY_BAR_MIN_WIDTH) {
+			const barWidth = Math.max(1, (width - 6) * velocity);
+			context.globalAlpha = 1;
+			context.fillStyle = colors.velocity;
+			context.fillRect(left + 3, top + noteHeight - 5, barWidth, 3);
+		}
 	}
-	surface.lastRenderKey = renderKey;
+	context.globalAlpha = 1;
 }
 
 function resolvePlaybackFollowScrollLeft(
@@ -396,8 +456,8 @@ function resolveMidiTimelinePosition(
 	return clampTime(playerPosition, 0, duration);
 }
 
-export function wrapMidiCanvases(ctx: any): any {
-	return function (this: any) {
+export function wrapMidiCanvases(ctx: ViewRenderer): void {
+	(function (this: ViewRenderer) {
 		this.midiSeekSurfaces.length = 0;
 
 		const canvases = this.root.querySelectorAll("canvas.midi");
@@ -410,18 +470,16 @@ export function wrapMidiCanvases(ctx: any): any {
 				return;
 			}
 
-			const source = String(canvasElement.getAttribute("data-midi-src") || "");
-			if (!source) {
-				return;
-			}
+			const definition: ConfiguredViewHost =
+				this.getConfiguredViewHost(canvasElement);
+			if (definition.view.type !== "midi") return;
+			const config = definition.view as TrackSwitchMidiViewConfig;
+			const source = definition.source;
+			if (!source) return;
 
 			const wrapper = document.createElement("div");
 			wrapper.className = "midi-wrap ts-stack-section";
-			wrapper.setAttribute(
-				"style",
-				sanitizeInlineStyle(canvasElement.getAttribute("data-midi-style")) +
-					"; display: block;",
-			);
+			applyCssOverrides(wrapper, config.css);
 
 			const scrollContainer = document.createElement("div");
 			scrollContainer.className = "midi-scroll";
@@ -429,8 +487,10 @@ export function wrapMidiCanvases(ctx: any): any {
 			const surface = document.createElement("div");
 			surface.className = "midi-surface";
 
-			const noteLayer = document.createElement("div");
-			noteLayer.className = "midi-note-layer";
+			// One viewport-sized canvas slides over the virtual MIDI surface, so the
+			// note count no longer drives the DOM node count.
+			const noteCanvas = document.createElement("canvas");
+			noteCanvas.className = "midi-note-layer";
 
 			const overlay = document.createElement("div");
 			overlay.className = "midi-overlay";
@@ -443,14 +503,8 @@ export function wrapMidiCanvases(ctx: any): any {
 			parent.insertBefore(wrapper, canvasElement);
 			wrapper.appendChild(scrollContainer);
 			scrollContainer.appendChild(surface);
-			surface.appendChild(noteLayer);
-			surface.insertAdjacentHTML(
-				"beforeend",
-				buildSeekWrap(
-					clampPercent(canvasElement.getAttribute("data-seek-margin-left")),
-					clampPercent(canvasElement.getAttribute("data-seek-margin-right")),
-				),
-			);
+			surface.appendChild(noteCanvas);
+			surface.insertAdjacentHTML("beforeend", buildSeekWrap());
 			wrapper.appendChild(overlay);
 			canvasElement.remove();
 
@@ -458,17 +512,21 @@ export function wrapMidiCanvases(ctx: any): any {
 			if (!(seekWrap instanceof HTMLElement)) {
 				return;
 			}
+			this.registerSeekMarkerLayers(seekWrap, config.markerLayers);
+			this.registerSeekTimeline(
+				seekWrap,
+				definition.alignmentTimeline?.trim() || null,
+			);
 			seekWrap.setAttribute("data-seek-surface", "midi");
 
 			const originalHeight = Math.max(1, canvasElement.height);
 			surface.style.height = `${originalHeight}px`;
-			noteLayer.style.height = `${originalHeight}px`;
+			noteCanvas.style.height = `${originalHeight}px`;
 
-			const timingNode = parseMidiBoolean(
-				canvasElement.getAttribute("data-midi-timer"),
-			)
-				? createMidiTimingNode(overlay)
-				: null;
+			// Same default as a waveform: an aligned player runs every surface on its
+			// own local clock, which is only readable with the timer on.
+			const timerEnabled = config.timer ?? this.isAlignmentMode();
+			const timingNode = timerEnabled ? createMidiTimingNode(overlay) : null;
 			const zoomNode = createMidiZoomNode(overlay);
 			const zoomMinimapNode = zoomNode.querySelector(".midi-zoom-minimap");
 			const zoomCanvas = zoomNode.querySelector(".midi-zoom-canvas");
@@ -485,21 +543,15 @@ export function wrapMidiCanvases(ctx: any): any {
 				wrapper,
 				scrollContainer,
 				surface,
-				noteLayer,
+				noteCanvas,
 				overlay,
 				seekWrap,
 				source,
-				alignmentColumn:
-					canvasElement.getAttribute("data-midi-alignment-column")?.trim() ||
-					null,
-				playbackFollowMode: parseMidiPlaybackFollowMode(
-					canvasElement.getAttribute("data-midi-playback-follow-mode"),
-				),
+				alignmentColumn: definition.alignmentTimeline?.trim() || null,
+				mediaId: config.mediaID,
+				playbackFollowMode: config.playbackFollowMode ?? "center",
 				originalHeight,
-				maxZoomSeconds: parsePositiveFiniteNumber(
-					canvasElement.getAttribute("data-midi-max-zoom"),
-					5,
-				),
+				maxZoomSeconds: config.maxZoom ?? 5,
 				baseWidth: this.resolveMidiBaseWidth(
 					scrollContainer,
 					canvasElement.width,
@@ -510,72 +562,117 @@ export function wrapMidiCanvases(ctx: any): any {
 				zoomMinimapNode,
 				zoomCanvas,
 				zoomViewportNode,
+				midi: null,
 				notes: [],
 				minMidi: 0,
 				maxMidi: 0,
 				midiDurationSeconds: 0,
+				maxNoteDuration: 0,
+				noteColors: null,
 				lastRenderKey: null,
 				lastMinimapKey: null,
+				lastPlaybackKey: null,
+				lastFollowScrollLeft: null,
 			};
 			this.midiSeekSurfaces.push(metadata);
 
 			scrollContainer.addEventListener(
 				"scroll",
 				() => {
+					// Scroll handlers run after layout, so refreshing the cached width
+					// here is free and keeps the per-frame paths off the layout path.
+					refreshTimelineViewportWidth(metadata);
 					updateMidiMinimapViewport(metadata);
+					this.scheduleMidiNoteRefresh();
 				},
 				{ passive: true },
 			);
 		});
-	}.call(ctx);
+	}).call(ctx);
 }
 
 export function resolveMidiBaseWidth(
-	ctx: any,
+	ctx: ViewRenderer,
 	scrollContainer: HTMLElement,
 	fallback: number,
 ): number {
-	return function (this: any, scrollContainer: HTMLElement, fallback: number) {
+	return function (
+		this: ViewRenderer,
+		scrollContainer: HTMLElement,
+		fallback: number,
+	) {
 		return resolveTimelineBaseWidth(scrollContainer, fallback);
 	}.call(ctx, scrollContainer, fallback);
 }
 
-export function reflowMidiDisplays(ctx: any): any {
-	return function (this: any) {
+export function reflowMidiDisplays(ctx: ViewRenderer): void {
+	(function (this: ViewRenderer) {
 		this.midiSeekSurfaces.forEach((surface: MidiSeekSurfaceMetadata) => {
+			// Theme variables may have changed along with the layout.
+			surface.noteColors = null;
 			reflowTimelineSurface(surface, setMidiSurfaceWidth);
 		});
-	}.call(ctx);
+	}).call(ctx);
 }
 
-export async function initializeMidiDisplays(
-	ctx: any,
-	timelineDuration: number,
-	useMidiLocalTimeline = false,
-): Promise<void> {
-	const surfaces = ctx.midiSeekSurfaces as MidiSeekSurfaceMetadata[];
+/**
+ * Fetch and decode every MIDI source. Split out of rendering so that
+ * `midiDurationSeconds` and the parsed header — which the alignment needs for
+ * extents and tick conversion — are available before the alignment resolves.
+ * The parsed file is cached on the surface so nothing is fetched twice.
+ */
+export async function loadMidiSources(ctx: ViewRenderer): Promise<void> {
+	const surfaces = ctx.midiSeekSurfaces;
 	if (surfaces.length === 0) {
 		return;
 	}
 
 	await Promise.all(
 		surfaces.map(async (surface) => {
+			if (surface.midi) {
+				return;
+			}
 			surface.wrapper.classList.add("midi-loading");
 			const midi = await Midi.fromUrl(surface.source);
+			surface.midi = midi;
 			applyMidiNotes(surface, flattenMidiNotes(midi, surface.source));
 			surface.wrapper.classList.remove("midi-loading");
 		}),
 	);
+}
+
+/** Parsed MIDI files keyed by source url, for reuse by the media profiler. */
+export function getLoadedMidiBySource(ctx: ViewRenderer): Map<string, Midi> {
+	const bySource = new Map<string, Midi>();
+	ctx.midiSeekSurfaces.forEach((surface) => {
+		if (surface.midi) {
+			bySource.set(surface.source, surface.midi);
+		}
+	});
+	return bySource;
+}
+
+export async function initializeMidiDisplays(
+	ctx: ViewRenderer,
+	timelineDuration: number,
+	useMidiLocalTimeline = false,
+): Promise<void> {
+	const surfaces = ctx.midiSeekSurfaces;
+	if (surfaces.length === 0) {
+		return;
+	}
+
+	await loadMidiSources(ctx);
 	ctx.renderMidiDisplays(timelineDuration, useMidiLocalTimeline);
 }
 
 export function renderMidiDisplays(
-	ctx: any,
+	ctx: ViewRenderer,
 	timelineDuration: number,
 	useMidiLocalTimeline = false,
-): any {
-	return function (
-		this: any,
+): void {
+	(function (
+		this: ViewRenderer,
 		timelineDuration: number,
 		useMidiLocalTimeline: boolean,
 	) {
@@ -583,6 +680,7 @@ export function renderMidiDisplays(
 			return;
 		}
 
+		this.latestMidiRenderInput = { timelineDuration, useMidiLocalTimeline };
 		this.reflowMidiDisplays();
 		this.midiSeekSurfaces.forEach((surface: MidiSeekSurfaceMetadata) => {
 			const surfaceDuration = resolveMidiTimelineDuration(
@@ -599,27 +697,56 @@ export function renderMidiDisplays(
 			renderMidiMinimap(surface, surfaceDuration);
 		});
 		this.updateMidiZoomIndicators();
-	}.call(ctx, timelineDuration, useMidiLocalTimeline);
+	}).call(ctx, timelineDuration, useMidiLocalTimeline);
+}
+
+/**
+ * Redraws the sliding note canvases from the inputs of the last full render.
+ * Unlike `renderMidiDisplays` this touches no layout and never writes
+ * `scrollLeft`, so it is safe to run from scroll and zoom handlers.
+ */
+export function refreshMidiNoteTiles(ctx: ViewRenderer): void {
+	(function (this: ViewRenderer) {
+		const latestInput = this.latestMidiRenderInput;
+		if (!latestInput || this.midiSeekSurfaces.length === 0) {
+			return;
+		}
+
+		this.midiSeekSurfaces.forEach((surface: MidiSeekSurfaceMetadata) => {
+			const surfaceDuration = resolveMidiTimelineDuration(
+				surface,
+				latestInput.timelineDuration,
+				latestInput.useMidiLocalTimeline,
+			);
+			renderMidiNotes(surface, surfaceDuration);
+			renderMidiMinimap(surface, surfaceDuration);
+		});
+	}).call(ctx);
+}
+
+export function scheduleMidiNoteRefresh(ctx: ViewRenderer): void {
+	(function (this: ViewRenderer) {
+		if (this.midiNoteRefreshFrameId !== null) {
+			return;
+		}
+
+		this.midiNoteRefreshFrameId = requestAnimationFrame(() => {
+			this.midiNoteRefreshFrameId = null;
+			this.refreshMidiNoteTiles();
+		});
+	}).call(ctx);
 }
 
 export function updateMidiPlaybackState(
-	ctx: any,
-	state: {
-		position: number;
-		longestDuration: number;
-		loop?: { pointA: number | null; pointB: number | null; enabled: boolean };
-	},
+	ctx: ViewRenderer,
+	state: TrackSwitchUiState,
 	suppressPlaybackFollow: boolean,
 	useMidiLocalTimeline = false,
 	timelineContextResolver?: MidiTimelineContextResolver,
-): any {
-	return function (
-		this: any,
-		state: {
-			position: number;
-			longestDuration: number;
-			loop?: { pointA: number | null; pointB: number | null; enabled: boolean };
-		},
+): void {
+	(function (
+		this: ViewRenderer,
+		state: TrackSwitchUiState,
 		suppressPlaybackFollow: boolean,
 		useMidiLocalTimeline: boolean,
 		timelineContextResolver?: MidiTimelineContextResolver,
@@ -637,7 +764,8 @@ export function updateMidiPlaybackState(
 					);
 			const position = timelineContext
 				? clampTime(
-						timelineContext.fromReferenceTime(state.position),
+						timelineContext.playbackPosition?.() ??
+							timelineContext.fromReferenceTime(state.position),
 						0,
 						safeDuration,
 					)
@@ -667,6 +795,21 @@ export function updateMidiPlaybackState(
 								safeDuration,
 							)
 						: clampTime(state.loop.pointB, 0, safeDuration);
+			// This runs on every 16 ms playback tick, so bail out early when nothing
+			// observable changed since the previous one.
+			const playbackKey = [
+				Math.round(position * 1000),
+				Math.round(safeDuration * 1000),
+				loopPointA === null ? "-" : Math.round(loopPointA * 1000),
+				loopPointB === null ? "-" : Math.round(loopPointB * 1000),
+				state.loop?.enabled === true ? "1" : "0",
+				suppressPlaybackFollow ? "1" : "0",
+			].join("#");
+			if (surface.lastPlaybackKey === playbackKey) {
+				return;
+			}
+			surface.lastPlaybackKey = playbackKey;
+
 			this.updateSeekWrapVisuals(surface.seekWrap, position, safeDuration, {
 				pointA: loopPointA,
 				pointB: loopPointB,
@@ -674,10 +817,14 @@ export function updateMidiPlaybackState(
 			});
 
 			if (surface.timingNode) {
-				surface.timingNode.textContent =
-					formatSecondsToHHMMSSmmm(position) +
-					" / " +
-					formatSecondsToHHMMSSmmm(safeDuration);
+				// A MIDI surface always shows its own file's clock, so it reads out
+				// in the unit its own alignment column was declared in.
+				const timeline = surface.mediaId;
+				surface.timingNode.textContent = this.formatLocalTimelinePair(
+					timeline,
+					position,
+					safeDuration,
+				);
 			}
 
 			if (!suppressPlaybackFollow && safeDuration > 0) {
@@ -685,13 +832,19 @@ export function updateMidiPlaybackState(
 					surface,
 					position / safeDuration,
 				);
-				if (Number.isFinite(scrollLeft)) {
+				// Writing scrollLeft and then reading layout back would force a
+				// synchronous reflow every tick. The native scroll event already
+				// refreshes the minimap viewport and the note tiles.
+				if (
+					Number.isFinite(scrollLeft) &&
+					scrollLeft !== surface.lastFollowScrollLeft
+				) {
+					surface.lastFollowScrollLeft = scrollLeft as number;
 					surface.scrollContainer.scrollLeft = scrollLeft as number;
-					updateMidiMinimapViewport(surface);
 				}
 			}
 		});
-	}.call(
+	}).call(
 		ctx,
 		state,
 		suppressPlaybackFollow,
@@ -700,8 +853,8 @@ export function updateMidiPlaybackState(
 	);
 }
 
-export function updateMidiZoomIndicators(ctx: any): any {
-	return function (this: any) {
+export function updateMidiZoomIndicators(ctx: ViewRenderer): void {
+	(function (this: ViewRenderer) {
 		this.midiSeekSurfaces.forEach((surface: MidiSeekSurfaceMetadata) => {
 			if (surface.zoom <= MIN_MIDI_ZOOM + 0.000001) {
 				surface.zoomNode.style.display = "none";
@@ -711,16 +864,19 @@ export function updateMidiZoomIndicators(ctx: any): any {
 			updateMidiMinimapViewport(surface);
 			surface.zoomNode.style.display = "flex";
 		});
-	}.call(ctx);
+	}).call(ctx);
 }
 
-export function findMidiSurface(ctx: any, seekWrap: HTMLElement | null): any {
-	return function (this: any, seekWrap: HTMLElement | null) {
+export function findMidiSurface(
+	ctx: ViewRenderer,
+	seekWrap: HTMLElement | null,
+): MidiSeekSurfaceMetadata | null {
+	return function (this: ViewRenderer, seekWrap: HTMLElement | null) {
 		if (!seekWrap) {
 			return null;
 		}
 
-		for (const surface of this.midiSeekSurfaces as MidiSeekSurfaceMetadata[]) {
+		for (const surface of this.midiSeekSurfaces) {
 			if (surface.seekWrap === seekWrap) {
 				return surface;
 			}
@@ -730,19 +886,26 @@ export function findMidiSurface(ctx: any, seekWrap: HTMLElement | null): any {
 	}.call(ctx, seekWrap);
 }
 
-export function getMidiZoom(ctx: any, seekWrap: HTMLElement): any {
-	return function (this: any, seekWrap: HTMLElement) {
+export function getMidiZoom(
+	ctx: ViewRenderer,
+	seekWrap: HTMLElement,
+): number | null {
+	return function (this: ViewRenderer, seekWrap: HTMLElement) {
 		const surface = this.findMidiSurface(seekWrap);
 		return surface ? surface.zoom : null;
 	}.call(ctx, seekWrap);
 }
 
 export function isMidiZoomEnabled(
-	ctx: any,
+	ctx: ViewRenderer,
 	seekWrap: HTMLElement,
 	durationSeconds: number,
-): any {
-	return function (this: any, seekWrap: HTMLElement, durationSeconds: number) {
+): boolean {
+	return function (
+		this: ViewRenderer,
+		seekWrap: HTMLElement,
+		durationSeconds: number,
+	) {
 		const surface = this.findMidiSurface(seekWrap);
 		return surface
 			? getMidiMaximumZoom(surface, durationSeconds) > MIN_MIDI_ZOOM
@@ -751,14 +914,14 @@ export function isMidiZoomEnabled(
 }
 
 export function setMidiZoom(
-	ctx: any,
+	ctx: ViewRenderer,
 	seekWrap: HTMLElement,
 	zoom: number,
 	durationSeconds: number,
 	anchorPageX?: number,
-): any {
+): boolean {
 	return function (
-		this: any,
+		this: ViewRenderer,
 		seekWrap: HTMLElement,
 		zoom: number,
 		durationSeconds: number,
@@ -776,25 +939,39 @@ export function setMidiZoom(
 			anchorPageX,
 		);
 		if (changed) {
-			this.renderMidiDisplays(durationSeconds, false);
+			// Geometry is applied synchronously above so the anchor stays under the
+			// cursor; the redraw is coalesced to one per frame.
+			this.latestMidiRenderInput = {
+				timelineDuration: durationSeconds,
+				useMidiLocalTimeline: false,
+			};
+			this.updateMidiZoomIndicators();
+			this.scheduleMidiNoteRefresh();
 		}
 		return changed;
 	}.call(ctx, seekWrap, zoom, durationSeconds, anchorPageX);
 }
 
-export function getMidiMinimapViewport(ctx: any, seekWrap: HTMLElement): any {
-	return function (this: any, seekWrap: HTMLElement) {
+export function getMidiMinimapViewport(
+	ctx: ViewRenderer,
+	seekWrap: HTMLElement,
+): { startRatio: number; widthRatio: number } | null {
+	return function (this: ViewRenderer, seekWrap: HTMLElement) {
 		const surface = this.findMidiSurface(seekWrap);
 		return surface ? getMidiViewportState(surface) : null;
 	}.call(ctx, seekWrap);
 }
 
 export function setMidiMinimapViewportStart(
-	ctx: any,
+	ctx: ViewRenderer,
 	seekWrap: HTMLElement,
 	startRatio: number,
-): any {
-	return function (this: any, seekWrap: HTMLElement, startRatio: number) {
+): boolean {
+	return function (
+		this: ViewRenderer,
+		seekWrap: HTMLElement,
+		startRatio: number,
+	) {
 		const surface = this.findMidiSurface(seekWrap);
 		if (!surface) {
 			return false;
@@ -824,8 +1001,13 @@ export function setMidiMinimapViewportStart(
 	}.call(ctx, seekWrap, startRatio);
 }
 
-export function destroyMidiDisplays(ctx: any): any {
-	return function (this: any) {
+export function destroyMidiDisplays(ctx: ViewRenderer): void {
+	(function (this: ViewRenderer) {
+		if (this.midiNoteRefreshFrameId !== null) {
+			cancelAnimationFrame(this.midiNoteRefreshFrameId);
+			this.midiNoteRefreshFrameId = null;
+		}
+		this.latestMidiRenderInput = null;
 		this.midiSeekSurfaces.length = 0;
-	}.call(ctx);
+	}).call(ctx);
 }

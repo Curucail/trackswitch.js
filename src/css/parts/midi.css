@@ -31,46 +31,20 @@
 	background: var(--ts-color-surface-base);
 }
 
+/*
+ * A single canvas that slides over the virtual surface; `left`, `width` and
+ * `height` are written by the renderer. The custom properties below are the
+ * theming hooks the note drawing reads.
+ */
 .trackswitch .midi-wrap .midi-note-layer {
 	position: absolute;
-	inset: 0;
-}
-
-.trackswitch .midi-wrap .midi-note {
-	position: absolute;
-	overflow: hidden;
-	box-sizing: border-box;
-	border: 1px solid var(--ts-color-accent-soft-55);
-	border-radius: 2px;
-	background: var(--ts-color-accent-soft-30);
-	color: var(--ts-color-text-primary);
-	font-family: var(--ts-font-ui);
-	font-size: 10px;
-	line-height: 1;
-	white-space: nowrap;
-	box-shadow: inset 0 1px 0 var(--ts-color-surface-raised-42);
-}
-
-.trackswitch .midi-wrap .midi-note-label {
-	position: relative;
-	z-index: 1;
+	top: 0;
+	left: 0;
 	display: block;
-	overflow: hidden;
-	padding: 2px 4px 0;
-	text-overflow: clip;
 	pointer-events: none;
-}
-
-.trackswitch .midi-wrap .midi-note-velocity {
-	position: absolute;
-	left: 3px;
-	right: auto;
-	bottom: 2px;
-	width: max(1px, calc((100% - 6px) * var(--ts-midi-note-velocity)));
-	height: 3px;
-	border-radius: 1px;
-	background: var(--ts-color-accent);
-	pointer-events: none;
+	--midi-note-fill: var(--ts-color-accent-soft-30);
+	--midi-note-border: var(--ts-color-accent-soft-55);
+	--midi-note-color: var(--ts-color-accent);
 }
 
 .trackswitch .midi-wrap .midi-overlay {

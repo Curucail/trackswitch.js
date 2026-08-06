@@ -1,0 +1,1243 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"type": "object",
+	"properties": {
+		"$schema": {
+			"type": "string",
+			"description": "URL of the published JSON Schema. Ignored by the player; editors read it to offer completion and validation while a config file is being written."
+		},
+		"media": {
+			"$ref": "#/definitions/MediaConfig"
+		},
+		"alignment": {
+			"$ref": "#/definitions/AlignmentConfig"
+		},
+		"markers": {
+			"$ref": "#/definitions/MarkersConfig"
+		},
+		"presets": {
+			"$ref": "#/definitions/PresetsConfig"
+		},
+		"views": {
+			"type": "array",
+			"items": {
+				"$ref": "#/definitions/TrackSwitchViewConfig"
+			}
+		},
+		"features": {
+			"type": "object",
+			"properties": {
+				"muteOtherPlayerInstances": {
+					"type": "boolean"
+				},
+				"customizablePanelOrder": {
+					"type": "boolean"
+				},
+				"tabView": {
+					"type": "boolean"
+				},
+				"keyboard": {
+					"type": "boolean"
+				}
+			},
+			"additionalProperties": false
+		},
+		"css": {
+			"$ref": "#/definitions/TrackSwitchCssOverrides",
+			"description": "Theming overrides for the whole player."
+		}
+	},
+	"required": [
+		"media",
+		"views"
+	],
+	"additionalProperties": false,
+	"definitions": {
+		"MediaConfig": {
+			"type": "object",
+			"additionalProperties": {
+				"$ref": "#/definitions/MediaEntryConfig"
+			},
+			"propertyNames": {
+				"description": "A media id doubles as a timeline id; a track id is a media id restricted to `type: 'audio'`."
+			}
+		},
+		"MediaEntryConfig": {
+			"oneOf": [
+				{
+					"$ref": "#/definitions/AudioMediaEntryConfig"
+				},
+				{
+					"$ref": "#/definitions/MidiMediaEntryConfig"
+				},
+				{
+					"$ref": "#/definitions/MusicXmlMediaEntryConfig"
+				},
+				{
+					"$ref": "#/definitions/ImageMediaEntryConfig"
+				}
+			]
+		},
+		"AudioMediaEntryConfig": {
+			"type": "object",
+			"properties": {
+				"type": {
+					"type": "string",
+					"const": "audio"
+				},
+				"src": {
+					"type": "string"
+				},
+				"title": {
+					"type": "string"
+				},
+				"timelineUnit": {
+					"$ref": "#/definitions/TimelineUnit",
+					"description": "The unit this medium's positions are expressed in: its alignment column is read in it, and every surface the medium owns reads out in it. Omitted, the medium uses the native unit of its type."
+				},
+				"imageID": {
+					"$ref": "#/definitions/MediaId",
+					"description": "Names an `image` media entry shown by a `perTrackImage` view while this track is the only soloed one. Being a medium, it carries its own alignment column, so a per-stem spectrogram seeks and folds markers like any other timed image."
+				},
+				"css": {
+					"$ref": "#/definitions/TrackSwitchCssOverrides"
+				},
+				"solo": {
+					"type": "boolean"
+				},
+				"volume": {
+					"type": "number"
+				},
+				"pan": {
+					"type": "number"
+				},
+				"startOffsetMs": {
+					"type": "number"
+				},
+				"endOffsetMs": {
+					"type": "number"
+				},
+				"srcSynchronized": {
+					"$ref": "#/definitions/SynchronizedAudioSourceConfig"
+				}
+			},
+			"required": [
+				"type",
+				"src"
+			],
+			"additionalProperties": false
+		},
+		"TimelineUnit": {
+			"type": "string",
+			"enum": [
+				"seconds",
+				"samples",
+				"ticks",
+				"measures",
+				"percent",
+				"pixels"
+			],
+			"description": "The unit a timeline's alignment column is authored in. Each medium has one native unit it plays back in (audio and MIDI: seconds, a score: measures, an image: percent of its width); the others are declared alternatives that are converted to the native unit when the alignment is parsed — see `src/timeline/media-profile.ts`."
+		},
+		"MediaId": {
+			"type": "string",
+			"description": "A media id doubles as a timeline id; a track id is a media id restricted to `type: 'audio'`."
+		},
+		"TrackSwitchCssOverrides": {
+			"type": "object",
+			"properties": {
+				"--ts-color-text-primary": {
+					"type": "string",
+					"description": "Default: #000000"
+				},
+				"--ts-color-text-inverse": {
+					"type": "string",
+					"description": "Default: #ffffff"
+				},
+				"--ts-color-text-muted": {
+					"type": "string",
+					"description": "Default: #dddddd"
+				},
+				"--ts-color-text-secondary": {
+					"type": "string",
+					"description": "Default: #666666"
+				},
+				"--ts-color-text-error": {
+					"type": "string",
+					"description": "Default: #c03328"
+				},
+				"--ts-color-surface-base": {
+					"type": "string",
+					"description": "Default: #eeeeee"
+				},
+				"--ts-color-surface-panel-dark": {
+					"type": "string",
+					"description": "Default: #383838"
+				},
+				"--ts-color-surface-panel-dark-50": {
+					"type": "string",
+					"description": "Default: rgba(56, 56, 56, 0.5)"
+				},
+				"--ts-color-surface-panel-dark-08": {
+					"type": "string",
+					"description": "Default: rgba(56, 56, 56, 0.08)"
+				},
+				"--ts-color-surface-panel-dark-12": {
+					"type": "string",
+					"description": "Default: rgba(56, 56, 56, 0.12)"
+				},
+				"--ts-color-surface-panel-dark-14": {
+					"type": "string",
+					"description": "Default: rgba(56, 56, 56, 0.14)"
+				},
+				"--ts-color-surface-panel-dark-16": {
+					"type": "string",
+					"description": "Default: rgba(56, 56, 56, 0.16)"
+				},
+				"--ts-color-surface-control": {
+					"type": "string",
+					"description": "Default: #555555"
+				},
+				"--ts-color-surface-raised-16": {
+					"type": "string",
+					"description": "Default: rgba(255, 255, 255, 0.16)"
+				},
+				"--ts-color-surface-raised-18": {
+					"type": "string",
+					"description": "Default: rgba(255, 255, 255, 0.18)"
+				},
+				"--ts-color-surface-raised-42": {
+					"type": "string",
+					"description": "Default: rgba(255, 255, 255, 0.42)"
+				},
+				"--ts-color-surface-raised-48": {
+					"type": "string",
+					"description": "Default: rgba(255, 255, 255, 0.48)"
+				},
+				"--ts-color-surface-raised-52": {
+					"type": "string",
+					"description": "Default: rgba(255, 255, 255, 0.52)"
+				},
+				"--ts-color-surface-raised-58": {
+					"type": "string",
+					"description": "Default: rgba(255, 255, 255, 0.58)"
+				},
+				"--ts-color-surface-raised-62": {
+					"type": "string",
+					"description": "Default: rgba(255, 255, 255, 0.62)"
+				},
+				"--ts-color-surface-raised-66": {
+					"type": "string",
+					"description": "Default: rgba(255, 255, 255, 0.66)"
+				},
+				"--ts-color-surface-raised-72": {
+					"type": "string",
+					"description": "Default: rgba(255, 255, 255, 0.72)"
+				},
+				"--ts-color-surface-raised-86": {
+					"type": "string",
+					"description": "Default: rgba(255, 255, 255, 0.86)"
+				},
+				"--ts-color-surface-raised-88": {
+					"type": "string",
+					"description": "Default: rgba(255, 255, 255, 0.88)"
+				},
+				"--ts-color-surface-raised-90": {
+					"type": "string",
+					"description": "Default: rgba(255, 255, 255, 0.9)"
+				},
+				"--ts-color-surface-raised-92": {
+					"type": "string",
+					"description": "Default: rgba(255, 255, 255, 0.92)"
+				},
+				"--ts-color-surface-raised-94": {
+					"type": "string",
+					"description": "Default: rgba(255, 255, 255, 0.94)"
+				},
+				"--ts-color-surface-raised-98": {
+					"type": "string",
+					"description": "Default: rgba(255, 255, 255, 0.98)"
+				},
+				"--ts-color-surface-inverse-soft-10": {
+					"type": "string",
+					"description": "Default: rgba(255, 255, 255, 0.1)"
+				},
+				"--ts-color-surface-inverse-soft-12": {
+					"type": "string",
+					"description": "Default: rgba(255, 255, 255, 0.12)"
+				},
+				"--ts-color-surface-inverse-soft-78": {
+					"type": "string",
+					"description": "Default: rgba(255, 255, 255, 0.78)"
+				},
+				"--ts-color-border-mid": {
+					"type": "string",
+					"description": "Default: #999999"
+				},
+				"--ts-color-border-mid-20": {
+					"type": "string",
+					"description": "Default: rgba(153, 153, 153, 0.2)"
+				},
+				"--ts-color-border-mid-26": {
+					"type": "string",
+					"description": "Default: rgba(153, 153, 153, 0.26)"
+				},
+				"--ts-color-border-mid-35": {
+					"type": "string",
+					"description": "Default: rgba(153, 153, 153, 0.35)"
+				},
+				"--ts-color-border-mid-45": {
+					"type": "string",
+					"description": "Default: rgba(153, 153, 153, 0.45)"
+				},
+				"--ts-color-border-mid-55": {
+					"type": "string",
+					"description": "Default: rgba(153, 153, 153, 0.55)"
+				},
+				"--ts-color-border-mid-56": {
+					"type": "string",
+					"description": "Default: rgba(153, 153, 153, 0.56)"
+				},
+				"--ts-color-border-mid-60": {
+					"type": "string",
+					"description": "Default: rgba(153, 153, 153, 0.6)"
+				},
+				"--ts-color-border-mid-65": {
+					"type": "string",
+					"description": "Default: rgba(153, 153, 153, 0.65)"
+				},
+				"--ts-color-border-mid-70": {
+					"type": "string",
+					"description": "Default: rgba(153, 153, 153, 0.7)"
+				},
+				"--ts-color-border-mid-75": {
+					"type": "string",
+					"description": "Default: rgba(153, 153, 153, 0.75)"
+				},
+				"--ts-color-border-hover-ring": {
+					"type": "string",
+					"description": "Default: rgba(153, 153, 153, 0.18)"
+				},
+				"--ts-color-accent": {
+					"type": "string",
+					"description": "Default: #ed8c01"
+				},
+				"--ts-color-accent-soft-06": {
+					"type": "string",
+					"description": "Default: rgba(237, 140, 1, 0.06)"
+				},
+				"--ts-color-accent-soft-08": {
+					"type": "string",
+					"description": "Default: rgba(237, 140, 1, 0.08)"
+				},
+				"--ts-color-accent-soft-10": {
+					"type": "string",
+					"description": "Default: rgba(237, 140, 1, 0.1)"
+				},
+				"--ts-color-accent-soft-15": {
+					"type": "string",
+					"description": "Default: rgba(237, 140, 1, 0.12)"
+				},
+				"--ts-color-accent-soft-20": {
+					"type": "string",
+					"description": "Default: rgba(237, 140, 1, 0.2)"
+				},
+				"--ts-color-accent-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(237, 140, 1, 0.25)"
+				},
+				"--ts-color-accent-soft-32": {
+					"type": "string",
+					"description": "Default: rgba(237, 140, 1, 0.32)"
+				},
+				"--ts-color-accent-soft-45": {
+					"type": "string",
+					"description": "Default: rgba(237, 140, 1, 0.45)"
+				},
+				"--ts-color-accent-soft-50": {
+					"type": "string",
+					"description": "Default: rgba(237, 140, 1, 0.5)"
+				},
+				"--ts-color-accent-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(237, 140, 1, 0.55)"
+				},
+				"--ts-color-accent-shadow": {
+					"type": "string",
+					"description": "Default: rgba(237, 140, 1, 0.18)"
+				},
+				"--ts-color-overlay-dim": {
+					"type": "string",
+					"description": "Default: rgba(0, 0, 0, 0.5)"
+				},
+				"--ts-color-overlay-dim-68": {
+					"type": "string",
+					"description": "Default: rgba(0, 0, 0, 0.65)"
+				},
+				"--ts-color-overlay-dim-48": {
+					"type": "string",
+					"description": "Default: rgba(0, 0, 0, 0.48)"
+				},
+				"--ts-color-overlay-ring": {
+					"type": "string",
+					"description": "Default: rgba(0, 0, 0, 0.18)"
+				},
+				"--ts-color-overlay-button": {
+					"type": "string",
+					"description": "Default: rgba(56, 56, 56, 0.82)"
+				},
+				"--ts-color-shadow-soft": {
+					"type": "string",
+					"description": "Default: var(--ts-color-overlay-ring)"
+				},
+				"--ts-color-shadow-medium": {
+					"type": "string",
+					"description": "Default: rgba(0, 0, 0, 0.22)"
+				},
+				"--ts-color-shadow-strong": {
+					"type": "string",
+					"description": "Default: rgba(0, 0, 0, 0.3)"
+				},
+				"--ts-color-shadow-modal": {
+					"type": "string",
+					"description": "Default: rgba(0, 0, 0, 0.26)"
+				},
+				"--ts-color-shortcut-panel-bg": {
+					"type": "string",
+					"description": "Default: rgba(72, 72, 72, 0.96)"
+				},
+				"--ts-color-alignment-points": {
+					"type": "string",
+					"description": "Default: rgba(128, 128, 128, 0.5)"
+				},
+				"--ts-color-track-error-bg": {
+					"type": "string",
+					"description": "Default: #dd9b9b"
+				},
+				"--ts-color-track-error-soft": {
+					"type": "string",
+					"description": "Default: rgba(192, 51, 40, 0.08)"
+				},
+				"--ts-focus-ring-color": {
+					"type": "string",
+					"description": "Default: var(--ts-color-accent-soft-45)"
+				},
+				"--ts-main-control-icon-size": {
+					"type": "string",
+					"description": "Default: 14px"
+				},
+				"--ts-main-control-large-button-size": {
+					"type": "string",
+					"description": "Default: 20px"
+				},
+				"--ts-preset-selector-height": {
+					"type": "string",
+					"description": "Default: 24px"
+				},
+				"--ts-main-control-height": {
+					"type": "string",
+					"description": "Default: 24px"
+				},
+				"--ts-main-control-padding-block-start": {
+					"type": "string",
+					"description": "Default: 8px"
+				},
+				"--ts-main-control-padding-block-end": {
+					"type": "string",
+					"description": "Default: 8px"
+				},
+				"--ts-main-control-padding-inline": {
+					"type": "string",
+					"description": "Default: 12px"
+				},
+				"--ts-main-control-row-gap": {
+					"type": "string",
+					"description": "Default: 8px"
+				},
+				"--ts-main-control-column-gap": {
+					"type": "string",
+					"description": "Default: 16px"
+				},
+				"--ts-main-control-playback-gap": {
+					"type": "string",
+					"description": "Default: 10px"
+				},
+				"--ts-main-control-loop-gap": {
+					"type": "string",
+					"description": "Default: 2px"
+				},
+				"--ts-track-min-height": {
+					"type": "string",
+					"description": "Default: 32px"
+				},
+				"--ts-track-padding-block": {
+					"type": "string",
+					"description": "Default: 8px"
+				},
+				"--ts-track-padding-inline": {
+					"type": "string",
+					"description": "Default: 10px"
+				},
+				"--ts-track-control-column": {
+					"type": "string",
+					"description": "Default: 30px"
+				},
+				"--ts-track-list-indent": {
+					"type": "string",
+					"description": "Default: 18px"
+				},
+				"--ts-track-control-size": {
+					"type": "string",
+					"description": "Default: 24px"
+				},
+				"--ts-track-mix-gap": {
+					"type": "string",
+					"description": "Default: 14px"
+				},
+				"--ts-track-mix-padding": {
+					"type": "string",
+					"description": "Default: 14px"
+				},
+				"--ts-seekbar-height": {
+					"type": "string",
+					"description": "Default: 6px"
+				},
+				"--ts-main-seek-hit-height": {
+					"type": "string",
+					"description": "Default: 20px"
+				},
+				"--ts-main-seekhead-width": {
+					"type": "string",
+					"description": "Default: 5px"
+				},
+				"--ts-main-seekhead-half-width": {
+					"type": "string",
+					"description": "Default: 2.5px"
+				},
+				"--ts-main-seekhead-height": {
+					"type": "string",
+					"description": "Default: 20px"
+				},
+				"--ts-seek-marker-hit-width": {
+					"type": "string",
+					"description": "Default: 10px"
+				},
+				"--ts-seek-marker-line-width": {
+					"type": "string",
+					"description": "Default: 2px"
+				},
+				"--ts-seek-marker-dash": {
+					"type": "string",
+					"description": "Default: 6px"
+				},
+				"--ts-seek-marker-gap": {
+					"type": "string",
+					"description": "Default: 2px"
+				},
+				"--ts-waveform-seekhead-width": {
+					"type": "string",
+					"description": "Default: 2px"
+				},
+				"--ts-panel-gutter-sm": {
+					"type": "string",
+					"description": "Default: 12px"
+				},
+				"--ts-panel-gutter-md": {
+					"type": "string",
+					"description": "Default: 16px"
+				},
+				"--ts-panel-gutter-lg": {
+					"type": "string",
+					"description": "Default: 22px"
+				},
+				"--ts-interactive-panel-padding": {
+					"type": "string",
+					"description": "Default: 18px"
+				},
+				"--ts-interactive-panel-gap": {
+					"type": "string",
+					"description": "Default: 18px"
+				},
+				"--ts-slider-thumb-size": {
+					"type": "string",
+					"description": "Default: 12px"
+				},
+				"--ts-slider-track-size": {
+					"type": "string",
+					"description": "Default: 5px"
+				},
+				"--ts-slider-hit-size": {
+					"type": "string",
+					"description": "Default: 16px"
+				},
+				"--ts-slider-width": {
+					"type": "string",
+					"description": "Default: 80px"
+				},
+				"--ts-slider-track-color": {
+					"type": "string",
+					"description": "Default: var(--ts-color-surface-control)"
+				},
+				"--ts-slider-thumb-color": {
+					"type": "string",
+					"description": "Default: var(--ts-color-accent)"
+				},
+				"--ts-shortcut-delay": {
+					"type": "string",
+					"description": "Default: 40ms"
+				}
+			},
+			"additionalProperties": false,
+			"description": "Overrides for the player's public `--ts-*` theming custom properties, set on the element the block belongs to. Custom properties inherit, so a block on a view reaches everything that view renders — an accent colour set on one waveform recolours that waveform alone — while the top-level block on `TrackSwitchInit` reaches the whole player."
+		},
+		"SynchronizedAudioSourceConfig": {
+			"type": "object",
+			"properties": {
+				"src": {
+					"type": "string"
+				},
+				"startOffsetMs": {
+					"type": "number",
+					"description": "Trims and pads this file, independently of the media entry's own offsets: a time-warped rendition carries its silence differently from the original."
+				},
+				"endOffsetMs": {
+					"type": "number"
+				}
+			},
+			"required": [
+				"src"
+			],
+			"additionalProperties": false
+		},
+		"MidiMediaEntryConfig": {
+			"type": "object",
+			"properties": {
+				"type": {
+					"type": "string",
+					"const": "midi"
+				},
+				"src": {
+					"type": "string"
+				},
+				"timelineUnit": {
+					"$ref": "#/definitions/TimelineUnit",
+					"description": "See `AudioMediaEntryConfig.timelineUnit`."
+				}
+			},
+			"required": [
+				"type",
+				"src"
+			],
+			"additionalProperties": false
+		},
+		"MusicXmlMediaEntryConfig": {
+			"type": "object",
+			"properties": {
+				"type": {
+					"type": "string",
+					"const": "musicxml"
+				},
+				"src": {
+					"type": "string"
+				},
+				"timelineUnit": {
+					"$ref": "#/definitions/TimelineUnit",
+					"description": "See `AudioMediaEntryConfig.timelineUnit`."
+				}
+			},
+			"required": [
+				"type",
+				"src"
+			],
+			"additionalProperties": false
+		},
+		"ImageMediaEntryConfig": {
+			"type": "object",
+			"properties": {
+				"type": {
+					"type": "string",
+					"const": "image"
+				},
+				"src": {
+					"type": "string"
+				},
+				"timelineUnit": {
+					"$ref": "#/definitions/TimelineUnit",
+					"description": "See `AudioMediaEntryConfig.timelineUnit`."
+				}
+			},
+			"required": [
+				"type",
+				"src"
+			],
+			"additionalProperties": false,
+			"description": "An image with a time axis — a spectrogram, a scanned page, a structure plot. Its native coordinate is percent of its width; `timelineUnit: \"pixels\"` reads its column as pixel columns instead."
+		},
+		"AlignmentConfig": {
+			"type": "object",
+			"properties": {
+				"src": {
+					"type": "string"
+				},
+				"referenceTimeline": {
+					"type": "string"
+				},
+				"timelines": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "string"
+					},
+					"description": "timeline id -> CSV column name. What the column's numbers mean is the medium's business: see `media.timelineUnit`."
+				},
+				"outsideCoverage": {
+					"$ref": "#/definitions/OutsideCoverageMode"
+				},
+				"duplicatePlacements": {
+					"$ref": "#/definitions/DuplicatePlacementPolicy"
+				}
+			},
+			"required": [
+				"src",
+				"referenceTimeline",
+				"timelines"
+			],
+			"additionalProperties": false
+		},
+		"OutsideCoverageMode": {
+			"type": "string",
+			"enum": [
+				"hold",
+				"extrapolate",
+				"error"
+			],
+			"description": "What a projection does for positions outside a timeline's coverage — the span its alignment placements actually annotate."
+		},
+		"DuplicatePlacementPolicy": {
+			"type": "string",
+			"enum": [
+				"first",
+				"average",
+				"error"
+			],
+			"description": "How a projection resolves several alignment rows that place one timeline at the same position — the shape a repeat produces, where one performance revisits a stretch the other plays only once."
+		},
+		"MarkersConfig": {
+			"type": "object",
+			"additionalProperties": {
+				"$ref": "#/definitions/MarkerSetSourceConfig"
+			}
+		},
+		"MarkerSetSourceConfig": {
+			"type": "object",
+			"properties": {
+				"src": {
+					"type": "string"
+				},
+				"timeline": {
+					"type": "string",
+					"description": "Defaults to the reference timeline; meaningless (and omittable) with no alignment block."
+				},
+				"timeCol": {
+					"type": "string",
+					"description": "CSV column with marker positions, read in the timeline unit of the timeline they belong to."
+				},
+				"labelCol": {
+					"type": "string"
+				}
+			},
+			"required": [
+				"src",
+				"timeCol"
+			],
+			"additionalProperties": false
+		},
+		"PresetsConfig": {
+			"type": "object",
+			"additionalProperties": {
+				"$ref": "#/definitions/PresetConfig"
+			}
+		},
+		"PresetConfig": {
+			"type": "object",
+			"properties": {
+				"label": {
+					"type": "string"
+				},
+				"tracks": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/TrackId"
+					}
+				}
+			},
+			"required": [
+				"tracks"
+			],
+			"additionalProperties": false
+		},
+		"TrackId": {
+			"$ref": "#/definitions/MediaId"
+		},
+		"TrackSwitchViewConfig": {
+			"oneOf": [
+				{
+					"$ref": "#/definitions/TrackSwitchImageViewConfig"
+				},
+				{
+					"$ref": "#/definitions/TrackSwitchPerTrackImageViewConfig"
+				},
+				{
+					"$ref": "#/definitions/TrackSwitchWaveformViewConfig"
+				},
+				{
+					"$ref": "#/definitions/TrackSwitchMidiViewConfig"
+				},
+				{
+					"$ref": "#/definitions/TrackSwitchSheetMusicViewConfig"
+				},
+				{
+					"$ref": "#/definitions/TrackSwitchWarpingMatrixViewConfig"
+				},
+				{
+					"$ref": "#/definitions/TrackSwitchTextViewConfig"
+				},
+				{
+					"$ref": "#/definitions/TrackSwitchSeparatorViewConfig"
+				},
+				{
+					"$ref": "#/definitions/TrackSwitchTrackListViewConfig"
+				},
+				{
+					"$ref": "#/definitions/TrackSwitchNavigationBarViewConfig"
+				}
+			]
+		},
+		"TrackSwitchImageViewConfig": {
+			"type": "object",
+			"properties": {
+				"type": {
+					"type": "string",
+					"const": "image"
+				},
+				"mediaID": {
+					"$ref": "#/definitions/MediaId",
+					"description": "Names the `image` media entry this view displays."
+				},
+				"seekable": {
+					"type": "boolean"
+				},
+				"css": {
+					"$ref": "#/definitions/TrackSwitchCssOverrides"
+				},
+				"seekMarginLeft": {
+					"type": "number"
+				},
+				"seekMarginRight": {
+					"type": "number"
+				},
+				"markerLayers": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/MarkerLayerConfig"
+					}
+				}
+			},
+			"required": [
+				"type",
+				"mediaID"
+			],
+			"additionalProperties": false
+		},
+		"MarkerLayerConfig": {
+			"type": "object",
+			"properties": {
+				"set": {
+					"type": "string"
+				},
+				"color": {
+					"type": "string"
+				},
+				"line": {
+					"type": "string",
+					"enum": [
+						"solid",
+						"dashed"
+					]
+				},
+				"lineWidth": {
+					"type": "number",
+					"description": "Marker line width in CSS pixels."
+				},
+				"opacity": {
+					"type": "number",
+					"description": "Resting opacity (0–1) of markers in this layer. Defaults to the stylesheet's --ts-marker-opacity."
+				},
+				"foldToReference": {
+					"type": "boolean",
+					"description": "Draw a connector from this timeline to the reference timeline. Ignored when the view's timeline IS the reference."
+				}
+			},
+			"required": [
+				"set"
+			],
+			"additionalProperties": false
+		},
+		"TrackSwitchPerTrackImageViewConfig": {
+			"type": "object",
+			"properties": {
+				"type": {
+					"type": "string",
+					"const": "perTrackImage"
+				},
+				"seekable": {
+					"type": "boolean"
+				},
+				"css": {
+					"$ref": "#/definitions/TrackSwitchCssOverrides"
+				},
+				"seekMarginLeft": {
+					"type": "number"
+				},
+				"seekMarginRight": {
+					"type": "number"
+				},
+				"markerLayers": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/MarkerLayerConfig"
+					}
+				}
+			},
+			"required": [
+				"type"
+			],
+			"additionalProperties": false
+		},
+		"TrackSwitchWaveformViewConfig": {
+			"type": "object",
+			"properties": {
+				"type": {
+					"type": "string",
+					"const": "waveform"
+				},
+				"tracks": {
+					"anyOf": [
+						{
+							"type": "array",
+							"items": {
+								"$ref": "#/definitions/TrackId"
+							}
+						},
+						{
+							"type": "string",
+							"const": "audible"
+						}
+					]
+				},
+				"height": {
+					"type": "number"
+				},
+				"waveformBarWidth": {
+					"type": "number"
+				},
+				"maxZoom": {
+					"type": "number"
+				},
+				"playbackFollowMode": {
+					"$ref": "#/definitions/WaveformPlaybackFollowMode"
+				},
+				"timeAxis": {
+					"$ref": "#/definitions/WaveformTimeAxis"
+				},
+				"timer": {
+					"type": "boolean"
+				},
+				"alignedPlayhead": {
+					"type": "boolean"
+				},
+				"markerLayers": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/MarkerLayerConfig"
+					}
+				},
+				"css": {
+					"$ref": "#/definitions/TrackSwitchCssOverrides"
+				}
+			},
+			"required": [
+				"type"
+			],
+			"additionalProperties": false
+		},
+		"WaveformPlaybackFollowMode": {
+			"type": "string",
+			"enum": [
+				"off",
+				"center",
+				"jump"
+			]
+		},
+		"WaveformTimeAxis": {
+			"type": "string",
+			"enum": [
+				"shared",
+				"individual"
+			],
+			"description": "Whether a fixed-track waveform uses the shared duration or its own duration."
+		},
+		"TrackSwitchMidiViewConfig": {
+			"type": "object",
+			"properties": {
+				"type": {
+					"type": "string",
+					"const": "midi"
+				},
+				"mediaID": {
+					"$ref": "#/definitions/MediaId"
+				},
+				"height": {
+					"type": "number"
+				},
+				"maxZoom": {
+					"type": "number"
+				},
+				"playbackFollowMode": {
+					"$ref": "#/definitions/WaveformPlaybackFollowMode"
+				},
+				"timer": {
+					"type": "boolean"
+				},
+				"markerLayers": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/MarkerLayerConfig"
+					}
+				},
+				"css": {
+					"$ref": "#/definitions/TrackSwitchCssOverrides"
+				}
+			},
+			"required": [
+				"type",
+				"mediaID"
+			],
+			"additionalProperties": false
+		},
+		"TrackSwitchSheetMusicViewConfig": {
+			"type": "object",
+			"properties": {
+				"type": {
+					"type": "string",
+					"const": "sheetMusic"
+				},
+				"mediaID": {
+					"$ref": "#/definitions/MediaId"
+				},
+				"maxWidth": {
+					"type": "number"
+				},
+				"maxHeight": {
+					"type": "number"
+				},
+				"renderScale": {
+					"type": "number"
+				},
+				"followPlayback": {
+					"type": "boolean"
+				},
+				"css": {
+					"$ref": "#/definitions/TrackSwitchCssOverrides"
+				},
+				"cursorColor": {
+					"type": "string"
+				},
+				"cursorAlpha": {
+					"type": "number"
+				}
+			},
+			"required": [
+				"type",
+				"mediaID"
+			],
+			"additionalProperties": false
+		},
+		"TrackSwitchWarpingMatrixViewConfig": {
+			"type": "object",
+			"properties": {
+				"type": {
+					"type": "string",
+					"const": "warpingMatrix"
+				},
+				"x": {
+					"$ref": "#/definitions/TrackId"
+				},
+				"y": {
+					"$ref": "#/definitions/TrackId"
+				},
+				"css": {
+					"$ref": "#/definitions/TrackSwitchCssOverrides"
+				},
+				"height": {
+					"type": "number"
+				},
+				"tempoSmoothingSeconds": {
+					"type": "number"
+				}
+			},
+			"required": [
+				"type",
+				"x",
+				"y"
+			],
+			"additionalProperties": false
+		},
+		"TrackSwitchTextViewConfig": {
+			"type": "object",
+			"properties": {
+				"type": {
+					"type": "string",
+					"const": "text"
+				},
+				"text": {
+					"type": "string"
+				},
+				"bold": {
+					"type": "boolean"
+				},
+				"italic": {
+					"type": "boolean"
+				},
+				"fontSize": {
+					"type": "number"
+				},
+				"align": {
+					"$ref": "#/definitions/TrackSwitchTextAlign"
+				},
+				"css": {
+					"$ref": "#/definitions/TrackSwitchCssOverrides"
+				}
+			},
+			"required": [
+				"type",
+				"text"
+			],
+			"additionalProperties": false
+		},
+		"TrackSwitchTextAlign": {
+			"type": "string",
+			"enum": [
+				"left",
+				"center",
+				"right"
+			]
+		},
+		"TrackSwitchSeparatorViewConfig": {
+			"type": "object",
+			"properties": {
+				"type": {
+					"type": "string",
+					"const": "separator"
+				},
+				"thickness": {
+					"type": "number"
+				}
+			},
+			"required": [
+				"type"
+			],
+			"additionalProperties": false,
+			"description": "A horizontal rule between panels. Replaces the hairline the stack draws on its own."
+		},
+		"TrackSwitchTrackListViewConfig": {
+			"type": "object",
+			"properties": {
+				"type": {
+					"type": "string",
+					"const": "trackList"
+				},
+				"tracks": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/TrackId"
+					}
+				},
+				"title": {
+					"type": "string",
+					"description": "Labels the list. Alignment shows it on the row that selects the list as a whole."
+				},
+				"soloGroup": {
+					"type": "number",
+					"description": "Names the selection this list belongs to, which permits only one audible track at a time — its rows behave as radio buttons. Lists that name the same number share that one selection, so picking a track in one of them deselects whatever the others had. Any non-negative integer works; distinct numbers are independent selections.\n\nOmit it to let the list's tracks sound together, each row an ordinary toggle.\n\nUnder alignment it decides which level of the selection hierarchy the list contributes: with a `soloGroup` every row is a selectable timeline of its own, without one the list is a single selectable timeline whose rows mix freely inside it — which requires all of its tracks to share one alignment timeline. Alignment plays one timeline at a time across the whole player, so an aligned player has at most one `soloGroup` to share."
+				},
+				"rowHeight": {
+					"type": "number"
+				},
+				"trackVolumeControls": {
+					"type": "boolean"
+				},
+				"trackPanControls": {
+					"anyOf": [
+						{
+							"$ref": "#/definitions/TrackPanAlgorithm"
+						},
+						{
+							"type": "boolean",
+							"const": false
+						}
+					]
+				}
+			},
+			"required": [
+				"type",
+				"tracks"
+			],
+			"additionalProperties": false
+		},
+		"TrackPanAlgorithm": {
+			"type": "string",
+			"enum": [
+				"balance",
+				"pan"
+			]
+		},
+		"TrackSwitchNavigationBarViewConfig": {
+			"type": "object",
+			"properties": {
+				"type": {
+					"type": "string",
+					"const": "navigationBar"
+				},
+				"controls": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/TrackSwitchNavigationBarControl"
+					}
+				},
+				"repeatEnabled": {
+					"type": "boolean"
+				}
+			},
+			"required": [
+				"type",
+				"controls"
+			],
+			"additionalProperties": false
+		},
+		"TrackSwitchNavigationBarControl": {
+			"type": "string",
+			"enum": [
+				"playback",
+				"globalVolume",
+				"markerNavigation",
+				"looping",
+				"sync",
+				"presets",
+				"timer",
+				"seekBar"
+			]
+		}
+	},
+	"$id": "https://audiolabs.github.io/trackswitch.js/schema/trackswitch.schema.json",
+	"title": "TrackSwitch player configuration"
+}

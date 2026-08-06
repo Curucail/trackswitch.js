@@ -14,10 +14,11 @@ import type {
 } from "../types";
 import {
 	ALIGNMENT_PIPELINE,
+	CONVERT_INPUTS,
 	DTW_SPEEDUP,
-	LIBFMP_SHIM,
-	MISC_SHIMS,
-	NUMBA_SHIM,
+	INSTALL_MUSIC21,
+	INSTALL_PACKAGES,
+	SHIMS,
 } from "./python-scripts";
 
 declare const self: Worker & {
@@ -27,7 +28,6 @@ declare const self: Worker & {
 	) => void;
 	location: { href: string };
 };
-declare function importScripts(...urls: string[]): void;
 
 interface PyodideInterface {
 	runPythonAsync(code: string): Promise<unknown>;
@@ -39,9 +39,9 @@ interface PyodideInterface {
 	toPy(value: unknown): unknown;
 }
 
-declare function loadPyodide(options: {
-	indexURL: string;
-}): Promise<PyodideInterface>;
+interface PyodideModule {
+	loadPyodide(options: { indexURL: string }): Promise<PyodideInterface>;
+}
 
 let pyodide: PyodideInterface | null = null;
 let synctoolboxInstalled = false;
@@ -69,8 +69,12 @@ async function initializePyodide(cdnUrl: string): Promise<void> {
 	// If init already happened in the background, compute starts at 0% anyway.
 	postProgress("[0%] Loading Pyodide runtime...");
 
-	importScripts(`${cdnUrl}pyodide.js`);
-	pyodide = await loadPyodide({ indexURL: cdnUrl });
+	// Pyodide dropped classic-worker support, so this must stay an ES module
+	// import of pyodide.mjs rather than importScripts() of pyodide.js.
+	const pyodideModule: PyodideModule = await import(
+		/* @vite-ignore */ `${cdnUrl}pyodide.mjs`
+	);
+	pyodide = await pyodideModule.loadPyodide({ indexURL: cdnUrl });
 
 	postProgress("[3%] Loading NumPy and SciPy...");
 	await pyodide.loadPackage(["numpy", "scipy"]);
@@ -82,23 +86,12 @@ async function initializePyodide(cdnUrl: string): Promise<void> {
 	await pyodide.loadPackage(["scikit-learn", "joblib", "micropip"]);
 
 	postProgress("[12%] Installing compatibility shims...");
-	await pyodide.runPythonAsync(NUMBA_SHIM);
-	await pyodide.runPythonAsync(LIBFMP_SHIM);
-	await pyodide.runPythonAsync(MISC_SHIMS);
+	await pyodide.runPythonAsync(SHIMS);
 
-	postProgress("[14%] Installing synctoolbox...");
-	await pyodide.runPythonAsync(`
-import micropip
-await micropip.install('synctoolbox==1.4.2', deps=False)
-`);
+	postProgress("[14%] Installing synctoolbox and libtsm...");
+	await pyodide.runPythonAsync(INSTALL_PACKAGES);
 
 	synctoolboxInstalled = true;
-
-	postProgress("[14%] Installing libtsm...");
-	await pyodide.runPythonAsync(`
-import micropip
-await micropip.install('libtsm==1.1.2')
-`);
 
 	postProgress("[14%] Applying DTW speedup...");
 	await pyodide.runPythonAsync(DTW_SPEEDUP);
@@ -112,13 +105,7 @@ async function installMusic21Impl(): Promise<void> {
 	}
 
 	postProgress("Installing MusicXML support (music21)...");
-	await pyodide.runPythonAsync(`
-import micropip
-# Mock music21's deps that aren't available in Pyodide.
-for pkg, ver in [('chardet', '5.2.0'), ('webcolors', '1.13')]:
-    micropip.add_mock_package(pkg, ver)
-await micropip.install('music21')
-`);
+	await pyodide.runPythonAsync(INSTALL_MUSIC21);
 	music21Installed = true;
 	postProgress("MusicXML support installed.");
 }
@@ -139,6 +126,7 @@ async function computeAlignment(
 		algorithm,
 		featureRate,
 		generateSyncedAudio,
+		pitchShiftEnabled,
 	} = message;
 
 	// Prepare data dictionaries for Python
@@ -222,26 +210,10 @@ async function computeAlignment(
 	pyodide.globals.set("FEATURE_RATE", featureRate);
 	pyodide.globals.set("SAMPLE_RATE", SAMPLE_RATE);
 	pyodide.globals.set("generate_synced_audio", generateSyncedAudio);
+	pyodide.globals.set("pitch_shift_enabled", pitchShiftEnabled);
 
 	// Convert audio arrays from JS lists to numpy arrays
-	await pyodide.runPythonAsync(`
-import numpy as np
-
-_audio_files_raw = dict(audio_files_js)
-audio_files = {}
-for fid, arr in _audio_files_raw.items():
-    audio_files[fid] = np.array(arr, dtype=np.float32)
-del _audio_files_raw
-`);
-
-	await pyodide.runPythonAsync(`
-_full_resolution_audio_files_raw = dict(full_resolution_audio_files)
-full_resolution_audio = {}
-for fid, channels in _full_resolution_audio_files_raw.items():
-    full_resolution_audio[fid] = [np.array(channel, dtype=np.float32) for channel in channels]
-del _full_resolution_audio_files_raw
-audio_sample_rates = {str(fid): int(rate) for fid, rate in dict(audio_sample_rates).items()}
-`);
+	await pyodide.runPythonAsync(CONVERT_INPUTS);
 
 	// Expose a progress reporting function to Python
 	pyodide.globals.set("report_progress", (msg: string) => {

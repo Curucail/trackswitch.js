@@ -1,5 +1,13 @@
+import {
+	buildMeasureNumbering,
+	createEmptyMeasureNumbering,
+} from "./measure-numbering";
 import { CursorType, OpenSheetMusicDisplay } from "./osmd";
-import type { SheetMusicCursor, SheetMusicEntryModel } from "./types";
+import type {
+	SheetMusicCursor,
+	SheetMusicEntryModel,
+	SheetMusicMeasureMapsByAxis,
+} from "./types";
 import {
 	MAX_OSMD_ZOOM,
 	MIN_HOST_WIDTH_DELTA_FOR_RERENDER_PX,
@@ -15,7 +23,13 @@ interface SheetMusicEntryLifecycleContext {
 	handleHostTouch(entry: SheetMusicEntryModel, event: TouchEvent): void;
 }
 
-export async function initializeEntry(
+/**
+ * Phase A: parse and render the score. Deliberately free of any alignment
+ * dependency, so the measure extent it collects can feed alignment resolution —
+ * the measure maps that need the alignment are attached afterwards by
+ * `attachMeasureMaps`.
+ */
+export async function renderEntry(
 	ctx: SheetMusicEntryLifecycleContext,
 	entry: SheetMusicEntryModel,
 ): Promise<void> {
@@ -25,30 +39,6 @@ export async function initializeEntry(
 		"sheetmusic-map-error",
 	);
 	entry.host.classList.add("sheetmusic-loading");
-
-	const measureMapsPromise = entry.measureMapsPromise
-		.then((points) => {
-			entry.measureMaps = points;
-			entry.measureMap = entry.syncReferenceTimeEnabled
-				? points.sync
-				: points.base;
-			entry.host.classList.remove("sheetmusic-map-error");
-			return points;
-		})
-		.catch((error) => {
-			entry.measureMaps = {
-				base: null,
-				sync: null,
-			};
-			entry.measureMap = null;
-			entry.host.classList.add("sheetmusic-map-error");
-			console.warn(
-				"[trackswitch] Failed to load sheet-music measure map:",
-				entry.source,
-				error,
-			);
-			return null;
-		});
 
 	try {
 		const osmd = new OpenSheetMusicDisplay(entry.host, {
@@ -76,10 +66,9 @@ export async function initializeEntry(
 
 		rebindMeasureCursor(entry);
 		refreshCursorElement(entry);
-		entry.availableMeasures = collectAvailableMeasures(osmd);
-		entry.availableMeasureSet = new Set(entry.availableMeasures);
+		entry.measureNumbering = buildMeasureNumbering(osmd);
 
-		if (entry.availableMeasures.length === 0) {
+		if (entry.measureNumbering.printed.length === 0) {
 			console.warn(
 				"[trackswitch] Sheet music rendered but no score measures were detected for source:",
 				entry.source,
@@ -94,8 +83,7 @@ export async function initializeEntry(
 		};
 		entry.projectedTempoSegments = null;
 		entry.fallbackTempoBpm = null;
-		entry.availableMeasures = [];
-		entry.availableMeasureSet = new Set<number>();
+		entry.measureNumbering = createEmptyMeasureNumbering();
 		entry.host.classList.add("sheetmusic-error");
 		console.warn(
 			"[trackswitch] Failed to load or render sheet music source:",
@@ -103,15 +91,46 @@ export async function initializeEntry(
 			error,
 		);
 	}
+}
 
-	await measureMapsPromise;
+/**
+ * Phase B: bind the alignment-derived measure map and tempo map, then wire up
+ * interaction. Runs once the alignment is resolved.
+ */
+export async function attachMeasureMaps(
+	ctx: SheetMusicEntryLifecycleContext,
+	entry: SheetMusicEntryModel,
+	maps: Promise<SheetMusicMeasureMapsByAxis>,
+): Promise<void> {
+	detachInteractionListeners(entry);
+	try {
+		const points = await maps;
+		entry.measureMaps = points;
+		entry.measureMap = entry.syncReferenceTimeEnabled
+			? points.sync
+			: points.base;
+		entry.host.classList.remove("sheetmusic-map-error");
+	} catch (error) {
+		entry.measureMaps = {
+			base: null,
+			sync: null,
+		};
+		entry.measureMap = null;
+		entry.host.classList.add("sheetmusic-map-error");
+		console.warn(
+			"[trackswitch] Failed to load sheet-music measure map:",
+			entry.source,
+			error,
+		);
+	}
+
 	await ctx.loadTempoMap(entry);
 
 	entry.syncEnabled = Boolean(
 		entry.osmd &&
 			entry.measureMap &&
 			entry.measureMap.length > 0 &&
-			entry.availableMeasures.length > 0 &&
+			entry.measureNumbering.printed.length > 0 &&
 			entry.measureCursor,
 	);
 	entry.targetMeasure = null;
@@ -226,26 +245,7 @@ export function refreshCursorElement(entry: SheetMusicEntryModel): void {
 }
 
 export function disposeEntry(entry: SheetMusicEntryModel): void {
-	if (entry.touchStartListener) {
-		entry.host.removeEventListener("touchstart", entry.touchStartListener);
-		entry.touchStartListener = null;
-	}
-
-	if (entry.touchMoveListener) {
-		entry.host.removeEventListener("touchmove", entry.touchMoveListener);
-		entry.touchMoveListener = null;
-	}
-
-	if (entry.clickListener) {
-		entry.host.removeEventListener("click", entry.clickListener);
-		entry.clickListener = null;
-	}
-
-	if (entry.touchListener) {
-		entry.host.removeEventListener("touchend", entry.touchListener);
-		entry.touchListener = null;
-	}
-
+	detachInteractionListeners(entry);
 	entry.touchTapState = null;
 
 	const osmd = entry.osmd;
@@ -300,7 +300,29 @@ export function disposeEntry(entry: SheetMusicEntryModel): void {
 	entry.lastRenderedHostWidth = -1;
 }
 
-export function resolveRuntimeCursor(
+function detachInteractionListeners(entry: SheetMusicEntryModel): void {
+	if (entry.touchStartListener) {
+		entry.host.removeEventListener("touchstart", entry.touchStartListener);
+		entry.touchStartListener = null;
+	}
+
+	if (entry.touchMoveListener) {
+		entry.host.removeEventListener("touchmove", entry.touchMoveListener);
+		entry.touchMoveListener = null;
+	}
+
+	if (entry.clickListener) {
+		entry.host.removeEventListener("click", entry.clickListener);
+		entry.clickListener = null;
+	}
+
+	if (entry.touchListener) {
+		entry.host.removeEventListener("touchend", entry.touchListener);
+		entry.touchListener = null;
+	}
+}
+
+function resolveRuntimeCursor(
 	entry: SheetMusicEntryModel,
 ): SheetMusicEntryModel["measureCursor"] {
 	const osmd = entry.osmd;
@@ -336,31 +358,10 @@ export function rebindMeasureCursor(
 		!entry.syncEnabled &&
 		entry.measureMap &&
 		entry.measureMap.length > 0 &&
-		entry.availableMeasures.length > 0
+		entry.measureNumbering.printed.length > 0
 	) {
 		entry.syncEnabled = true;
 	}
 
 	return entry.measureCursor as SheetMusicCursor;
-}
-
-export function collectAvailableMeasures(
-	osmd: import("./osmd").OpenSheetMusicDisplayType,
-): number[] {
-	const sourceMeasures = osmd.Sheet?.SourceMeasures;
-	if (!Array.isArray(sourceMeasures)) {
-		return [];
-	}
-
-	const unique = new Set<number>();
-	sourceMeasures.forEach((measure) => {
-		const rawMeasureNumber = measure?.MeasureNumber;
-		const parsedMeasureNumber = Number(rawMeasureNumber);
-		if (!Number.isFinite(parsedMeasureNumber)) {
-			return;
-		}
-		unique.add(Math.floor(parsedMeasureNumber));
-	});
-
-	return Array.from(unique).sort((a, b) => a - b);
 }

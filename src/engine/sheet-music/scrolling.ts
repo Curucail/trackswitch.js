@@ -22,7 +22,7 @@ export function centerCurrentMeasureInViewport(
 	scrollCurrentMeasure(ctx, entry, true);
 }
 
-export function scrollCurrentMeasure(
+function scrollCurrentMeasure(
 	ctx: SheetMusicScrollContext,
 	entry: SheetMusicEntryModel,
 	forceCenter: boolean,

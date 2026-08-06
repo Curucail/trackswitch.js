@@ -18,19 +18,11 @@
 
 	.trackswitch .main-control .timing {
 		flex: 0 0 auto;
-		margin-left: 0;
+		margin-left: auto;
 		text-align: right;
 	}
 
-	.trackswitch
-		.main-control
-		ul.control:not(:has(> .settings-button))
-		> .timing {
-		margin-left: auto;
-	}
-
 	.trackswitch .main-control .seekwrap {
-		order: 100;
 		flex: 0 0 100%;
 		min-width: 0;
 		width: 100%;
@@ -46,7 +38,6 @@
 	}
 
 	.trackswitch .main-control .timing {
-		order: 200;
 		flex: 0 0 100%;
 		justify-content: center;
 		justify-self: center;
@@ -58,15 +49,7 @@
 		margin-left: 0;
 	}
 
-	.trackswitch
-		.main-control
-		ul.control:not(:has(> .settings-button))
-		> .timing {
-		margin-left: 0;
-	}
-
 	.trackswitch .main-control .seekwrap {
-		order: 300;
 		min-width: 0;
 	}
 }
@@ -100,10 +83,6 @@
 		touch-action: manipulation;
 		pointer-events: auto;
 	}
-
-	.trackswitch .main-control .sync-global.sync-after-loop {
-		order: 55;
-	}
 }
 
 @container ts-main-control (max-width: 500px) {
@@ -117,27 +96,29 @@
 	}
 
 	.trackswitch .main-control .playback-group {
-		order: 10;
 		grid-column: auto;
 		min-width: 0;
 	}
 
 	.trackswitch .main-control .volume {
-		order: 20;
 		grid-column: auto;
 		justify-self: end;
 		margin: 0;
 	}
 
+	.trackswitch .main-control .marker-navigation-group {
+		grid-column: auto;
+		justify-self: start;
+		margin: 0;
+	}
+
 	.trackswitch .main-control .loop-group {
-		order: 50;
 		grid-column: auto;
 		justify-self: end;
 		margin: 0;
 	}
 
 	.trackswitch .main-control .preset-selector-wrap {
-		order: 40;
 		grid-column: auto;
 		min-width: 0;
 		margin: 0;
@@ -148,61 +129,14 @@
 		grid-column: auto;
 	}
 
-	/* Keep preset left and looping right when both controls are enabled. */
-	.trackswitch .main-control
-		ul.control:has(> .preset-selector-wrap):has(> .loop-group)
-		> .preset-selector-wrap {
-		grid-column: 1;
-		justify-self: start;
-	}
-
-	.trackswitch
-		.main-control
-		ul.control:has(> .preset-selector-wrap):has(> .loop-group)
-		> .loop-group {
-		grid-column: 2;
-		justify-self: end;
-	}
-
-	/* In sync+loop layouts without presets, pin loop controls left and SYNC right. */
-	.trackswitch .main-control
-		ul.control:has(> .sync-after-loop):has(> .loop-group):not(
-			:has(> .preset-selector-wrap)
-		)
-		> .loop-group {
-		grid-column: 1;
-		justify-self: start;
-		margin: 0;
-	}
-
-	.trackswitch
-		.main-control
-		ul.control:has(> .sync-after-loop):has(> .loop-group):not(
-			:has(> .preset-selector-wrap)
-		)
-		> .sync-after-loop {
-		grid-column: 2;
-		justify-self: end;
-		margin: 0;
-	}
-
 	.trackswitch .main-control .timing {
-		order: 200;
 		grid-column: 1 / -1;
 		justify-self: center;
 		margin: 0;
 		text-align: center;
 	}
 
-	.trackswitch
-		.main-control
-		ul.control:not(:has(> .settings-button))
-		> .timing {
-		margin-left: 0;
-	}
-
 	.trackswitch .main-control .seekwrap {
-		order: 300;
 		grid-column: 1 / -1;
 		width: 100%;
 		min-width: 0;
@@ -239,6 +173,18 @@
 		gap: 6px;
 		position: relative;
 		top: 2px;
+	}
+
+	.trackswitch .main-control .marker-navigation-controls {
+		gap: 1px;
+	}
+
+	.trackswitch .main-control .marker-navigation-controls > .button,
+	.trackswitch .main-control .marker-navigation-controls .ts-icon-slot,
+	.trackswitch .main-control .marker-navigation-controls .ts-icon-svg {
+		width: 20px;
+		height: 20px;
+		font-size: 20px;
 	}
 
 	.trackswitch
@@ -360,17 +306,21 @@
 }
 
 @media (max-width: 700px) {
-	.trackswitch li.track .track-volume-icon {
+	/* Rows with a configured rowHeight keep their derived sizes: the touch
+	   enlargement would undo the compaction the author asked for. */
+	.trackswitch li.track:not([data-row-height]) .track-volume-icon {
 		font-size: 18px;
 		margin-right: 10px;
 	}
 
-	.trackswitch li.track .mix-slider::-webkit-slider-thumb {
+	.trackswitch
+		li.track:not([data-row-height])
+		.mix-slider::-webkit-slider-thumb {
 		width: 16px;
 		height: 16px;
 	}
 
-	.trackswitch li.track .mix-slider::-moz-range-thumb {
+	.trackswitch li.track:not([data-row-height]) .mix-slider::-moz-range-thumb {
 		width: 16px;
 		height: 16px;
 	}

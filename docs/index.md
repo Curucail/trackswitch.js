@@ -1,6 +1,6 @@
 ---
 layout: default
-title: trackswitch.js
+title: trackswitch
 description: Web-Based Multitrack Audio Player for Presenting Scientific Results
 ---
 
@@ -8,12 +8,13 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
   <div class="ts-hero__row">
     <nav class="site-nav ts-hero__nav" aria-label="Documentation">
       <a href="{{ '/documentation.html' | relative_url }}">Documentation</a>
-      <a href="{{ '/examples.html' | relative_url }}">Examples</a>
+      <a href="{{ '/use-cases/' | relative_url }}">Tutorials &amp; Use Cases</a>
+      <a href="{{ '/references.html' | relative_url }}">References</a>
       <a href="{{ '/citation.html' | relative_url }}">Cite</a>
     </nav>
 
     <div class="ts-hero__copy">
-      <h1>trackswitch.js</h1>
+      <h1>trackswitch</h1>
       <p class="ts-hero__description">Web-Based Multitrack Audio Player for Presenting Scientific Results</p>
     </div>
 
@@ -35,11 +36,10 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
 <section class="ts-showcase">
   <div class="ts-showcase__layout">
     <aside class="ts-showcase__code-callout" aria-label="Copy player code">
-      <h4 class="ts-showcase__code-title">Copy player code</h4>
-      <p>Paste this player configuration into your website.</p>
-      <p class="ts-showcase__preview-hint">Hover here to preview the exact code.</p>
+      <h4 class="ts-showcase__code-title">Copy player config</h4>
+      <p class="ts-showcase__preview-hint">Hover here to preview the config for this player.</p>
       <button id="ts-copy-quickstart" class="ts-copy-btn" type="button">Copy to clipboard</button>
-      <p class="ts-showcase__copy-note">Updates as you change the options.</p>
+      <p class="ts-showcase__copy-note">Updates as you change the options on the right.</p>
     </aside>
 
     <div class="ts-showcase__player-stage">
@@ -48,46 +48,39 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
           id="ts-showcase-player"
           data-ts-default-base="{{ '/assets/multitracks' | relative_url }}"
           data-ts-sync-base="{{ '/assets/alignment' | relative_url }}"
-          data-ts-interactive-worker="{{ '/js/trackswitch-interactive-worker.js' | relative_url }}"
         ></div>
       </div>
     </div>
 
-    <aside id="ts-showcase-controls" class="ts-control-panel" aria-label="TrackSwitch feature controls">
-      <h4>Player Modes and Features</h4>
-      <div class="ts-control-mode-tabs" role="tablist" aria-label="Showcase mode">
-        <button
-          type="button"
-          class="ts-mode-tab is-active"
-          data-ts-mode-button
-          data-ts-mode="default"
-          role="tab"
-          aria-selected="true"
-        >
-          Default
-        </button>
-        <button
-          type="button"
-          class="ts-mode-tab"
-          data-ts-mode-button
-          data-ts-mode="sync"
-          role="tab"
-          aria-selected="false"
-        >
-          Sync
-        </button>
-        <button
-          type="button"
-          class="ts-mode-tab"
-          data-ts-mode-button
-          data-ts-mode="interactive"
-          role="tab"
-          aria-selected="false"
-        >
-          Interactive Sync
-        </button>
-      </div>
+    <div class="ts-showcase__sidebar">
+      <section class="ts-mode-panel" aria-label="Player mode">
+        <h4>Player Mode</h4>
+        <div class="ts-control-mode-tabs" role="tablist" aria-label="Showcase mode">
+          <button
+            type="button"
+            class="ts-mode-tab is-active"
+            data-ts-mode-button
+            data-ts-mode="default"
+            role="tab"
+            aria-selected="true"
+          >
+            Default Multitrack
+          </button>
+          <button
+            type="button"
+            class="ts-mode-tab"
+            data-ts-mode-button
+            data-ts-mode="sync"
+            role="tab"
+            aria-selected="false"
+          >
+            Aligned Timelines
+          </button>
+        </div>
+      </section>
 
+      <aside id="ts-showcase-controls" class="ts-control-panel" aria-label="TrackSwitch feature controls">
+      <h4>Features</h4>
       <div class="ts-control-group" data-ts-control-group="playback">
         <h5>Playback</h5>
         <label class="ts-control-row">
@@ -99,12 +92,16 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
           <input type="checkbox" name="globalVolume" checked />
         </label>
         <label class="ts-control-row">
-          <span>Track Volume</span>
+		  <span>Per-Track Volume</span>
           <input type="checkbox" name="trackVolumeControls" checked />
         </label>
         <label class="ts-control-row">
-          <span>Track Panning</span>
-          <input type="checkbox" name="trackPanControls" checked />
+		  <span>Per-Track Panning</span>
+          <select name="trackPanControls">
+            <option value="off">Off</option>
+            <option value="balance" selected>Balance</option>
+			<option value="pan">Pan</option>
+          </select>
         </label>
         <label class="ts-control-row">
           <span>Presets</span>
@@ -135,10 +132,17 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
           <input type="checkbox" name="waveform" checked />
         </label>
         <label class="ts-control-row">
-          <span>Waveform Follow</span>
-          <select name="waveformPlaybackFollowMode">
-            <option value="off" selected>Off</option>
-            <option value="center">Centered</option>
+          <span>Waveform Time Axis</span>
+          <select name="waveformTimeAxis">
+            <option value="shared" selected>Shared</option>
+            <option value="individual">Individual</option>
+          </select>
+        </label>
+        <label class="ts-control-row">
+          <span>Zoom Follow</span>
+          <select name="playbackFollowMode">
+            <option value="off">Off</option>
+            <option value="center" selected>Centered</option>
             <option value="jump">Jump to Edge</option>
           </select>
         </label>
@@ -155,15 +159,15 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
           <input type="checkbox" name="showAlignmentPoints" />
         </label>
         <label class="ts-control-row">
-          <span>Custom Cover Image</span>
+          <span>Markers</span>
+          <input type="checkbox" name="markers" />
+        </label>
+        <label class="ts-control-row">
+          <span>Custom Image</span>
           <input type="checkbox" name="customImage" />
         </label>
         <label class="ts-control-row">
-          <span>Seekable Cover Image</span>
-          <input type="checkbox" name="seekableImage" />
-        </label>
-        <label class="ts-control-row">
-          <span>Track-Based Images</span>
+          <span>Per-Track Images</span>
           <input type="checkbox" name="trackImageBySolo" />
         </label>
         <label class="ts-control-row">
@@ -171,7 +175,7 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
           <input type="checkbox" name="midi" />
         </label>
         <label class="ts-control-row">
-          <span>Score</span>
+          <span>Sheet Music</span>
           <input type="checkbox" name="sheetNotePreview" checked />
         </label>
         <label class="ts-control-row">
@@ -183,7 +187,7 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
       <div class="ts-control-group" data-ts-control-group="utils">
         <h5>Utils</h5>
         <label class="ts-control-row">
-          <span>Customizable Panel Order</span>
+		  <span>User-customizable panel order</span>
           <input type="checkbox" name="customizablePanelOrder" />
         </label>
         <label class="ts-control-row">
@@ -197,7 +201,8 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
       </div>
 
       <p id="ts-showcase-note" class="ts-control-note" role="status" aria-live="polite"></p>
-    </aside>
+      </aside>
+    </div>
 
     <div class="ts-showcase__snippet-panel" aria-label="Code preview">
       <pre class="ts-showcase__snippet-shell"><code id="ts-dynamic-quickstart"></code></pre>

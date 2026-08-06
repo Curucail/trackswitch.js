@@ -1,0 +1,94 @@
+.trackswitch.ts-status-panel {
+	border: 1px solid var(--ts-color-border-mid);
+	padding: 14px 16px;
+	font-size: 14px;
+	line-height: 1.4;
+}
+
+.trackswitch.ts-status-panel .ts-status-panel-body {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+}
+
+.trackswitch.ts-status-panel .ts-status-panel-icon {
+	flex: none;
+	width: 16px;
+	height: 16px;
+	margin-top: 1px;
+}
+
+.trackswitch.ts-status-panel .ts-status-panel-text {
+	min-width: 0;
+}
+
+.trackswitch.ts-status-panel .ts-status-panel-title {
+	margin: 0;
+	font-weight: 600;
+}
+
+.trackswitch.ts-status-panel .ts-status-panel-message {
+	margin: 4px 0 0;
+	color: var(--ts-color-text-secondary);
+	overflow-wrap: anywhere;
+}
+
+.trackswitch.ts-status-panel .ts-status-panel-details {
+	margin: 8px 0 0;
+	padding: 8px 10px;
+	max-height: 160px;
+	overflow: auto;
+	background: var(--ts-color-surface-panel-dark-08);
+	border: 1px solid var(--ts-color-border-mid-35);
+	color: var(--ts-color-text-secondary);
+	font-family: ui-monospace, monospace;
+	font-size: 12px;
+	/* `pre` keeps the caret under the reported JSON position. */
+	white-space: pre;
+}
+
+.trackswitch.ts-status-panel-error {
+	border-color: var(--ts-color-text-error);
+	background: var(--ts-color-track-error-soft);
+}
+
+.trackswitch.ts-status-panel-error .ts-status-panel-icon,
+.trackswitch.ts-status-panel-error .ts-status-panel-title {
+	color: var(--ts-color-text-error);
+}
+
+.trackswitch.ts-status-panel-loading {
+	color: var(--ts-color-text-secondary);
+	/* Delay the reveal so a fast successful mount never flashes a placeholder. */
+	opacity: 0;
+	animation: ts-status-panel-reveal 120ms linear 400ms forwards;
+}
+
+.trackswitch.ts-status-panel-loading .ts-status-panel-message {
+	margin: 0;
+}
+
+.trackswitch.ts-status-panel-loading .ts-status-panel-icon {
+	animation: ts-status-panel-spin 1.6s steps(8, end) infinite;
+}
+
+@keyframes ts-status-panel-reveal {
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes ts-status-panel-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.trackswitch.ts-status-panel-loading,
+	.trackswitch.ts-status-panel-loading .ts-status-panel-icon {
+		animation-iteration-count: 1;
+		animation-duration: 1ms;
+		animation-delay: 400ms;
+	}
+}

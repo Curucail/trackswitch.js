@@ -1,3 +1,4 @@
+import type { ControllerPointerEvent } from "../shared/seek";
 import type { TrackSwitchControllerImpl } from "./player-controller";
 
 const SHORTCUT_HELP_BLOCKED_KEYS = new Set([
@@ -11,6 +12,8 @@ const SHORTCUT_HELP_BLOCKED_KEYS = new Set([
 	"ArrowUp",
 	"ArrowDown",
 	"Home",
+	",",
+	".",
 	"r",
 	"R",
 	"a",
@@ -24,6 +27,8 @@ const SHORTCUT_HELP_BLOCKED_KEYS = new Set([
 ]);
 
 const SHORTCUT_HELP_BLOCKED_CODES = new Set([
+	"Comma",
+	"Period",
 	"KeyR",
 	"KeyA",
 	"KeyB",
@@ -33,7 +38,10 @@ const SHORTCUT_HELP_BLOCKED_CODES = new Set([
 
 const KEYBOARD_SHORTCUT_HANDLERS: Record<
 	string,
-	(controller: TrackSwitchControllerImpl, event: KeyboardEvent) => boolean
+	(
+		controller: TrackSwitchControllerImpl,
+		event: ControllerPointerEvent,
+	) => boolean
 > = {
 	" ": (controller) => {
 		controller.togglePlay();
@@ -64,14 +72,14 @@ const KEYBOARD_SHORTCUT_HANDLERS: Record<
 		return true;
 	},
 	ArrowUp: (controller) => {
-		if (!controller.features.globalVolume) {
+		if (!controller.navigationBar?.controls.includes("globalVolume")) {
 			return false;
 		}
 		controller.setVolume(controller.state.volume + 0.1);
 		return true;
 	},
 	ArrowDown: (controller) => {
-		if (!controller.features.globalVolume) {
+		if (!controller.navigationBar?.controls.includes("globalVolume")) {
 			return false;
 		}
 		controller.setVolume(controller.state.volume - 0.1);
@@ -79,6 +87,20 @@ const KEYBOARD_SHORTCUT_HANDLERS: Record<
 	},
 	Home: (controller) => {
 		controller.seekTo(0);
+		return true;
+	},
+	",": (controller) => {
+		if (!controller.navigationBar?.controls.includes("markerNavigation")) {
+			return false;
+		}
+		controller.seekToAdjacentMarker("previous");
+		return true;
+	},
+	".": (controller) => {
+		if (!controller.navigationBar?.controls.includes("markerNavigation")) {
+			return false;
+		}
+		controller.seekToAdjacentMarker("next");
 		return true;
 	},
 	r: (controller) => {
@@ -97,84 +119,84 @@ const KEYBOARD_SHORTCUT_HANDLERS: Record<
 		return true;
 	},
 	a: (controller) => {
-		if (!controller.features.looping) {
+		if (!controller.navigationBar?.controls.includes("looping")) {
 			return false;
 		}
 		controller.setLoopPoint("A");
 		return true;
 	},
 	A: (controller) => {
-		if (!controller.features.looping) {
+		if (!controller.navigationBar?.controls.includes("looping")) {
 			return false;
 		}
 		controller.setLoopPoint("A");
 		return true;
 	},
 	KeyA: (controller) => {
-		if (!controller.features.looping) {
+		if (!controller.navigationBar?.controls.includes("looping")) {
 			return false;
 		}
 		controller.setLoopPoint("A");
 		return true;
 	},
 	b: (controller) => {
-		if (!controller.features.looping) {
+		if (!controller.navigationBar?.controls.includes("looping")) {
 			return false;
 		}
 		controller.setLoopPoint("B");
 		return true;
 	},
 	B: (controller) => {
-		if (!controller.features.looping) {
+		if (!controller.navigationBar?.controls.includes("looping")) {
 			return false;
 		}
 		controller.setLoopPoint("B");
 		return true;
 	},
 	KeyB: (controller) => {
-		if (!controller.features.looping) {
+		if (!controller.navigationBar?.controls.includes("looping")) {
 			return false;
 		}
 		controller.setLoopPoint("B");
 		return true;
 	},
 	l: (controller) => {
-		if (!controller.features.looping) {
+		if (!controller.navigationBar?.controls.includes("looping")) {
 			return false;
 		}
 		controller.toggleLoop();
 		return true;
 	},
 	L: (controller) => {
-		if (!controller.features.looping) {
+		if (!controller.navigationBar?.controls.includes("looping")) {
 			return false;
 		}
 		controller.toggleLoop();
 		return true;
 	},
 	KeyL: (controller) => {
-		if (!controller.features.looping) {
+		if (!controller.navigationBar?.controls.includes("looping")) {
 			return false;
 		}
 		controller.toggleLoop();
 		return true;
 	},
 	c: (controller) => {
-		if (!controller.features.looping) {
+		if (!controller.navigationBar?.controls.includes("looping")) {
 			return false;
 		}
 		controller.clearLoop();
 		return true;
 	},
 	C: (controller) => {
-		if (!controller.features.looping) {
+		if (!controller.navigationBar?.controls.includes("looping")) {
 			return false;
 		}
 		controller.clearLoop();
 		return true;
 	},
 	KeyC: (controller) => {
-		if (!controller.features.looping) {
+		if (!controller.navigationBar?.controls.includes("looping")) {
 			return false;
 		}
 		controller.clearLoop();
@@ -205,7 +227,7 @@ function isShortcutSuppressedWhileHelpOpen(
 
 export function handleShortcutHelpKeyboard(
 	controller: TrackSwitchControllerImpl,
-	event: KeyboardEvent,
+	event: ControllerPointerEvent,
 	key: string,
 	code: string,
 	trackIndex: number | null,
@@ -231,7 +253,7 @@ export function handleShortcutHelpKeyboard(
 
 export function handleTrackKeyboardSelection(
 	controller: TrackSwitchControllerImpl,
-	event: KeyboardEvent,
+	event: ControllerPointerEvent,
 	trackIndex: number | null,
 ): boolean {
 	if (trackIndex === null || trackIndex >= controller.runtimes.length) {
@@ -239,14 +261,14 @@ export function handleTrackKeyboardSelection(
 	}
 
 	event.preventDefault();
-	controller.toggleSolo(trackIndex, controller.effectiveSingleSoloMode);
+	controller.toggleSolo(trackIndex, controller.isTrackExclusive(trackIndex));
 	event.stopPropagation();
 	return true;
 }
 
 export function handleGlobalKeyboardShortcut(
 	controller: TrackSwitchControllerImpl,
-	event: KeyboardEvent,
+	event: ControllerPointerEvent,
 	key: string,
 ): boolean {
 	const handler = KEYBOARD_SHORTCUT_HANDLERS[key];
@@ -263,7 +285,9 @@ export function handleGlobalKeyboardShortcut(
 	return true;
 }
 
-export function getKeyboardTrackIndex(event: KeyboardEvent): number | null {
+export function getKeyboardTrackIndex(
+	event: ControllerPointerEvent,
+): number | null {
 	const key = event.key;
 	const code = event.code;
 

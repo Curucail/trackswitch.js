@@ -6,11 +6,12 @@ import {
 } from "./sheet-music/cursor-sync";
 import {
 	applyConfiguredRenderScale,
+	attachMeasureMaps,
 	disposeEntry,
-	initializeEntry,
 	readHostWidth,
 	rebindMeasureCursor,
 	refreshCursorElement,
+	renderEntry,
 	renderFullScore,
 	shouldRerenderOnResize,
 } from "./sheet-music/entry-lifecycle";
@@ -20,6 +21,7 @@ import {
 	handleHostTouchMove,
 	handleHostTouchStart,
 } from "./sheet-music/interaction-hit-test";
+import { createEmptyMeasureNumbering } from "./sheet-music/measure-numbering";
 import {
 	centerCurrentMeasureInViewport,
 	ensureCurrentMeasureVisible,
@@ -28,6 +30,7 @@ import { loadProjectedTempoMaps } from "./sheet-music/tempo-map";
 import type {
 	SheetMusicEntryModel,
 	SheetMusicHostConfig,
+	SheetMusicMeasureMapsByAxis,
 } from "./sheet-music/types";
 import {
 	DEFAULT_CURSOR_COLOR,
@@ -50,6 +53,11 @@ export class SheetMusicEngine {
 			typeof onSeekReferenceTime === "function" ? onSeekReferenceTime : null;
 	}
 
+	/**
+	 * Phase A — parse and render every score. Runs before the alignment is
+	 * resolved so each score's printed measure numbers can supply its extent;
+	 * call `attachMeasureMaps` afterwards to finish the entries.
+	 */
 	async initialize(hosts: SheetMusicHostConfig[]): Promise<void> {
 		this.destroy();
 		this.destroyed = false;
@@ -59,7 +67,7 @@ export class SheetMusicEngine {
 				host: host.host,
 				scrollContainer: host.scrollContainer || null,
 				source: host.source,
-				measureMapsPromise: host.measureMapsPromise,
+				measureColumn: host.measureColumn,
 				renderScale: sanitizeRenderScale(host.renderScale),
 				followPlayback: host.followPlayback !== false,
 				cursorColor: host.cursorColor || DEFAULT_CURSOR_COLOR,
@@ -78,8 +86,7 @@ export class SheetMusicEngine {
 				},
 				projectedTempoSegments: null,
 				fallbackTempoBpm: null,
-				availableMeasures: [],
-				availableMeasureSet: new Set<number>(),
+				measureNumbering: createEmptyMeasureNumbering(),
 				syncEnabled: false,
 				targetMeasure: null,
 				clickListener: null,
@@ -91,8 +98,40 @@ export class SheetMusicEngine {
 			};
 		});
 
+		await Promise.all(this.entries.map((entry) => renderEntry(this, entry)));
+		this.updatePosition(this.lastPosition, this.syncReferenceTimeEnabled);
+	}
+
+	/** Printed measure numbers each rendered score covers, keyed by its media id. */
+	getAvailableMeasuresByMediaId(): Map<string, number[]> {
+		const byMediaId = new Map<string, number[]>();
+		this.entries.forEach((entry) => {
+			const mediaId = entry.measureColumn?.trim();
+			if (mediaId) {
+				byMediaId.set(mediaId, entry.measureNumbering.printed);
+			}
+		});
+		return byMediaId;
+	}
+
+	/**
+	 * Phase B — bind the alignment-derived measure maps rendered scores were
+	 * waiting for. `buildMaps` receives each entry's measure column.
+	 */
+	async attachMeasureMaps(
+		buildMaps: (
+			measureColumn: string,
+			source: string,
+		) => Promise<SheetMusicMeasureMapsByAxis>,
+	): Promise<void> {
 		await Promise.all(
-			this.entries.map((entry) => initializeEntry(this, entry)),
+			this.entries.map((entry) => {
+				const measureColumn = entry.measureColumn?.trim() ?? "";
+				const maps = measureColumn
+					? buildMaps(measureColumn, entry.source)
+					: Promise.resolve({ base: null, sync: null });
+				return attachMeasureMaps(this, entry, maps);
+			}),
 		);
 		this.updatePosition(this.lastPosition, this.syncReferenceTimeEnabled);
 	}
@@ -100,9 +139,23 @@ export class SheetMusicEngine {
 	updatePosition(
 		referencePosition: number,
 		syncReferenceTimeEnabled = this.syncReferenceTimeEnabled,
+		isTimelineCovered?: (mediaId: string) => boolean,
 	): void {
 		this.applyReferenceTimeline(syncReferenceTimeEnabled);
 		updateCursorPosition(this, sanitizePlaybackPosition(referencePosition));
+
+		if (!isTimelineCovered) {
+			return;
+		}
+		// The cursor holds at its boundary measure where the alignment stops
+		// covering the score; mark it so the freeze reads as intentional.
+		this.entries.forEach((entry) => {
+			const mediaId = entry.measureColumn?.trim();
+			entry.host.classList.toggle(
+				"ts-out-of-coverage",
+				Boolean(mediaId) && !isTimelineCovered(mediaId as string),
+			);
+		});
 	}
 
 	resize(): void {
@@ -229,7 +282,7 @@ export class SheetMusicEngine {
 				entry.osmd &&
 					entry.measureMap &&
 					entry.measureMap.length > 0 &&
-					entry.availableMeasures.length > 0 &&
+					entry.measureNumbering.printed.length > 0 &&
 					entry.measureCursor,
 			);
 			entry.targetMeasure = null;
@@ -281,7 +334,7 @@ export class SheetMusicEngine {
 				? projectedSegmentsByAxis.sync
 				: projectedSegmentsByAxis.base;
 		} catch (error) {
-			entry.fallbackTempoBpm = resolveOsmdFallbackTempo(entry);
+			entry.fallbackTempoBpm = null;
 			entry.projectedTempoSegmentsByAxis = {
 				base: null,
 				sync: null,
@@ -323,33 +376,6 @@ function resolveEntryReferenceBpm(
 		(entry.fallbackTempoBpm as number) > 0
 	) {
 		return entry.fallbackTempoBpm;
-	}
-
-	return resolveOsmdFallbackTempo(entry);
-}
-
-function resolveOsmdFallbackTempo(entry: SheetMusicEntryModel): number | null {
-	const sheet = entry.osmd?.Sheet as
-		| {
-				DefaultStartTempoInBpm?: unknown;
-				getExpressionsStartTempoInBPM?: () => unknown;
-		  }
-		| undefined;
-	if (!sheet) {
-		return null;
-	}
-
-	const expressionsTempo =
-		typeof sheet.getExpressionsStartTempoInBPM === "function"
-			? Number(sheet.getExpressionsStartTempoInBPM())
-			: Number.NaN;
-	if (Number.isFinite(expressionsTempo) && expressionsTempo > 0) {
-		return expressionsTempo;
-	}
-
-	const defaultTempo = Number(sheet.DefaultStartTempoInBpm);
-	if (Number.isFinite(defaultTempo) && defaultTempo > 0) {
-		return defaultTempo;
 	}
 
 	return null;

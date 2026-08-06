@@ -1,6 +1,12 @@
-import { loadElementConfig } from "../config/element-config";
-import { ensureTrackSwitchStyles } from "../shared/styles";
+import {
+	describeError,
+	isElementConfigError,
+	loadElementConfig,
+	renderTrackSwitchErrorPanel,
+	renderTrackSwitchLoadingPanel,
+} from "./core-adapter";
 import { createTrackSwitchSyncInteractive } from "./interactive-factory";
+import { ensureInteractiveTrackSwitchStyles } from "./styles";
 import type {
 	InteractiveTrackSwitchController,
 	InteractiveTrackSwitchInit,
@@ -9,7 +15,7 @@ import type {
 export const TRACKSWITCH_SYNC_INTERACTIVE_ELEMENT_NAME =
 	"trackswitch-sync-interactive";
 
-export interface TrackswitchSyncInteractiveElement extends HTMLElement {
+interface TrackswitchSyncInteractiveElement extends HTMLElement {
 	config: InteractiveTrackSwitchInit | undefined;
 	readonly controller: InteractiveTrackSwitchController | null;
 }
@@ -44,6 +50,9 @@ export class TrackswitchSyncInteractive
 			return;
 		}
 
+		if (this.mountRoot) {
+			renderTrackSwitchLoadingPanel(this.mountRoot);
+		}
 		void this.loadDeclarativeConfig();
 	}
 
@@ -63,7 +72,7 @@ export class TrackswitchSyncInteractive
 		mountRoot.className = "trackswitch-element-mount";
 
 		root.replaceChildren();
-		ensureTrackSwitchStyles(root);
+		ensureInteractiveTrackSwitchStyles(root);
 		root.append(mountRoot);
 		this.mountRoot = mountRoot;
 	}
@@ -91,7 +100,11 @@ export class TrackswitchSyncInteractive
 				return;
 			}
 
-			this.dispatchConfigError(error);
+			this.showError(
+				error,
+				"Unexpected error while loading TrackSwitch config.",
+				"Trackswitch config could not be loaded",
+			);
 		}
 	}
 
@@ -109,23 +122,38 @@ export class TrackswitchSyncInteractive
 		this.destroyController();
 		this.mountRoot.replaceChildren();
 
-		const controller = createTrackSwitchSyncInteractive(
-			this.mountRoot,
-			this.currentConfig,
-		);
-		this.currentController = controller;
-		controller.initialize();
+		try {
+			const controller = createTrackSwitchSyncInteractive(
+				this.mountRoot,
+				this.currentConfig,
+			);
+			this.currentController = controller;
+			controller.initialize();
+		} catch (error) {
+			this.destroyController();
+			this.showError(error, "Unexpected error while mounting TrackSwitch.");
+		}
 	}
 
-	private dispatchConfigError(error: unknown): void {
+	private showError(
+		error: unknown,
+		fallbackMessage: string,
+		title?: string,
+	): void {
+		const message = describeError(error, fallbackMessage);
+
+		if (this.mountRoot) {
+			const configError = isElementConfigError(error) ? error : undefined;
+			renderTrackSwitchErrorPanel(this.mountRoot, {
+				title: configError?.title ?? title,
+				message,
+				details: configError?.details,
+			});
+		}
+
 		this.dispatchEvent(
 			new CustomEvent("trackswitch-error", {
-				detail: {
-					message:
-						error instanceof Error
-							? error.message
-							: "Unexpected error while loading TrackSwitch config.",
-				},
+				detail: { message },
 				bubbles: true,
 				composed: true,
 			}),

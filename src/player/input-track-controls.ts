@@ -1,30 +1,50 @@
-import type { TrackRuntime } from "../domain/types";
 import { eventTargetAsElement } from "../shared/dom";
+import type { ControllerPointerEvent } from "../shared/seek";
 import type { TrackSwitchControllerImpl } from "./player-controller";
 
 export function toggleSoloFromPointerEvent(
 	controller: TrackSwitchControllerImpl,
-	event: MouseEvent,
+	event: ControllerPointerEvent,
 ): void {
+	const groupIndexFromTarget = controller.trackGroupIndexFromTarget(
+		event.target ?? null,
+	);
+
+	// The row above an aligned list selects the list itself — the first level of
+	// the hierarchy, where its tracks count as one timeline.
+	const target = eventTargetAsElement(event.target ?? null);
+	if (target?.closest(".track-list-select") && groupIndexFromTarget >= 0) {
+		controller.selectTrackListUnit(groupIndexFromTarget);
+		return;
+	}
+
 	const index = controller.trackIndexFromTarget(event.target ?? null);
 	if (index < 0) {
 		return;
 	}
 
+	const groupIndex =
+		groupIndexFromTarget >= 0
+			? groupIndexFromTarget
+			: controller.groupIndexForTrack(index);
+
+	// Shift-clicking the last remaining selection of an ordinary list brings the
+	// whole list back, which is the quickest way out of a narrowed-down comparison.
 	if (
 		event.shiftKey &&
-		!controller.features.exclusiveSolo &&
+		!controller.isGroupExclusive(groupIndex) &&
 		controller.runtimes[index]?.state.solo
 	) {
-		const selectedCount = controller.runtimes.reduce(
-			(count: number, runtime: TrackRuntime) =>
-				count + (runtime.state.solo ? 1 : 0),
+		const trackIndexes = controller.trackIndexesInGroup(groupIndex);
+		const selectedCount = trackIndexes.reduce(
+			(count: number, trackIndex: number) =>
+				count + (controller.runtimes[trackIndex].state.solo ? 1 : 0),
 			0,
 		);
 
 		if (selectedCount === 1) {
-			controller.runtimes.forEach((runtime) => {
-				runtime.state.solo = true;
+			trackIndexes.forEach((trackIndex: number) => {
+				controller.runtimes[trackIndex].state.solo = true;
 			});
 			controller.applyTrackProperties();
 			controller.updateMainControls();
@@ -32,7 +52,7 @@ export function toggleSoloFromPointerEvent(
 		}
 	}
 
-	controller.toggleSolo(index, !!event.shiftKey);
+	controller.toggleSolo(index, !!event.shiftKey, groupIndex);
 }
 
 export function parseSliderValue(target: HTMLInputElement): number {
@@ -41,7 +61,7 @@ export function parseSliderValue(target: HTMLInputElement): number {
 
 export function getTrackInputTarget(
 	controller: TrackSwitchControllerImpl,
-	event: Event,
+	event: ControllerPointerEvent,
 ): { target: HTMLInputElement; trackIndex: number } | null {
 	const target = eventTargetAsElement(event.target ?? null);
 	if (!(target instanceof HTMLInputElement)) {

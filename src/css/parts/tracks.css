@@ -43,6 +43,25 @@
 	--ts-track-row-bg: var(--ts-color-surface-base);
 }
 
+/* The row that selects a whole trackList as one timeline. It stands above the
+   list it selects, so it carries a heavier surface, and its tracks are indented
+   underneath it as the second level of the choice. */
+.trackswitch li.track.track-list-select,
+.trackswitch li.track.track-list-select:not(.tabs):nth-child(even) {
+	--ts-track-row-bg: var(--ts-color-surface-panel-dark-16);
+	font-weight: 600;
+}
+
+.trackswitch
+	ul.track_list:has(> li.track-list-select)
+	> li.track:not(.track-list-select) {
+	padding-inline-start: calc(
+		var(--ts-track-control-column) +
+		var(--ts-track-padding-inline) +
+		var(--ts-track-list-indent)
+	);
+}
+
 .trackswitch li.track.error,
 .trackswitch li.track.error:not(.tabs):nth-child(even) {
 	--ts-track-row-bg: var(--ts-color-track-error-bg);
@@ -79,6 +98,16 @@
 	transform: translateY(-50%);
 	inset-inline-start: var(--ts-track-padding-inline);
 	padding-left: 0;
+}
+
+.trackswitch
+	ul.track_list:has(> li.track-list-select)
+	> li.track:not(.track-list-select)
+	ul.control {
+	inset-inline-start: calc(
+		var(--ts-track-padding-inline) +
+		var(--ts-track-list-indent)
+	);
 }
 
 .trackswitch li.track.tabs ul.control {
@@ -279,4 +308,63 @@
 .trackswitch li.track .track-pan-control.disabled .track-pan-label,
 .trackswitch li.track .track-mix-controls.disabled .track-volume-icon {
 	opacity: 0.45;
+}
+
+/* A configured rowHeight drives every vertical dimension of the row: padding,
+   control size, icon size, font size and slider hit area all derive from it,
+   so rows can shrink below the default control/padding geometry. */
+.trackswitch li.track[data-row-height] {
+	--ts-track-row-padding-block: clamp(
+		0px,
+		calc((var(--ts-track-row-height) - 16px) / 2),
+		var(--ts-track-padding-block)
+	);
+	--ts-track-row-inner: max(
+		0px,
+		calc(var(--ts-track-row-height) - 2 * var(--ts-track-row-padding-block))
+	);
+	--ts-track-row-control-size: min(
+		var(--ts-track-control-size),
+		var(--ts-track-row-inner)
+	);
+	--ts-track-row-icon-size: min(16px, calc(var(--ts-track-row-inner) * 0.72));
+	--ts-slider-hit-size: min(16px, var(--ts-track-row-inner));
+	--ts-slider-thumb-size: min(12px, calc(var(--ts-track-row-inner) * 0.5));
+	--ts-slider-track-size: min(5px, calc(var(--ts-track-row-inner) * 0.21));
+	height: var(--ts-track-row-height);
+	min-height: 0;
+	padding-block: var(--ts-track-row-padding-block);
+	/* 0.58 x 1.35 line-height keeps the text box inside the row, so the title's
+	   own overflow: hidden never clips descenders. */
+	font-size: min(16px, calc(var(--ts-track-row-inner) * 0.58));
+	line-height: 1.35;
+	overflow: hidden;
+}
+
+.trackswitch li.track[data-row-height]:not(.tabs) {
+	padding-inline-start: calc(
+		var(--ts-track-row-control-size) +
+		6px +
+		var(--ts-track-padding-inline)
+	);
+}
+
+.trackswitch li.track[data-row-height] ul.control li {
+	width: var(--ts-track-row-control-size);
+	height: var(--ts-track-row-control-size);
+}
+
+.trackswitch
+	li.track[data-row-height]
+	:is(.control li.button, .control li.solo, .track-error-indicator)
+	.ts-icon-slot,
+.trackswitch li.track[data-row-height] .track-volume-icon {
+	font-size: var(--ts-track-row-icon-size);
+	width: var(--ts-track-row-icon-size);
+	height: var(--ts-track-row-icon-size);
+}
+
+.trackswitch li.track[data-row-height] .track-pan-label,
+.trackswitch li.track[data-row-height] .track-error-text {
+	font-size: min(12px, calc(var(--ts-track-row-inner) * 0.5));
 }

@@ -1,10 +1,10 @@
 import { resolve } from "node:path";
-import { defineConfig, type Plugin, type UserConfig } from "vite";
+import { defineConfig, type UserConfig } from "vite";
 
-const rootDir = __dirname;
+const rootDir = import.meta.dirname;
 const banner = [
 	"/*!",
-	" * trackswitch.js (https://github.com/audiolabs/trackswitch.js)",
+	" * trackswitch (https://github.com/audiolabs/trackswitch.js)",
 	" * Copyright 2026 International Audio Laboratories Erlangen",
 	" * Licensed under MIT (https://github.com/audiolabs/trackswitch.js/blob/master/LICENSE)",
 	" */",
@@ -20,36 +20,6 @@ const iifeOutput = {
 	banner,
 	inlineDynamicImports: true,
 } as const;
-
-function examplesRootPlugin(): Plugin {
-	return {
-		name: "trackswitch-examples-root",
-		configureServer(server) {
-			server.middlewares.use((request, response, next) => {
-				if (request.url === "/" || request.url === "/index.html") {
-					response.statusCode = 302;
-					response.setHeader("Location", "/examples/");
-					response.end();
-					return;
-				}
-
-				next();
-			});
-		},
-	};
-}
-
-const devConfig = {
-	root: rootDir,
-	plugins: [examplesRootPlugin()],
-	server: {
-		host: "0.0.0.0",
-		port: 8000,
-		fs: {
-			allow: [rootDir],
-		},
-	},
-} satisfies UserConfig;
 
 const buildTargets = {
 	browser: {
@@ -68,18 +38,39 @@ const buildTargets = {
 			},
 		},
 	},
-	worker: {
+	"interactive-browser": {
 		build: {
 			...commonBuild,
-			outDir: "dist/js",
+			outDir: "dist/interactive",
+			assetsInlineLimit: Number.MAX_SAFE_INTEGER,
 			lib: {
-				entry: resolve(rootDir, "src/interactive/worker/alignment-worker.ts"),
-				name: "TrackSwitchSyncWorker",
+				entry: resolve(rootDir, "src/interactive-browser.ts"),
+				name: "TrackSwitchInteractive",
 				formats: ["iife"],
-				fileName: () => "trackswitch-interactive-worker.js",
+				fileName: () => "trackswitch-interactive.js",
 			},
 			rollupOptions: {
 				output: iifeOutput,
+			},
+		},
+	},
+	"interactive-worker": {
+		build: {
+			...commonBuild,
+			// Loaded as a module worker: Pyodide no longer supports classic
+			// workers, and the CDN runtime is pulled in via dynamic import().
+			target: "es2020",
+			outDir: "dist/interactive",
+			lib: {
+				entry: resolve(rootDir, "src/interactive/worker/alignment-worker.ts"),
+				formats: ["es"],
+				fileName: () => "trackswitch-interactive-worker.js",
+			},
+			rollupOptions: {
+				output: {
+					banner,
+					inlineDynamicImports: true,
+				},
 			},
 		},
 	},
@@ -94,7 +85,6 @@ const buildTargets = {
 					react: resolve(rootDir, "src/react.ts"),
 					vue: resolve(rootDir, "src/vue.ts"),
 					svelte: resolve(rootDir, "src/svelte.ts"),
-					interactive: resolve(rootDir, "src/interactive.ts"),
 				},
 				formats: ["es"],
 			},
@@ -111,16 +101,8 @@ const buildTargets = {
 	},
 } satisfies Record<string, UserConfig>;
 
-export default defineConfig(({ command, mode }) => {
-	if (command === "serve") {
-		return devConfig;
-	}
-
-	const buildTarget = mode === "production" ? "browser" : mode;
-
-	if (!Object.hasOwn(buildTargets, buildTarget)) {
-		throw new Error(`Unknown Vite build mode: ${buildTarget}`);
-	}
+export default defineConfig(({ mode }) => {
+	const buildTarget = Object.hasOwn(buildTargets, mode) ? mode : "browser";
 
 	return buildTargets[buildTarget as keyof typeof buildTargets];
 });

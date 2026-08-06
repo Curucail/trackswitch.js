@@ -1,0 +1,183 @@
+{
+	"$schema": "https://audiolabs.github.io/trackswitch.js/schema/trackswitch.schema.json",
+	"media": {
+		"sopranoFlute": {
+			"type": "audio",
+			"title": "Soprano - Flute",
+			"src": "../../assets/chorale-bricks/01_fl.m4a"
+		},
+		"sopranoOboe": {
+			"type": "audio",
+			"title": "Soprano - Oboe",
+			"src": "../../assets/chorale-bricks/01_ob.m4a",
+			"solo": true
+		},
+		"sopranoClarinet": {
+			"type": "audio",
+			"title": "Soprano - Clarinet",
+			"src": "../../assets/chorale-bricks/01_cl.m4a"
+		},
+		"sopranoTrumpet": {
+			"type": "audio",
+			"title": "Soprano - Trumpet",
+			"src": "../../assets/chorale-bricks/01_tp.m4a"
+		},
+		"sopranoFlugelhorn": {
+			"type": "audio",
+			"title": "Soprano - Flugelhorn",
+			"src": "../../assets/chorale-bricks/01_fh.m4a"
+		},
+		"altoClarinet": {
+			"type": "audio",
+			"title": "Alto - Clarinet",
+			"src": "../../assets/chorale-bricks/02_cl.m4a"
+		},
+		"altoEnglishHorn": {
+			"type": "audio",
+			"title": "Alto - English horn",
+			"src": "../../assets/chorale-bricks/02_eh.m4a"
+		},
+		"altoFlugelhorn": {
+			"type": "audio",
+			"title": "Alto - Flugelhorn",
+			"src": "../../assets/chorale-bricks/02_fh.m4a",
+			"solo": true
+		},
+		"altoTrumpet": {
+			"type": "audio",
+			"title": "Alto - Trumpet",
+			"src": "../../assets/chorale-bricks/02_tp.m4a"
+		},
+		"tenorBaritone": {
+			"type": "audio",
+			"title": "Tenor - Baritone",
+			"src": "../../assets/chorale-bricks/03_bar.m4a",
+			"solo": true
+		},
+		"tenorBaritoneSaxophone": {
+			"type": "audio",
+			"title": "Tenor - Baritone saxophone",
+			"src": "../../assets/chorale-bricks/03_bs.m4a"
+		},
+		"bassBassClarinet": {
+			"type": "audio",
+			"title": "Bass - Bass clarinet",
+			"src": "../../assets/chorale-bricks/04_bcl.m4a",
+			"solo": true
+		},
+		"bassBaritone": {
+			"type": "audio",
+			"title": "Bass - Baritone",
+			"src": "../../assets/chorale-bricks/04_bar.m4a"
+		},
+		"bassBaritoneSaxophone": {
+			"type": "audio",
+			"title": "Bass - Baritone saxophone",
+			"src": "../../assets/chorale-bricks/04_bs.m4a"
+		},
+		"bassTrombone": {
+			"type": "audio",
+			"title": "Bass - Trombone",
+			"src": "../../assets/chorale-bricks/04_tb.m4a"
+		},
+		"bassTuba": {
+			"type": "audio",
+			"title": "Bass - Tuba",
+			"src": "../../assets/chorale-bricks/04_tba.m4a"
+		}
+	},
+	"presets": {
+		"referenceMix": {
+			"label": "Reference Mix",
+			"tracks": [
+				"sopranoOboe",
+				"altoFlugelhorn",
+				"tenorBaritone",
+				"bassBassClarinet"
+			]
+		},
+		"brassChoir": {
+			"label": "Brass Choir",
+			"tracks": [
+				"sopranoTrumpet",
+				"altoFlugelhorn",
+				"tenorBaritone",
+				"bassTuba"
+			]
+		},
+		"woodwindChoir": {
+			"label": "Woodwind Choir",
+			"tracks": [
+				"sopranoFlute",
+				"altoEnglishHorn",
+				"tenorBaritoneSaxophone",
+				"bassBassClarinet"
+			]
+		},
+		"reeds": {
+			"label": "Reeds",
+			"tracks": [
+				"sopranoClarinet",
+				"altoClarinet",
+				"tenorBaritoneSaxophone",
+				"bassBassClarinet"
+			]
+		}
+	},
+	"views": [
+		{
+			"type": "navigationBar",
+			"controls": ["playback", "globalVolume", "presets", "timer", "seekBar"]
+		},
+		{
+			"type": "trackList",
+			"tracks": [
+				"sopranoFlute",
+				"sopranoOboe",
+				"sopranoClarinet",
+				"sopranoTrumpet",
+				"sopranoFlugelhorn"
+			],
+			"soloGroup": 0,
+			"rowHeight": 36
+		},
+		{
+			"type": "separator"
+		},
+		{
+			"type": "trackList",
+			"tracks": [
+				"altoClarinet",
+				"altoEnglishHorn",
+				"altoFlugelhorn",
+				"altoTrumpet"
+			],
+			"soloGroup": 1,
+			"rowHeight": 36
+		},
+		{
+			"type": "separator"
+		},
+		{
+			"type": "trackList",
+			"tracks": ["tenorBaritone", "tenorBaritoneSaxophone"],
+			"soloGroup": 2,
+			"rowHeight": 36
+		},
+		{
+			"type": "separator"
+		},
+		{
+			"type": "trackList",
+			"tracks": [
+				"bassBassClarinet",
+				"bassBaritone",
+				"bassBaritoneSaxophone",
+				"bassTrombone",
+				"bassTuba"
+			],
+			"soloGroup": 3,
+			"rowHeight": 36
+		}
+	]
+}

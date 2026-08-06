@@ -1,5 +1,15 @@
-export { createTrackSwitchSyncPlayer } from "./alignment-factory";
-export {
-	createDefaultTrackSwitch,
-	createTrackSwitch,
-} from "./default-factory";
+import { normalizeTrackSwitchConfig } from "../config/normalize-init";
+import type { TrackSwitchController, TrackSwitchInit } from "../domain/types";
+import { ensureTrackSwitchStyles } from "../shared/styles";
+import { TrackSwitchControllerImpl } from "./player-controller";
+
+export function createTrackSwitch(
+	rootElement: HTMLElement,
+	init: TrackSwitchInit,
+): TrackSwitchController {
+	ensureTrackSwitchStyles(rootElement);
+	return new TrackSwitchControllerImpl(
+		rootElement,
+		normalizeTrackSwitchConfig(init),
+	);
+}

@@ -1,15 +1,19 @@
-import type {
-	TrackSwitchController,
-	TrackSwitchUiConfig,
-} from "../domain/types";
-import { createTrackSwitchSyncPlayer } from "../player/alignment-factory";
-import { parseNumericCsv } from "../shared/alignment";
-import { renderIconSlotHtml } from "../ui/icons";
 import {
 	coerceAlignmentSelectionForAlgorithm,
 	coerceAlignmentSelectionForFeatureSet,
 	normalizeAlignmentSelection,
 } from "./alignment-options";
+import type {
+	MediaConfig,
+	TrackSwitchController,
+	TrackSwitchViewConfig,
+	WaveformPlaybackFollowMode,
+} from "./core-adapter";
+import {
+	createTrackSwitch,
+	parseNumericCsv,
+	renderIconSlotHtml,
+} from "./core-adapter";
 import {
 	buildUniqueAlignmentColumnMaps,
 	fileNameToDisplayTitle,
@@ -53,6 +57,7 @@ export class InteractiveTrackSwitchControllerImpl
 		featureSet: AlignmentFeatureSetId;
 		algorithm: AlignmentAlgorithmId;
 		syncGenerationEnabled: boolean;
+		pitchShiftEnabled: boolean;
 		advancedOptionsExpanded: boolean;
 		showWarpingMatrix: boolean;
 		alignmentResult: InteractiveAlignmentResult | null;
@@ -70,10 +75,12 @@ export class InteractiveTrackSwitchControllerImpl
 			featureSet: initialAlignmentSelection.featureSet,
 			algorithm: initialAlignmentSelection.algorithm,
 			syncGenerationEnabled: true,
+			pitchShiftEnabled: false,
 			advancedOptionsExpanded: false,
 			waveformAlignedPlayhead: true,
 			waveformShowAlignmentPoints: false,
 			showWarpingMatrix: false,
+			playbackFollowMode: "center",
 			computationStatus: "idle",
 			computationError: null,
 			alignmentResult: null,
@@ -154,6 +161,7 @@ export class InteractiveTrackSwitchControllerImpl
 			this.state.algorithm,
 			this.state.canCancelBackToPlayer,
 			this.state.syncGenerationEnabled,
+			this.state.pitchShiftEnabled,
 			this.state.advancedOptionsExpanded,
 			fileListInfoMessage,
 		);
@@ -200,6 +208,7 @@ export class InteractiveTrackSwitchControllerImpl
 			onFeatureSetChanged: this.handleFeatureSetChanged.bind(this),
 			onAlgorithmChanged: this.handleAlgorithmChanged.bind(this),
 			onSyncGenerationChanged: this.handleSyncGenerationChanged.bind(this),
+			onPitchShiftChanged: this.handlePitchShiftChanged.bind(this),
 			onAdvancedOptionsChanged: this.handleAdvancedOptionsChanged.bind(this),
 			onAlignmentCsvSelected: this.handleAlignmentCsvSelected.bind(this),
 			onCancelClicked: this.handleSetupCancelClicked.bind(this),
@@ -298,6 +307,14 @@ export class InteractiveTrackSwitchControllerImpl
 
 	private handleSyncGenerationChanged(enabled: boolean): void {
 		this.state.syncGenerationEnabled = enabled;
+		if (!enabled) {
+			this.state.pitchShiftEnabled = false;
+		}
+		this.rerenderDropZone();
+	}
+
+	private handlePitchShiftChanged(enabled: boolean): void {
+		this.state.pitchShiftEnabled = enabled;
 		this.rerenderDropZone();
 	}
 
@@ -359,6 +376,7 @@ export class InteractiveTrackSwitchControllerImpl
 				this.state.featureSet,
 				this.state.algorithm,
 				this.state.syncGenerationEnabled,
+				this.state.pitchShiftEnabled,
 			);
 
 			this.replaceAlignmentResult(this.createAlignmentResult(result));
@@ -498,8 +516,6 @@ export class InteractiveTrackSwitchControllerImpl
 
 		const columnMaps = this.buildAlignmentColumnMaps();
 		const referenceColumnName = columnMaps.timeColumnByFileId[referenceFile.id];
-		const warpingMatrixBpm =
-			referenceFile.type === "musicxml" ? "infer_score" : null;
 
 		// Encode CSV as data URL for the existing alignment system
 		const csvDataUrl = `data:text/csv;base64,${btoa(this.state.alignmentResult.csv)}`;
@@ -509,9 +525,13 @@ export class InteractiveTrackSwitchControllerImpl
 				entry,
 			]),
 		);
+		const syncTimelineColumn =
+			this.state.alignmentResult.syncReferenceTimeColumn || undefined;
 
-		// Build UI array
-		const uiElements: TrackSwitchUiConfig = [];
+		const media: MediaConfig = {};
+		const timelines: Record<string, string> = {};
+		const views: TrackSwitchViewConfig[] = [];
+		const audioTrackIds: string[] = [];
 
 		// Add sheet music for MusicXML files
 		for (const file of this.state.files) {
@@ -521,11 +541,13 @@ export class InteractiveTrackSwitchControllerImpl
 				}
 				const xmlBlob = new Blob([file.xmlText], { type: "application/xml" });
 				const xmlUrl = URL.createObjectURL(xmlBlob);
-				uiElements.push({
+				const columnName = columnMaps.timeColumnByFileId[file.id];
+				media[columnName] = { type: "musicxml", src: xmlUrl };
+				timelines[columnName] = columnName;
+				views.push({
 					type: "sheetMusic",
-					src: xmlUrl,
+					mediaID: columnName,
 					renderScale: 0.65,
-					measureColumn: columnMaps.measureColumnByFileId[file.id],
 					followPlayback: true,
 				});
 			}
@@ -538,58 +560,55 @@ export class InteractiveTrackSwitchControllerImpl
 					type: file.file.type || "audio/midi",
 				});
 				const midiUrl = URL.createObjectURL(midiBlob);
-				uiElements.push({
+				const columnName = columnMaps.timeColumnByFileId[file.id];
+				media[columnName] = { type: "midi", src: midiUrl };
+				timelines[columnName] = columnName;
+				views.push({
 					type: "midi",
-					src: midiUrl,
-					alignmentColumn: columnMaps.timeColumnByFileId[file.id],
+					mediaID: columnName,
 					height: 180,
 					maxZoom: 5,
-					playbackFollowMode: "center",
+					playbackFollowMode: this.state.playbackFollowMode,
 					timer: true,
 				});
 			}
 		}
 
-		// Add one waveform + one trackGroup per audio file.
-		// waveformSource is the global track index (sequential across all trackGroups).
-		let audioTrackCount = 0;
+		// Add one waveform per audio file, tracked in a single trackList.
 		for (const file of this.state.files) {
 			if (file.type === "audio") {
 				const audioBlob = new Blob([file.file], { type: file.file.type });
 				const audioUrl = URL.createObjectURL(audioBlob);
 				const columnName = columnMaps.timeColumnByFileId[file.id];
 
-				uiElements.push({
+				media[columnName] = {
+					type: "audio",
+					title: fileNameToDisplayTitle(file.name),
+					src: audioUrl,
+					srcSynchronized: this.buildSynchronizedSourceForFile(
+						file,
+						audioUrl,
+						synchronizedAudioByFileId,
+						syncTimelineColumn,
+					),
+				};
+				timelines[columnName] = columnName;
+				audioTrackIds.push(columnName);
+
+				views.push({
 					type: "waveform",
+					tracks: [columnName],
 					height: 100,
-					waveformSource: audioTrackCount,
+					playbackFollowMode: this.state.playbackFollowMode,
 					alignedPlayhead: this.state.waveformAlignedPlayhead,
-					showAlignmentPoints: this.state.waveformShowAlignmentPoints,
+					markerLayers: this.state.waveformShowAlignmentPoints
+						? [{ set: "alignment", foldToReference: true }]
+						: undefined,
 				});
-
-				uiElements.push({
-					type: "trackGroup",
-					trackGroup: [
-						{
-							title: fileNameToDisplayTitle(file.name),
-							sources: [{ src: audioUrl, type: file.file.type }],
-							alignment: {
-								column: columnName,
-								synchronizedSources: this.buildSynchronizedSourcesForFile(
-									file,
-									audioUrl,
-									synchronizedAudioByFileId,
-								),
-							},
-						},
-					],
-				});
-
-				audioTrackCount++;
 			}
 		}
 
-		if (audioTrackCount === 0) {
+		if (audioTrackIds.length === 0) {
 			this.state.computationError =
 				"No audio tracks to play. Add at least one audio file.";
 			this.state.computationStatus = "error";
@@ -597,29 +616,49 @@ export class InteractiveTrackSwitchControllerImpl
 			return;
 		}
 
-		uiElements.push({
-			type: "warpingMatrix",
-			bpm: warpingMatrixBpm,
+		if (syncTimelineColumn) {
+			timelines[syncTimelineColumn] = syncTimelineColumn;
+		}
+
+		if (audioTrackIds.length >= 2) {
+			views.push({
+				type: "warpingMatrix",
+				x: audioTrackIds[0],
+				y: audioTrackIds[1],
+			});
+		}
+
+		views.unshift({
+			type: "navigationBar",
+			controls: [
+				"playback",
+				"globalVolume",
+				"markerNavigation",
+				"looping",
+				"sync",
+				"timer",
+				"seekBar",
+			],
+		});
+		views.push({
+			type: "trackList",
+			tracks: audioTrackIds,
+			trackVolumeControls: true,
+			trackPanControls: "balance",
 		});
 
 		const playerInit = {
 			features: {
-				seekBar: true,
-				timer: true,
 				keyboard: true,
-				globalVolume: true,
-				trackVolumeControls: true,
-				trackPanControls: true,
-				looping: true,
 			},
+			media,
 			alignment: {
-				csv: csvDataUrl,
-				referenceTimeColumn: referenceColumnName,
-				referenceTimeColumnSync:
-					this.state.alignmentResult.syncReferenceTimeColumn || undefined,
-				outOfRange: "clamp" as const,
+				src: csvDataUrl,
+				referenceTimeline: referenceColumnName,
+				timelines,
+				outsideCoverage: "hold" as const,
 			},
-			ui: uiElements,
+			views,
 		};
 
 		// Clear and mount
@@ -628,10 +667,7 @@ export class InteractiveTrackSwitchControllerImpl
 		this.rootElement.classList.remove("ts-interactive-setup");
 
 		try {
-			this.innerController = createTrackSwitchSyncPlayer(
-				this.rootElement,
-				playerInit,
-			);
+			this.innerController = createTrackSwitch(this.rootElement, playerInit);
 			this.applyWarpingMatrixVisibility();
 
 			// Load the player
@@ -689,6 +725,7 @@ export class InteractiveTrackSwitchControllerImpl
 			featureSet: this.state.featureSet,
 			algorithm: this.state.algorithm,
 			syncGenerationEnabled: this.state.syncGenerationEnabled,
+			pitchShiftEnabled: this.state.pitchShiftEnabled,
 			advancedOptionsExpanded: this.state.advancedOptionsExpanded,
 			showWarpingMatrix: this.state.showWarpingMatrix,
 			alignmentResult: this.state.alignmentResult,
@@ -720,6 +757,7 @@ export class InteractiveTrackSwitchControllerImpl
 		this.state.algorithm = this.playerSetupSnapshot.algorithm;
 		this.state.syncGenerationEnabled =
 			this.playerSetupSnapshot.syncGenerationEnabled;
+		this.state.pitchShiftEnabled = this.playerSetupSnapshot.pitchShiftEnabled;
 		this.state.advancedOptionsExpanded =
 			this.playerSetupSnapshot.advancedOptionsExpanded;
 		this.state.showWarpingMatrix = this.playerSetupSnapshot.showWarpingMatrix;
@@ -760,6 +798,7 @@ export class InteractiveTrackSwitchControllerImpl
 			waveformAlignedPlayhead: this.state.waveformAlignedPlayhead,
 			waveformShowAlignmentPoints: this.state.waveformShowAlignmentPoints,
 			showWarpingMatrix: this.state.showWarpingMatrix,
+			playbackFollowMode: this.state.playbackFollowMode,
 		});
 
 		const menu = wrapper.firstElementChild as HTMLElement | null;
@@ -808,6 +847,17 @@ export class InteractiveTrackSwitchControllerImpl
 		if (warpingMatrixInput) {
 			warpingMatrixInput.addEventListener("change", () => {
 				this.applyWarpingMatrixDisplaySetting(warpingMatrixInput.checked);
+			});
+		}
+
+		const playbackFollowModeSelect = menu.querySelector(
+			'[data-setting-id="playback-follow-mode"]',
+		) as HTMLSelectElement | null;
+		if (playbackFollowModeSelect) {
+			playbackFollowModeSelect.addEventListener("change", () => {
+				this.applyPlaybackFollowModeSetting(
+					playbackFollowModeSelect.value as WaveformPlaybackFollowMode,
+				);
 			});
 		}
 
@@ -914,6 +964,28 @@ export class InteractiveTrackSwitchControllerImpl
 		});
 	}
 
+	private applyPlaybackFollowModeSetting(
+		playbackFollowMode: WaveformPlaybackFollowMode,
+	): void {
+		if (
+			!this.innerController ||
+			!this.state.alignmentResult ||
+			this.destroyed
+		) {
+			return;
+		}
+
+		const snapshot = this.innerController.getState();
+		this.state.playbackFollowMode = playbackFollowMode;
+
+		this.innerController.destroy();
+		this.innerController = null;
+		this.buildAndMountPlayer({
+			position: snapshot.state.position,
+			playing: snapshot.state.playing,
+		});
+	}
+
 	private applyWarpingMatrixDisplaySetting(showWarpingMatrix: boolean): void {
 		this.state.showWarpingMatrix = showWarpingMatrix;
 		this.applyWarpingMatrixVisibility();
@@ -960,6 +1032,9 @@ export class InteractiveTrackSwitchControllerImpl
 			this.state.featureSet,
 			this.state.algorithm,
 			this.state.syncGenerationEnabled ? "sync" : "base",
+			this.state.syncGenerationEnabled && this.state.pitchShiftEnabled
+				? "pitch"
+				: "nopitch",
 		].join("::");
 	}
 
@@ -970,20 +1045,21 @@ export class InteractiveTrackSwitchControllerImpl
 		return buildUniqueAlignmentColumnMaps(this.state.files);
 	}
 
-	private buildSynchronizedSourcesForFile(
+	private buildSynchronizedSourceForFile(
 		file: InteractiveFile,
 		baseAudioUrl: string,
 		synchronizedAudioByFileId: Map<
 			string,
 			{ objectUrl: string; mimeType: string }
 		>,
-	): Array<{ src: string; type: string }> | undefined {
-		if (!this.state.alignmentResult?.syncReferenceTimeColumn) {
+		syncTimelineColumn: string | undefined,
+	): { src: string } | undefined {
+		if (!syncTimelineColumn) {
 			return undefined;
 		}
 
 		if (file.id === this.state.referenceFileId) {
-			return [{ src: baseAudioUrl, type: file.file.type || "audio/wav" }];
+			return { src: baseAudioUrl };
 		}
 
 		const synchronizedAudio = synchronizedAudioByFileId.get(file.id);
@@ -991,9 +1067,7 @@ export class InteractiveTrackSwitchControllerImpl
 			return undefined;
 		}
 
-		return [
-			{ src: synchronizedAudio.objectUrl, type: synchronizedAudio.mimeType },
-		];
+		return { src: synchronizedAudio.objectUrl };
 	}
 
 	private createAlignmentResult(

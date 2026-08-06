@@ -44,7 +44,9 @@ export class AlignmentWorkerBridge {
 
 		this.initPromise = new Promise((resolve, reject) => {
 			try {
-				this.worker = new Worker(this.workerUrl);
+				// Must be a module worker: Pyodide throws "Classic web workers
+				// are not supported" when loaded from a classic worker scope.
+				this.worker = new Worker(this.workerUrl, { type: "module" });
 			} catch (_e) {
 				reject(
 					new Error(
@@ -127,6 +129,7 @@ export class AlignmentWorkerBridge {
 		featureSet: AlignmentFeatureSetId,
 		algorithm: AlignmentAlgorithmId,
 		generateSyncedAudio: boolean,
+		pitchShiftEnabled: boolean,
 	): Promise<WorkerComputeResult> {
 		await this.ensureReady();
 		const worker = this.worker;
@@ -233,6 +236,7 @@ export class AlignmentWorkerBridge {
 				algorithm: algorithm,
 				featureRate: FEATURE_RATE,
 				generateSyncedAudio: generateSyncedAudio,
+				pitchShiftEnabled: pitchShiftEnabled,
 			};
 
 			worker.postMessage(message, transferables);

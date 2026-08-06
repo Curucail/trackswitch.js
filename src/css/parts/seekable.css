@@ -32,6 +32,10 @@
 	cursor: pointer;
 }
 
+.trackswitch .seekable-img-wrap .seekwrap.marker-only-seekwrap {
+	cursor: default;
+}
+
 .trackswitch .seekable-img-wrap .seekwrap .seekhead {
 	inset-block: 0;
 	width: var(--ts-waveform-seekhead-width);

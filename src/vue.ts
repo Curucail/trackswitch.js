@@ -14,15 +14,9 @@ import type {
 } from "./domain/types";
 import type { TrackswitchDomEventName, TrackswitchPlayer } from "./element";
 import {
-	defineTrackSwitchSyncPlayerElement,
 	defineTrackswitchDefaultElement,
 	TRACKSWITCH_DOM_EVENTS,
 } from "./element";
-import { defineTrackSwitchSyncInteractiveElement } from "./interactive/interactive-element";
-import type {
-	InteractiveTrackSwitchController,
-	InteractiveTrackSwitchInit,
-} from "./interactive/types";
 
 type TrackSwitchVueEventHandlers = {
 	loaded: (payload: TrackSwitchEventMap["loaded"]) => true;
@@ -39,11 +33,6 @@ type TrackSwitchVueEmit = <K extends keyof TrackSwitchVueEventHandlers>(
 export interface TrackSwitchVueExpose {
 	element: TrackswitchPlayer | null;
 	controller: TrackSwitchController | null;
-}
-
-export interface TrackSwitchInteractiveVueExpose {
-	element: HTMLElement | null;
-	controller: InteractiveTrackSwitchController | null;
 }
 
 function createTrackSwitchVueComponent(
@@ -92,7 +81,6 @@ function createTrackSwitchVueComponent(
 
 			onMounted(() => {
 				if (tagName === "trackswitch-sync-player") {
-					defineTrackSwitchSyncPlayerElement();
 				} else {
 					defineTrackswitchDefaultElement();
 				}
@@ -162,69 +150,5 @@ export const TrackSwitchSyncPlayer = createTrackSwitchVueComponent(
 	"TrackSwitchSyncPlayer",
 	"trackswitch-sync-player",
 );
-
-export const TrackSwitchSyncInteractive = defineComponent({
-	name: "TrackSwitchSyncInteractive",
-	props: {
-		config: {
-			type: Object as PropType<InteractiveTrackSwitchInit>,
-			required: false,
-		},
-	},
-	setup(
-		props: { config?: InteractiveTrackSwitchInit },
-		{
-			expose,
-			attrs,
-		}: {
-			expose: (exposed: TrackSwitchInteractiveVueExpose) => void;
-			attrs: Record<string, unknown>;
-		},
-	) {
-		const elementRef = ref<
-			| (HTMLElement & {
-					config?: InteractiveTrackSwitchInit;
-					controller?: InteractiveTrackSwitchController | null;
-			  })
-			| null
-		>(null);
-
-		const controller = (): InteractiveTrackSwitchController | null =>
-			elementRef.value?.controller || null;
-
-		expose({
-			get element() {
-				return elementRef.value;
-			},
-			get controller() {
-				return controller();
-			},
-		} satisfies TrackSwitchInteractiveVueExpose);
-
-		onMounted(() => {
-			defineTrackSwitchSyncInteractiveElement();
-			if (elementRef.value) {
-				elementRef.value.config = props.config || {};
-			}
-		});
-
-		watch(
-			() => props.config,
-			(nextConfig) => {
-				if (elementRef.value) {
-					elementRef.value.config = nextConfig || {};
-				}
-			},
-			{ deep: false },
-		);
-
-		return function render() {
-			return h("trackswitch-sync-interactive", {
-				...attrs,
-				ref: elementRef,
-			});
-		};
-	},
-});
 
 export default TrackSwitchPlayer;

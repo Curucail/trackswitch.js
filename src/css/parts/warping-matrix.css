@@ -5,6 +5,10 @@
 	margin: 0;
 }
 
+.trackswitch .warping-matrix-preview {
+	pointer-events: none;
+}
+
 .trackswitch .warping-matrix-host {
 	width: 100%;
 	min-height: 180px;
@@ -182,6 +186,11 @@
 	stroke-width: 2px;
 	stroke-linecap: round;
 	stroke-linejoin: round;
+}
+
+.trackswitch .warping-matrix-preview .warping-path-line,
+.trackswitch .warping-matrix-preview .warping-tempo-line {
+	opacity: 0.3;
 }
 
 .trackswitch .warping-tempo-reference-line {

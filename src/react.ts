@@ -15,15 +15,9 @@ import type {
 } from "./domain/types";
 import type { TrackswitchDomEventName, TrackswitchPlayer } from "./element";
 import {
-	defineTrackSwitchSyncPlayerElement,
 	defineTrackswitchDefaultElement,
 	TRACKSWITCH_DOM_EVENTS,
 } from "./element";
-import { defineTrackSwitchSyncInteractiveElement } from "./interactive/interactive-element";
-import type {
-	InteractiveTrackSwitchController,
-	InteractiveTrackSwitchInit,
-} from "./interactive/types";
 
 export interface TrackSwitchEventProps {
 	onLoaded?: (payload: TrackSwitchEventMap["loaded"]) => void;
@@ -34,14 +28,6 @@ export interface TrackSwitchEventProps {
 
 export interface TrackSwitchPlayerProps extends TrackSwitchEventProps {
 	config: TrackSwitchInit;
-	configKey?: string | number;
-	id?: string;
-	className?: string;
-	style?: CSSProperties;
-}
-
-export interface TrackSwitchInteractiveProps {
-	config?: InteractiveTrackSwitchInit;
 	configKey?: string | number;
 	id?: string;
 	className?: string;
@@ -80,7 +66,6 @@ function addTrackswitchListener<K extends keyof TrackSwitchEventProps>(
 
 function defineTrackSwitchElementForTag(tagName: string): void {
 	if (tagName === "trackswitch-sync-player") {
-		defineTrackSwitchSyncPlayerElement();
 		return;
 	}
 
@@ -207,62 +192,3 @@ export const TrackSwitchPlayer =
 export const TrackSwitchSyncPlayer = createTrackSwitchReactComponent(
 	"trackswitch-sync-player",
 );
-
-export const TrackSwitchSyncInteractive = forwardRef(
-	function TrackSwitchSyncInteractive(
-		{ config, configKey, id, className, style }: TrackSwitchInteractiveProps,
-		ref: Ref<InteractiveTrackSwitchController | null>,
-	) {
-		const rootRef = useRef<
-			| (HTMLElement & {
-					config?: InteractiveTrackSwitchInit;
-					controller?: InteractiveTrackSwitchController | null;
-			  })
-			| null
-		>(null);
-		const controllerRef = useRef<InteractiveTrackSwitchController | null>(null);
-
-		useEffect(() => {
-			defineTrackSwitchSyncInteractiveElement();
-		}, []);
-
-		useEffect(() => {
-			void configKey;
-			const element = rootRef.current;
-			if (!element) {
-				return;
-			}
-
-			element.config = config || {};
-			controllerRef.current = element.controller || null;
-
-			return () => {
-				controllerRef.current = null;
-			};
-		}, [config, configKey]);
-
-		useEffect(() => {
-			const element = rootRef.current;
-			if (!element) {
-				return;
-			}
-
-			element.config = config || {};
-			controllerRef.current = element.controller || null;
-		}, [config]);
-
-		useImperativeHandle(ref, () => {
-			void configKey;
-			return controllerRef.current;
-		}, [configKey]);
-
-		return createElement("trackswitch-sync-interactive", {
-			ref: rootRef,
-			id,
-			className,
-			style,
-		});
-	},
-);
-
-export const TrackSwitchElement = TrackSwitchPlayer;
