@@ -34,8 +34,12 @@ function shouldSuppressMidiPlaybackFollow(
 
 export function applyTrackProperties(ctx: TrackSwitchControllerImpl): void {
 	const panSupported = ctx.audioEngine.supportsStereoPanning();
-	const noSoloFallbackGate =
-		ctx.isAlignmentMode() && ctx.globalSyncEnabled ? 0 : undefined;
+	// With nothing soloed at all, a track of an exclusive list still sounds — that
+	// list always means one of its tracks. Global sync silences the fallback.
+	const silentFallback = ctx.isAlignmentMode() && ctx.globalSyncEnabled;
+	const noSoloFallbackGates = ctx.runtimes.map((_runtime, index) =>
+		!silentFallback && ctx.isTrackExclusive(index) ? 1 : 0,
+	);
 	if (!panSupported) {
 		ctx.runtimes.forEach((runtime) => {
 			runtime.state.pan = 0;
@@ -45,11 +49,10 @@ export function applyTrackProperties(ctx: TrackSwitchControllerImpl): void {
 	ctx.renderer.updateTrackControls(
 		ctx.runtimes,
 		ctx.syncLockedTrackIndexes,
-		ctx.effectiveSingleSoloMode,
 		panSupported,
 		ctx.globalSyncEnabled,
 	);
-	ctx.audioEngine.applyTrackStateGains(ctx.runtimes, noSoloFallbackGate);
+	ctx.audioEngine.applyTrackStateGains(ctx.runtimes, noSoloFallbackGates);
 	ctx.renderer.switchPosterImage(ctx.runtimes);
 	ctx.renderer.renderWaveforms(
 		ctx.waveformEngine,
@@ -58,6 +61,8 @@ export function applyTrackProperties(ctx: TrackSwitchControllerImpl): void {
 		ctx.getWaveformTimelineProjector(),
 		ctx.getWaveformTimelineContext(),
 	);
+	ctx.renderMarkerLayers();
+	ctx.updateMarkerNavigation();
 
 	ctx.runtimes.forEach((runtime, index) => {
 		ctx.emit("trackState", createTrackStateEventPayload(index, runtime));
@@ -65,6 +70,7 @@ export function applyTrackProperties(ctx: TrackSwitchControllerImpl): void {
 }
 
 export function updateMainControls(ctx: TrackSwitchControllerImpl): void {
+	ctx.synchronizeRuntimeMarkers();
 	const uiState = createUiState(ctx);
 	const suppressWaveformPlaybackFollow =
 		shouldSuppressWaveformPlaybackFollow(ctx);
@@ -87,15 +93,18 @@ export function updateMainControls(ctx: TrackSwitchControllerImpl): void {
 		ctx.isAlignmentMode(),
 		(surface) => ctx.getMidiTimelineContext(surface),
 	);
+	ctx.updateMarkerNavigation();
 	ctx.sheetMusicEngine.updatePosition(
 		ctx.state.position,
 		ctx.isSyncReferenceAxisActive(),
+		ctx.renderer.isTimelineCovered ?? undefined,
 	);
 
 	emitPositionUpdate(ctx);
 }
 
 export function updatePlaybackPositionUi(ctx: TrackSwitchControllerImpl): void {
+	ctx.synchronizeRuntimeMarkers();
 	const uiState = createUiState(ctx);
 	const suppressWaveformPlaybackFollow =
 		shouldSuppressWaveformPlaybackFollow(ctx);
@@ -118,9 +127,11 @@ export function updatePlaybackPositionUi(ctx: TrackSwitchControllerImpl): void {
 		ctx.isAlignmentMode(),
 		(surface) => ctx.getMidiTimelineContext(surface),
 	);
+	ctx.updateMarkerNavigation();
 	ctx.sheetMusicEngine.updatePosition(
 		ctx.state.position,
 		ctx.isSyncReferenceAxisActive(),
+		ctx.renderer.isTimelineCovered ?? undefined,
 	);
 
 	emitPositionUpdate(ctx);

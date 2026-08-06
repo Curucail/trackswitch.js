@@ -451,8 +451,11 @@
 	transform-origin: top center;
 }
 
+/* Reserves room below the "Advanced" toggle for the absolutely positioned
+   panel (features/algorithm selects, the two sync toggle rows, and the
+   alignment.csv upload row) so it doesn't overlap content below the bar. */
 .trackswitch .ts-compute-bar:has(.ts-advanced-options[open]) {
-	padding-bottom: 228px;
+	padding-bottom: 280px;
 }
 
 .trackswitch .ts-advanced-options-grid {
@@ -671,6 +674,11 @@
 	gap: 12px;
 }
 
+.trackswitch .ts-sync-toggle-row.ts-sync-toggle-row-disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
 .trackswitch .ts-sync-toggle-copy {
 	display: grid;
 	gap: 2px;
@@ -730,6 +738,12 @@
 	margin: 0;
 	opacity: 0;
 	cursor: pointer;
+}
+
+.trackswitch
+	.ts-sync-toggle-row.ts-sync-toggle-row-disabled
+	.ts-sync-toggle-input {
+	cursor: not-allowed;
 }
 
 .trackswitch .ts-sync-toggle-knob {
@@ -989,6 +1003,20 @@
 	line-height: 1.45;
 }
 
+/* Settings button ---------------------------------------------------------- */
+
+.trackswitch .settings-button {
+	margin-left: 0;
+}
+
+.trackswitch .settings-button .ts-icon-slot {
+	transition: transform 0.3s ease;
+}
+
+.trackswitch .settings-button:hover .ts-icon-slot {
+	transform: rotate(45deg);
+}
+
 /* Disabled nav state ------------------------------------------------------- */
 
 .trackswitch .ts-controls-disabled .main-control .control {
@@ -1045,20 +1073,6 @@
 	}
 }
 
-/* Settings button ---------------------------------------------------------- */
-
-.trackswitch .settings-button {
-	margin-left: 0;
-}
-
-.trackswitch .settings-button .ts-icon-slot {
-	transition: transform 0.3s ease;
-}
-
-.trackswitch .settings-button:hover .ts-icon-slot {
-	transform: rotate(45deg);
-}
-
 /* Player settings menu ---------------------------------------------------- */
 
 .trackswitch .ts-player-settings-menu {
@@ -1104,6 +1118,20 @@
 	font-weight: 700;
 	color: var(--ts-color-text-primary);
 	line-height: 1.2;
+}
+
+.trackswitch.trackswitch select.ts-player-settings-select {
+	flex: 0 0 auto;
+	min-height: 32px;
+	padding: 4px 8px;
+	border: 1px solid var(--ts-color-border-mid);
+	border-radius: 4px;
+	background: var(--ts-color-surface-raised-92);
+	color: var(--ts-color-text-primary);
+	font-family: var(--ts-font-ui);
+	font-size: 12px;
+	font-weight: 700;
+	cursor: pointer;
 }
 
 .trackswitch .ts-player-settings-switch {

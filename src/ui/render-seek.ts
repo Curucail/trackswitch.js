@@ -47,6 +47,20 @@ function sanitizeDuration(value: number): number {
 	return value;
 }
 
+/**
+ * Attribute writes are the expensive part of the playback tick, so skip them
+ * whenever the value is already what the DOM holds.
+ */
+function setAttributeIfChanged(
+	element: Element,
+	name: string,
+	value: string,
+): void {
+	if (element.getAttribute(name) !== value) {
+		element.setAttribute(name, value);
+	}
+}
+
 function setMainSeekbarPlayheadPosition(
 	seekbar: HTMLElement,
 	seekhead: HTMLElement,
@@ -68,6 +82,7 @@ export function updateSeekWrapVisuals(
 	duration: number,
 	loop: LoopState,
 	loopingEnabled: boolean,
+	formatValue: (value: number) => string = String,
 ): void {
 	const safeDuration = sanitizeDuration(duration);
 	const safePosition =
@@ -86,7 +101,25 @@ export function updateSeekWrapVisuals(
 				clampPercent(seekRatio * 100),
 			);
 		}
+		const formattedPosition = formatValue(safePosition);
+		setAttributeIfChanged(
+			seekhead,
+			"aria-label",
+			`Playhead ${formattedPosition}`,
+		);
+		if (seekhead.title !== formattedPosition) {
+			seekhead.title = formattedPosition;
+		}
 	}
+	setAttributeIfChanged(geometryRoot, "role", "slider");
+	setAttributeIfChanged(geometryRoot, "aria-valuemin", "0");
+	setAttributeIfChanged(geometryRoot, "aria-valuemax", String(safeDuration));
+	setAttributeIfChanged(geometryRoot, "aria-valuenow", String(safePosition));
+	setAttributeIfChanged(
+		geometryRoot,
+		"aria-valuetext",
+		formatValue(safePosition),
+	);
 
 	if (!loopingEnabled) {
 		return;
@@ -99,6 +132,8 @@ export function updateSeekWrapVisuals(
 		);
 		setPercentProperty(geometryRoot, "--ts-loop-marker-a", pointAPerc);
 		setDisplay(markerA, "block");
+		markerA.setAttribute("aria-label", `Loop A ${formatValue(loop.pointA)}`);
+		(markerA as HTMLElement).title = formatValue(loop.pointA);
 	} else if (markerA) {
 		setDisplay(markerA, "none");
 	}
@@ -110,6 +145,8 @@ export function updateSeekWrapVisuals(
 		);
 		setPercentProperty(geometryRoot, "--ts-loop-marker-b", pointBPerc);
 		setDisplay(markerB, "block");
+		markerB.setAttribute("aria-label", `Loop B ${formatValue(loop.pointB)}`);
+		(markerB as HTMLElement).title = formatValue(loop.pointB);
 	} else if (markerB) {
 		setDisplay(markerB, "none");
 	}

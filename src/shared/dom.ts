@@ -1,17 +1,21 @@
-export function sanitizeInlineStyle(styleValue: unknown): string {
-	const style = typeof styleValue === "string" ? styleValue.trim() : "";
-	if (!style) {
-		return "";
+import type { TrackSwitchCssOverrides } from "../domain/types";
+
+/**
+ * Writes a config `css` block onto an element. `setProperty` takes the value as
+ * a single declaration value, so — unlike the raw style string this replaced —
+ * there is no way for a config to open a second declaration or a new rule.
+ */
+export function applyCssOverrides(
+	element: HTMLElement,
+	css: TrackSwitchCssOverrides | undefined,
+): void {
+	if (!css) {
+		return;
 	}
 
-	return style
-		.replace(/url\s*\(/gi, "")
-		.replace(/expression\s*\(/gi, "")
-		.replace(/javascript\s*:/gi, "")
-		.replace(/vbscript\s*:/gi, "")
-		.replace(/@import/gi, "")
-		.replace(/behavior\s*:/gi, "")
-		.replace(/[<>]/g, "");
+	Object.entries(css).forEach(([token, value]) => {
+		element.style.setProperty(token, value);
+	});
 }
 
 export function escapeHtml(value: unknown): string {
@@ -34,7 +38,7 @@ export function eventTargetAsElement(
 	return candidate.nodeType === 1 ? (target as Element) : null;
 }
 
-export function getOwnerDocument(node: Node | null | undefined): Document {
+function getOwnerDocument(node: Node | null | undefined): Document {
 	if (node?.ownerDocument) {
 		return node.ownerDocument;
 	}

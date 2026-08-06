@@ -1,9 +1,9 @@
-import { renderIconSlotHtml } from "../../ui/icons";
 import {
 	ALIGNMENT_ALGORITHM_OPTIONS,
 	ALIGNMENT_FEATURE_SET_OPTIONS,
 	isCompatibleAlignmentSelection,
 } from "../alignment-options";
+import { renderIconSlotHtml } from "../core-adapter";
 import { classifyFileType } from "../file-handler";
 import type {
 	AlignmentAlgorithmId,
@@ -16,14 +16,14 @@ import {
 	buildAlignmentHelpTriggerHtml,
 } from "./alignment-help";
 
-export function buildDropZoneInputHtml(): string {
+function buildDropZoneInputHtml(): string {
 	return (
 		'<input type="file" class="ts-dropzone-input" multiple ' +
 		'accept=".wav,.mp3,.ogg,.flac,.m4a,.aac,.webm,.xml,.musicxml,.mxl,.mid,.midi">'
 	);
 }
 
-export function buildDropZoneHtml(): string {
+function buildDropZoneHtml(): string {
 	return (
 		'<div class="ts-dropzone" tabindex="0">' +
 		'<div class="ts-dropzone-prompt">' +
@@ -42,7 +42,7 @@ export function buildDropZoneHtml(): string {
 	);
 }
 
-export function buildFileListHtml(
+function buildFileListHtml(
 	files: InteractiveFile[],
 	referenceFileId: string | null,
 	infoMessage?: string,
@@ -131,7 +131,7 @@ export function buildFileListHtml(
 	return html;
 }
 
-export function buildComputeBarHtml(
+function buildComputeBarHtml(
 	canCompute: boolean,
 	status: string,
 	featureSet: AlignmentFeatureSetId,
@@ -139,6 +139,7 @@ export function buildComputeBarHtml(
 	isComputing: boolean,
 	showCancel: boolean,
 	syncGenerationEnabled: boolean,
+	pitchShiftEnabled: boolean,
 	advancedOptionsExpanded: boolean,
 ): string {
 	const featureSelectId = "ts-dropzone-feature-set-select";
@@ -150,6 +151,7 @@ export function buildComputeBarHtml(
 			featureSet,
 			algorithm,
 			syncGenerationEnabled,
+			pitchShiftEnabled,
 			featureSelectId,
 			algorithmSelectId,
 			"dropzone",
@@ -186,7 +188,7 @@ export function buildComputeBarHtml(
 	return html;
 }
 
-export function buildComputingOverlayHtml(message: string): string {
+function buildComputingOverlayHtml(message: string): string {
 	return (
 		'<div class="ts-computing-overlay">' +
 		'<div class="ts-computing-card">' +
@@ -211,6 +213,7 @@ export function buildFullDropZonePanel(
 	algorithm: AlignmentAlgorithmId,
 	showCancel: boolean,
 	syncGenerationEnabled: boolean,
+	pitchShiftEnabled: boolean,
 	advancedOptionsExpanded: boolean,
 	fileListInfoMessage?: string,
 ): string {
@@ -230,6 +233,7 @@ export function buildFullDropZonePanel(
 		isComputing,
 		showCancel,
 		syncGenerationEnabled,
+		pitchShiftEnabled,
 		advancedOptionsExpanded,
 	);
 
@@ -258,6 +262,7 @@ export interface DropZoneEvents {
 	onFeatureSetChanged(featureSet: AlignmentFeatureSetId): void;
 	onAlgorithmChanged(algorithm: AlignmentAlgorithmId): void;
 	onSyncGenerationChanged(enabled: boolean): void;
+	onPitchShiftChanged(enabled: boolean): void;
 	onAdvancedOptionsChanged(expanded: boolean): void;
 	onAlignmentCsvSelected(file: File): void;
 	onCancelClicked(): void;
@@ -432,6 +437,15 @@ export function bindDropZoneEvents(
 		});
 	}
 
+	const pitchShiftToggleInput = container.querySelector(
+		".ts-pitch-shift-toggle-input",
+	) as HTMLInputElement | null;
+	if (pitchShiftToggleInput) {
+		pitchShiftToggleInput.addEventListener("change", () => {
+			events.onPitchShiftChanged(pitchShiftToggleInput.checked);
+		});
+	}
+
 	const alignmentCsvInput = container.querySelector(
 		".ts-alignment-csv-input",
 	) as HTMLInputElement | null;
@@ -516,6 +530,7 @@ function buildAdvancedOptionsHtml(
 	featureSet: AlignmentFeatureSetId,
 	algorithm: AlignmentAlgorithmId,
 	syncGenerationEnabled: boolean,
+	pitchShiftEnabled: boolean,
 	featureSelectId: string,
 	algorithmSelectId: string,
 	idPrefix: string,
@@ -588,7 +603,7 @@ function buildAdvancedOptionsHtml(
 		'<div class="ts-sync-toggle-row-wrap">' +
 		'<label class="ts-sync-toggle-row ts-sync-toggle-row-compact">' +
 		'<span class="ts-sync-toggle-copy">' +
-		'<span class="ts-sync-toggle-title">Generate time-/pitch-synchronized versions of audio for multitrack playback</span>' +
+		'<span class="ts-sync-toggle-title">Generate time-synchronized versions of audio for multitrack playback</span>' +
 		"</span>" +
 		'<span class="ts-sync-toggle-switch ts-sync-toggle-switch-compact">' +
 		'<input class="ts-sync-toggle-input" type="checkbox"' +
@@ -601,6 +616,30 @@ function buildAdvancedOptionsHtml(
 		buildAlignmentHelpTriggerHtml({
 			label: "synchronized audio generation",
 			tooltipId: "sync-generation",
+			idPrefix: idPrefix,
+			align: "end",
+		}) +
+		"</span>" +
+		"</div>" +
+		'<div class="ts-sync-toggle-row-wrap">' +
+		'<label class="ts-sync-toggle-row ts-sync-toggle-row-compact' +
+		(syncGenerationEnabled ? "" : " ts-sync-toggle-row-disabled") +
+		'">' +
+		'<span class="ts-sync-toggle-copy">' +
+		'<span class="ts-sync-toggle-title">Pitch-shift synchronized audio to match the reference key</span>' +
+		"</span>" +
+		'<span class="ts-sync-toggle-switch ts-sync-toggle-switch-compact">' +
+		'<input class="ts-sync-toggle-input ts-pitch-shift-toggle-input" type="checkbox"' +
+		(pitchShiftEnabled ? " checked" : "") +
+		(syncGenerationEnabled ? "" : " disabled") +
+		">" +
+		'<span class="ts-sync-toggle-knob" aria-hidden="true"></span>' +
+		"</span>" +
+		"</label>" +
+		'<span class="ts-sync-toggle-help">' +
+		buildAlignmentHelpTriggerHtml({
+			label: "pitch-shifted audio generation",
+			tooltipId: "pitch-shift",
 			idPrefix: idPrefix,
 			align: "end",
 		}) +

@@ -1,0 +1,48 @@
+{
+	"$schema": "https://audiolabs.github.io/trackswitch.js/schema/trackswitch.schema.json",
+	"media": {
+		"mix": {
+			"type": "audio",
+			"title": "Mix (Kick, Bass, Piano)",
+			"src": "../../assets/global-image/mix.mp3",
+			"solo": true
+		},
+		"kick": {
+			"type": "audio",
+			"title": "Kick",
+			"src": "../../assets/global-image/kick.mp3"
+		},
+		"bass": {
+			"type": "audio",
+			"title": "Bass",
+			"src": "../../assets/global-image/bass.mp3"
+		},
+		"piano": {
+			"type": "audio",
+			"title": "Piano",
+			"src": "../../assets/global-image/piano.mp3"
+		},
+		"controlSignalPlot": {
+			"type": "image",
+			"src": "../../assets/global-image/example-1-normal.png"
+		}
+	},
+	"views": [
+		{
+			"type": "navigationBar",
+			"controls": ["playback", "globalVolume", "looping", "timer"]
+		},
+		{
+			"type": "image",
+			"mediaID": "controlSignalPlot",
+			"seekable": true,
+			"seekMarginLeft": 6.6,
+			"seekMarginRight": 0.4
+		},
+		{
+			"type": "trackList",
+			"tracks": ["mix", "kick", "bass", "piano"],
+			"soloGroup": 0
+		}
+	]
+}

@@ -1,5 +1,5 @@
-import { ensureTrackSwitchStyles } from "../shared/styles";
 import { InteractiveTrackSwitchControllerImpl } from "./interactive-controller";
+import { ensureInteractiveTrackSwitchStyles } from "./styles";
 import type {
 	InteractiveTrackSwitchController,
 	InteractiveTrackSwitchInit,
@@ -27,12 +27,10 @@ import type {
  * player.initialize();
  * ```
  */
-export function createInteractiveTrackSwitch(
+export function createTrackSwitchSyncInteractive(
 	rootElement: HTMLElement,
 	init?: InteractiveTrackSwitchInit,
 ): InteractiveTrackSwitchController {
-	ensureTrackSwitchStyles(rootElement);
+	ensureInteractiveTrackSwitchStyles(rootElement);
 	return new InteractiveTrackSwitchControllerImpl(rootElement, init || {});
 }
-
-export const createTrackSwitchSyncInteractive = createInteractiveTrackSwitch;

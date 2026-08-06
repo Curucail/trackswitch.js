@@ -1,0 +1,19 @@
+/*
+ * Outside a timeline's aligned region there is no alignment data, so its
+ * surfaces hold at the last aligned point while the media keep playing. The
+ * muted playhead says that the freeze is deliberate.
+ */
+
+.trackswitch .ts-out-of-coverage > .seekhead,
+.trackswitch .ts-out-of-coverage .seekhead {
+	opacity: 0.35;
+}
+
+.trackswitch .seekwrap.ts-out-of-coverage {
+	cursor: default;
+}
+
+.trackswitch .timing.ts-out-of-coverage,
+.trackswitch .sheetmusic.ts-out-of-coverage {
+	opacity: 0.55;
+}

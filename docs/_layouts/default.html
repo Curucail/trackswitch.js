@@ -14,15 +14,16 @@
   <link rel="stylesheet" href="{{ '/css/style.css' | relative_url }}" />
 </head>
 
-<body{% if page.url == '/' %} class="home-page"{% elsif page.url == '/documentation.html' %} class="docs-page docs-page--config"{% elsif page.url == '/examples.html' %} class="docs-page docs-page--narrow"{% elsif page.url == '/citation.html' %} class="docs-page docs-page--cite"{% endif %}>
+<body{% if page.body_class %} class="{{ page.body_class }}"{% elsif page.url == '/' %} class="home-page"{% elsif page.url == '/documentation.html' %} class="docs-page docs-page--config"{% elsif page.url == '/references.html' %} class="docs-page docs-page--narrow"{% elsif page.url == '/citation.html' %} class="docs-page docs-page--cite"{% endif %}>
   {% unless page.url == '/' %}
   <header class="site-masthead">
     <div class="site-masthead__inner">
-      <a class="site-brand" href="{{ '/' | relative_url }}">trackswitch.js</a>
+      <a class="site-brand" href="{{ '/' | relative_url }}">trackswitch</a>
       <nav class="site-nav" aria-label="Documentation">
         <a href="{{ '/' | relative_url }}"{% if page.url == '/' %} aria-current="page"{% endif %}>Home</a>
         <a href="{{ '/documentation.html' | relative_url }}"{% if page.url == '/documentation.html' %} aria-current="page"{% endif %}>Documentation</a>
-        <a href="{{ '/examples.html' | relative_url }}"{% if page.url == '/examples.html' %} aria-current="page"{% endif %}>Examples</a>
+        <a href="{{ '/use-cases/' | relative_url }}"{% if page.url contains '/use-cases/' %} aria-current="page"{% endif %}>Tutorials &amp; Use Cases</a>
+        <a href="{{ '/references.html' | relative_url }}"{% if page.url == '/references.html' %} aria-current="page"{% endif %}>References</a>
         <a href="{{ '/citation.html' | relative_url }}"{% if page.url == '/citation.html' %} aria-current="page"{% endif %}>Cite</a>
       </nav>
     </div>
@@ -48,12 +49,18 @@
   </footer>
 
   <script src="{{ '/js/trackswitch.js' | relative_url }}"></script>
+  {% if page.interactive_demo %}
+  <script src="{{ '/js/trackswitch-interactive.js' | relative_url }}"></script>
+  {% endif %}
+  {% if page.url contains '/use-cases/' %}
+  <script src="{{ '/js/use-case-autoload.js' | relative_url }}"></script>
+  {% endif %}
   {% if page.url == '/' %}
   <script src="{{ '/js/homepage-demo.js' | relative_url }}"></script>
   {% else %}
   <script src="{{ '/js/docs-code-snippets.js' | relative_url }}"></script>
   {% endif %}
-  {% if page.url == '/documentation.html' %}
+  {% if page.toc_script or page.url == '/documentation.html' %}
   <script src="{{ '/js/configuration-toc.js' | relative_url }}"></script>
   {% endif %}
 </body>

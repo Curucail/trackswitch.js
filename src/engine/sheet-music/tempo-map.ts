@@ -16,25 +16,6 @@ interface MeasureMapPointLike {
 	measure: number;
 }
 
-export async function loadProjectedTempoMap(
-	musicXmlUrl: string,
-	measureMap: MeasureMapPointLike[] | null,
-): Promise<{
-	fallbackTempoBpm: number | null;
-	projectedSegments: SheetMusicProjectedTempoSegment[];
-}> {
-	const { fallbackTempoBpm, projectedSegmentsByAxis } =
-		await loadProjectedTempoMaps(musicXmlUrl, {
-			base: measureMap,
-			sync: null,
-		});
-
-	return {
-		fallbackTempoBpm: fallbackTempoBpm,
-		projectedSegments: projectedSegmentsByAxis.base || [],
-	};
-}
-
 export async function loadProjectedTempoMaps(
 	musicXmlUrl: string,
 	measureMaps: SheetMusicMeasureMapsByAxis,

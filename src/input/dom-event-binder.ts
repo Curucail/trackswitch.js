@@ -1,4 +1,4 @@
-import type { TrackSwitchFeatures } from "../domain/types";
+import type { PresetsConfig, TrackSwitchFeatures } from "../domain/types";
 import {
 	eventTargetAsElement,
 	getDeepActiveElement,
@@ -8,7 +8,7 @@ import type { ControllerPointerEvent } from "../shared/seek";
 
 export interface InputController {
 	eventNamespace: string;
-	presetCount: number;
+	presets: PresetsConfig;
 	setKeyboardActive(): void;
 	openShortcutHelp(): void;
 	toggleShortcutHelp(): void;
@@ -44,6 +44,17 @@ export interface InputController {
 	onToggleLoop(event: ControllerPointerEvent): void;
 	onClearLoop(event: ControllerPointerEvent): void;
 	onMarkerDragStart(event: ControllerPointerEvent): void;
+	onTimelineMarkerActivate(event: ControllerPointerEvent): void;
+	onTimelineMarkerKeydown(event: ControllerPointerEvent): void;
+	onAdjacentMarker(
+		event: ControllerPointerEvent,
+		direction: "previous" | "next",
+	): void;
+	onMarkerNavigationOpen(event: ControllerPointerEvent): void;
+	onMarkerNavigationOverlay(event: ControllerPointerEvent): void;
+	onMarkerNavigationInput(event: ControllerPointerEvent): void;
+	onMarkerNavigationSubmit(event: ControllerPointerEvent): void;
+	onMarkerNavigationKeydown(event: ControllerPointerEvent): void;
 	onKeyboard(event: ControllerPointerEvent): void;
 	onResize(): void;
 }
@@ -259,9 +270,68 @@ export class InputBinder {
 		this.addPointerDelegatedListener(".repeat", (event) => {
 			this.controller.onRepeat(event);
 		});
+		this.addDelegatedListener("click", ".timeline-marker", (event) => {
+			this.controller.onTimelineMarkerActivate(event);
+		});
+		this.addDelegatedListener("keydown", ".timeline-marker", (event) => {
+			this.controller.onTimelineMarkerKeydown(event);
+		});
+		this.addDelegatedListener("click", ".marker-previous", (event) => {
+			this.controller.onAdjacentMarker(event, "previous");
+		});
+		this.addDelegatedListener("click", ".marker-next", (event) => {
+			this.controller.onAdjacentMarker(event, "next");
+		});
 		this.addPointerDelegatedListener(".seekwrap", (event) => {
 			this.controller.onSeekStart(event);
 		});
+	}
+
+	private bindMarkerNavigationControls(): void {
+		this.addDelegatedListener("click", ".marker-jump", (event) => {
+			this.controller.onMarkerNavigationOpen(event);
+		});
+		this.addDelegatedListener(
+			"click",
+			".marker-navigation-overlay",
+			(event) => {
+				this.controller.onMarkerNavigationOverlay(event);
+			},
+		);
+		this.addDelegatedListener("input", ".marker-navigation-input", (event) => {
+			this.controller.onMarkerNavigationInput(event);
+		});
+		this.addDelegatedListener(
+			"focusin",
+			".marker-navigation-input",
+			(event) => {
+				this.controller.onMarkerNavigationInput(event);
+			},
+		);
+		this.addDelegatedListener("click", ".marker-navigation-input", (event) => {
+			this.controller.onMarkerNavigationInput(event);
+		});
+		this.addDelegatedListener(
+			"click",
+			".marker-navigation-option, .marker-navigation-options-more",
+			(event) => {
+				this.controller.onMarkerNavigationInput(event);
+			},
+		);
+		this.addDelegatedListener(
+			"submit",
+			".marker-navigation-dialog",
+			(event) => {
+				this.controller.onMarkerNavigationSubmit(event);
+			},
+		);
+		this.addDelegatedListener(
+			"keydown",
+			".marker-navigation-dialog",
+			(event) => {
+				this.controller.onMarkerNavigationKeydown(event);
+			},
+		);
 	}
 
 	private bindPanelReorder(): void {
@@ -520,30 +590,17 @@ export class InputBinder {
 		this.bindKeyboardActivation();
 		this.bindSeekLifecycle();
 		this.bindTrackControls();
+		this.bindMarkerNavigationControls();
+		this.bindGlobalVolumeControls();
+		this.bindTrackVolumeControls();
+		this.bindTrackPanControls();
+		this.bindTrackMixControlPropagation();
 
-		if (this.features.globalVolume) {
-			this.bindGlobalVolumeControls();
-		}
-
-		if (this.features.trackVolumeControls) {
-			this.bindTrackVolumeControls();
-		}
-
-		if (this.features.trackPanControls) {
-			this.bindTrackPanControls();
-		}
-
-		if (this.features.trackVolumeControls || this.features.trackPanControls) {
-			this.bindTrackMixControlPropagation();
-		}
-
-		if (this.features.presets && this.controller.presetCount >= 2) {
+		if (Object.keys(this.controller.presets).length >= 2) {
 			this.bindPresetControls();
 		}
 
-		if (this.features.looping) {
-			this.bindLoopControls();
-		}
+		this.bindLoopControls();
 
 		if (this.features.keyboard) {
 			this.bindKeyboardShortcuts();

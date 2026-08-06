@@ -1,4 +1,5 @@
 import type { MeasureMapPoint } from "../../shared/measure-map";
+import type { ScoreMeasureNumbering } from "./measure-numbering";
 import type { OpenSheetMusicDisplayType } from "./osmd";
 
 export interface SheetMusicMeasureMapsByAxis {
@@ -15,7 +16,8 @@ export interface SheetMusicHostConfig {
 	host: HTMLElement;
 	scrollContainer: HTMLElement | null;
 	source: string;
-	measureMapsPromise: Promise<SheetMusicMeasureMapsByAxis>;
+	/** Alignment column naming this score's timeline; null when it is unaligned. */
+	measureColumn: string | null;
 	renderScale: number | null;
 	followPlayback: boolean;
 	cursorColor: string;
@@ -36,7 +38,7 @@ export interface SheetMusicEntryModel {
 	host: HTMLElement;
 	scrollContainer: HTMLElement | null;
 	source: string;
-	measureMapsPromise: Promise<SheetMusicMeasureMapsByAxis>;
+	measureColumn: string | null;
 	renderScale: number | null;
 	followPlayback: boolean;
 	cursorColor: string;
@@ -60,9 +62,9 @@ export interface SheetMusicEntryModel {
 	projectedTempoSegmentsByAxis: SheetMusicProjectedTempoSegmentsByAxis;
 	projectedTempoSegments: SheetMusicProjectedTempoSegment[] | null;
 	fallbackTempoBpm: number | null;
-	availableMeasures: number[];
-	availableMeasureSet: Set<number>;
+	measureNumbering: ScoreMeasureNumbering;
 	syncEnabled: boolean;
+	/** Printed measure number the cursor currently sits on. */
 	targetMeasure: number | null;
 	clickListener: ((event: MouseEvent) => void) | null;
 	touchStartListener: ((event: TouchEvent) => void) | null;
@@ -82,7 +84,7 @@ export type SheetMusicCursor = NonNullable<
 >;
 
 export const DEFAULT_CURSOR_COLOR = "#999999";
-export const DEFAULT_CURSOR_ALPHA = 0.4;
+const DEFAULT_CURSOR_ALPHA = 0.4;
 export const DEFAULT_GRAPHICAL_MEASURE_CLASS_NAME = "GraphicalMeasure";
 export const MIN_OSMD_ZOOM = 0.05;
 export const MAX_OSMD_ZOOM = 8;

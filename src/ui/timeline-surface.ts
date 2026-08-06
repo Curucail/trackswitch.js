@@ -8,11 +8,26 @@ export interface TimelineSurfaceGeometry {
 	baseWidth: number;
 	zoom: number;
 	zoomMinimapNode: HTMLElement;
+	/**
+	 * Last known `scrollContainer.clientWidth`. Reading it live during playback
+	 * forces a synchronous layout on every tick, so the per-frame paths read this
+	 * cache instead. Refreshed whenever the surface is reflowed or resized.
+	 */
+	cachedViewportWidth?: number;
 }
 
 export interface TimelineViewportState {
 	startRatio: number;
 	widthRatio: number;
+}
+
+/** Visible slice of a virtual surface that a sliding tile canvas has to cover. */
+export interface TimelineTileWindow {
+	tileStartPx: number;
+	tileCssWidth: number;
+	tileCssHeight: number;
+	surfaceWidth: number;
+	viewportWidth: number;
 }
 
 export function clampTimelineValue(
@@ -49,11 +64,33 @@ export function getTimelineSurfaceWidth(
 	return Math.max(1, Math.round(surface.baseWidth * surface.zoom));
 }
 
+/**
+ * Reads the scroll viewport width from the cache when it has been primed, so
+ * per-frame callers never trigger a layout flush. `refreshTimelineViewportWidth`
+ * repopulates it whenever geometry actually changes.
+ */
+function getTimelineViewportWidth(surface: TimelineSurfaceGeometry): number {
+	const cached = surface.cachedViewportWidth;
+	if (Number.isFinite(cached) && (cached as number) > 0) {
+		return cached as number;
+	}
+
+	return refreshTimelineViewportWidth(surface);
+}
+
+export function refreshTimelineViewportWidth(
+	surface: TimelineSurfaceGeometry,
+): number {
+	const viewportWidth = Math.max(1, surface.scrollContainer.clientWidth);
+	surface.cachedViewportWidth = viewportWidth;
+	return viewportWidth;
+}
+
 export function getTimelineViewportState(
 	surface: TimelineSurfaceGeometry,
 ): TimelineViewportState {
 	const surfaceWidth = getTimelineSurfaceWidth(surface);
-	const viewportWidth = Math.max(1, surface.scrollContainer.clientWidth);
+	const viewportWidth = getTimelineViewportWidth(surface);
 	const widthRatio = clampTimelineValue(viewportWidth / surfaceWidth, 0, 1);
 	const maxStartRatio = Math.max(0, 1 - widthRatio);
 	const startRatio = clampTimelineValue(
@@ -126,7 +163,7 @@ export function setTimelineZoomForSurface<T extends TimelineSurfaceGeometry>(
 
 	const previousSurfaceWidth = getTimelineSurfaceWidth(surface);
 	const wrapperRect = surface.scrollContainer.getBoundingClientRect();
-	const wrapperWidth = Math.max(1, surface.scrollContainer.clientWidth);
+	const wrapperWidth = refreshTimelineViewportWidth(surface);
 	const anchorWithinWrapper = Number.isFinite(anchorPageX)
 		? clampTimelineValue(
 				(anchorPageX as number) - (wrapperRect.left + window.scrollX),
@@ -144,10 +181,7 @@ export function setTimelineZoomForSurface<T extends TimelineSurfaceGeometry>(
 	const nextSurfaceWidth = getTimelineSurfaceWidth(surface);
 	applySurfaceWidth(surface, nextSurfaceWidth);
 
-	const maxScrollLeft = Math.max(
-		0,
-		nextSurfaceWidth - surface.scrollContainer.clientWidth,
-	);
+	const maxScrollLeft = Math.max(0, nextSurfaceWidth - wrapperWidth);
 	const nextScrollLeft = anchorRatio * nextSurfaceWidth - anchorWithinWrapper;
 	surface.scrollContainer.scrollLeft = clampTimelineValue(
 		nextScrollLeft,
@@ -163,7 +197,8 @@ export function reflowTimelineSurface<T extends TimelineSurfaceGeometry>(
 	applySurfaceWidth: (surface: T, width: number) => void,
 ): void {
 	const previousSurfaceWidth = getTimelineSurfaceWidth(surface);
-	const viewportCenter = surface.scrollContainer.clientWidth / 2;
+	const viewportWidth = refreshTimelineViewportWidth(surface);
+	const viewportCenter = viewportWidth / 2;
 	const centerRatio =
 		previousSurfaceWidth > 0
 			? (surface.scrollContainer.scrollLeft + viewportCenter) /
@@ -177,10 +212,7 @@ export function reflowTimelineSurface<T extends TimelineSurfaceGeometry>(
 	const nextSurfaceWidth = getTimelineSurfaceWidth(surface);
 	applySurfaceWidth(surface, nextSurfaceWidth);
 
-	const maxScrollLeft = Math.max(
-		0,
-		nextSurfaceWidth - surface.scrollContainer.clientWidth,
-	);
+	const maxScrollLeft = Math.max(0, nextSurfaceWidth - viewportWidth);
 	const nextScrollLeft = centerRatio * nextSurfaceWidth - viewportCenter;
 	surface.scrollContainer.scrollLeft = clampTimelineValue(
 		nextScrollLeft,
@@ -200,7 +232,7 @@ export function resolveTimelinePlaybackFollowScrollLeft(
 		return null;
 	}
 
-	const viewportWidth = Math.max(1, surface.scrollContainer.clientWidth);
+	const viewportWidth = getTimelineViewportWidth(surface);
 	const surfaceWidth = getTimelineSurfaceWidth(surface);
 	const maxScrollLeft = Math.max(0, surfaceWidth - viewportWidth);
 	if (maxScrollLeft <= 0) {
@@ -225,4 +257,86 @@ export function resolveTimelinePlaybackFollowScrollLeft(
 	}
 
 	return null;
+}
+
+/**
+ * Sizes a canvas backing store for the given CSS box at device-pixel resolution,
+ * clears it and returns a context already scaled so drawing can use CSS pixel
+ * coordinates. The CSS box itself is left to the caller or the stylesheet.
+ */
+export function resizeCanvasForCssSize(
+	canvas: HTMLCanvasElement,
+	width: number,
+	height: number,
+): CanvasRenderingContext2D | null {
+	const cssWidth = Math.max(1, Math.round(width));
+	const cssHeight = Math.max(1, Math.round(height));
+	const pixelRatio = Math.max(1, window.devicePixelRatio || 1);
+	const pixelWidth = Math.max(1, Math.round(cssWidth * pixelRatio));
+	const pixelHeight = Math.max(1, Math.round(cssHeight * pixelRatio));
+
+	if (canvas.width !== pixelWidth) {
+		canvas.width = pixelWidth;
+	}
+	if (canvas.height !== pixelHeight) {
+		canvas.height = pixelHeight;
+	}
+
+	const context = canvas.getContext("2d");
+	if (!context) {
+		return null;
+	}
+
+	context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+	context.clearRect(0, 0, cssWidth, cssHeight);
+	return context;
+}
+
+/**
+ * Computes the slice of the virtual surface a sliding tile canvas must cover:
+ * the viewport plus one viewport of buffer on each side.
+ *
+ * The window edges are snapped to a half-viewport grid. Without that, a
+ * playback-follow scroll of a pixel per frame would shift the window by a pixel
+ * per frame and force a full redraw every frame, which is exactly what the
+ * buffer exists to avoid. Snapped, the window only re-anchors once the viewport
+ * has travelled half a screen, while still always covering the viewport.
+ */
+export function resolveVisibleTileWindow(
+	surface: TimelineSurfaceGeometry,
+	tileHeight: number,
+): TimelineTileWindow {
+	const surfaceWidth = getTimelineSurfaceWidth(surface);
+	const viewportWidth = getTimelineViewportWidth(surface);
+	const scrollLeft = clampTimelineValue(
+		surface.scrollContainer.scrollLeft,
+		0,
+		Math.max(0, surfaceWidth - viewportWidth),
+	);
+	const bufferPx = viewportWidth;
+	const stepPx = Math.max(1, Math.round(viewportWidth / 2));
+	const visibleStart = Math.max(
+		0,
+		Math.floor((scrollLeft - bufferPx) / stepPx) * stepPx,
+	);
+	const visibleEnd = Math.min(
+		surfaceWidth,
+		Math.ceil((scrollLeft + viewportWidth + bufferPx) / stepPx) * stepPx,
+	);
+	return {
+		tileStartPx: visibleStart,
+		tileCssWidth: Math.max(1, Math.ceil(visibleEnd - visibleStart)),
+		tileCssHeight: Math.max(1, Math.round(tileHeight)),
+		surfaceWidth,
+		viewportWidth,
+	};
+}
+
+export function positionTileCanvas(
+	canvas: HTMLCanvasElement,
+	tileWindow: TimelineTileWindow,
+): void {
+	canvas.style.left = `${tileWindow.tileStartPx}px`;
+	canvas.style.width = `${tileWindow.tileCssWidth}px`;
+	canvas.style.height = `${tileWindow.tileCssHeight}px`;
 }

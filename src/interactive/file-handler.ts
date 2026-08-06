@@ -57,7 +57,7 @@ export function readFileAsText(file: File): Promise<string> {
 	});
 }
 
-export function readFileAsArrayBuffer(file: File): Promise<ArrayBuffer> {
+function readFileAsArrayBuffer(file: File): Promise<ArrayBuffer> {
 	return new Promise((resolve, reject) => {
 		const reader = new FileReader();
 		reader.onload = () => {
@@ -70,7 +70,7 @@ export function readFileAsArrayBuffer(file: File): Promise<ArrayBuffer> {
 	});
 }
 
-export async function decodeAudioFile(file: File): Promise<AudioBuffer> {
+async function decodeAudioFile(file: File): Promise<AudioBuffer> {
 	const arrayBuffer = await readFileAsArrayBuffer(file);
 	const audioContext = new AudioContext();
 	try {
@@ -80,7 +80,7 @@ export async function decodeAudioFile(file: File): Promise<AudioBuffer> {
 	}
 }
 
-export async function resampleToMono(
+async function resampleToMono(
 	audioBuffer: AudioBuffer,
 	targetSampleRate: number,
 ): Promise<Float32Array> {
@@ -94,7 +94,7 @@ export async function resampleToMono(
 	return resampled.getChannelData(0);
 }
 
-export async function processAudioFile(file: File): Promise<InteractiveFile> {
+async function processAudioFile(file: File): Promise<InteractiveFile> {
 	const audioBuffer = await decodeAudioFile(file);
 	const pcmData = await resampleToMono(audioBuffer, SAMPLE_RATE);
 	const fullPcmChannels: Float32Array[] = [];
@@ -121,9 +121,7 @@ export async function processAudioFile(file: File): Promise<InteractiveFile> {
 	};
 }
 
-export async function processMusicXmlFile(
-	file: File,
-): Promise<InteractiveFile> {
+async function processMusicXmlFile(file: File): Promise<InteractiveFile> {
 	const xmlText = await readFileAsText(file);
 	return {
 		id: generateFileId(),
@@ -181,7 +179,7 @@ function flattenMidiNotes(
 	};
 }
 
-export async function processMidiFile(file: File): Promise<InteractiveFile> {
+async function processMidiFile(file: File): Promise<InteractiveFile> {
 	const arrayBuffer = await readFileAsArrayBuffer(file);
 	const midi = new Midi(arrayBuffer);
 	const parsed = flattenMidiNotes(midi, file.name);
@@ -211,7 +209,7 @@ export async function processFile(file: File): Promise<InteractiveFile> {
 	throw new Error(`Unsupported file type: ${file.name}`);
 }
 
-export function stripExtension(filename: string): string {
+function stripExtension(filename: string): string {
 	const dot = filename.lastIndexOf(".");
 	return dot > 0 ? filename.substring(0, dot) : filename;
 }
@@ -222,12 +220,12 @@ export function fileNameToDisplayTitle(filename: string): string {
 }
 
 /** Sanitize a filename into a valid CSV column name. */
-export function fileNameToColumnName(filename: string): string {
+function fileNameToColumnName(filename: string): string {
 	return `time_${stripExtension(filename).replace(/[^a-zA-Z0-9_-]/g, "_")}`;
 }
 
 /** Measure column name matching the Python pipeline's naming convention. */
-export function fileNameToMeasureColumnName(filename: string): string {
+function fileNameToMeasureColumnName(filename: string): string {
 	return `measure_${stripExtension(filename).replace(/[^a-zA-Z0-9_-]/g, "_")}`;
 }
 

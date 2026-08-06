@@ -1,0 +1,101 @@
+{
+	"$schema": "https://audiolabs.github.io/trackswitch.js/schema/trackswitch.schema.json",
+	"media": {
+		"score": {
+			"type": "musicxml",
+			"src": "../../assets/alignment/Schubert_D911-03.xml"
+		},
+		"hu33Harmonic": {
+			"type": "audio",
+			"title": "Harmonic",
+			"src": "../../assets/separation/hu33_harmonic.mp3",
+			"startOffsetMs": 200,
+			"endOffsetMs": 6600
+		},
+		"hu33Percussive": {
+			"type": "audio",
+			"title": "Percussive",
+			"src": "../../assets/separation/hu33_percussive.mp3",
+			"startOffsetMs": 200,
+			"endOffsetMs": 6600
+		},
+		"hu33Residual": {
+			"type": "audio",
+			"title": "Residual",
+			"src": "../../assets/separation/hu33_residual.mp3",
+			"startOffsetMs": 200,
+			"endOffsetMs": 6600
+		},
+		"sc06Harmonic": {
+			"type": "audio",
+			"title": "Harmonic",
+			"src": "../../assets/separation/sc06_harmonic.mp3",
+			"startOffsetMs": 600,
+			"endOffsetMs": 300
+		},
+		"sc06Percussive": {
+			"type": "audio",
+			"title": "Percussive",
+			"src": "../../assets/separation/sc06_percussive.mp3",
+			"startOffsetMs": 600,
+			"endOffsetMs": 300
+		},
+		"sc06Residual": {
+			"type": "audio",
+			"title": "Residual",
+			"src": "../../assets/separation/sc06_residual.mp3",
+			"startOffsetMs": 600,
+			"endOffsetMs": 300
+		}
+	},
+	"alignment": {
+		"src": "../../assets/alignment/alignment.csv",
+		"referenceTimeline": "reference",
+		"timelines": {
+			"reference": "time_Schubert_D911-03_HU33",
+			"score": "measure_Schubert_D911-03_2",
+			"hu33Harmonic": "time_Schubert_D911-03_HU33",
+			"hu33Percussive": "time_Schubert_D911-03_HU33",
+			"hu33Residual": "time_Schubert_D911-03_HU33",
+			"sc06Harmonic": "time_Schubert_D911-03_SC06",
+			"sc06Percussive": "time_Schubert_D911-03_SC06",
+			"sc06Residual": "time_Schubert_D911-03_SC06"
+		},
+		"outsideCoverage": "hold",
+		"duplicatePlacements": "average"
+	},
+	"views": [
+		{
+			"type": "navigationBar",
+			"controls": ["playback", "globalVolume", "looping", "timer", "seekBar"]
+		},
+		{
+			"type": "sheetMusic",
+			"mediaID": "score",
+			"maxHeight": 370,
+			"cursorColor": "#999999"
+		},
+		{
+			"type": "waveform",
+			"tracks": "audible",
+			"height": 70
+		},
+		{
+			"type": "trackList",
+			"title": "Performance HU33",
+			"tracks": ["hu33Harmonic", "hu33Percussive", "hu33Residual"],
+			"trackVolumeControls": true,
+			"trackPanControls": "balance"
+		},
+		{
+			"type": "separator"
+		},
+		{
+			"type": "trackList",
+			"title": "Performance SC06",
+			"tracks": ["sc06Harmonic", "sc06Percussive", "sc06Residual"],
+			"trackVolumeControls": true,
+			"trackPanControls": "balance"
+		}
+	]
+}

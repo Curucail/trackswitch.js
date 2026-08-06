@@ -48,7 +48,7 @@
 	position: absolute;
 	inset-block: 0;
 	display: none;
-	z-index: 2;
+	z-index: 5;
 	width: var(--ts-seek-marker-hit-width);
 	cursor: ew-resize;
 	background: transparent;

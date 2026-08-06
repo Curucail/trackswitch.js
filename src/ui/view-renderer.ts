@@ -1,24 +1,43 @@
-import type { ScaleLinear, Selection } from "d3";
+import type { Midi } from "@tonejs/midi";
+import type { ScaleContinuousNumeric, ScaleLinear, Selection } from "d3";
+import type { ViewNormalizeContext } from "../config/ui-elements";
 import type {
 	AudioDownloadSizeInfo,
-	NormalizedTrackGroupLayout,
+	MarkerLayerConfig,
+	TrackId,
+	TrackListGroup,
 	TrackRuntime,
+	TrackSwitchCssOverrides,
 	TrackSwitchFeatures,
+	TrackSwitchNavigationBarViewConfig,
 	TrackSwitchUiState,
+	TrackSwitchViewConfig,
 	WaveformPlaybackFollowMode,
-	WaveformSource,
+	WaveformSourceIndex,
+	WaveformTimeAxis,
 } from "../domain/types";
 import type {
 	TrackTimelineProjector,
 	WaveformEngine,
 } from "../engine/waveform-engine";
+import { formatSecondsToHHMMSSmmm } from "../shared/format";
+import {
+	formatTimelineValue,
+	formatTimelineValuePair,
+	type TimelineUnit,
+	type TimelineValuePair,
+} from "../timeline/timeline";
+import { renderConfiguredViews } from "./render-configured-views";
 import * as viewRendererCore from "./render-layout";
+import type { MarkerRenderData } from "./render-markers";
+import * as viewRendererMarkers from "./render-markers";
 import type {
 	MidiSeekSurfaceMetadata,
 	MidiTimelineContextResolver,
 } from "./render-midi";
 import * as viewRendererMidi from "./render-midi";
 import * as viewRendererSeek from "./render-seek";
+import * as viewRendererWarping from "./render-warping-matrix";
 import * as viewRendererWaveform from "./render-waveforms";
 
 type SvgSelection = Selection<SVGSVGElement, unknown, null, undefined>;
@@ -32,11 +51,33 @@ type TextSelection = Selection<SVGTextElement, unknown, null, undefined>;
 export interface WaveformTimelineContext {
 	enabled: boolean;
 	referenceToTrackTime(trackIndex: number, referenceTime: number): number;
+	/**
+	 * The current position on this track's own timeline, taken from the playback
+	 * anchor rather than projected back out of the reference — see
+	 * `playbackPositionOn`. Null when no anchor describes the position.
+	 */
+	getPlaybackPosition(trackIndex: number): number | null;
 	getTrackDuration(trackIndex: number): number;
 	getTrackCount(): number;
 	getTrackAlignmentPoints(
 		trackIndex: number,
 	): Array<{ referenceTime: number; trackTime: number }>;
+}
+
+/**
+ * How one timeline renders its own positions: the unit its alignment column was
+ * declared in, and the conversion out of the native playback coordinate.
+ */
+export interface TimelineReadout {
+	unit: TimelineUnit;
+	toReadout(nativeValue: number): number;
+}
+
+export interface ConfiguredViewHost {
+	view: TrackSwitchViewConfig;
+	waveformSource?: WaveformSourceIndex;
+	alignmentTimeline?: string;
+	source?: string;
 }
 
 export interface SheetMusicHostConfig {
@@ -48,6 +89,30 @@ export interface SheetMusicHostConfig {
 	followPlayback: boolean;
 	cursorColor: string;
 	cursorAlpha: number;
+}
+
+/** A seekable image bound to a media entry, so it carries its own timeline. */
+export interface ImageSeekSurfaceMetadata {
+	seekWrap: HTMLElement;
+	wrapper: HTMLElement;
+	image: HTMLImageElement;
+	/** Alignment timeline this image is placed on, or null when unaligned. */
+	alignmentColumn: string | null;
+}
+
+/** What a `perTrackImage` view swaps in when a track becomes the only soloed one. */
+export interface PerTrackImageSource {
+	src: string;
+	/** Alignment column of the image medium, or "" when it is unaligned. */
+	alignmentTimeline: string;
+}
+
+export interface ImageTimelineContext {
+	duration: number;
+	toReferenceTime(imageValue: number): number;
+	fromReferenceTime(referenceTime: number): number;
+	/** See `WaveformTimelineContext.getPlaybackPosition`. */
+	playbackPosition?(): number | null;
 }
 
 export interface WarpingMatrixDataPoint {
@@ -78,9 +143,11 @@ interface WaveformSeekSurfaceMetadata {
 	overlay: HTMLElement;
 	surface: HTMLElement;
 	tileLayer: HTMLElement;
+	endedRegion: HTMLElement;
 	seekWrap: HTMLElement;
-	waveformSource: WaveformSource;
+	waveformSource: WaveformSourceIndex;
 	playbackFollowMode: WaveformPlaybackFollowMode;
+	timeAxis: WaveformTimeAxis;
 	originalHeight: number;
 	barWidth: number;
 	maxZoomSeconds: number;
@@ -90,6 +157,7 @@ interface WaveformSeekSurfaceMetadata {
 	zoomNode: HTMLElement;
 	zoomMinimapNode: HTMLElement;
 	zoomCanvas: HTMLCanvasElement;
+	zoomEndedRegion: HTMLElement;
 	zoomViewportNode: HTMLElement;
 	zoomCanvasLastDrawKey: string | null;
 	waveformColor: string | null;
@@ -125,45 +193,50 @@ interface LatestWaveformRenderInput {
 	waveformTimelineContext?: WaveformTimelineContext;
 }
 
-interface WarpingMatrixPathPoint {
+interface LatestMidiRenderInput {
+	timelineDuration: number;
+	useMidiLocalTimeline: boolean;
+}
+
+export interface WarpingMatrixPathPoint {
 	referenceTime: number;
 	trackTime: number;
 }
 
-interface WarpingMatrixPathSeriesData {
+export interface WarpingMatrixPathSeriesData {
 	pointsByReferenceTime: WarpingMatrixPathPoint[];
 	pointsByTrackTime: WarpingMatrixPathPoint[];
 	trackDuration: number;
 }
 
-interface WarpingMatrixMatrixData {
+export interface WarpingMatrixMatrixData {
 	byColumn: Map<string, WarpingMatrixPathSeriesData>;
 }
 
-interface WarpingMatrixTempoPoint {
+export interface WarpingMatrixTempoPoint {
 	trackTime: number;
 	referenceTime: number;
 	tempoPercent: number;
 }
 
-interface WarpingMatrixTempoSeriesData {
+export interface WarpingMatrixTempoSeriesData {
 	points: WarpingMatrixTempoPoint[];
 	isStrictlyMonotonic: boolean;
 	warningMessage: string | null;
 }
 
-interface WarpingMatrixTempoData {
+export interface WarpingMatrixTempoData {
 	byColumn: Map<string, WarpingMatrixTempoSeriesData>;
 }
 
-interface WarpingPlotMargins {
+export interface WarpingPlotMargins {
 	top: number;
 	right: number;
 	bottom: number;
 	left: number;
 }
 
-interface WarpingMatrixPlotState {
+export interface WarpingMatrixPlotState {
 	svg: SvgSelection;
 	title: TextSelection;
 	xAxis: GroupSelection;
@@ -183,7 +256,7 @@ interface WarpingMatrixPlotState {
 	innerHeight: number;
 }
 
-interface WarpingTempoPlotState {
+export interface WarpingTempoPlotState {
 	svg: SvgSelection;
 	title: TextSelection;
 	xAxis: GroupSelection;
@@ -198,13 +271,13 @@ interface WarpingTempoPlotState {
 	baseline: LineSelection;
 	centerLine: LineSelection;
 	xScale: ScaleLinear<number, number>;
-	yScale: ScaleLinear<number, number>;
+	yScale: ScaleContinuousNumeric<number, number>;
 	margins: WarpingPlotMargins;
 	innerWidth: number;
 	innerHeight: number;
 }
 
-interface WarpingMatrixHostMetadata {
+export interface WarpingMatrixHostMetadata {
 	wrapper: HTMLElement;
 	host: HTMLElement;
 	visible: boolean;
@@ -218,9 +291,9 @@ interface WarpingMatrixHostMetadata {
 	tempoControls: HTMLElement;
 	tempoMessage: HTMLElement;
 	tempoWindowSlider: HTMLInputElement;
-	tempoWindowValueNode: HTMLElement;
+	tempoWindowValueNode: HTMLSpanElement;
 	tempoSmoothingSlider: HTMLInputElement;
-	tempoSmoothingValueNode: HTMLElement;
+	tempoSmoothingValueNode: HTMLSpanElement;
 	matrixSeriesSignature: string | null;
 	matrixDataCache: WarpingMatrixMatrixData | null;
 	matrixDataCacheKey: string | null;
@@ -231,7 +304,6 @@ interface WarpingMatrixHostMetadata {
 	trackSeries: WarpingMatrixTrackSeries[];
 	matrixTrackDuration: number;
 	configuredHeight: number | null;
-	configuredBpm: number | "infer_score" | null;
 	tempoWindowSeconds: number;
 	tempoSmoothingSeconds: number;
 	colorByColumn: Map<string, string>;
@@ -258,19 +330,64 @@ interface PanelDragState {
 export class ViewRenderer {
 	public readonly root: HTMLElement;
 	public readonly features: TrackSwitchFeatures;
-	public presetNames: string[];
-	public trackGroups: NormalizedTrackGroupLayout[];
+	public presetEntries: Array<{ id: string; label: string }>;
+	public trackGroups: TrackListGroup[];
+	public navigationBar: TrackSwitchNavigationBarViewConfig | null = null;
+	/**
+	 * Whether a track's `trackList` currently permits only one audible track. The
+	 * controller answers this, since global sync can override what the lists declare.
+	 */
+	public isTrackExclusive: (trackIndex: number) => boolean = () => false;
+	/** The same question for one `trackList`, used where a row's own list is known. */
+	public isGroupExclusive: (groupIndex: number) => boolean = () => false;
+	/** Whether a `trackList` is the selected timeline of an aligned player. */
+	public isTrackListUnitActive: (groupIndex: number) => boolean = () => false;
+	public hasAlignment = false;
+	public referenceTimelineUnit: TimelineUnit = "seconds";
+	public referenceTimelineId: string | null = null;
+	public toReferenceReadout: ((referenceValue: number) => number) | null = null;
+	/**
+	 * Declared unit and native-to-readout conversion per timeline, so a waveform
+	 * or piano roll can render its own local time in the unit its alignment
+	 * column was authored in rather than always in seconds.
+	 */
+	public timelineReadouts: ReadonlyMap<string, TimelineReadout> = new Map();
 
 	public readonly waveformSeekSurfaces: WaveformSeekSurfaceMetadata[] = [];
 	public readonly midiSeekSurfaces: MidiSeekSurfaceMetadata[] = [];
+	public readonly imageSeekSurfaces: ImageSeekSurfaceMetadata[] = [];
 	public readonly sheetMusicHosts: SheetMusicHostConfig[] = [];
 	public readonly warpingMatrixHosts: WarpingMatrixHostMetadata[] = [];
+	public readonly configuredViewHosts = new WeakMap<
+		Element,
+		ConfiguredViewHost
+	>();
+	public readonly timelineBySeekWrap = new WeakMap<HTMLElement, string>();
+	public perTrackImageSources = new Map<TrackId, PerTrackImageSource>();
+	public isTimelineCovered: ((alignmentTimeline: string) => boolean) | null =
+		null;
+	public imageTimelineContextResolver:
+		| ((surface: ImageSeekSurfaceMetadata) => ImageTimelineContext | null)
+		| null = null;
+	public readonly markerLayersBySeekWrap = new WeakMap<
+		HTMLElement,
+		MarkerLayerConfig[]
+	>();
 	public waveformTileRefreshFrameId: number | null = null;
 	public latestWaveformRenderInput: LatestWaveformRenderInput | null = null;
+	public midiNoteRefreshFrameId: number | null = null;
+	public latestMidiRenderInput: LatestMidiRenderInput | null = null;
 	public readonly onWarpingMatrixSeek?: (referenceTime: number) => void;
 	public readonly resolveWarpingMatrixScoreBpm?: (
 		referenceTime: number,
 	) => number | null;
+	public css: TrackSwitchCssOverrides | undefined;
+	/**
+	 * The root element outlives a config update — `resetManagedRoot` replaces its
+	 * children but leaves its inline properties — so the tokens written last time
+	 * have to be cleared, or one dropped from the config lingers.
+	 */
+	public appliedRootCssTokens: string[] = [];
 	public warpingClipPathCounter = 0;
 	public panelDragState: PanelDragState | null = null;
 	public readonly warpingMatrixTempoControlState = new WeakMap<
@@ -281,25 +398,218 @@ export class ViewRenderer {
 	constructor(
 		root: HTMLElement,
 		features: TrackSwitchFeatures,
-		presetNames: string[],
-		trackGroups: NormalizedTrackGroupLayout[] = [],
+		presetEntries: Array<{ id: string; label: string }>,
+		trackGroups: TrackListGroup[] = [],
 		onWarpingMatrixSeek?: (referenceTime: number) => void,
 		resolveWarpingMatrixScoreBpm?: (referenceTime: number) => number | null,
+		css?: TrackSwitchCssOverrides,
 	) {
 		this.root = root;
 		this.features = features;
-		this.presetNames = presetNames;
+		this.presetEntries = presetEntries;
 		this.trackGroups = trackGroups;
 		this.onWarpingMatrixSeek = onWarpingMatrixSeek;
 		this.resolveWarpingMatrixScoreBpm = resolveWarpingMatrixScoreBpm;
+		this.css = css;
 	}
 
 	public updateConfig(
-		presetNames: string[],
-		trackGroups: NormalizedTrackGroupLayout[],
+		presetEntries: Array<{ id: string; label: string }>,
+		trackGroups: TrackListGroup[],
+		css?: TrackSwitchCssOverrides,
 	): void {
-		this.presetNames = presetNames;
+		this.presetEntries = presetEntries;
 		this.trackGroups = trackGroups;
+		this.css = css;
+	}
+
+	public renderViews(
+		views: TrackSwitchViewConfig[],
+		context: ViewNormalizeContext,
+	): void {
+		this.navigationBar =
+			views.find((view) => view.type === "navigationBar") ?? null;
+		renderConfiguredViews(this, views, context);
+	}
+
+	public registerConfiguredViewHost(
+		element: Element,
+		definition: ConfiguredViewHost,
+	): void {
+		this.configuredViewHosts.set(element, definition);
+	}
+
+	public getConfiguredViewHost(element: Element): ConfiguredViewHost {
+		const definition = this.configuredViewHosts.get(element);
+		if (!definition) {
+			throw new Error("Missing typed view definition for rendered surface.");
+		}
+		return definition;
+	}
+
+	public registerSeekMarkerLayers(
+		seekWrap: HTMLElement,
+		layers: MarkerLayerConfig[] | undefined,
+	): void {
+		if (layers?.length) this.markerLayersBySeekWrap.set(seekWrap, layers);
+	}
+
+	public getSeekMarkerLayers(seekWrap: HTMLElement): MarkerLayerConfig[] {
+		return this.markerLayersBySeekWrap.get(seekWrap) ?? [];
+	}
+
+	/** Records which alignment timeline a seek surface renders, for coverage state. */
+	public registerSeekTimeline(
+		seekWrap: HTMLElement,
+		alignmentTimeline: string | null,
+	): void {
+		if (alignmentTimeline) {
+			this.timelineBySeekWrap.set(seekWrap, alignmentTimeline);
+			return;
+		}
+		// A per-track surface changes timeline as the solo moves, so clearing has
+		// to actually clear.
+		this.timelineBySeekWrap.delete(seekWrap);
+	}
+
+	/**
+	 * Places an already-wrapped image on a different alignment column — what a
+	 * `perTrackImage` surface does when the solo moves to another track.
+	 */
+	public retimeImageSurface(
+		image: HTMLImageElement,
+		alignmentTimeline: string,
+	): void {
+		const surface = this.imageSeekSurfaces.find(
+			(candidate) => candidate.image === image,
+		);
+		if (!surface) {
+			return;
+		}
+		const column = alignmentTimeline.trim();
+		surface.alignmentColumn = column || null;
+		this.registerSeekTimeline(surface.seekWrap, surface.alignmentColumn);
+		if (surface.alignmentColumn) {
+			surface.seekWrap.setAttribute("data-seek-surface", "image");
+			return;
+		}
+		surface.seekWrap.removeAttribute("data-seek-surface");
+	}
+
+	public setPerTrackImageSources(
+		sources: Map<TrackId, PerTrackImageSource>,
+	): void {
+		this.perTrackImageSources = sources;
+	}
+
+	public getSeekTimeline(seekWrap: HTMLElement): string | null {
+		return this.timelineBySeekWrap.get(seekWrap) ?? null;
+	}
+
+	public findImageSurface(
+		seekWrap: HTMLElement | null,
+	): ImageSeekSurfaceMetadata | null {
+		if (!seekWrap) {
+			return null;
+		}
+		return (
+			this.imageSeekSurfaces.find((surface) => surface.seekWrap === seekWrap) ??
+			null
+		);
+	}
+
+	/**
+	 * Answers whether a timeline has alignment data at the current reference
+	 * position; surfaces that do not are rendered as held out of coverage.
+	 */
+	public setCoverageResolver(
+		resolver: ((alignmentTimeline: string) => boolean) | null,
+		referenceTimeline: string | null = null,
+	): void {
+		this.isTimelineCovered = resolver;
+		this.referenceTimelineId = referenceTimeline;
+	}
+
+	public setImageTimelineContextResolver(
+		resolver:
+			| ((surface: ImageSeekSurfaceMetadata) => ImageTimelineContext | null)
+			| null,
+	): void {
+		this.imageTimelineContextResolver = resolver;
+	}
+
+	/** The local axis of an aligned image, or null for a linearly-mapped one. */
+	public resolveImageTimelineContext(
+		seekWrap: HTMLElement,
+	): ImageTimelineContext | null {
+		if (!this.imageTimelineContextResolver) {
+			return null;
+		}
+		const surface = this.findImageSurface(seekWrap);
+		if (!surface?.alignmentColumn) {
+			return null;
+		}
+		return this.imageTimelineContextResolver(surface);
+	}
+
+	/**
+	 * Converts a native reference-timeline position back into the unit declared
+	 * for that column.
+	 */
+	public setReferenceTimelineUnit(
+		unit: TimelineUnit,
+		toReferenceReadout?: (referenceValue: number) => number,
+	): void {
+		this.referenceTimelineUnit = unit;
+		this.toReferenceReadout = toReferenceReadout ?? null;
+	}
+
+	public formatReferenceTimelineValue(value: number): string {
+		const readout = this.toReferenceReadout
+			? this.toReferenceReadout(value)
+			: value;
+		return formatTimelineValue(this.referenceTimelineUnit, readout);
+	}
+
+	/** The main timer's two halves, which name their unit once between them. */
+	public formatReferenceTimelinePair(
+		position: number,
+		duration: number,
+	): TimelineValuePair {
+		const toReadout = this.toReferenceReadout;
+		return formatTimelineValuePair(
+			this.referenceTimelineUnit,
+			toReadout ? toReadout(position) : position,
+			toReadout ? toReadout(duration) : duration,
+		);
+	}
+
+	public setTimelineReadouts(
+		readouts: ReadonlyMap<string, TimelineReadout>,
+	): void {
+		this.timelineReadouts = readouts;
+	}
+
+	/**
+	 * A surface timer, rendered in the unit of the timeline it draws. A timeline
+	 * with no declared unit has nothing but seconds to render.
+	 */
+	public formatLocalTimelinePair(
+		timeline: string | null,
+		position: number,
+		duration: number,
+	): string {
+		const readout =
+			timeline === null ? undefined : this.timelineReadouts.get(timeline);
+		if (!readout) {
+			return `${formatSecondsToHHMMSSmmm(position)} / ${formatSecondsToHHMMSSmmm(duration)}`;
+		}
+		const pair = formatTimelineValuePair(
+			readout.unit,
+			readout.toReadout(position),
+			readout.toReadout(duration),
+		);
+		return `${pair.position} / ${pair.duration}`;
 	}
 
 	public query(selector: string): HTMLElement | null {
@@ -311,50 +621,64 @@ export class ViewRenderer {
 	}
 
 	public isAlignmentMode(): boolean {
-		return false;
+		return this.hasAlignment;
 	}
 
 	public getWarpingMatrixPathStrokeWidth(): number {
-		return 3;
+		return viewRendererWarping.getWarpingMatrixPathStrokeWidth(this);
 	}
 
 	public getWarpingMatrixLocalTempoWindowSeconds(
 		host: WarpingMatrixHostMetadata,
 	): number {
-		return host.tempoWindowSeconds;
+		return viewRendererWarping.getWarpingMatrixLocalTempoWindowSeconds(
+			this,
+			host,
+		);
 	}
 
 	public getWarpingMatrixLocalTempoSmoothingSeconds(
 		host: WarpingMatrixHostMetadata,
 	): number {
-		return host.tempoSmoothingSeconds;
+		return viewRendererWarping.getWarpingMatrixLocalTempoSmoothingSeconds(
+			this,
+			host,
+		);
 	}
 
 	public updateWarpingMatrixTempoControlLabels(
 		host: WarpingMatrixHostMetadata,
 	): void {
-		void host;
+		viewRendererWarping.updateWarpingMatrixTempoControlLabels(this, host);
 	}
 
 	public persistWarpingMatrixTempoControls(
 		host: WarpingMatrixHostMetadata,
 	): void {
-		void host;
+		viewRendererWarping.persistWarpingMatrixTempoControls(this, host);
 	}
 
 	public getWarpingMatrixSquarePlotSize(plot: WarpingMatrixPlotState): number {
-		return Math.max(1, Math.min(plot.innerWidth, plot.innerHeight));
+		return viewRendererWarping.getWarpingMatrixSquarePlotSize(this, plot);
 	}
 
 	public resolveWarpingMatrixColumnColor(
-		_columnKey: string,
-		_columnOrder: string[],
+		columnKey: string,
+		columnOrder: string[],
 	): string {
-		return "#ED8C01";
+		return viewRendererWarping.resolveWarpingMatrixColumnColor(
+			this,
+			columnKey,
+			columnOrder,
+		);
 	}
 
 	initialize(runtimes: TrackRuntime[]): void {
 		viewRendererCore.initialize(this, runtimes);
+	}
+
+	public buildPlayerOverlayHtml(runtimes: TrackRuntime[]): string {
+		return viewRendererCore.buildPlayerOverlayHtml(this, runtimes);
 	}
 
 	public buildMainControlHtml(runtimes: TrackRuntime[]): string {
@@ -365,8 +689,17 @@ export class ViewRenderer {
 		return viewRendererCore.shouldRenderGlobalSync(this, runtimes);
 	}
 
-	public buildTrackRow(runtime: TrackRuntime, index: number): HTMLElement {
-		return viewRendererCore.buildTrackRow(this, runtime, index);
+	public buildTrackRow(
+		runtime: TrackRuntime,
+		index: number,
+		trackListOptions: TrackListGroup,
+	): HTMLElement {
+		return viewRendererCore.buildTrackRow(
+			this,
+			runtime,
+			index,
+			trackListOptions,
+		);
 	}
 
 	public renderTrackList(runtimes: TrackRuntime[]): void {
@@ -410,6 +743,79 @@ export class ViewRenderer {
 		viewRendererCore.wrapSeekableImages(this);
 	}
 
+	public renderTimelineMarkers(data: MarkerRenderData): ReadonlySet<string> {
+		return viewRendererMarkers.renderTimelineMarkers(this, data);
+	}
+
+	public updateMarkerNavigationControls(
+		canGoPrevious: boolean,
+		canGoNext: boolean,
+		canOpenDialog: boolean,
+	): void {
+		viewRendererMarkers.updateMarkerNavigationControls(
+			this.root,
+			canGoPrevious,
+			canGoNext,
+			canOpenDialog,
+		);
+	}
+
+	public openMarkerNavigationDialog(
+		sets: viewRendererMarkers.MarkerNavigationSetOption[],
+	): void {
+		viewRendererMarkers.openMarkerNavigationDialog(this.root, sets);
+	}
+
+	public closeMarkerNavigationDialog(): void {
+		viewRendererMarkers.closeMarkerNavigationDialog(this.root);
+	}
+
+	public updateMarkerNavigationDialogSets(
+		sets: viewRendererMarkers.MarkerNavigationSetOption[],
+	): void {
+		viewRendererMarkers.updateMarkerNavigationDialogSets(this.root, sets);
+	}
+
+	public handleMarkerNavigationInteraction(
+		eventType: string,
+		target: Element | null,
+	): void {
+		viewRendererMarkers.handleMarkerNavigationInteraction(
+			this.root,
+			eventType,
+			target,
+		);
+	}
+
+	public handleMarkerNavigationComboboxKeydown(
+		key: string,
+		target: Element | null,
+	): boolean {
+		return viewRendererMarkers.handleMarkerNavigationComboboxKeydown(
+			this.root,
+			key,
+			target,
+		);
+	}
+
+	public validateMarkerNavigationDialogSelections(): boolean {
+		return viewRendererMarkers.validateMarkerNavigationDialogSelections(
+			this.root,
+		);
+	}
+
+	public setMarkerNavigationDialogError(message: string): void {
+		viewRendererMarkers.setMarkerNavigationDialogError(this.root, message);
+	}
+
+	public readMarkerNavigationDialogValues(): viewRendererMarkers.MarkerNavigationDialogValues {
+		return viewRendererMarkers.readMarkerNavigationDialogValues(this.root);
+	}
+
+	public trapMarkerNavigationDialogFocus(shiftKey: boolean): void {
+		viewRendererMarkers.trapMarkerNavigationDialogFocus(this.root, shiftKey);
+	}
+
 	public wrapWaveformCanvases(): void {
 		viewRendererWaveform.wrapWaveformCanvases(this);
 	}
@@ -427,7 +833,7 @@ export class ViewRenderer {
 	}
 
 	public wrapWarpingMatrixContainers(): void {
-		return;
+		viewRendererWarping.wrapWarpingMatrixContainers(this);
 	}
 
 	public createWarpingMatrixPlotState(
@@ -435,10 +841,12 @@ export class ViewRenderer {
 		width: number,
 		height: number,
 	): WarpingMatrixPlotState {
-		void plotHost;
-		void width;
-		void height;
-		throw new Error("warpingMatrix requires the sync player variant.");
+		return viewRendererWarping.createWarpingMatrixPlotState(
+			this,
+			plotHost,
+			width,
+			height,
+		);
 	}
 
 	public createWarpingTempoPlotState(
@@ -446,10 +854,12 @@ export class ViewRenderer {
 		width: number,
 		height: number,
 	): WarpingTempoPlotState {
-		void plotHost;
-		void width;
-		void height;
-		throw new Error("warpingMatrix requires the sync player variant.");
+		return viewRendererWarping.createWarpingTempoPlotState(
+			this,
+			plotHost,
+			width,
+			height,
+		);
 	}
 
 	public applyWarpingMatrixPlotDimensions(
@@ -457,9 +867,12 @@ export class ViewRenderer {
 		width: number,
 		height: number,
 	): void {
-		void plot;
-		void width;
-		void height;
+		viewRendererWarping.applyWarpingMatrixPlotDimensions(
+			this,
+			plot,
+			width,
+			height,
+		);
 	}
 
 	public applyWarpingTempoPlotDimensions(
@@ -467,9 +880,12 @@ export class ViewRenderer {
 		width: number,
 		height: number,
 	): void {
-		void plot;
-		void width;
-		void height;
+		viewRendererWarping.applyWarpingTempoPlotDimensions(
+			this,
+			plot,
+			width,
+			height,
+		);
 	}
 
 	public isPointerInsidePlotArea(
@@ -480,138 +896,134 @@ export class ViewRenderer {
 		clientX: number,
 		clientY: number,
 	): boolean {
-		void plotHost;
-		void margins;
-		void innerWidth;
-		void innerHeight;
-		void clientX;
-		void clientY;
-		return false;
+		return viewRendererWarping.isPointerInsidePlotArea(
+			this,
+			plotHost,
+			margins,
+			innerWidth,
+			innerHeight,
+			clientX,
+			clientY,
+		);
 	}
 
 	public onWarpingMatrixPointerDown(
 		host: WarpingMatrixHostMetadata,
 		event: PointerEvent,
 	): void {
-		void host;
-		void event;
+		viewRendererWarping.onWarpingMatrixPointerDown(this, host, event);
 	}
 
 	public onWarpingMatrixPointerMove(
 		host: WarpingMatrixHostMetadata,
 		event: PointerEvent,
 	): void {
-		void host;
-		void event;
+		viewRendererWarping.onWarpingMatrixPointerMove(this, host, event);
 	}
 
 	public onWarpingMatrixPointerUp(
 		host: WarpingMatrixHostMetadata,
 		event: PointerEvent,
 	): void {
-		void host;
-		void event;
+		viewRendererWarping.onWarpingMatrixPointerUp(this, host, event);
 	}
 
 	public seekWarpingMatrixFromPointerX(
 		host: WarpingMatrixHostMetadata,
 		clientX: number,
 	): void {
-		void host;
-		void clientX;
+		viewRendererWarping.seekWarpingMatrixFromPointerX(this, host, clientX);
 	}
 
 	public onWarpingTempoPointerDown(
 		host: WarpingMatrixHostMetadata,
 		event: PointerEvent,
 	): void {
-		void host;
-		void event;
+		viewRendererWarping.onWarpingTempoPointerDown(this, host, event);
 	}
 
 	public onWarpingTempoWheel(
 		host: WarpingMatrixHostMetadata,
 		event: WheelEvent,
 	): void {
-		void host;
-		void event;
+		viewRendererWarping.onWarpingTempoWheel(this, host, event);
 	}
 
 	public seekWarpingMatrixFromTempoPointerX(
 		host: WarpingMatrixHostMetadata,
 		clientX: number,
 	): void {
-		void host;
-		void clientX;
+		viewRendererWarping.seekWarpingMatrixFromTempoPointerX(this, host, clientX);
 	}
 
 	public getPrimaryWarpingSeriesData(
 		host: WarpingMatrixHostMetadata,
 	): WarpingMatrixPathSeriesData | null {
-		void host;
-		return null;
+		return viewRendererWarping.getPrimaryWarpingSeriesData(this, host);
 	}
 
 	public getPrimaryTempoSeries(
 		host: WarpingMatrixHostMetadata,
 	): WarpingMatrixTempoPoint[] {
-		void host;
-		return [];
+		return viewRendererWarping.getPrimaryTempoSeries(this, host);
 	}
 
 	public getPrimaryTempoSeriesData(
 		host: WarpingMatrixHostMetadata,
 	): WarpingMatrixTempoSeriesData | null {
-		void host;
-		return null;
+		return viewRendererWarping.getPrimaryTempoSeriesData(this, host);
 	}
 
 	public ensureWarpingLayout(host: WarpingMatrixHostMetadata): void {
-		void host;
+		viewRendererWarping.ensureWarpingLayout(this, host);
 	}
 
 	public applyWarpingMatrixContext(
 		host: WarpingMatrixHostMetadata,
 		context: WarpingMatrixRenderContext,
 	): void {
-		void host;
-		void context;
+		viewRendererWarping.applyWarpingMatrixContext(this, host, context);
 	}
 
 	public updateWarpingMatrix(
 		host: WarpingMatrixHostMetadata,
 		context: WarpingMatrixRenderContext | undefined,
 	): void {
-		void host;
-		void context;
+		viewRendererWarping.updateWarpingMatrix(this, host, context);
+	}
+
+	public drawDummyWarpingMatrices(): void {
+		viewRendererWarping.drawDummyWarpingMatrices(this);
 	}
 
 	public updateWarpingMatrixPlaybackState(
 		host: WarpingMatrixHostMetadata,
 		context: WarpingMatrixRenderContext | undefined,
 	): void {
-		void host;
-		void context;
+		viewRendererWarping.updateWarpingMatrixPlaybackState(this, host, context);
 	}
 
 	public setWarpingMatrixVisible(visible: boolean): void {
-		void visible;
+		viewRendererWarping.setWarpingMatrixVisible(this, visible);
 	}
 
 	public renderWarpingMatrixPathPlot(
 		host: WarpingMatrixHostMetadata,
 		pathStrokeWidth: number,
 	): void {
-		void host;
-		void pathStrokeWidth;
+		viewRendererWarping.renderWarpingMatrixPathPlot(
+			this,
+			host,
+			pathStrokeWidth,
+		);
 	}
 
 	public renderWarpingMatrixPlayhead(host: WarpingMatrixHostMetadata): void {
-		void host;
+		viewRendererWarping.renderWarpingMatrixPlayhead(this, host);
 	}
 
 	public renderWarpingMatrixTempoPlot(host: WarpingMatrixHostMetadata): void {
-		void host;
+		viewRendererWarping.renderWarpingMatrixTempoPlot(this, host);
 	}
 
 	public resolveCenteredWarpingWindow(
@@ -630,34 +1042,44 @@ export class ViewRenderer {
 		trackSeries: WarpingMatrixTrackSeries[],
 		referenceDuration: number,
 	): WarpingMatrixMatrixData {
-		void trackSeries;
-		void referenceDuration;
-		return { byColumn: new Map() };
+		return viewRendererWarping.buildWarpingMatrixData(
+			this,
+			trackSeries,
+			referenceDuration,
+		);
 	}
 
 	public buildWarpingTempoData(
 		matrixData: WarpingMatrixMatrixData | null,
 		smoothingSeconds: number,
 	): WarpingMatrixTempoData {
-		void matrixData;
-		void smoothingSeconds;
-		return { byColumn: new Map() };
+		return viewRendererWarping.buildWarpingTempoData(
+			this,
+			matrixData,
+			smoothingSeconds,
+		);
 	}
 
 	public interpolateWarpingTrackTime(
 		points: WarpingMatrixPathPoint[],
 		referenceTime: number,
 	): number {
-		void points;
-		return referenceTime;
+		return viewRendererWarping.interpolateWarpingTrackTime(
+			this,
+			points,
+			referenceTime,
+		);
 	}
 
 	public interpolateWarpingReferenceTime(
 		pointsByTrackTime: WarpingMatrixPathPoint[],
 		trackTime: number,
 	): number {
-		void pointsByTrackTime;
-		return trackTime;
+		return viewRendererWarping.interpolateWarpingReferenceTime(
+			this,
+			pointsByTrackTime,
+			trackTime,
+		);
 	}
 
 	public createWaveformTimingNode(overlay: HTMLElement): HTMLElement {
@@ -735,7 +1157,6 @@ export class ViewRenderer {
 		duration: number,
 		baseProjector: TrackTimelineProjector | undefined,
 		baseWidth: number,
-		ignoreTrackPadding?: boolean,
 	): number {
 		return viewRendererWaveform.computeNormalizationPeak(
 			this,
@@ -745,7 +1166,6 @@ export class ViewRenderer {
 			duration,
 			baseProjector,
 			baseWidth,
-			ignoreTrackPadding,
 		);
 	}
 
@@ -898,6 +1318,14 @@ export class ViewRenderer {
 		);
 	}
 
+	public async loadMidiSources(): Promise<void> {
+		return viewRendererMidi.loadMidiSources(this);
+	}
+
+	public getLoadedMidiBySource(): Map<string, Midi> {
+		return viewRendererMidi.getLoadedMidiBySource(this);
+	}
+
 	public async initializeMidiDisplays(
 		timelineDuration: number,
 		useMidiLocalTimeline = false,
@@ -935,6 +1363,14 @@ export class ViewRenderer {
 		);
 	}
 
+	public refreshMidiNoteTiles(): void {
+		viewRendererMidi.refreshMidiNoteTiles(this);
+	}
+
+	public scheduleMidiNoteRefresh(): void {
+		viewRendererMidi.scheduleMidiNoteRefresh(this);
+	}
+
 	public updateMidiZoomIndicators(): void {
 		viewRendererMidi.updateMidiZoomIndicators(this);
 	}
@@ -966,20 +1402,9 @@ export class ViewRenderer {
 
 	public getWaveformSourceRuntimes(
 		runtimes: TrackRuntime[],
-		waveformSource: WaveformSource,
+		waveformSource: WaveformSourceIndex,
 	): TrackRuntime[] {
 		return viewRendererWaveform.getWaveformSourceRuntimes(
-			this,
-			runtimes,
-			waveformSource,
-		);
-	}
-
-	public resolveWaveformTrackIndex(
-		runtimes: TrackRuntime[],
-		waveformSource: WaveformSource,
-	): number | null {
-		return viewRendererWaveform.resolveWaveformTrackIndex(
 			this,
 			runtimes,
 			waveformSource,
@@ -1020,20 +1445,22 @@ export class ViewRenderer {
 		viewRendererWaveform.updateWaveformZoomIndicators(this);
 	}
 
-	public applyFixedWaveformLocalSeekVisuals(
+	public applyWaveformLocalSeekVisuals(
 		state: TrackSwitchUiState,
+		runtimes: TrackRuntime[],
 		waveformTimelineContext?: WaveformTimelineContext,
 	): void {
-		viewRendererWaveform.applyFixedWaveformLocalSeekVisuals(
+		viewRendererWaveform.applyWaveformLocalSeekVisuals(
 			this,
 			state,
+			runtimes,
 			waveformTimelineContext,
 		);
 	}
 
 	public getLongestWaveformSourceDuration(
 		runtimes: TrackRuntime[],
-		waveformSource: WaveformSource,
+		waveformSource: WaveformSourceIndex,
 	): number {
 		return viewRendererWaveform.getLongestWaveformSourceDuration(
 			this,
@@ -1070,6 +1497,14 @@ export class ViewRenderer {
 		);
 	}
 
+	public applySeekWrapCoverageState(seekWrap: HTMLElement): void {
+		viewRendererCore.applySeekWrapCoverageState(this, seekWrap);
+	}
+
+	public formatImageTimelineValue(value: number): string {
+		return formatTimelineValue("percent", value);
+	}
+
 	public updateSeekWrapVisuals(
 		seekWrap: Element,
 		position: number,
@@ -1080,19 +1515,29 @@ export class ViewRenderer {
 			return;
 		}
 
+		const surfaceKind = seekWrap.getAttribute("data-seek-surface");
+		let formatValue: (value: number) => string;
+		if (surfaceKind === "waveform" || surfaceKind === "midi") {
+			formatValue = formatSecondsToHHMMSSmmm;
+		} else if (surfaceKind === "image") {
+			// An aligned image reports its own axis, in percent of its width.
+			formatValue = (value: number) => this.formatImageTimelineValue(value);
+		} else {
+			formatValue = (value: number) => this.formatReferenceTimelineValue(value);
+		}
 		viewRendererSeek.updateSeekWrapVisuals(
 			seekWrap,
 			position,
 			duration,
 			loop,
-			this.features.looping,
+			!!this.navigationBar?.controls.includes("looping"),
+			formatValue,
 		);
 	}
 
 	updateTrackControls(
 		runtimes: TrackRuntime[],
 		syncLockedTrackIndexes?: ReadonlySet<number>,
-		effectiveSingleSoloMode = this.features.exclusiveSolo,
 		panSupported = true,
 		syncEnabled = false,
 	): void {
@@ -1100,7 +1545,6 @@ export class ViewRenderer {
 			this,
 			runtimes,
 			syncLockedTrackIndexes,
-			effectiveSingleSoloMode,
 			panSupported,
 			syncEnabled,
 		);

@@ -1,0 +1,5 @@
+{
+	"workerUrl": "../../js/trackswitch-interactive-worker.js",
+	"featureSet": "chroma_dlnco_synctoolbox",
+	"algorithm": "mrmsdtw"
+}

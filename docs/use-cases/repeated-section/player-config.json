@@ -1,0 +1,77 @@
+{
+	"$schema": "https://audiolabs.github.io/trackswitch.js/schema/trackswitch.schema.json",
+	"media": {
+		"krueger": {
+			"type": "audio",
+			"title": "Bernd Krueger (plays both repeats)",
+			"src": "../../assets/repeat/mozart-k545-krueger.ogg"
+		},
+		"alciatore": {
+			"type": "audio",
+			"title": "Robin Alciatore (skips both repeats)",
+			"src": "../../assets/repeat/mozart-k545-musopen.ogg"
+		}
+	},
+	"alignment": {
+		"src": "alignment.csv",
+		"referenceTimeline": "krueger",
+		"timelines": {
+			"krueger": "krueger",
+			"alciatore": "alciatore"
+		},
+		"outsideCoverage": "hold"
+	},
+	"markers": {
+		"kruegerSections": {
+			"src": "krueger-markers.csv",
+			"timeline": "krueger",
+			"timeCol": "time",
+			"labelCol": "label"
+		},
+		"alciatoreSections": {
+			"src": "alciatore-markers.csv",
+			"timeline": "alciatore",
+			"timeCol": "time",
+			"labelCol": "label"
+		}
+	},
+	"views": [
+		{
+			"type": "navigationBar",
+			"controls": ["playback", "globalVolume", "looping", "timer", "seekBar"]
+		},
+		{
+			"type": "waveform",
+			"tracks": ["krueger"],
+			"height": 110,
+			"timer": true,
+			"timeAxis": "individual",
+			"markerLayers": [
+				{
+					"set": "kruegerSections",
+					"color": "var(--ts-color-accent)",
+					"line": "solid"
+				}
+			]
+		},
+		{
+			"type": "waveform",
+			"tracks": ["alciatore"],
+			"height": 110,
+			"timer": true,
+			"timeAxis": "individual",
+			"markerLayers": [
+				{
+					"set": "alciatoreSections",
+					"color": "var(--ts-color-accent)",
+					"line": "solid"
+				}
+			]
+		},
+		{
+			"type": "trackList",
+			"tracks": ["krueger", "alciatore"],
+			"soloGroup": 0
+		}
+	]
+}

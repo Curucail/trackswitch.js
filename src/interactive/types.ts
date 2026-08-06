@@ -1,4 +1,7 @@
-import type { TrackSwitchController } from "../domain/types";
+import type {
+	TrackSwitchController,
+	WaveformPlaybackFollowMode,
+} from "./core-adapter";
 
 export type InteractiveFileType = "audio" | "musicxml" | "midi";
 
@@ -7,7 +10,6 @@ export type AlignmentFeatureSetId =
 	| "chroma"
 	| "chroma_dlnco"
 	| "chroma_dlnco_synctoolbox";
-export type AlignmentMethodId = "dtw" | "mrmsdtw";
 
 export interface AlignmentSelection {
 	featureSet: AlignmentFeatureSetId;
@@ -42,7 +44,7 @@ export interface InteractiveMidiNote {
 	velocity: number;
 }
 
-export interface InteractiveSynchronizedAudio {
+interface InteractiveSynchronizedAudio {
 	fileId: string;
 	objectUrl: string;
 	mimeType: string;
@@ -61,10 +63,13 @@ export interface InteractiveState {
 	featureSet: AlignmentFeatureSetId;
 	algorithm: AlignmentAlgorithmId;
 	syncGenerationEnabled: boolean;
+	pitchShiftEnabled: boolean;
 	advancedOptionsExpanded: boolean;
 	waveformAlignedPlayhead: boolean;
 	waveformShowAlignmentPoints: boolean;
 	showWarpingMatrix: boolean;
+	/** Applies to both waveform and MIDI views. */
+	playbackFollowMode: WaveformPlaybackFollowMode;
 	computationStatus: "idle" | "initializing" | "computing" | "done" | "error";
 	computationError: string | null;
 	alignmentResult: InteractiveAlignmentResult | null;
@@ -74,7 +79,11 @@ export interface InteractiveState {
 }
 
 export interface InteractiveTrackSwitchInit {
-	/** URL to the alignment worker script. Defaults to relative `trackswitch-interactive-worker.js`. */
+	/**
+	 * URL to the alignment worker script. Defaults to relative `trackswitch-interactive-worker.js`.
+	 * The script is loaded as an ES module worker, so it must be served with a
+	 * JavaScript MIME type and must not also be included via a `<script>` tag.
+	 */
 	workerUrl?: string;
 	/** Pyodide CDN index URL override. */
 	pyodideCdnUrl?: string;
@@ -82,8 +91,6 @@ export interface InteractiveTrackSwitchInit {
 	featureSet?: AlignmentFeatureSetId;
 	/** Default alignment algorithm. */
 	algorithm?: AlignmentAlgorithmId;
-	/** Legacy compatibility for the old combined alignment method control. */
-	alignmentMethod?: AlignmentMethodId;
 }
 
 export interface InteractiveTrackSwitchController {
@@ -123,7 +130,7 @@ export interface WorkerFileMidi {
 
 export type WorkerFile = WorkerFileAudio | WorkerFileScore | WorkerFileMidi;
 
-export interface WorkerInitMessage {
+interface WorkerInitMessage {
 	type: "init";
 	pyodideCdnUrl: string;
 }
@@ -138,9 +145,10 @@ export interface WorkerComputeMessage {
 	algorithm: AlignmentAlgorithmId;
 	featureRate: number;
 	generateSyncedAudio: boolean;
+	pitchShiftEnabled: boolean;
 }
 
-export interface WorkerInstallMusic21Message {
+interface WorkerInstallMusic21Message {
 	type: "install_music21";
 }
 
@@ -149,25 +157,25 @@ export type WorkerMessage =
 	| WorkerComputeMessage
 	| WorkerInstallMusic21Message;
 
-export interface WorkerReadyResponse {
+interface WorkerReadyResponse {
 	type: "ready";
 }
 
-export interface WorkerMusic21InstalledResponse {
+interface WorkerMusic21InstalledResponse {
 	type: "music21_installed";
 }
 
-export interface WorkerResultResponse {
+interface WorkerResultResponse {
 	type: "result";
 	result: WorkerComputeResult;
 }
 
-export interface WorkerErrorResponse {
+interface WorkerErrorResponse {
 	type: "error";
 	message: string;
 }
 
-export interface WorkerProgressResponse {
+interface WorkerProgressResponse {
 	type: "progress";
 	message: string;
 }
@@ -179,7 +187,7 @@ export type WorkerResponse =
 	| WorkerErrorResponse
 	| WorkerProgressResponse;
 
-export interface WorkerSynchronizedAudioResult {
+interface WorkerSynchronizedAudioResult {
 	fileId: string;
 	wavData: ArrayBuffer;
 	mimeType: string;

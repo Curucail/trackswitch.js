@@ -1,4 +1,4 @@
-import { renderIconSlotHtml } from "../../ui/icons";
+import { renderIconSlotHtml } from "../core-adapter";
 
 /**
  * Inject the settings button into an existing player's main control bar.

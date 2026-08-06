@@ -1,12 +1,17 @@
-import { loadElementConfig } from "./config/element-config";
+import { ElementConfigError, loadElementConfig } from "./config/element-config";
 import type {
 	TrackSwitchController,
 	TrackSwitchEventMap,
 	TrackSwitchEventName,
 	TrackSwitchInit,
 } from "./domain/types";
-import { createDefaultTrackSwitch } from "./player/default-factory";
+import { createTrackSwitch } from "./player/factory";
 import { ensureTrackSwitchStyles } from "./shared/styles";
+import {
+	describeError,
+	renderTrackSwitchErrorPanel,
+	renderTrackSwitchLoadingPanel,
+} from "./ui/render-status-panel";
 
 export type TrackswitchDomEventName =
 	| "trackswitch-loaded"
@@ -20,7 +25,6 @@ export interface TrackswitchPlayerElement extends HTMLElement {
 }
 
 export const TRACKSWITCH_DEFAULT_ELEMENT_NAME = "trackswitch-player";
-export const TRACKSWITCH_ELEMENT_NAME = TRACKSWITCH_DEFAULT_ELEMENT_NAME;
 
 export const TRACKSWITCH_DOM_EVENTS: Record<
 	TrackSwitchEventName,
@@ -32,7 +36,7 @@ export const TRACKSWITCH_DOM_EVENTS: Record<
 	trackState: "trackswitch-track-state",
 };
 
-export function dispatchTrackSwitchEvent<K extends TrackSwitchEventName>(
+function dispatchTrackSwitchEvent<K extends TrackSwitchEventName>(
 	element: HTMLElement,
 	eventName: K,
 	detail: TrackSwitchEventMap[K],
@@ -46,7 +50,7 @@ export function dispatchTrackSwitchEvent<K extends TrackSwitchEventName>(
 	);
 }
 
-export abstract class TrackswitchPlayerBase
+abstract class TrackswitchPlayerBase
 	extends HTMLElement
 	implements TrackswitchPlayerElement
 {
@@ -54,7 +58,6 @@ export abstract class TrackswitchPlayerBase
 	private currentController: TrackSwitchController | null = null;
 	private mountRoot: HTMLDivElement | null = null;
 	private unsubscribeHandlers: Array<() => void> = [];
-	private loadGeneration = 0;
 	private configLoadGeneration = 0;
 
 	get config(): TrackSwitchInit | undefined {
@@ -83,6 +86,7 @@ export abstract class TrackswitchPlayerBase
 			return;
 		}
 
+		this.showLoading();
 		void this.loadDeclarativeConfig();
 	}
 
@@ -130,12 +134,11 @@ export abstract class TrackswitchPlayerBase
 				return;
 			}
 
-			dispatchTrackSwitchEvent(this, "error", {
-				message:
-					error instanceof Error
-						? error.message
-						: "Unexpected error while loading TrackSwitch config.",
-			});
+			this.showError(
+				error,
+				"Unexpected error while loading TrackSwitch config.",
+				"Trackswitch config could not be loaded",
+			);
 		}
 	}
 
@@ -178,13 +181,35 @@ export abstract class TrackswitchPlayerBase
 		try {
 			this.mountController(this.currentConfig);
 		} catch (error) {
-			dispatchTrackSwitchEvent(this, "error", {
-				message:
-					error instanceof Error
-						? error.message
-						: "Unexpected error while mounting TrackSwitch.",
+			this.destroyController();
+			this.showError(error, "Unexpected error while mounting TrackSwitch.");
+		}
+	}
+
+	private showLoading(): void {
+		if (this.mountRoot) {
+			renderTrackSwitchLoadingPanel(this.mountRoot);
+		}
+	}
+
+	private showError(
+		error: unknown,
+		fallbackMessage: string,
+		title?: string,
+	): void {
+		const message = describeError(error, fallbackMessage);
+
+		if (this.mountRoot) {
+			const configError =
+				error instanceof ElementConfigError ? error : undefined;
+			renderTrackSwitchErrorPanel(this.mountRoot, {
+				title: configError?.title ?? title,
+				message,
+				details: configError?.details,
 			});
 		}
+
+		dispatchTrackSwitchEvent(this, "error", { message });
 	}
 
 	private mountController(init: TrackSwitchInit): void {
@@ -214,7 +239,6 @@ export abstract class TrackswitchPlayerBase
 	private destroyController(): void {
 		const controller = this.currentController;
 		this.currentController = null;
-		this.loadGeneration += 1;
 
 		this.unsubscribeHandlers.forEach((unsubscribe) => {
 			unsubscribe();
@@ -232,7 +256,7 @@ export class TrackswitchPlayer extends TrackswitchPlayerBase {
 		rootElement: HTMLElement,
 		init: TrackSwitchInit,
 	): TrackSwitchController {
-		return createDefaultTrackSwitch(rootElement, init);
+		return createTrackSwitch(rootElement, init);
 	}
 }
 
@@ -261,8 +285,6 @@ export function defineTrackswitchDefaultElement(
 		TrackswitchPlayer,
 	);
 }
-
-export const defineTrackswitchElement = defineTrackswitchDefaultElement;
 
 declare global {
 	interface HTMLElementTagNameMap {

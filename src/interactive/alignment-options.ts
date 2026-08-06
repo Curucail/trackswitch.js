@@ -1,7 +1,6 @@
 import type {
 	AlignmentAlgorithmId,
 	AlignmentFeatureSetId,
-	AlignmentMethodId,
 	AlignmentSelection,
 } from "./types";
 
@@ -43,20 +42,20 @@ const COMPATIBLE_FEATURE_SETS_BY_ALGORITHM: Record<
 	dtw: ["chroma_dlnco", "chroma"],
 };
 
-export function getDefaultAlignmentSelection(): AlignmentSelection {
+function getDefaultAlignmentSelection(): AlignmentSelection {
 	return {
 		featureSet: "chroma_dlnco_synctoolbox",
 		algorithm: "mrmsdtw",
 	};
 }
 
-export function getCompatibleAlgorithms(
+function getCompatibleAlgorithms(
 	featureSet: AlignmentFeatureSetId,
 ): AlignmentAlgorithmId[] {
 	return [...COMPATIBLE_ALGORITHMS_BY_FEATURE_SET[featureSet]];
 }
 
-export function getCompatibleFeatureSets(
+function getCompatibleFeatureSets(
 	algorithm: AlignmentAlgorithmId,
 ): AlignmentFeatureSetId[] {
 	return [...COMPATIBLE_FEATURE_SETS_BY_ALGORITHM[algorithm]];
@@ -72,16 +71,13 @@ export function isCompatibleAlignmentSelection(
 export function normalizeAlignmentSelection(input: {
 	featureSet?: AlignmentFeatureSetId;
 	algorithm?: AlignmentAlgorithmId;
-	alignmentMethod?: AlignmentMethodId;
 }): AlignmentSelection {
-	const legacySelection = input.alignmentMethod
-		? mapLegacyAlignmentMethod(input.alignmentMethod)
-		: getDefaultAlignmentSelection();
+	const defaultSelection = getDefaultAlignmentSelection();
 
 	const featureSetProvided = !!input.featureSet;
 	const algorithmProvided = !!input.algorithm;
-	let featureSet = input.featureSet || legacySelection.featureSet;
-	let algorithm = input.algorithm || legacySelection.algorithm;
+	let featureSet = input.featureSet || defaultSelection.featureSet;
+	let algorithm = input.algorithm || defaultSelection.algorithm;
 
 	if (!featureSetProvided && algorithmProvided) {
 		featureSet = getCompatibleFeatureSets(algorithm)[0];
@@ -155,21 +151,4 @@ export function coerceAlignmentSelectionForAlgorithm(
 		featureSet: nearestFeatureSet,
 		algorithm: algorithm,
 	};
-}
-
-export function mapLegacyAlignmentMethod(
-	method: AlignmentMethodId,
-): AlignmentSelection {
-	switch (method) {
-		case "dtw":
-			return {
-				featureSet: "chroma",
-				algorithm: "dtw",
-			};
-		default:
-			return {
-				featureSet: "chroma_dlnco_synctoolbox",
-				algorithm: "mrmsdtw",
-			};
-	}
 }

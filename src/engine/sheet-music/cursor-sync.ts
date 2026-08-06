@@ -48,7 +48,7 @@ export function updatePosition(
 	});
 }
 
-export function resolveMappedMeasure(
+function resolveMappedMeasure(
 	measureMap: MeasureMapPoint[],
 	position: number,
 ): number | null {
@@ -73,28 +73,35 @@ export function resolveMappedMeasure(
 	return Math.floor(selected.measure);
 }
 
+/** Snaps a printed measure number onto one the score actually covers. */
 export function resolveAvailableMeasure(
 	entry: SheetMusicEntryModel,
 	desiredMeasure: number,
 ): number | null {
-	if (entry.availableMeasures.length === 0) {
+	const printed = entry.measureNumbering.printed;
+	if (printed.length === 0) {
 		return null;
 	}
 
-	if (entry.availableMeasureSet.has(desiredMeasure)) {
+	if (entry.measureNumbering.printedSet.has(desiredMeasure)) {
 		return desiredMeasure;
 	}
 
-	for (let index = entry.availableMeasures.length - 1; index >= 0; index -= 1) {
-		const candidate = entry.availableMeasures[index];
+	for (let index = printed.length - 1; index >= 0; index -= 1) {
+		const candidate = printed[index];
 		if (candidate <= desiredMeasure) {
 			return candidate;
 		}
 	}
 
-	return entry.availableMeasures[0];
+	return printed[0];
 }
 
+/**
+ * Drives the cursor to a printed measure number. The stepping itself runs in
+ * internal numbers: they are gapless and unique, so distances are meaningful
+ * and a repeated printed number cannot stall the walk.
+ */
 export function moveCursorToMeasure(
 	ctx: CursorSyncContext,
 	entry: SheetMusicEntryModel,
@@ -105,33 +112,51 @@ export function moveCursorToMeasure(
 		return;
 	}
 
-	let currentMeasure = initializeCursorMeasure(entry, cursor);
+	const targetInternal =
+		entry.measureNumbering.internalByPrinted.get(targetMeasure);
+	if (targetInternal === undefined) {
+		return;
+	}
+
+	const measureCount = entry.measureNumbering.printedByInternal.size;
+	let currentInternal = initializeCursorMeasure(entry, cursor);
 
 	const estimatedDistance =
-		currentMeasure === null
-			? entry.availableMeasures.length
-			: Math.abs(targetMeasure - currentMeasure);
+		currentInternal === null
+			? measureCount
+			: Math.abs(targetInternal - currentInternal);
 	const maxSteps = Math.max(
 		1,
-		Math.min(entry.availableMeasures.length + 5, estimatedDistance + 8),
+		Math.min(measureCount + 5, estimatedDistance + 8),
 	);
-	currentMeasure = stepCursorTowardsTarget(
+	currentInternal = stepCursorTowardsTarget(
 		cursor,
-		currentMeasure,
-		targetMeasure,
+		currentInternal,
+		targetInternal,
 		maxSteps,
 	);
 
-	if (currentMeasure !== targetMeasure) {
-		currentMeasure = retryCursorFromReset(entry, cursor, targetMeasure);
+	if (currentInternal !== targetInternal) {
+		currentInternal = retryCursorFromReset(entry, cursor, targetInternal);
 	}
 
-	entry.targetMeasure = resolveAvailableMeasure(
-		entry,
-		currentMeasure === null ? targetMeasure : currentMeasure,
-	);
+	entry.targetMeasure =
+		currentInternal === null
+			? targetMeasure
+			: (entry.measureNumbering.printedByInternal.get(currentInternal) ??
+				targetMeasure);
 
 	ctx.ensureCurrentMeasureVisible(entry);
+}
+
+/** The score's first internal measure number, where the cursor lands on reset. */
+function firstInternalMeasure(entry: SheetMusicEntryModel): number | null {
+	const firstPrinted = entry.measureNumbering.printed[0];
+	if (firstPrinted === undefined) {
+		return null;
+	}
+
+	return entry.measureNumbering.internalByPrinted.get(firstPrinted) ?? null;
 }
 
 function initializeCursorMeasure(
@@ -149,9 +174,7 @@ function initializeCursorMeasure(
 	showCursor(cursor);
 
 	currentMeasure = readCursorMeasure(cursor);
-	return currentMeasure === null
-		? (entry.availableMeasures[0] ?? null)
-		: currentMeasure;
+	return currentMeasure === null ? firstInternalMeasure(entry) : currentMeasure;
 }
 
 function retryCursorFromReset(
@@ -164,10 +187,11 @@ function retryCursorFromReset(
 
 	const fallbackMeasure = readCursorMeasure(cursor);
 	const initialMeasure =
-		fallbackMeasure === null
-			? (entry.availableMeasures[0] ?? null)
-			: fallbackMeasure;
-	const fallbackMaxSteps = Math.max(1, entry.availableMeasures.length + 5);
+		fallbackMeasure === null ? firstInternalMeasure(entry) : fallbackMeasure;
+	const fallbackMaxSteps = Math.max(
+		1,
+		entry.measureNumbering.printedByInternal.size + 5,
+	);
 	return stepCursorTowardsTarget(
 		cursor,
 		initialMeasure,
@@ -222,7 +246,8 @@ function showCursor(
 	cursor.show?.();
 }
 
-export function readCursorMeasure(
+/** The cursor's position as an internal measure number. */
+function readCursorMeasure(
 	cursor: NonNullable<SheetMusicEntryModel["measureCursor"]>,
 ): number | null {
 	const raw = cursor.Iterator?.CurrentMeasure?.MeasureNumber;

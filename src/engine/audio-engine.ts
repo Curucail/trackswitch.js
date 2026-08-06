@@ -7,6 +7,7 @@ import type {
 } from "../domain/types";
 import { calculateTrackTiming, inferSourceMimeType } from "../shared/audio";
 import { getAudioContext } from "./audio-context";
+import { readSourceSampleRate } from "./source-sample-rate";
 
 const MIME_TYPE_TABLE: Record<string, string> = {
 	".aac": "audio/aac;",
@@ -27,6 +28,27 @@ const MIME_TYPE_TABLE: Record<string, string> = {
 	".webm": "audio/webm;",
 };
 
+/**
+ * Whether a source is worth attempting to load.
+ *
+ * `canPlayType` is only a pre-filter for picking among fallback sources, so an
+ * unknown media type must not disqualify a source: object URLs and
+ * extension-less paths carry no type to infer, and rejecting them here would
+ * fail the track before it is ever decoded. Sources that turn out to be
+ * undecodable are skipped by the decode step instead.
+ */
+function isPlayableSource(
+	source: TrackSourceDefinition,
+	audioElement: HTMLAudioElement,
+): boolean {
+	const mime = inferSourceMimeType(source.src, source.type, MIME_TYPE_TABLE);
+	if (!mime) {
+		return true;
+	}
+
+	return !!audioElement.canPlayType?.(mime).replace(/no/, "");
+}
+
 interface LoadTrackResult {
 	success: boolean;
 	error: string | null;
@@ -36,6 +58,7 @@ interface LoadedSourceSelection {
 	buffer: AudioBuffer;
 	timing: TrackTiming;
 	sourceIndex: number;
+	sourceSampleRate: number | null;
 }
 
 interface LoadSourceSelectionResult {
@@ -66,10 +89,24 @@ function clampPan(value: number): number {
 	return Math.max(-1, Math.min(1, value));
 }
 
+/**
+ * True balance control: each channel's gain is scaled independently, so a
+ * hard-left position silences the right channel instead of summing it into
+ * the left one (which is what StereoPannerNode does for stereo sources).
+ */
+function computeBalanceGains(pan: number): { gainL: number; gainR: number } {
+	const x = clampPan(pan);
+	return {
+		gainL: x <= 0 ? 1 : 1 - x,
+		gainR: x >= 0 ? 1 : 1 + x,
+	};
+}
+
 export class AudioEngine {
 	private context: AudioContext | null;
 	private readonly features: TrackSwitchFeatures;
 	private readonly alignmentEnabled: boolean;
+	private globalVolumeEnabled: boolean;
 	private gainNodeMaster: GainNode | null;
 	private gainNodeVolume: GainNode | null;
 	private masterVolume: number;
@@ -78,9 +115,11 @@ export class AudioEngine {
 		features: TrackSwitchFeatures,
 		initialVolume: number,
 		alignmentEnabled = false,
+		globalVolumeEnabled = false,
 	) {
 		this.features = features;
 		this.alignmentEnabled = alignmentEnabled;
+		this.globalVolumeEnabled = globalVolumeEnabled;
 		this.context = null;
 		this.gainNodeMaster = null;
 		this.gainNodeVolume = null;
@@ -107,7 +146,7 @@ export class AudioEngine {
 
 		if (!this.gainNodeVolume) {
 			const volumeNode = this.context.createGain();
-			volumeNode.gain.value = this.features.globalVolume
+			volumeNode.gain.value = this.globalVolumeEnabled
 				? this.masterVolume
 				: 1.0;
 			volumeNode.connect(this.context.destination);
@@ -153,6 +192,105 @@ export class AudioEngine {
 			AudioContextConstructor?.prototype &&
 			typeof AudioContextConstructor.prototype.createStereoPanner === "function"
 		);
+	}
+
+	/**
+	 * (Re)builds the gainNode -> [panning nodes] -> gainNodeMaster chain for a
+	 * runtime according to its current panAlgorithm, disconnecting whatever
+	 * panning nodes it previously had. Safe to call on an already-connected
+	 * runtime (e.g. when the pan algorithm changes without reloading audio).
+	 */
+	private configurePanningGraph(runtime: TrackRuntime): void {
+		if (!this.context || !this.gainNodeMaster || !runtime.gainNode) {
+			return;
+		}
+
+		const previousNodes = [
+			runtime.pannerNode,
+			runtime.panUpmixNode,
+			runtime.panSplitterNode,
+			runtime.panGainLeftNode,
+			runtime.panGainRightNode,
+			runtime.panMergerNode,
+		];
+
+		const useBalanceAlgorithm = runtime.panAlgorithm === "balance";
+		const stereoPanningSupported = this.supportsStereoPanning();
+
+		if (useBalanceAlgorithm) {
+			runtime.pannerNode = null;
+			runtime.panUpmixNode = this.context.createGain();
+			runtime.panUpmixNode.channelCount = 2;
+			runtime.panUpmixNode.channelCountMode = "explicit";
+			runtime.panUpmixNode.channelInterpretation = "speakers";
+			runtime.panSplitterNode = this.context.createChannelSplitter(2);
+			runtime.panGainLeftNode = this.context.createGain();
+			runtime.panGainRightNode = this.context.createGain();
+			runtime.panMergerNode = this.context.createChannelMerger(2);
+		} else {
+			runtime.panUpmixNode = null;
+			runtime.panSplitterNode = null;
+			runtime.panGainLeftNode = null;
+			runtime.panGainRightNode = null;
+			runtime.panMergerNode = null;
+			runtime.pannerNode =
+				stereoPanningSupported &&
+				typeof this.context.createStereoPanner === "function"
+					? this.context.createStereoPanner()
+					: null;
+		}
+
+		try {
+			runtime.gainNode.disconnect();
+		} catch (_error) {
+			// ignore
+		}
+		previousNodes.forEach((node) => {
+			try {
+				node?.disconnect();
+			} catch (_error) {
+				// ignore
+			}
+		});
+
+		if (runtime.pannerNode) {
+			runtime.gainNode.connect(runtime.pannerNode);
+			runtime.pannerNode.connect(this.gainNodeMaster);
+		} else if (
+			runtime.panUpmixNode &&
+			runtime.panSplitterNode &&
+			runtime.panGainLeftNode &&
+			runtime.panGainRightNode &&
+			runtime.panMergerNode
+		) {
+			runtime.gainNode.connect(runtime.panUpmixNode);
+			runtime.panUpmixNode.connect(runtime.panSplitterNode);
+			runtime.panSplitterNode.connect(runtime.panGainLeftNode, 0);
+			runtime.panSplitterNode.connect(runtime.panGainRightNode, 1);
+			runtime.panGainLeftNode.connect(runtime.panMergerNode, 0, 0);
+			runtime.panGainRightNode.connect(runtime.panMergerNode, 0, 1);
+			runtime.panMergerNode.connect(this.gainNodeMaster);
+
+			const { gainL, gainR } = computeBalanceGains(runtime.state.pan);
+			runtime.panGainLeftNode.gain.value = gainL;
+			runtime.panGainRightNode.gain.value = gainR;
+		} else {
+			runtime.gainNode.connect(this.gainNodeMaster);
+		}
+	}
+
+	/**
+	 * Rebuilds the panning graph for runtimes whose panAlgorithm changed
+	 * without reloading their audio buffers (used by config hot reload).
+	 */
+	refreshPanningGraph(runtimes: TrackRuntime[]): void {
+		if (!this.context || !this.gainNodeMaster) {
+			return;
+		}
+
+		runtimes.forEach((runtime) => {
+			this.configurePanningGraph(runtime);
+		});
 	}
 
 	private requestContextResume(): Promise<void> {
@@ -221,10 +359,6 @@ export class AudioEngine {
 	}
 
 	async unlockIOSPlayback(): Promise<void> {
-		if (!this.features.iosAudioUnlock) {
-			return;
-		}
-
 		this.initializeAudioGraph();
 
 		if (!this.context) {
@@ -360,37 +494,7 @@ export class AudioEngine {
 			runtime.gainNode = this.context.createGain();
 		}
 
-		const previousPannerNode = runtime.pannerNode;
-		const stereoPanningSupported = this.supportsStereoPanning();
-		if (
-			stereoPanningSupported &&
-			!runtime.pannerNode &&
-			typeof this.context.createStereoPanner === "function"
-		) {
-			runtime.pannerNode = this.context.createStereoPanner();
-		}
-
-		if (!stereoPanningSupported) {
-			runtime.pannerNode = null;
-		}
-
-		try {
-			runtime.gainNode.disconnect();
-		} catch (_error) {
-			// ignore
-		}
-		try {
-			previousPannerNode?.disconnect();
-		} catch (_error) {
-			// ignore
-		}
-
-		if (runtime.pannerNode) {
-			runtime.gainNode.connect(runtime.pannerNode);
-			runtime.pannerNode.connect(this.gainNodeMaster);
-		} else {
-			runtime.gainNode.connect(this.gainNodeMaster);
-		}
+		this.configurePanningGraph(runtime);
 
 		const baseSelectionResult = await this.loadSourceSelection(
 			runtime.definition.sources || [],
@@ -407,16 +511,18 @@ export class AudioEngine {
 			buffer: baseSelectionResult.selection.buffer,
 			timing: baseSelectionResult.selection.timing,
 			sourceIndex: baseSelectionResult.selection.sourceIndex,
+			sourceSampleRate: baseSelectionResult.selection.sourceSampleRate,
 			waveformSummary: null,
 		};
 
 		runtime.activeVariant = "base";
 		runtime.buffer = runtime.baseSource.buffer;
 		runtime.timing = runtime.baseSource.timing;
+		runtime.sourceSampleRate = runtime.baseSource.sourceSampleRate;
 		runtime.sourceIndex = runtime.baseSource.sourceIndex;
 		runtime.waveformSummary = runtime.baseSource.waveformSummary;
 
-		const alignmentSources = runtime.definition.alignment?.synchronizedSources;
+		const alignmentSources = runtime.definition.syncedSources;
 		const shouldLoadSyncedSources =
 			this.alignmentEnabled &&
 			Array.isArray(alignmentSources) &&
@@ -440,6 +546,7 @@ export class AudioEngine {
 				buffer: syncedSelectionResult.selection.buffer,
 				timing: syncedSelectionResult.selection.timing,
 				sourceIndex: syncedSelectionResult.selection.sourceIndex,
+				sourceSampleRate: syncedSelectionResult.selection.sourceSampleRate,
 				waveformSummary: null,
 			};
 		} else {
@@ -465,13 +572,7 @@ export class AudioEngine {
 				continue;
 			}
 
-			const mime = inferSourceMimeType(
-				source.src,
-				source.type,
-				MIME_TYPE_TABLE,
-			);
-			const canPlay = !!audioElement.canPlayType?.(mime).replace(/no/, "");
-			if (!canPlay) {
+			if (!isPlayableSource(source, audioElement)) {
 				continue;
 			}
 
@@ -485,6 +586,7 @@ export class AudioEngine {
 						buffer: decodedBuffer,
 						timing: calculateTrackTiming(source, decodedBuffer.duration),
 						sourceIndex: sourceIndex,
+						sourceSampleRate: readSourceSampleRate(arrayBuffer),
 					},
 					error: null,
 				};
@@ -508,8 +610,7 @@ export class AudioEngine {
 				...this.filterPlayableSources(runtime.definition.sources || []),
 			);
 
-			const alignmentSources =
-				runtime.definition.alignment?.synchronizedSources;
+			const alignmentSources = runtime.definition.syncedSources;
 			const shouldLoadSyncedSources =
 				this.alignmentEnabled &&
 				Array.isArray(alignmentSources) &&
@@ -532,12 +633,7 @@ export class AudioEngine {
 				return false;
 			}
 
-			const mime = inferSourceMimeType(
-				source.src,
-				source.type,
-				MIME_TYPE_TABLE,
-			);
-			return !!audioElement.canPlayType?.(mime).replace(/no/, "");
+			return isPlayableSource(source, audioElement);
 		});
 	}
 
@@ -657,24 +753,24 @@ export class AudioEngine {
 
 		const nextVolume = clamp01(volume);
 		this.masterVolume = nextVolume;
-		this.gainNodeVolume.gain.value = this.features.globalVolume
-			? nextVolume
-			: 1;
+		this.gainNodeVolume.gain.value = this.globalVolumeEnabled ? nextVolume : 1;
 	}
 
+	setGlobalVolumeEnabled(enabled: boolean): void {
+		this.globalVolumeEnabled = enabled;
+		if (this.gainNodeVolume) {
+			this.gainNodeVolume.gain.value = enabled ? this.masterVolume : 1;
+		}
+	}
+
+	/** `noSoloFallbackGates` says, per track, how loud it is while nothing is soloed. */
 	applyTrackStateGains(
 		runtimes: TrackRuntime[],
-		noSoloFallbackGate?: number,
+		noSoloFallbackGates?: number[],
 	): void {
 		const anySolos = runtimes.some((runtime) => runtime.state.solo);
-		const resolvedNoSoloFallbackGate =
-			typeof noSoloFallbackGate === "number"
-				? clamp01(noSoloFallbackGate)
-				: this.features.exclusiveSolo
-					? 1
-					: 0;
 
-		runtimes.forEach((runtime) => {
+		runtimes.forEach((runtime, index) => {
 			if (!runtime.gainNode) {
 				return;
 			}
@@ -683,11 +779,15 @@ export class AudioEngine {
 				? runtime.state.solo
 					? 1
 					: 0
-				: resolvedNoSoloFallbackGate;
+				: clamp01(noSoloFallbackGates?.[index] ?? 0);
 			runtime.gainNode.gain.value = soloGate * clamp01(runtime.state.volume);
 
 			if (runtime.pannerNode) {
 				runtime.pannerNode.pan.value = clampPan(runtime.state.pan);
+			} else if (runtime.panGainLeftNode && runtime.panGainRightNode) {
+				const { gainL, gainR } = computeBalanceGains(runtime.state.pan);
+				runtime.panGainLeftNode.gain.value = gainL;
+				runtime.panGainRightNode.gain.value = gainR;
 			}
 		});
 	}
@@ -837,15 +937,29 @@ export class AudioEngine {
 			} catch (_error) {
 				// ignore
 			}
-			try {
-				runtime.pannerNode?.disconnect();
-			} catch (_error) {
-				// ignore
-			}
+			[
+				runtime.pannerNode,
+				runtime.panUpmixNode,
+				runtime.panSplitterNode,
+				runtime.panGainLeftNode,
+				runtime.panGainRightNode,
+				runtime.panMergerNode,
+			].forEach((node) => {
+				try {
+					node?.disconnect();
+				} catch (_error) {
+					// ignore
+				}
+			});
 
 			runtime.activeSource = null;
 			runtime.gainNode = null;
 			runtime.pannerNode = null;
+			runtime.panUpmixNode = null;
+			runtime.panSplitterNode = null;
+			runtime.panGainLeftNode = null;
+			runtime.panGainRightNode = null;
+			runtime.panMergerNode = null;
 		});
 	}
 

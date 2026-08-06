@@ -5,20 +5,14 @@ import type {
 } from "./domain/types";
 import type { TrackswitchDomEventName, TrackswitchPlayer } from "./element";
 import {
-	defineTrackSwitchSyncPlayerElement,
 	defineTrackswitchDefaultElement,
 	TRACKSWITCH_DOM_EVENTS,
 } from "./element";
-import { defineTrackSwitchSyncInteractiveElement } from "./interactive/interactive-element";
-import type {
-	InteractiveTrackSwitchController,
-	InteractiveTrackSwitchInit,
-} from "./interactive/types";
 
-export type TrackswitchSvelteVariant = "default" | "sync" | "sync-interactive";
+export type TrackswitchSvelteVariant = "default" | "sync";
 
 export interface TrackswitchSvelteOptions {
-	config: TrackSwitchInit | InteractiveTrackSwitchInit;
+	config: TrackSwitchInit;
 	variant?: TrackswitchSvelteVariant;
 	onLoaded?: (payload: TrackSwitchEventMap["loaded"]) => void;
 	onError?: (payload: TrackSwitchEventMap["error"]) => void;
@@ -31,10 +25,7 @@ export interface TrackswitchSvelteAction {
 	destroy(): void;
 }
 
-type TrackswitchSvelteElement = HTMLElement & {
-	config?: TrackSwitchInit | InteractiveTrackSwitchInit;
-	controller?: TrackSwitchController | InteractiveTrackSwitchController | null;
-};
+type TrackswitchSvelteElement = TrackswitchPlayer;
 
 function bindEvent<P>(
 	element: HTMLElement,
@@ -55,12 +46,6 @@ function defineElementForVariant(
 	variant: TrackswitchSvelteVariant | undefined,
 ): void {
 	if (variant === "sync") {
-		defineTrackSwitchSyncPlayerElement();
-		return;
-	}
-
-	if (variant === "sync-interactive") {
-		defineTrackSwitchSyncInteractiveElement();
 		return;
 	}
 
@@ -113,10 +98,4 @@ export function getTrackswitchController(
 	node: TrackswitchPlayer,
 ): TrackSwitchController | null {
 	return node.controller;
-}
-
-export function getTrackswitchInteractiveController(
-	node: TrackswitchSvelteElement,
-): InteractiveTrackSwitchController | null {
-	return (node.controller as InteractiveTrackSwitchController | null) || null;
 }

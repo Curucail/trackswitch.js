@@ -1,0 +1,19 @@
+/* SEPARATOR STYLES ---------------------------------------------------------- */
+
+.trackswitch .ts-separator {
+	display: block;
+	width: 100%;
+	height: var(--ts-separator-thickness);
+	background: var(--ts-color-text-primary);
+}
+
+/* The separator replaces the hairline the stack draws between sections, rather
+   than sitting on top of it — on either side. */
+.trackswitch.trackswitch
+	> .ts-stack-section:not(.main-control)
+	+ .ts-stack-section.ts-separator,
+.trackswitch.trackswitch
+	> .ts-stack-section.ts-separator:not(.main-control)
+	+ .ts-stack-section {
+	border-top: 0;
+}

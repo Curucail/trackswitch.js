@@ -1,28 +1,27 @@
-import type { ScaleContinuousNumeric, ScaleLinear, Selection } from "d3";
 import type {
 	AudioDownloadSizeInfo,
-	NormalizedTrackGroupLayout,
+	TrackListGroup,
 	TrackRuntime,
+	TrackSwitchNavigationBarControl,
+	TrackSwitchNavigationBarViewConfig,
+	TrackSwitchSheetMusicViewConfig,
+	TrackSwitchTextViewConfig,
+	TrackSwitchUiState,
 } from "../domain/types";
 import {
+	applyCssOverrides,
 	escapeHtml,
 	getDeepActiveElement,
-	sanitizeInlineStyle,
 } from "../shared/dom";
-import {
-	formatBytesToHumanReadable,
-	formatSecondsToHHMMSSmmm,
-} from "../shared/format";
+import { formatBytesToHumanReadable } from "../shared/format";
 import { clampPercent } from "../shared/math";
 import { getHostIconSlot, renderIconSlotHtml, setHostIcon } from "./icons";
-
-type SvgSelection = Selection<SVGSVGElement, unknown, null, undefined>;
-type GroupSelection = Selection<SVGGElement, unknown, null, undefined>;
-type PathSelection = Selection<SVGPathElement, unknown, null, undefined>;
-type RectSelection = Selection<SVGRectElement, unknown, null, undefined>;
-type LineSelection = Selection<SVGLineElement, unknown, null, undefined>;
-type CircleSelection = Selection<SVGCircleElement, unknown, null, undefined>;
-type TextSelection = Selection<SVGTextElement, unknown, null, undefined>;
+import type {
+	PerTrackImageSource,
+	ViewRenderer,
+	WarpingMatrixRenderContext,
+	WaveformTimelineContext,
+} from "./view-renderer";
 
 const TRACKSWITCH_ROOT_CLASSES = [
 	"trackswitch",
@@ -30,6 +29,13 @@ const TRACKSWITCH_ROOT_CLASSES = [
 	"sync-enabled",
 	"ts-panel-reorder-active",
 ] as const;
+
+function navigationBarHasControl(
+	navigationBar: TrackSwitchNavigationBarViewConfig | null,
+	control: TrackSwitchNavigationBarControl,
+): boolean {
+	return navigationBar?.controls.includes(control) ?? false;
+}
 
 function resetManagedRoot(root: HTMLElement): void {
 	TRACKSWITCH_ROOT_CLASSES.forEach((className) => {
@@ -55,128 +61,28 @@ interface SheetMusicHostConfig {
 	cursorAlpha: number;
 }
 
-interface WarpingMatrixPathPoint {
-	referenceTime: number;
-	trackTime: number;
-}
-
-interface WarpingMatrixPathSeriesData {
-	pointsByReferenceTime: WarpingMatrixPathPoint[];
-	pointsByTrackTime: WarpingMatrixPathPoint[];
-	trackDuration: number;
-}
-
-interface WarpingMatrixMatrixData {
-	byColumn: Map<string, WarpingMatrixPathSeriesData>;
-}
-
-interface WarpingMatrixTempoPoint {
-	trackTime: number;
-	referenceTime: number;
-	tempoPercent: number;
-}
-
-interface WarpingMatrixTempoSeriesData {
-	points: WarpingMatrixTempoPoint[];
-	isStrictlyMonotonic: boolean;
-	warningMessage: string | null;
-}
-
-interface WarpingMatrixTempoData {
-	byColumn: Map<string, WarpingMatrixTempoSeriesData>;
-}
-
-interface WarpingPlotMargins {
-	top: number;
-	right: number;
-	bottom: number;
-	left: number;
-}
-
-interface WarpingMatrixPlotState {
-	svg: SvgSelection;
-	title: TextSelection;
-	xAxis: GroupSelection;
-	yAxis: GroupSelection;
-	xLabel: TextSelection;
-	yLabel: TextSelection;
-	plotRoot: GroupSelection;
-	pathLayer: GroupSelection;
-	clipRect: RectSelection;
-	pathByColumn: Map<string, PathSelection>;
-	guideDiagonal: LineSelection;
-	playhead: CircleSelection;
-	xScale: ScaleLinear<number, number>;
-	yScale: ScaleLinear<number, number>;
-	margins: WarpingPlotMargins;
-	innerWidth: number;
-	innerHeight: number;
-}
-
-interface WarpingTempoPlotState {
-	svg: SvgSelection;
-	title: TextSelection;
-	xAxis: GroupSelection;
-	yAxis: GroupSelection;
-	yAxisRight: GroupSelection;
-	xLabel: TextSelection;
-	yLabel: TextSelection;
-	yLabelRight: TextSelection;
-	plotRoot: GroupSelection;
-	clipRect: RectSelection;
-	path: PathSelection;
-	baseline: LineSelection;
-	centerLine: LineSelection;
-	xScale: ScaleLinear<number, number>;
-	yScale: ScaleContinuousNumeric<number, number>;
-	margins: WarpingPlotMargins;
-	innerWidth: number;
-	innerHeight: number;
-}
-
-interface WarpingMatrixHostMetadata {
-	wrapper: HTMLElement;
-	host: HTMLElement;
-	syncDisabledOverlay: HTMLElement;
-	matrixPanel: HTMLElement;
-	matrixPlotHost: HTMLElement;
-	matrixPlot: WarpingMatrixPlotState | null;
-	tempoPanel: HTMLElement;
-	tempoPlotHost: HTMLElement;
-	tempoPlot: WarpingTempoPlotState | null;
-	tempoControls: HTMLElement;
-	tempoMessage: HTMLElement;
-	tempoWindowSlider: HTMLInputElement;
-	tempoWindowValueNode: HTMLElement;
-	tempoSmoothingSlider: HTMLInputElement;
-	tempoSmoothingValueNode: HTMLElement;
-	matrixSeriesSignature: string | null;
-	matrixDataCache: WarpingMatrixMatrixData | null;
-	matrixDataCacheKey: string | null;
-	tempoDataCache: WarpingMatrixTempoData | null;
-	tempoDataCacheKey: string | null;
-	matrixDisabled: boolean;
-	tempoCurveValid: boolean;
-	matrixTrackDuration: number;
-	configuredHeight: number | null;
-	configuredBpm: number | "infer_score" | null;
-	tempoWindowSeconds: number;
-	tempoSmoothingSeconds: number;
-	colorByColumn: Map<string, string>;
-	activeColumnKey: string | null;
-	referenceDuration: number;
-	currentReferenceTime: number;
-	currentTrackTime: number;
-	currentScoreBpm: number | null;
-	matrixActivePointerId: number | null;
-	lastSizeKey: string | null;
-	layoutDirty: boolean;
-	staticPlotDirty: boolean;
-}
-
 interface ShortcutHelpEntry {
 	keys: string;
 	action: string;
+}
+
+interface PanelReorderStartEvent {
+	target?: EventTarget | null;
+	pageY?: number;
+	originalEvent?: Event;
+	preventDefault(): void;
+	stopPropagation(): void;
+}
+
+interface PanelReorderMoveEvent {
+	pageY?: number;
+	originalEvent?: Event;
+	preventDefault(): void;
+}
+
+interface PanelReorderEndEvent {
+	originalEvent?: Event;
+	preventDefault(): void;
 }
 
 function buildSeekWrap(leftPercent: number, rightPercent: number): string {
@@ -326,90 +232,19 @@ function applySoloIconState(
 	setHostIcon(soloButton, "circle-check");
 }
 
-function parseSheetMusicString(value: string | null): string {
-	return typeof value === "string" ? value.trim() : "";
-}
-
-function parseSheetMusicCursorColor(value: string | null): string {
-	const raw = parseSheetMusicString(value);
-	return raw || "#999999";
-}
-
-function parseSheetMusicCursorAlpha(value: string | null): number {
-	if (value === null) {
-		return 0.4;
+/** The `trackList` a rendered row belongs to, as stamped on its enclosing list. */
+function trackGroupIndexOfRow(row: HTMLElement): number {
+	const list = row.closest(".track_list[data-track-group-index]");
+	if (!list) {
+		return -1;
 	}
 
-	const parsed = Number(value);
-	if (!Number.isFinite(parsed)) {
-		return 0.4;
+	const parsed = Number(list.getAttribute("data-track-group-index"));
+	if (!Number.isFinite(parsed) || parsed < 0) {
+		return -1;
 	}
 
-	if (parsed < 0) {
-		return 0;
-	}
-
-	if (parsed > 1) {
-		return 1;
-	}
-
-	return parsed;
-}
-
-function parseSheetMusicMaxHeight(value: string | null): number | null {
-	return parseRoundedPositiveIntegerAttribute(value) ?? 380;
-}
-
-function parseSheetMusicMaxWidth(value: string | null): number | null {
-	return parseRoundedPositiveIntegerAttribute(value) ?? 1000;
-}
-
-function parseRoundedPositiveIntegerAttribute(
-	value: string | null,
-): number | null {
-	if (value === null) {
-		return null;
-	}
-
-	const parsed = Number(value);
-	if (!Number.isFinite(parsed) || parsed < 1) {
-		return null;
-	}
-
-	return Math.max(1, Math.round(parsed));
-}
-
-function parseSheetMusicRenderScale(value: string | null): number | null {
-	if (value === null) {
-		return 0.7;
-	}
-
-	const parsed = Number(value);
-	if (!Number.isFinite(parsed) || parsed <= 0) {
-		return 0.7;
-	}
-
-	return parsed;
-}
-
-function parseSheetMusicFollowPlayback(value: string | null): boolean {
-	if (value === null) {
-		return true;
-	}
-
-	return parseSheetMusicString(value).toLowerCase() !== "false";
-}
-
-function parseTextAlign(value: string | null): "left" | "center" | "right" {
-	if (value === "left" || value === "right") {
-		return value;
-	}
-
-	return "center";
-}
-
-function parseTextFontSize(value: string | null): number | null {
-	return parseRoundedPositiveIntegerAttribute(value);
+	return Math.floor(parsed);
 }
 
 function buildTrackShortcutAction(
@@ -424,11 +259,8 @@ function buildTrackShortcutAction(
 }
 
 function getShortcutHelpEntries(
-	features: {
-		exclusiveSolo: boolean;
-		globalVolume: boolean;
-		looping: boolean;
-	},
+	singleSoloMode: boolean,
+	navigationBar: TrackSwitchNavigationBarViewConfig | null,
 	trackCount: number,
 ): ShortcutHelpEntry[] {
 	const entries: ShortcutHelpEntry[] = [
@@ -443,18 +275,18 @@ function getShortcutHelpEntries(
 		{ keys: "Home", action: "Jump to the start." },
 		{
 			keys: "1 .. 0",
-			action: buildTrackShortcutAction(trackCount, features.exclusiveSolo),
+			action: buildTrackShortcutAction(trackCount, singleSoloMode),
 		},
 	];
 
-	if (features.globalVolume) {
+	if (navigationBarHasControl(navigationBar, "globalVolume")) {
 		entries.push({
 			keys: "↑ / ↓",
 			action: "Increase or decrease the global volume by 10%.",
 		});
 	}
 
-	if (features.looping) {
+	if (navigationBarHasControl(navigationBar, "looping")) {
 		entries.push(
 			{ keys: "A", action: "Set loop point A at the current position." },
 			{ keys: "B", action: "Set loop point B at the current position." },
@@ -463,18 +295,26 @@ function getShortcutHelpEntries(
 		);
 	}
 
+	if (navigationBarHasControl(navigationBar, "markerNavigation")) {
+		entries.push({
+			keys: ", / .",
+			action: "Jump to the previous or next marker.",
+		});
+	}
+
 	return entries;
 }
 
 function buildShortcutHelpHtml(
-	features: {
-		exclusiveSolo: boolean;
-		globalVolume: boolean;
-		looping: boolean;
-	},
+	singleSoloMode: boolean,
+	navigationBar: TrackSwitchNavigationBarViewConfig | null,
 	trackCount: number,
 ): string {
-	const entries = getShortcutHelpEntries(features, trackCount);
+	const entries = getShortcutHelpEntries(
+		singleSoloMode,
+		navigationBar,
+		trackCount,
+	);
 	const itemsHtml = entries
 		.map(
 			(entry: ShortcutHelpEntry, index: number) =>
@@ -492,7 +332,7 @@ function buildShortcutHelpHtml(
 		.join("");
 
 	return (
-		'<div class="overlay overlay-shortcuts is-hidden" aria-hidden="true">' +
+		'<div class="overlay overlay-shortcuts is-hidden" popover="manual" aria-hidden="true">' +
 		'<div class="shortcut-help-panel" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts help" tabindex="-1">' +
 		'<div class="shortcut-help-header">' +
 		'<div class="shortcut-help-heading">' +
@@ -506,6 +346,65 @@ function buildShortcutHelpHtml(
 		'<p class="shortcut-help-footer">Press F1 or Escape to close.</p>' +
 		"</div>" +
 		"</div>"
+	);
+}
+
+let markerNavigationDialogId = 0;
+
+function buildMarkerNavigationDialogHtml(looping: boolean): string {
+	const dialogId = ++markerNavigationDialogId;
+	const field = (className: string, label: string, fieldId: string): string => {
+		const inputId = `marker-navigation-${dialogId}-${fieldId}`;
+		const listboxId = `${inputId}-listbox`;
+		return (
+			'<div class="marker-navigation-field">' +
+			'<div class="marker-navigation-combobox">' +
+			'<input class="marker-navigation-input ' +
+			className +
+			'" id="' +
+			inputId +
+			'" type="text" role="combobox" aria-label="' +
+			escapeHtml(label) +
+			'" aria-autocomplete="list" aria-expanded="false" aria-controls="' +
+			listboxId +
+			'" autocomplete="off" placeholder="Search by marker set, ID, or label">' +
+			'<div class="marker-navigation-options" id="' +
+			listboxId +
+			'" role="listbox" popover="manual" aria-label="' +
+			escapeHtml(label) +
+			' suggestions"></div>' +
+			"</div></div>"
+		);
+	};
+
+	const loopHtml = looping
+		? '<fieldset class="marker-navigation-loop-fields" aria-label="Set loop points between markers">' +
+			'<div class="marker-navigation-section-heading">Set loop points between markers</div>' +
+			'<div class="marker-navigation-loop-grid">' +
+			'<div class="marker-navigation-loop-column"><span class="marker-navigation-loop-point">A</span>' +
+			field("marker-loop-a", "Loop point A marker", "loop-a") +
+			"</div>" +
+			'<div class="marker-navigation-loop-column"><span class="marker-navigation-loop-point">B</span>' +
+			field("marker-loop-b", "Loop point B marker", "loop-b") +
+			"</div>" +
+			"</div></fieldset>"
+		: "";
+
+	return (
+		'<div class="overlay marker-navigation-overlay is-hidden" aria-hidden="true">' +
+		'<form class="marker-navigation-dialog" role="dialog" aria-modal="true" aria-label="Jump to annotation marker" tabindex="-1">' +
+		'<div class="marker-navigation-section-heading">Jump to marker</div>' +
+		'<div class="marker-navigation-jump-fields">' +
+		field(
+			"marker-jump-target",
+			"Jump to marker by ID, label, or marker set",
+			"jump",
+		) +
+		"</div>" +
+		loopHtml +
+		'<p class="marker-navigation-error" role="alert" aria-live="assertive"></p>' +
+		'<div class="marker-navigation-dialog-actions"><button type="submit" class="marker-navigation-ok">Apply</button></div>' +
+		"</form></div>"
 	);
 }
 
@@ -538,28 +437,41 @@ function renderOverlayDownloadInfoText(info: AudioDownloadSizeInfo): string {
 	return "Expected download size for this player: unavailable";
 }
 
-export function query(ctx: any, selector: any): any {
-	return function (this: any, selector: any) {
-		return this.root.querySelector(selector);
+export function query(ctx: ViewRenderer, selector: string): HTMLElement | null {
+	return function (this: ViewRenderer, selector: string) {
+		return this.root.querySelector(selector) as HTMLElement | null;
 	}.call(ctx, selector);
 }
 
-export function queryAll(ctx: any, selector: any): any {
-	return function (this: any, selector: any) {
+export function queryAll(ctx: ViewRenderer, selector: string): HTMLElement[] {
+	return function (this: ViewRenderer, selector: string) {
 		return Array.from(this.root.querySelectorAll(selector)) as HTMLElement[];
 	}.call(ctx, selector);
 }
 
-export function initialize(ctx: any, runtimes: any): any {
-	return function (this: any, runtimes: any) {
+export function initialize(ctx: ViewRenderer, runtimes: TrackRuntime[]): void {
+	(function (this: ViewRenderer, runtimes: TrackRuntime[]) {
 		this.root.classList.add("trackswitch");
 
-		if (!this.query(".main-control")) {
-			this.root.insertAdjacentHTML(
-				"afterbegin",
+		this.appliedRootCssTokens.forEach((token) => {
+			if (!this.css || !(token in this.css)) {
+				this.root.style.removeProperty(token);
+			}
+		});
+		applyCssOverrides(this.root, this.css);
+		this.appliedRootCssTokens = this.css ? Object.keys(this.css) : [];
+
+		this.root.insertAdjacentHTML(
+			"afterbegin",
+			this.buildPlayerOverlayHtml(runtimes),
+		);
+		this.queryAll(".navigation-bar-host").forEach((host: HTMLElement) => {
+			host.insertAdjacentHTML(
+				"beforebegin",
 				this.buildMainControlHtml(runtimes),
 			);
-		}
+			host.remove();
+		});
 
 		this.wrapSeekableImages();
 		this.wrapWaveformCanvases();
@@ -582,28 +494,14 @@ export function initialize(ctx: any, runtimes: any): any {
 
 		this.updateTiming(0, 0);
 		this.updateVolumeIcon(1);
-	}.call(ctx, runtimes);
+	}).call(ctx, runtimes);
 }
 
-export function buildMainControlHtml(ctx: any, runtimes: any): any {
-	return function (this: any, runtimes: any) {
-		let presetDropdownHtml = "";
-		if (this.features.presets && this.presetNames.length >= 2) {
-			presetDropdownHtml +=
-				'<li class="preset-selector-wrap"><select class="preset-selector" title="Select Preset">';
-			for (let i = 0; i < this.presetNames.length; i += 1) {
-				presetDropdownHtml +=
-					'<option value="' +
-					i +
-					'"' +
-					(i === 0 ? " selected" : "") +
-					">" +
-					escapeHtml(this.presetNames[i]) +
-					"</option>";
-			}
-			presetDropdownHtml += "</select></li>";
-		}
-
+export function buildPlayerOverlayHtml(
+	ctx: ViewRenderer,
+	runtimes: TrackRuntime[],
+): string {
+	return function (this: ViewRenderer, runtimes: TrackRuntime[]) {
 		return (
 			'<div class="overlay overlay-activation"><span class="activate">Activate' +
 			renderIconSlotHtml("power-off") +
@@ -614,98 +512,181 @@ export function buildMainControlHtml(ctx: any, runtimes: any): any {
 			renderIconSlotHtml("circle-info") +
 			"</span>" +
 			'<span class="text">' +
-			"<strong>trackswitch.js</strong> - Open Source Multitrack Audio Player<br />" +
+			"<strong>trackswitch</strong> - Open Source Multitrack Audio Player<br />" +
 			'<a href="https://github.com/audiolabs/trackswitch.js">https://github.com/audiolabs/trackswitch.js</a>' +
 			'<br /><br /><span class="overlay-download-info">Expected download size for this player: calculating...</span>' +
 			"</span>" +
 			"</p>" +
 			"</div>" +
-			buildShortcutHelpHtml(this.features, runtimes.length) +
+			buildShortcutHelpHtml(
+				// The number keys switch rather than toggle only where every list is
+				// exclusive; a mixed player still gets the plain toggle wording.
+				this.trackGroups.length > 0 &&
+					this.trackGroups.every((group) =>
+						this.isGroupExclusive(group.groupIndex),
+					),
+				this.navigationBar,
+				runtimes.length,
+			) +
+			(navigationBarHasControl(this.navigationBar, "markerNavigation")
+				? buildMarkerNavigationDialogHtml(
+						navigationBarHasControl(this.navigationBar, "looping"),
+					)
+				: "")
+		);
+	}.call(ctx, runtimes);
+}
+
+export function buildMainControlHtml(
+	ctx: ViewRenderer,
+	runtimes: TrackRuntime[],
+): string {
+	return function (this: ViewRenderer, runtimes: TrackRuntime[]) {
+		let presetDropdownHtml = "";
+		if (this.presetEntries.length >= 2) {
+			presetDropdownHtml +=
+				'<li class="preset-selector-wrap"><select class="preset-selector" title="Select Preset">';
+			this.presetEntries.forEach(
+				(preset: { id: string; label: string }, i: number) => {
+					presetDropdownHtml +=
+						'<option value="' +
+						escapeHtml(preset.id) +
+						'"' +
+						(i === 0 ? " selected" : "") +
+						">" +
+						escapeHtml(preset.label) +
+						"</option>";
+				},
+			);
+			presetDropdownHtml += "</select></li>";
+		}
+
+		const controlHtml = (control: TrackSwitchNavigationBarControl): string => {
+			switch (control) {
+				case "playback":
+					return (
+						'<li class="playback-group">' +
+						'<ul class="playback-controls">' +
+						'<li class="playpause button" title="Play/Pause (Spacebar)">Play' +
+						renderIconSlotHtml("play") +
+						"</li>" +
+						'<li class="stop button" title="Stop (Esc)">Stop' +
+						renderIconSlotHtml("stop") +
+						"</li>" +
+						'<li class="repeat button" title="Repeat (R)">Repeat' +
+						renderIconSlotHtml("rotate-right") +
+						"</li>" +
+						"</ul>" +
+						"</li>"
+					);
+				case "globalVolume":
+					return (
+						'<li class="volume"><div class="volume-control"><i class="volume-icon">' +
+						renderIconSlotHtml("volume-high") +
+						"</i>" +
+						'<input type="range" class="volume-slider" min="0" max="100" value="100"></div></li>'
+					);
+				case "markerNavigation":
+					return (
+						'<li class="marker-navigation-group"><div class="marker-navigation-controls" role="group" aria-label="Marker navigation">' +
+						'<button type="button" class="marker-previous button" title="Previous marker" aria-label="Previous marker" disabled>' +
+						renderIconSlotHtml("marker-previous") +
+						"</button>" +
+						'<button type="button" class="marker-jump button" title="Jump to marker" aria-label="Jump to marker" disabled>' +
+						renderIconSlotHtml("marker-jump") +
+						"</button>" +
+						'<button type="button" class="marker-next button" title="Next marker" aria-label="Next marker" disabled>' +
+						renderIconSlotHtml("marker-next") +
+						"</button>" +
+						"</div></li>"
+					);
+				case "looping":
+					return (
+						'<li class="loop-group"><ul class="loop-controls">' +
+						'<li class="loop-a button" title="Set Loop Point A (A)" aria-label="Set Loop Point A">' +
+						renderIconSlotHtml("loop-a") +
+						"</li>" +
+						'<li class="loop-b button" title="Set Loop Point B (B)" aria-label="Set Loop Point B">' +
+						renderIconSlotHtml("loop-b") +
+						"</li>" +
+						'<li class="loop-toggle button" title="Toggle Loop On/Off (L)">Loop' +
+						renderIconSlotHtml("repeat") +
+						"</li>" +
+						'<li class="loop-clear button" title="Clear Loop Points (C)">Clear' +
+						renderIconSlotHtml("xmark") +
+						"</li>" +
+						"</ul></li>"
+					);
+				case "sync":
+					return this.shouldRenderGlobalSync(runtimes)
+						? '<li class="sync-global button" title="Use synchronized version">SYNC</li>'
+						: "";
+				case "presets":
+					return presetDropdownHtml;
+				case "timer":
+					return '<li class="timing"><span class="time">--:--:--:---</span> / <span class="length">--:--:--:---</span></li>';
+				case "seekBar":
+					return (
+						'<li class="seekwrap">' +
+						'<div class="seekbar">' +
+						'<div class="loop-region"></div>' +
+						'<div class="loop-marker marker-a"></div>' +
+						'<div class="loop-marker marker-b"></div>' +
+						'<div class="seekhead"></div>' +
+						"</div>" +
+						"</li>"
+					);
+			}
+		};
+
+		const controlsHtml =
+			this.navigationBar?.controls.map(controlHtml).join("") ?? "";
+
+		return (
 			'<div class="main-control ts-stack-section">' +
 			'<ul class="control">' +
-			'<li class="playback-group">' +
-			'<ul class="playback-controls">' +
-			'<li class="playpause button" title="Play/Pause (Spacebar)">Play' +
-			renderIconSlotHtml("play") +
-			"</li>" +
-			'<li class="stop button" title="Stop (Esc)">Stop' +
-			renderIconSlotHtml("stop") +
-			"</li>" +
-			'<li class="repeat button" title="Repeat (R)">Repeat' +
-			renderIconSlotHtml("rotate-right") +
-			"</li>" +
-			"</ul>" +
-			"</li>" +
-			(this.features.globalVolume
-				? '<li class="volume"><div class="volume-control"><i class="volume-icon">' +
-					renderIconSlotHtml("volume-high") +
-					"</i>" +
-					'<input type="range" class="volume-slider" min="0" max="100" value="100"></div></li>'
-				: "") +
-			(this.features.looping
-				? '<li class="loop-group"><ul class="loop-controls">' +
-					'<li class="loop-a button" title="Set Loop Point A (A)" aria-label="Set Loop Point A">' +
-					renderIconSlotHtml("loop-a") +
-					"</li>" +
-					'<li class="loop-b button" title="Set Loop Point B (B)" aria-label="Set Loop Point B">' +
-					renderIconSlotHtml("loop-b") +
-					"</li>" +
-					'<li class="loop-toggle button" title="Toggle Loop On/Off (L)">Loop' +
-					renderIconSlotHtml("repeat") +
-					"</li>" +
-					'<li class="loop-clear button" title="Clear Loop Points (C)">Clear' +
-					renderIconSlotHtml("xmark") +
-					"</li>" +
-					"</ul></li>"
-				: "") +
-			(this.shouldRenderGlobalSync(runtimes)
-				? '<li class="sync-global button sync-after-loop" title="Use synchronized version">SYNC</li>'
-				: "") +
-			presetDropdownHtml +
-			(this.features.timer
-				? '<li class="timing"><span class="time">--:--:--:---</span> / <span class="length">--:--:--:---</span></li>'
-				: "") +
-			(this.features.seekBar
-				? '<li class="seekwrap">' +
-					'<div class="seekbar">' +
-					'<div class="loop-region"></div>' +
-					'<div class="loop-marker marker-a"></div>' +
-					'<div class="loop-marker marker-b"></div>' +
-					'<div class="seekhead"></div>' +
-					"</div>" +
-					"</li>"
-				: "") +
+			controlsHtml +
 			"</ul>" +
 			"</div>"
 		);
 	}.call(ctx, runtimes);
 }
 
-export function shouldRenderGlobalSync(ctx: any, runtimes: any): any {
-	return function (this: any, runtimes: any) {
+export function shouldRenderGlobalSync(
+	ctx: ViewRenderer,
+	runtimes: TrackRuntime[],
+): boolean {
+	return function (this: ViewRenderer, runtimes: TrackRuntime[]) {
 		if (!this.isAlignmentMode()) {
 			return false;
 		}
 
 		return runtimes.some((runtime: TrackRuntime) => {
-			const sources = runtime.definition.alignment?.synchronizedSources;
+			const sources = runtime.definition.syncedSources;
 			return Array.isArray(sources) && sources.length > 0;
 		});
 	}.call(ctx, runtimes);
 }
 
-export function buildTrackRow(ctx: any, runtime: any, index: any): any {
-	return function (this: any, runtime: any, index: any) {
+export function buildTrackRow(
+	ctx: ViewRenderer,
+	runtime: TrackRuntime,
+	index: number,
+	trackListOptions: TrackListGroup,
+): HTMLElement {
+	return function (
+		this: ViewRenderer,
+		runtime: TrackRuntime,
+		index: number,
+		trackListOptions: TrackListGroup,
+	) {
 		const tabviewClass = this.features.tabView ? " tabs" : "";
-		const radioSoloClass = this.features.exclusiveSolo ? " radio" : "";
-		const wholeSoloClass = this.features.exclusiveSolo ? " solo" : "";
+		const radioSoloClass = trackListOptions.exclusiveSolo ? " radio" : "";
+		const wholeSoloClass = trackListOptions.exclusiveSolo ? " solo" : "";
 
 		const track = document.createElement("li");
 		track.className = `track${tabviewClass}${wholeSoloClass}`;
-		track.setAttribute(
-			"style",
-			sanitizeInlineStyle(runtime.definition.style || ""),
-		);
+		applyCssOverrides(track, runtime.definition.css);
 		track.setAttribute("data-track-index", String(index));
 
 		const errorIndicator = document.createElement("span");
@@ -732,11 +713,14 @@ export function buildTrackRow(ctx: any, runtime: any, index: any): any {
 
 		track.appendChild(controls);
 
-		if (this.features.trackVolumeControls || this.features.trackPanControls) {
+		if (
+			trackListOptions.trackVolumeControls ||
+			trackListOptions.trackPanControls
+		) {
 			const mixControls = document.createElement("div");
 			mixControls.className = "track-mix-controls";
 
-			if (this.features.trackVolumeControls) {
+			if (trackListOptions.trackVolumeControls) {
 				const volumeControl = document.createElement("div");
 				volumeControl.className = "track-volume-control";
 
@@ -758,7 +742,7 @@ export function buildTrackRow(ctx: any, runtime: any, index: any): any {
 				mixControls.appendChild(volumeControl);
 			}
 
-			if (this.features.trackPanControls) {
+			if (trackListOptions.trackPanControls) {
 				const panControl = document.createElement("div");
 				panControl.className = "track-pan-control";
 
@@ -784,46 +768,86 @@ export function buildTrackRow(ctx: any, runtime: any, index: any): any {
 		}
 
 		return track;
-	}.call(ctx, runtime, index);
+	}.call(ctx, runtime, index, trackListOptions);
 }
 
-export function renderTrackList(ctx: any, runtimes: any): any {
-	return function (this: any, runtimes: any) {
+/**
+ * The row that selects a whole `trackList` — its tracks share one alignment
+ * timeline, which makes the list itself one of the timelines the player picks
+ * from, and its rows the mix inside that pick.
+ */
+function buildTrackListSelectRow(group: TrackListGroup): HTMLElement {
+	const row = document.createElement("li");
+	row.className = "track track-list-select solo";
+
+	const title = document.createElement("span");
+	title.className = "track-title";
+	title.textContent = group.title ?? "";
+	row.appendChild(title);
+
+	const controls = document.createElement("ul");
+	controls.className = "control";
+
+	const solo = document.createElement("li");
+	solo.className = "solo button radio";
+	solo.title = "Solo this track list";
+	solo.textContent = "Solo";
+	solo.insertAdjacentHTML("beforeend", renderIconSlotHtml("circle"));
+	controls.appendChild(solo);
+
+	row.appendChild(controls);
+	return row;
+}
+
+/**
+ * Only an aligned player has two levels to separate, and only against another
+ * selectable timeline — a lone list is the whole player and selects itself.
+ */
+function needsTrackListSelectRow(
+	ctx: ViewRenderer,
+	group: TrackListGroup,
+): boolean {
+	return (
+		ctx.isAlignmentMode() && !group.exclusiveSolo && ctx.trackGroups.length > 1
+	);
+}
+
+export function renderTrackList(
+	ctx: ViewRenderer,
+	runtimes: TrackRuntime[],
+): void {
+	(function (this: ViewRenderer, runtimes: TrackRuntime[]) {
 		this.queryAll(".track_list").forEach((existing: HTMLElement) => {
 			existing.remove();
 		});
 
-		if (this.trackGroups.length === 0) {
-			const list = document.createElement("ul");
-			list.className = "track_list";
-
-			runtimes.forEach((runtime: TrackRuntime, index: number) => {
-				list.appendChild(this.buildTrackRow(runtime, index));
-			});
-
-			this.root.appendChild(list);
-			return;
-		}
-
-		this.trackGroups.forEach((group: NormalizedTrackGroupLayout) => {
+		this.trackGroups.forEach((group: TrackListGroup) => {
 			const list = document.createElement("ul");
 			list.className = "track_list";
 			list.setAttribute("data-track-group-index", String(group.groupIndex));
 
-			for (let offset = 0; offset < group.trackCount; offset += 1) {
-				const trackIndex = group.startTrackIndex + offset;
+			if (needsTrackListSelectRow(this, group)) {
+				list.appendChild(buildTrackListSelectRow(group));
+			}
+
+			for (const trackId of group.trackIds) {
+				const trackIndex = runtimes.findIndex(
+					(runtime: TrackRuntime) => runtime.definition.id === trackId,
+				);
 				const runtime = runtimes[trackIndex];
 				if (!runtime) {
 					continue;
 				}
 
-				const row = this.buildTrackRow(runtime, trackIndex);
+				const row = this.buildTrackRow(runtime, trackIndex, group);
 				if (
 					typeof group.rowHeight === "number" &&
 					Number.isFinite(group.rowHeight) &&
 					group.rowHeight > 0
 				) {
-					row.style.minHeight = `${String(Math.round(group.rowHeight))}px`;
+					const rowHeight = Math.round(group.rowHeight);
+					row.dataset.rowHeight = String(rowHeight);
+					row.style.setProperty("--ts-track-row-height", `${rowHeight}px`);
 				}
 
 				list.appendChild(row);
@@ -839,56 +863,48 @@ export function renderTrackList(ctx: any, runtimes: any): any {
 
 			this.root.appendChild(list);
 		});
-	}.call(ctx, runtimes);
+	}).call(ctx, runtimes);
 }
 
-export function prepareTextPanels(ctx: any): any {
-	return function (this: any) {
+export function prepareTextPanels(ctx: ViewRenderer): void {
+	(function (this: ViewRenderer) {
 		const hosts = this.root.querySelectorAll(".ts-text");
 		hosts.forEach((hostElement: Element) => {
 			if (!(hostElement instanceof HTMLElement)) {
 				return;
 			}
+			const definition = this.getConfiguredViewHost(hostElement);
+			if (definition.view.type !== "text") return;
+			const config = definition.view as TrackSwitchTextViewConfig;
 
 			hostElement.classList.add("ts-stack-section");
-			hostElement.setAttribute(
-				"style",
-				sanitizeInlineStyle(hostElement.getAttribute("data-ts-text-style")) +
-					"; display: block;",
-			);
-			hostElement.style.textAlign = parseTextAlign(
-				hostElement.getAttribute("data-ts-text-align"),
-			);
+			applyCssOverrides(hostElement, config.css);
+			hostElement.style.textAlign = config.align ?? "center";
 			hostElement.style.cursor = "default";
-			hostElement.style.fontWeight =
-				hostElement.getAttribute("data-ts-text-bold") === "true"
-					? "700"
-					: "400";
-			hostElement.style.fontStyle =
-				hostElement.getAttribute("data-ts-text-italic") === "true"
-					? "italic"
-					: "normal";
+			hostElement.style.fontWeight = config.bold ? "700" : "400";
+			hostElement.style.fontStyle = config.italic ? "italic" : "normal";
 
-			const fontSize = parseTextFontSize(
-				hostElement.getAttribute("data-ts-text-font-size"),
-			);
+			const fontSize = config.fontSize ?? null;
 			if (fontSize !== null) {
 				hostElement.style.fontSize = `${fontSize}px`;
 			} else {
 				hostElement.style.removeProperty("font-size");
 			}
 		});
-	}.call(ctx);
+	}).call(ctx);
 }
 
-export function prepareCustomizablePanels(ctx: any): any {
-	return function (this: any) {
+export function prepareCustomizablePanels(ctx: ViewRenderer): void {
+	(function (this: ViewRenderer) {
 		const root = this.root as HTMLElement;
+		// A separator is a rule, not a panel: wrapping it in a drag shell would
+		// give a 2px divider a 24px handle.
 		const panels = Array.from(this.root.children).filter(
 			(child): child is HTMLElement =>
 				child instanceof HTMLElement &&
 				child.classList.contains("ts-stack-section") &&
-				!child.classList.contains("main-control"),
+				!child.classList.contains("main-control") &&
+				!child.classList.contains("ts-separator"),
 		);
 
 		if (!this.features.customizablePanelOrder) {
@@ -965,11 +981,14 @@ export function prepareCustomizablePanels(ctx: any): any {
 				shell.insertBefore(handle, shell.firstChild);
 			}
 		});
-	}.call(ctx);
+	}).call(ctx);
 }
 
-export function startPanelReorder(ctx: any, event: any): any {
-	return function (this: any, event: any) {
+export function startPanelReorder(
+	ctx: ViewRenderer,
+	event: PanelReorderStartEvent,
+): boolean {
+	return function (this: ViewRenderer, event: PanelReorderStartEvent) {
 		if (!this.features.customizablePanelOrder || this.panelDragState) {
 			return false;
 		}
@@ -1032,8 +1051,11 @@ export function startPanelReorder(ctx: any, event: any): any {
 	}.call(ctx, event);
 }
 
-export function movePanelReorder(ctx: any, event: any): any {
-	return function (this: any, event: any) {
+export function movePanelReorder(
+	ctx: ViewRenderer,
+	event: PanelReorderMoveEvent,
+): boolean {
+	return function (this: ViewRenderer, event: PanelReorderMoveEvent) {
 		const dragState = this.panelDragState;
 		if (!dragState) {
 			return false;
@@ -1085,8 +1107,11 @@ export function movePanelReorder(ctx: any, event: any): any {
 	}.call(ctx, event);
 }
 
-export function endPanelReorder(ctx: any, event: any = null): any {
-	return function (this: any, event: any) {
+export function endPanelReorder(
+	ctx: ViewRenderer,
+	event: PanelReorderEndEvent | null = null,
+): boolean {
+	return function (this: ViewRenderer, event: PanelReorderEndEvent | null) {
 		const dragState = this.panelDragState;
 		if (!dragState) {
 			return false;
@@ -1133,9 +1158,10 @@ export function endPanelReorder(ctx: any, event: any = null): any {
 	}.call(ctx, event);
 }
 
-export function wrapSeekableImages(ctx: any): any {
-	return function (this: any) {
-		const candidates = this.queryAll("img");
+export function wrapSeekableImages(ctx: ViewRenderer): void {
+	(function (this: ViewRenderer) {
+		this.imageSeekSurfaces.length = 0;
+		const candidates = this.queryAll(":scope > img");
 
 		candidates.forEach((candidate: HTMLElement) => {
 			if (!(candidate instanceof HTMLImageElement)) {
@@ -1145,17 +1171,20 @@ export function wrapSeekableImages(ctx: any): any {
 			if (candidate.parentElement?.classList.contains("seekable-img-wrap")) {
 				return;
 			}
+			const definition = this.getConfiguredViewHost(candidate);
+			if (
+				definition.view.type !== "image" &&
+				definition.view.type !== "perTrackImage"
+			)
+				return;
+			const config = definition.view;
 
 			const section = document.createElement("div");
 			section.className = "seekable-section ts-stack-section";
 
 			const wrapper = document.createElement("div");
 			wrapper.className = "seekable-img-wrap";
-			wrapper.setAttribute(
-				"style",
-				sanitizeInlineStyle(candidate.getAttribute("data-style")) +
-					"; display: block;",
-			);
+			applyCssOverrides(wrapper, config.css);
 
 			const parent = candidate.parentElement;
 			if (!parent) {
@@ -1166,21 +1195,44 @@ export function wrapSeekableImages(ctx: any): any {
 			section.appendChild(wrapper);
 			wrapper.appendChild(candidate);
 
-			if (candidate.classList.contains("seekable")) {
-				wrapper.insertAdjacentHTML(
-					"beforeend",
-					buildSeekWrap(
-						clampPercent(candidate.getAttribute("data-seek-margin-left")),
-						clampPercent(candidate.getAttribute("data-seek-margin-right")),
-					),
+			wrapper.insertAdjacentHTML(
+				"beforeend",
+				buildSeekWrap(
+					clampPercent(config.seekMarginLeft),
+					clampPercent(config.seekMarginRight),
+				),
+			);
+			const seekWrap = wrapper.querySelector(":scope > .seekwrap");
+			if (seekWrap instanceof HTMLElement) {
+				this.registerSeekMarkerLayers(seekWrap, config.markerLayers);
+				const perTrack = config.type === "perTrackImage";
+				seekWrap.setAttribute(
+					"data-marker-image-scope",
+					perTrack ? "per-track" : "global",
 				);
+				if (!candidate.classList.contains("seekable")) {
+					seekWrap.classList.add("marker-only-seekwrap");
+				}
+				const alignmentColumn = perTrack
+					? null
+					: definition.alignmentTimeline || null;
+				this.registerSeekTimeline(seekWrap, alignmentColumn);
+				if (alignmentColumn) {
+					seekWrap.setAttribute("data-seek-surface", "image");
+				}
+				this.imageSeekSurfaces.push({
+					seekWrap,
+					wrapper,
+					image: candidate,
+					alignmentColumn,
+				});
 			}
 		});
-	}.call(ctx);
+	}).call(ctx);
 }
 
-export function wrapSheetMusicContainers(ctx: any): any {
-	return function (this: any) {
+export function wrapSheetMusicContainers(ctx: ViewRenderer): void {
+	(function (this: ViewRenderer) {
 		this.sheetMusicHosts.length = 0;
 
 		const hosts = this.root.querySelectorAll(".sheetmusic");
@@ -1188,6 +1240,9 @@ export function wrapSheetMusicContainers(ctx: any): any {
 			if (!(hostElement instanceof HTMLElement)) {
 				return;
 			}
+			const definition = this.getConfiguredViewHost(hostElement);
+			if (definition.view.type !== "sheetMusic") return;
+			const config = definition.view as TrackSwitchSheetMusicViewConfig;
 
 			let wrapper: HTMLElement | null = hostElement.closest(
 				".sheetmusic-wrap",
@@ -1197,12 +1252,7 @@ export function wrapSheetMusicContainers(ctx: any): any {
 			if (!wrapper) {
 				wrapper = document.createElement("div");
 				wrapper.className = "sheetmusic-wrap ts-stack-section";
-				wrapper.setAttribute(
-					"style",
-					`${sanitizeInlineStyle(
-						hostElement.getAttribute("data-sheetmusic-style"),
-					)}; display: block;`,
-				);
+				applyCssOverrides(wrapper, config.css);
 
 				scrollContainer = document.createElement("div");
 				scrollContainer.className = "sheetmusic-scroll";
@@ -1226,9 +1276,7 @@ export function wrapSheetMusicContainers(ctx: any): any {
 				return;
 			}
 
-			const maxWidth = parseSheetMusicMaxWidth(
-				hostElement.getAttribute("data-sheetmusic-max-width"),
-			);
+			const maxWidth = config.maxWidth ?? null;
 			if (maxWidth !== null) {
 				wrapper.style.width = "100%";
 				wrapper.style.maxWidth = `${maxWidth}px`;
@@ -1245,9 +1293,7 @@ export function wrapSheetMusicContainers(ctx: any): any {
 				wrapper.removeAttribute("data-sheetmusic-max-width-applied");
 			}
 
-			const maxHeight = parseSheetMusicMaxHeight(
-				hostElement.getAttribute("data-sheetmusic-max-height"),
-			);
+			const maxHeight = config.maxHeight ?? null;
 			if (maxHeight !== null) {
 				scrollContainer.style.maxHeight = `${maxHeight}px`;
 				scrollContainer.style.height = `${maxHeight}px`;
@@ -1260,9 +1306,7 @@ export function wrapSheetMusicContainers(ctx: any): any {
 				wrapper.classList.remove("sheetmusic-scrollable");
 			}
 
-			const source = parseSheetMusicString(
-				hostElement.getAttribute("data-sheetmusic-src"),
-			);
+			const source = definition.source ?? null;
 			if (!source) {
 				return;
 			}
@@ -1271,28 +1315,68 @@ export function wrapSheetMusicContainers(ctx: any): any {
 				host: hostElement,
 				scrollContainer: scrollContainer,
 				source: source,
-				measureColumn: parseSheetMusicString(
-					hostElement.getAttribute("data-sheetmusic-measure-column"),
-				),
-				renderScale: parseSheetMusicRenderScale(
-					hostElement.getAttribute("data-sheetmusic-render-scale"),
-				),
-				followPlayback: parseSheetMusicFollowPlayback(
-					hostElement.getAttribute("data-sheetmusic-follow-playback"),
-				),
-				cursorColor: parseSheetMusicCursorColor(
-					hostElement.getAttribute("data-sheetmusic-cursor-color"),
-				),
-				cursorAlpha: parseSheetMusicCursorAlpha(
-					hostElement.getAttribute("data-sheetmusic-cursor-alpha"),
-				),
+				measureColumn: definition.alignmentTimeline?.trim() || null,
+				renderScale: config.renderScale ?? null,
+				followPlayback: config.followPlayback ?? true,
+				cursorColor: config.cursorColor ?? "#999999",
+				cursorAlpha: config.cursorAlpha ?? 0.4,
 			});
 		});
-	}.call(ctx);
+	}).call(ctx);
 }
 
-export function getPreparedSheetMusicHosts(ctx: any): any {
-	return function (this: any) {
+/** Loop markers live in reference coordinates; a local axis needs them mapped. */
+function mapLoopToTimeline(
+	loop: { pointA: number | null; pointB: number | null; enabled: boolean },
+	context: { fromReferenceTime(value: number): number },
+): { pointA: number | null; pointB: number | null; enabled: boolean } {
+	return {
+		pointA:
+			loop.pointA === null ? null : context.fromReferenceTime(loop.pointA),
+		pointB:
+			loop.pointB === null ? null : context.fromReferenceTime(loop.pointB),
+		enabled: loop.enabled,
+	};
+}
+
+const OUT_OF_COVERAGE_CLASS = "ts-out-of-coverage";
+const OUT_OF_COVERAGE_TITLE =
+	"Outside this timeline's aligned region — position held at the last aligned point.";
+
+/**
+ * Marks a surface whose timeline has no alignment data at the current position.
+ * It holds at its boundary while the media keep playing, so the freeze needs to
+ * read as intentional rather than as a stuck playhead.
+ */
+export function applySeekWrapCoverageState(
+	ctx: ViewRenderer,
+	seekWrap: HTMLElement,
+): void {
+	(function (this: ViewRenderer, seekWrap: HTMLElement) {
+		const timeline = this.getSeekTimeline(seekWrap);
+		const outOfCoverage = Boolean(
+			timeline && this.isTimelineCovered && !this.isTimelineCovered(timeline),
+		);
+
+		if (seekWrap.classList.contains(OUT_OF_COVERAGE_CLASS) === outOfCoverage) {
+			return;
+		}
+
+		seekWrap.classList.toggle(OUT_OF_COVERAGE_CLASS, outOfCoverage);
+		const host = seekWrap.parentElement;
+		host?.classList.toggle(OUT_OF_COVERAGE_CLASS, outOfCoverage);
+		if (outOfCoverage) {
+			seekWrap.title = OUT_OF_COVERAGE_TITLE;
+		} else {
+			seekWrap.removeAttribute("title");
+		}
+	}).call(ctx, seekWrap);
+}
+
+export function getPreparedSheetMusicHosts(
+	ctx: ViewRenderer,
+): SheetMusicHostConfig[] {
+	return function (this: ViewRenderer) {
 		return this.sheetMusicHosts.map((entry: SheetMusicHostConfig) => {
 			return {
 				host: entry.host,
@@ -1309,18 +1393,18 @@ export function getPreparedSheetMusicHosts(ctx: any): any {
 }
 
 export function updateMainControls(
-	ctx: any,
-	state: any,
-	runtimes: any,
-	waveformTimelineContext: any,
-	warpingMatrixContext: any,
-): any {
-	return function (
-		this: any,
-		state: any,
-		runtimes: any,
-		waveformTimelineContext: any,
-		warpingMatrixContext: any,
+	ctx: ViewRenderer,
+	state: TrackSwitchUiState,
+	runtimes: TrackRuntime[],
+	waveformTimelineContext: WaveformTimelineContext | undefined,
+	warpingMatrixContext: WarpingMatrixRenderContext | undefined,
+): void {
+	(function (
+		this: ViewRenderer,
+		state: TrackSwitchUiState,
+		runtimes: TrackRuntime[],
+		waveformTimelineContext: WaveformTimelineContext | undefined,
+		warpingMatrixContext: WarpingMatrixRenderContext | undefined,
 	) {
 		this.updatePlaybackPosition(
 			state,
@@ -1345,11 +1429,11 @@ export function updateMainControls(
 			element.classList.toggle("disabled", !state.syncAvailable);
 		});
 
-		this.warpingMatrixHosts.forEach((host: WarpingMatrixHostMetadata) => {
+		this.warpingMatrixHosts.forEach((host) => {
 			this.updateWarpingMatrix(host, warpingMatrixContext);
 		});
 
-		if (!this.features.looping) {
+		if (!navigationBarHasControl(this.navigationBar, "looping")) {
 			return;
 		}
 
@@ -1366,38 +1450,56 @@ export function updateMainControls(
 		this.queryAll(".loop-toggle").forEach((element: HTMLElement) => {
 			element.classList.toggle("checked", state.loop.enabled);
 		});
-	}.call(ctx, state, runtimes, waveformTimelineContext, warpingMatrixContext);
+	}).call(ctx, state, runtimes, waveformTimelineContext, warpingMatrixContext);
 }
 
 export function updatePlaybackPosition(
-	ctx: any,
-	state: any,
-	runtimes: any,
-	waveformTimelineContext: any,
-	warpingMatrixContext: any,
-): any {
-	return function (
-		this: any,
-		state: any,
-		runtimes: any,
-		waveformTimelineContext: any,
-		warpingMatrixContext: any,
+	ctx: ViewRenderer,
+	state: TrackSwitchUiState,
+	runtimes: TrackRuntime[],
+	waveformTimelineContext: WaveformTimelineContext | undefined,
+	warpingMatrixContext: WarpingMatrixRenderContext | undefined,
+): void {
+	(function (
+		this: ViewRenderer,
+		state: TrackSwitchUiState,
+		runtimes: TrackRuntime[],
+		waveformTimelineContext: WaveformTimelineContext | undefined,
+		warpingMatrixContext: WarpingMatrixRenderContext | undefined,
 	) {
 		this.root.classList.toggle("sync-enabled", state.syncEnabled);
 
 		const seekWraps = this.queryAll(".seekwrap");
 		seekWraps.forEach((seekWrap: HTMLElement) => {
-			this.updateSeekWrapVisuals(
-				seekWrap,
-				state.position,
-				state.longestDuration,
-				state.loop,
-			);
+			// An aligned image has its own (possibly non-linear) axis, so its
+			// playhead comes from the projection rather than a linear ratio.
+			const imageContext = this.resolveImageTimelineContext(seekWrap);
+			if (imageContext) {
+				this.updateSeekWrapVisuals(
+					seekWrap,
+					imageContext.playbackPosition?.() ??
+						imageContext.fromReferenceTime(state.position),
+					imageContext.duration,
+					mapLoopToTimeline(state.loop, imageContext),
+				);
+			} else {
+				this.updateSeekWrapVisuals(
+					seekWrap,
+					state.position,
+					state.longestDuration,
+					state.loop,
+				);
+			}
+			this.applySeekWrapCoverageState(seekWrap);
 		});
 
-		this.applyFixedWaveformLocalSeekVisuals(state, waveformTimelineContext);
+		this.applyWaveformLocalSeekVisuals(
+			state,
+			runtimes,
+			waveformTimelineContext,
+		);
 
-		if (this.features.timer) {
+		if (navigationBarHasControl(this.navigationBar, "timer")) {
 			this.updateTiming(state.position, state.longestDuration);
 		}
 
@@ -1405,137 +1507,146 @@ export function updatePlaybackPosition(
 		this.updateWaveformZoomIndicators();
 		this.updateMidiPlaybackState(state, true, false);
 		this.updateMidiZoomIndicators();
-		this.warpingMatrixHosts.forEach((host: WarpingMatrixHostMetadata) => {
+		this.warpingMatrixHosts.forEach((host) => {
 			this.updateWarpingMatrixPlaybackState(host, warpingMatrixContext);
 		});
-	}.call(ctx, state, runtimes, waveformTimelineContext, warpingMatrixContext);
+	}).call(ctx, state, runtimes, waveformTimelineContext, warpingMatrixContext);
 }
 
 export function updateTrackControls(
-	ctx: any,
-	runtimes: any,
-	syncLockedTrackIndexes: any,
-	effectiveSingleSoloMode: any,
-	panSupported: any,
-	syncEnabled: any,
-): any {
-	return function (
-		this: any,
-		runtimes: any,
-		syncLockedTrackIndexes: any,
-		effectiveSingleSoloMode: any,
-		panSupported: any,
-		syncEnabled: any,
+	ctx: ViewRenderer,
+	runtimes: TrackRuntime[],
+	syncLockedTrackIndexes: ReadonlySet<number> | undefined,
+	panSupported: boolean,
+	syncEnabled: boolean,
+): void {
+	(function (
+		this: ViewRenderer,
+		runtimes: TrackRuntime[],
+		syncLockedTrackIndexes: ReadonlySet<number> | undefined,
+		panSupported: boolean,
+		syncEnabled: boolean,
 	) {
 		runtimes.forEach((runtime: TrackRuntime, index: number) => {
-			const row = this.query(`.track[data-track-index="${index}"]`);
-			if (!row) {
+			const rows = this.queryAll(`.track[data-track-index="${index}"]`);
+			if (rows.length === 0) {
 				return;
 			}
 
-			const solo = row.querySelector(".solo");
 			const isLocked =
 				!!syncLockedTrackIndexes && syncLockedTrackIndexes.has(index);
 
-			row.classList.toggle("solo", effectiveSingleSoloMode);
+			rows.forEach((row: HTMLElement) => {
+				const solo = row.querySelector(".solo");
+				// A track may be listed twice, so each row follows the list it sits in.
+				const singleSoloMode = this.isGroupExclusive(trackGroupIndexOfRow(row));
+				row.classList.toggle("solo", singleSoloMode);
 
-			if (solo instanceof HTMLElement) {
-				solo.classList.toggle("checked", runtime.state.solo);
-				solo.classList.toggle("disabled", isLocked);
-				solo.classList.toggle("radio", effectiveSingleSoloMode);
-				applySoloIconState(
-					solo,
-					runtime.state.solo,
-					effectiveSingleSoloMode,
-					!!syncEnabled,
-				);
-			}
+				if (solo instanceof HTMLElement) {
+					solo.classList.toggle("checked", runtime.state.solo);
+					solo.classList.toggle("disabled", isLocked);
+					solo.classList.toggle("radio", singleSoloMode);
+					applySoloIconState(
+						solo,
+						runtime.state.solo,
+						singleSoloMode,
+						!!syncEnabled,
+					);
+				}
 
-			if (
-				!this.features.trackVolumeControls &&
-				!this.features.trackPanControls
-			) {
+				const trackVolumeSlider = row.querySelector(".track-volume-slider");
+				if (trackVolumeSlider instanceof HTMLInputElement) {
+					trackVolumeSlider.value = String(
+						Math.round(sanitizeVolume(runtime.state.volume) * 100),
+					);
+					trackVolumeSlider.disabled = isLocked;
+				}
+
+				const trackPanSlider = row.querySelector(".track-pan-slider");
+				if (trackPanSlider instanceof HTMLInputElement) {
+					trackPanSlider.value = String(
+						Math.round(sanitizePan(panSupported ? runtime.state.pan : 0) * 100),
+					);
+					trackPanSlider.disabled = isLocked || !panSupported;
+				}
+
+				const trackVolumeIcon = row.querySelector(".track-volume-icon");
+				if (trackVolumeIcon instanceof HTMLElement) {
+					this.applyVolumeIconState(trackVolumeIcon, runtime.state.volume);
+				}
+
+				const trackControlGroup = row.querySelector(".track-mix-controls");
+				if (trackControlGroup) {
+					trackControlGroup.classList.toggle("disabled", isLocked);
+				}
+
+				const trackPanControl = row.querySelector(".track-pan-control");
+				if (trackPanControl) {
+					trackPanControl.classList.toggle(
+						"disabled",
+						isLocked || !panSupported,
+					);
+				}
+			});
+		});
+
+		// Sync mode plays every timeline at once, so there is nothing to select.
+		this.trackGroups.forEach((group: TrackListGroup) => {
+			const solo = this.query(
+				`.track_list[data-track-group-index="${group.groupIndex}"] .track-list-select .solo`,
+			);
+			if (!solo) {
 				return;
 			}
 
-			if (this.features.trackVolumeControls) {
-				this.setTrackVolumeSlider(index, runtime.state.volume);
-			}
-			if (this.features.trackPanControls) {
-				this.setTrackPanSlider(index, panSupported ? runtime.state.pan : 0);
-			}
-
-			const trackVolumeSlider = row.querySelector(".track-volume-slider");
-			if (trackVolumeSlider instanceof HTMLInputElement) {
-				trackVolumeSlider.disabled = isLocked;
-			}
-
-			const trackPanSlider = row.querySelector(".track-pan-slider");
-			if (trackPanSlider instanceof HTMLInputElement) {
-				trackPanSlider.disabled = isLocked || !panSupported;
-			}
-
-			const trackVolumeIcon = row.querySelector(".track-volume-icon");
-			if (trackVolumeIcon instanceof HTMLElement) {
-				this.applyVolumeIconState(trackVolumeIcon, runtime.state.volume);
-			}
-
-			const trackControlGroup = row.querySelector(".track-mix-controls");
-			if (trackControlGroup) {
-				trackControlGroup.classList.toggle("disabled", isLocked);
-			}
-
-			const trackPanControl = row.querySelector(".track-pan-control");
-			if (trackPanControl) {
-				trackPanControl.classList.toggle("disabled", isLocked || !panSupported);
-			}
+			const isActive = this.isTrackListUnitActive(group.groupIndex);
+			solo.classList.toggle("checked", isActive);
+			solo.classList.toggle("disabled", !!syncEnabled);
+			applySoloIconState(solo, isActive, true, !!syncEnabled);
 		});
-	}.call(
-		ctx,
-		runtimes,
-		syncLockedTrackIndexes,
-		effectiveSingleSoloMode,
-		panSupported,
-		syncEnabled,
-	);
+	}).call(ctx, runtimes, syncLockedTrackIndexes, panSupported, syncEnabled);
 }
 
-export function switchPosterImage(ctx: any, runtimes: any): any {
-	return function (this: any, runtimes: any) {
+export function switchPosterImage(
+	ctx: ViewRenderer,
+	runtimes: TrackRuntime[],
+): void {
+	(function (this: ViewRenderer, runtimes: TrackRuntime[]) {
 		let soloCount = 0;
-		let imageSrc: string | null = null;
+		let source: PerTrackImageSource | null = null;
 		const switchTargets = this.queryAll('img[data-per-track-image="true"]');
 
-		runtimes.forEach((runtime: TrackRuntime) => {
+		for (const runtime of runtimes) {
 			if (runtime.state.solo) {
 				soloCount += 1;
-				const configuredImage =
-					typeof runtime.definition.image === "string"
-						? runtime.definition.image.trim()
-						: "";
-				if (configuredImage) {
-					imageSrc = configuredImage;
-				}
+				const configured: PerTrackImageSource | undefined =
+					this.perTrackImageSources.get(runtime.definition.id);
+				source = configured ?? source;
 			}
-		});
+		}
 
 		if (switchTargets.length === 0) {
 			return;
 		}
+
+		const next: PerTrackImageSource | null = soloCount === 1 ? source : null;
 
 		switchTargets.forEach((element: HTMLElement) => {
 			if (!(element instanceof HTMLImageElement)) {
 				return;
 			}
 
-			const nextSrc = soloCount === 1 && imageSrc ? imageSrc : null;
 			const container = element.parentElement?.classList.contains(
 				"seekable-img-wrap",
 			)
 				? element.parentElement
 				: element;
 
-			if (!nextSrc) {
+			// The surface adopts the shown medium's timeline, so seeks and markers
+			// follow the soloed track rather than the reference playhead.
+			this.retimeImageSurface(element, next ? next.alignmentTimeline : "");
+
+			if (!next) {
 				setDisplay(container, "none");
 				setDisplay(element, "none");
 				return;
@@ -1545,16 +1656,19 @@ export function switchPosterImage(ctx: any, runtimes: any): any {
 			setDisplay(element, "");
 
 			const currentSrc = element.getAttribute("data-per-track-current-src");
-			if (currentSrc !== nextSrc) {
-				element.src = nextSrc;
-				element.setAttribute("data-per-track-current-src", nextSrc);
+			if (currentSrc !== next.src) {
+				element.src = next.src;
+				element.setAttribute("data-per-track-current-src", next.src);
 			}
 		});
-	}.call(ctx, runtimes);
+	}).call(ctx, runtimes);
 }
 
-export function setVolumeSlider(ctx: any, volumeZeroToOne: any): any {
-	return function (this: any, volumeZeroToOne: any) {
+export function setVolumeSlider(
+	ctx: ViewRenderer,
+	volumeZeroToOne: number,
+): void {
+	(function (this: ViewRenderer, volumeZeroToOne: number) {
 		const slider = this.query(".main-control .volume-slider");
 		if (!slider || !(slider instanceof HTMLInputElement)) {
 			return;
@@ -1562,15 +1676,15 @@ export function setVolumeSlider(ctx: any, volumeZeroToOne: any): any {
 
 		slider.value = String(Math.round(volumeZeroToOne * 100));
 		this.updateVolumeIcon(volumeZeroToOne);
-	}.call(ctx, volumeZeroToOne);
+	}).call(ctx, volumeZeroToOne);
 }
 
 export function setTrackVolumeSlider(
-	ctx: any,
-	trackIndex: any,
-	volumeZeroToOne: any,
-): any {
-	return function (this: any, trackIndex: any, volumeZeroToOne: any) {
+	ctx: ViewRenderer,
+	trackIndex: number,
+	volumeZeroToOne: number,
+): void {
+	(function (this: ViewRenderer, trackIndex: number, volumeZeroToOne: number) {
 		const row = this.query(`.track[data-track-index="${trackIndex}"]`);
 		if (!row) {
 			return;
@@ -1582,15 +1696,15 @@ export function setTrackVolumeSlider(
 		}
 
 		slider.value = String(Math.round(sanitizeVolume(volumeZeroToOne) * 100));
-	}.call(ctx, trackIndex, volumeZeroToOne);
+	}).call(ctx, trackIndex, volumeZeroToOne);
 }
 
 export function setTrackPanSlider(
-	ctx: any,
-	trackIndex: any,
-	panMinusOneToOne: any,
-): any {
-	return function (this: any, trackIndex: any, panMinusOneToOne: any) {
+	ctx: ViewRenderer,
+	trackIndex: number,
+	panMinusOneToOne: number,
+): void {
+	(function (this: ViewRenderer, trackIndex: number, panMinusOneToOne: number) {
 		const row = this.query(`.track[data-track-index="${trackIndex}"]`);
 		if (!row) {
 			return;
@@ -1602,25 +1716,28 @@ export function setTrackPanSlider(
 		}
 
 		slider.value = String(Math.round(sanitizePan(panMinusOneToOne) * 100));
-	}.call(ctx, trackIndex, panMinusOneToOne);
+	}).call(ctx, trackIndex, panMinusOneToOne);
 }
 
-export function updateVolumeIcon(ctx: any, volumeZeroToOne: any): any {
-	return function (this: any, volumeZeroToOne: any) {
+export function updateVolumeIcon(
+	ctx: ViewRenderer,
+	volumeZeroToOne: number,
+): void {
+	(function (this: ViewRenderer, volumeZeroToOne: number) {
 		this.queryAll(".main-control .volume-control .volume-icon").forEach(
 			(icon: HTMLElement) => {
 				this.applyVolumeIconState(icon, volumeZeroToOne);
 			},
 		);
-	}.call(ctx, volumeZeroToOne);
+	}).call(ctx, volumeZeroToOne);
 }
 
 export function applyVolumeIconState(
-	ctx: any,
-	icon: any,
-	volumeZeroToOne: any,
-): any {
-	return function (this: any, icon: any, volumeZeroToOne: any) {
+	ctx: ViewRenderer,
+	icon: HTMLElement,
+	volumeZeroToOne: number,
+): void {
+	(function (this: ViewRenderer, icon: HTMLElement, volumeZeroToOne: number) {
 		const volume = sanitizeVolume(volumeZeroToOne);
 		if (volume === 0) {
 			setHostIcon(icon, "volume-xmark");
@@ -1631,11 +1748,11 @@ export function applyVolumeIconState(
 		} else {
 			setHostIcon(icon, "volume-high");
 		}
-	}.call(ctx, icon, volumeZeroToOne);
+	}).call(ctx, icon, volumeZeroToOne);
 }
 
-export function setOverlayLoading(ctx: any, isLoading: any): any {
-	return function (this: any, isLoading: any) {
+export function setOverlayLoading(ctx: ViewRenderer, isLoading: boolean): void {
+	(function (this: ViewRenderer, isLoading: boolean) {
 		this.queryAll(".overlay-activation .activate").forEach(
 			(activate: HTMLElement) => {
 				activate.classList.toggle("loading", isLoading);
@@ -1652,16 +1769,80 @@ export function setOverlayLoading(ctx: any, isLoading: any): any {
 		this.queryAll(".overlay-activation").forEach((overlay: HTMLElement) => {
 			overlay.classList.toggle("loading", isLoading);
 		});
-	}.call(ctx, isLoading);
+	}).call(ctx, isLoading);
 }
 
-export function setShortcutHelpVisible(ctx: any, isVisible: any): any {
-	return function (this: any, isVisible: any) {
+const shortcutOverlayPositionCleanupByOverlay = new WeakMap<
+	HTMLElement,
+	() => void
+>();
+
+function positionShortcutOverlay(
+	root: HTMLElement,
+	overlay: HTMLElement,
+): void {
+	const rect = root.getBoundingClientRect();
+	overlay.style.left = `${rect.left}px`;
+	overlay.style.top = `${rect.top}px`;
+	overlay.style.width = `${rect.width}px`;
+	overlay.style.height = `${rect.height}px`;
+}
+
+function trackShortcutOverlayPosition(
+	root: HTMLElement,
+	overlay: HTMLElement,
+): void {
+	if (shortcutOverlayPositionCleanupByOverlay.has(overlay)) {
+		return;
+	}
+	const ownerWindow = root.ownerDocument.defaultView;
+	if (!ownerWindow) {
+		return;
+	}
+	let animationFrame: number | null = null;
+	const updatePosition = (): void => {
+		animationFrame = null;
+		if (overlay.matches(":popover-open")) {
+			positionShortcutOverlay(root, overlay);
+		}
+	};
+	const schedulePositionUpdate = (): void => {
+		if (animationFrame === null) {
+			animationFrame = ownerWindow.requestAnimationFrame(updatePosition);
+		}
+	};
+	const cleanup = (): void => {
+		ownerWindow.removeEventListener("scroll", schedulePositionUpdate, true);
+		ownerWindow.removeEventListener("resize", schedulePositionUpdate);
+		if (animationFrame !== null) {
+			ownerWindow.cancelAnimationFrame(animationFrame);
+		}
+		shortcutOverlayPositionCleanupByOverlay.delete(overlay);
+	};
+	shortcutOverlayPositionCleanupByOverlay.set(overlay, cleanup);
+	ownerWindow.addEventListener("scroll", schedulePositionUpdate, {
+		capture: true,
+		passive: true,
+	});
+	ownerWindow.addEventListener("resize", schedulePositionUpdate);
+}
+
+export function setShortcutHelpVisible(
+	ctx: ViewRenderer,
+	isVisible: boolean,
+): void {
+	(function (this: ViewRenderer, isVisible: boolean) {
+		const root = this.root;
 		this.queryAll(".overlay-shortcuts").forEach((overlay: HTMLElement) => {
 			overlay.classList.toggle("is-hidden", !isVisible);
 			overlay.setAttribute("aria-hidden", isVisible ? "false" : "true");
 
 			if (isVisible) {
+				positionShortcutOverlay(root, overlay);
+				if (!overlay.matches(":popover-open")) {
+					overlay.showPopover();
+				}
+				trackShortcutOverlayPosition(root, overlay);
 				const panel = overlay.querySelector(".shortcut-help-panel");
 				if (panel instanceof HTMLElement) {
 					panel.focus();
@@ -1676,31 +1857,43 @@ export function setShortcutHelpVisible(ctx: any, isVisible: any): any {
 			) {
 				activeElement.blur();
 			}
+
+			if (overlay.matches(":popover-open")) {
+				overlay.hidePopover();
+			}
+			shortcutOverlayPositionCleanupByOverlay.get(overlay)?.();
 		});
-	}.call(ctx, isVisible);
+	}).call(ctx, isVisible);
 }
 
-export function updateOverlayDownloadInfo(ctx: any, info: any): any {
-	return function (this: any, info: AudioDownloadSizeInfo) {
+export function updateOverlayDownloadInfo(
+	ctx: ViewRenderer,
+	info: AudioDownloadSizeInfo,
+): void {
+	(function (this: ViewRenderer, info: AudioDownloadSizeInfo) {
 		const downloadInfo = this.query(".overlay-download-info");
 		if (!downloadInfo) {
 			return;
 		}
 
 		downloadInfo.textContent = renderOverlayDownloadInfoText(info);
-	}.call(ctx, info);
+	}).call(ctx, info);
 }
 
-export function hideOverlayOnLoaded(ctx: any): any {
-	return function (this: any) {
+export function hideOverlayOnLoaded(ctx: ViewRenderer): void {
+	(function (this: ViewRenderer) {
 		this.queryAll(".overlay-activation").forEach((overlay: HTMLElement) => {
 			overlay.classList.add("is-hidden");
 		});
-	}.call(ctx);
+	}).call(ctx);
 }
 
-export function showError(ctx: any, message: any, runtimes: any): any {
-	return function (this: any, message: any, runtimes: any) {
+export function showError(
+	ctx: ViewRenderer,
+	message: string,
+	runtimes: TrackRuntime[],
+): void {
+	(function (this: ViewRenderer, message: string, runtimes: TrackRuntime[]) {
 		this.root.classList.add("error");
 
 		this.queryAll(".overlay-activation").forEach((overlay: HTMLElement) => {
@@ -1735,11 +1928,11 @@ export function showError(ctx: any, message: any, runtimes: any): any {
 				row.classList.add("error");
 			}
 		});
-	}.call(ctx, message, runtimes);
+	}).call(ctx, message, runtimes);
 }
 
-export function destroy(ctx: any): any {
-	return function (this: any) {
+export function destroy(ctx: ViewRenderer): void {
+	(function (this: ViewRenderer) {
 		if (this.panelDragState) {
 			this.endPanelReorder();
 		}
@@ -1752,31 +1945,46 @@ export function destroy(ctx: any): any {
 		this.latestWaveformRenderInput = null;
 		this.waveformSeekSurfaces.length = 0;
 		this.midiSeekSurfaces.length = 0;
+		this.imageSeekSurfaces.length = 0;
 		this.sheetMusicHosts.length = 0;
 		this.warpingMatrixHosts.length = 0;
 		this.panelDragState = null;
 		resetManagedRoot(this.root);
-	}.call(ctx);
+	}).call(ctx);
 }
 
-export function getPresetCount(ctx: any): any {
-	return function (this: any) {
-		return this.presetNames.length;
+export function getPresetCount(ctx: ViewRenderer): number {
+	return function (this: ViewRenderer) {
+		return this.presetEntries.length;
 	}.call(ctx);
 }
 
 export function updateTiming(
-	ctx: any,
-	position: any,
-	longestDuration: any,
-): any {
-	return function (this: any, position: any, longestDuration: any) {
+	ctx: ViewRenderer,
+	position: number,
+	longestDuration: number,
+): void {
+	(function (this: ViewRenderer, position: number, longestDuration: number) {
+		// One pair, so the unit is named once across both halves.
+		const readout = this.formatReferenceTimelinePair(position, longestDuration);
 		this.queryAll(".timing .time").forEach((node: HTMLElement) => {
-			node.textContent = formatSecondsToHHMMSSmmm(position);
+			node.textContent = readout.position;
 		});
 
 		this.queryAll(".timing .length").forEach((node: HTMLElement) => {
-			node.textContent = formatSecondsToHHMMSSmmm(longestDuration);
+			node.textContent = readout.duration;
 		});
-	}.call(ctx, position, longestDuration);
+
+		// The readout is on the reference timeline, which may have no data out
+		// where the reference playhead currently is.
+		const referenceTimeline = this.referenceTimelineId;
+		const outOfCoverage = Boolean(
+			referenceTimeline &&
+				this.isTimelineCovered &&
+				!this.isTimelineCovered(referenceTimeline),
+		);
+		this.queryAll(".timing").forEach((node: HTMLElement) => {
+			node.classList.toggle(OUT_OF_COVERAGE_CLASS, outOfCoverage);
+		});
+	}).call(ctx, position, longestDuration);
 }

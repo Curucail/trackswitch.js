@@ -33,8 +33,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Demo media derived at build time (source separation) runs through
+      # `uv run`, which resolves its Python dependencies on its own.
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: true
+
       - name: Typecheck
         run: npm run typecheck
+
+      # Fails if the CSS token list or the JSON Schema were not regenerated
+      # after a change to the config types or the root stylesheets.
+      - name: Verify generated files are up to date
+        run: npm run generate:check
 
       - name: Build project and docs assets
         run: npm run docs:build
@@ -54,7 +66,7 @@ jobs:
         run: bundle exec jekyll build --source ./docs --destination ./_site --baseurl "${{ steps.pages.outputs.base_path }}"
       
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v5
 
   # Deployment job
   deploy:

@@ -30,9 +30,9 @@
 }
 
 .trackswitch .sheetmusic img[id^="cursorImg"] {
-	max-width: none !important;
-	margin: 0 !important;
-	display: inline !important;
+	max-width: none;
+	margin: 0;
+	display: inline;
 }
 
 .trackswitch .sheetmusic.sheetmusic-loading {

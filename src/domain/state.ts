@@ -1,10 +1,15 @@
-import type { LoopMarker, PlayerState } from "./types";
+import type { LoopMarker, PlaybackAnchor, PlayerState } from "./types";
 
 export type PlayerAction =
 	| { type: "set-playing"; playing: boolean }
 	| { type: "toggle-repeat" }
 	| { type: "set-repeat"; enabled: boolean }
-	| { type: "set-position"; position: number }
+	| {
+			type: "set-position";
+			position: number;
+			/** Omitted whenever the caller only knows the reference coordinate. */
+			anchor?: PlaybackAnchor | null;
+	  }
 	| { type: "set-start-time"; startTime: number }
 	| { type: "set-seeking"; seeking: boolean }
 	| { type: "set-volume"; volume: number }
@@ -29,6 +34,7 @@ export function createInitialPlayerState(repeat: boolean): PlayerState {
 		playing: false,
 		repeat: repeat,
 		position: 0,
+		positionAnchor: null,
 		startTime: 0,
 		currentlySeeking: false,
 		loop: {
@@ -143,6 +149,7 @@ export function playerStateReducer(
 			return {
 				...state,
 				position: clampNonNegative(action.position),
+				positionAnchor: action.anchor ?? null,
 			};
 
 		case "set-start-time":

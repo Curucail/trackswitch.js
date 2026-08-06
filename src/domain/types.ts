@@ -1,16 +1,62 @@
+import type { TrackSwitchCssToken } from "../generated/css-tokens";
+import type {
+	MarkerSetId as BrandedMarkerSetId,
+	MarkerSet,
+} from "../timeline/marker";
+import type { MediaProfile } from "../timeline/media-profile";
+import type { ProjectionService } from "../timeline/projection";
+import type {
+	Timeline,
+	TimelineExtent,
+	TimelineId,
+	TimelineUnit,
+} from "../timeline/timeline";
+
 export type LoopMarker = "A" | "B";
-export type TrackSwitchVariant = "default" | "sync";
-export type AlignmentOutOfRangeMode = "clamp" | "linear";
-export type WaveformSource = "audible" | number | number[];
+export type TrackPanAlgorithm = "balance" | "pan";
+/**
+ * What a projection does for positions outside a timeline's coverage — the span
+ * its alignment placements actually annotate.
+ */
+export type OutsideCoverageMode = "hold" | "extrapolate" | "error";
+/**
+ * How a projection resolves several alignment rows that place one timeline at
+ * the same position — the shape a repeat produces, where one performance
+ * revisits a stretch the other plays only once.
+ */
+export type DuplicatePlacementPolicy = "first" | "average" | "error";
 export type WaveformPlaybackFollowMode = "off" | "center" | "jump";
 export type TrackSwitchTextAlign = "left" | "center" | "right";
+type MarkerLineStyle = "solid" | "dashed";
 
-export interface TrackAlignmentConfig {
-	csv: string;
-	referenceTimeColumn: string;
-	referenceTimeColumnSync?: string;
-	outOfRange?: AlignmentOutOfRangeMode;
-}
+/**
+ * Overrides for the player's public `--ts-*` theming custom properties, set on
+ * the element the block belongs to. Custom properties inherit, so a block on a
+ * view reaches everything that view renders — an accent colour set on one
+ * waveform recolours that waveform alone — while the top-level block on
+ * `TrackSwitchInit` reaches the whole player.
+ */
+export type TrackSwitchCssOverrides = Partial<
+	Record<TrackSwitchCssToken, string>
+>;
+
+/** A media id doubles as a timeline id; a track id is a media id restricted to `type: 'audio'`. */
+export type MediaId = string;
+export type TrackId = MediaId;
+type MarkerSetId = string;
+type PresetId = string;
+
+/**
+ * Internal rendering representation: a waveform view's `tracks` option resolved
+ * to positions in the runtimes array. Derived at config-normalization time,
+ * never configured directly.
+ */
+export type WaveformSourceIndex = "audible" | number | number[];
+
+/** Whether a fixed-track waveform uses the shared duration or its own duration. */
+export type WaveformTimeAxis = "shared" | "individual";
+
+// ═══════════ config: data ═══════════
 
 export interface TrackSourceDefinition {
 	src: string;
@@ -19,183 +65,341 @@ export interface TrackSourceDefinition {
 	endOffsetMs?: number;
 }
 
-export interface TrackDefinitionAlignment {
-	column?: string;
-	synchronizedSources?: TrackSourceDefinition[];
+export interface SynchronizedAudioSourceConfig {
+	src: string;
+	/**
+	 * Trims and pads this file, independently of the media entry's own offsets:
+	 * a time-warped rendition carries its silence differently from the original.
+	 */
+	startOffsetMs?: number;
+	endOffsetMs?: number;
 }
 
-export interface TrackDefinition {
+export interface AudioMediaEntryConfig {
+	type: "audio";
+	src: string;
 	title?: string;
+	/**
+	 * The unit this medium's positions are expressed in: its alignment column is
+	 * read in it, and every surface the medium owns reads out in it. Omitted, the
+	 * medium uses the native unit of its type.
+	 */
+	timelineUnit?: TimelineUnit;
+	/**
+	 * Names an `image` media entry shown by a `perTrackImage` view while this
+	 * track is the only soloed one. Being a medium, it carries its own alignment
+	 * column, so a per-stem spectrogram seeks and folds markers like any other
+	 * timed image.
+	 */
+	imageID?: MediaId;
+	css?: TrackSwitchCssOverrides;
 	solo?: boolean;
 	volume?: number;
 	pan?: number;
-	image?: string;
-	style?: string;
-	presets?: number[];
-	sources: TrackSourceDefinition[];
-	alignment?: TrackDefinitionAlignment;
+	startOffsetMs?: number;
+	endOffsetMs?: number;
+	srcSynchronized?: SynchronizedAudioSourceConfig;
 }
 
-export interface TrackSwitchFeatures {
-	exclusiveSolo: boolean;
-	muteOtherPlayerInstances: boolean;
-	globalVolume: boolean;
-	trackVolumeControls: boolean;
-	trackPanControls: boolean;
-	customizablePanelOrder: boolean;
-	repeat: boolean;
-	tabView: boolean;
-	iosAudioUnlock: boolean;
-	keyboard: boolean;
-	looping: boolean;
-	seekBar: boolean;
-	timer: boolean;
-	presets: boolean;
-}
-
-export interface TrackSwitchImageConfig {
+export interface MidiMediaEntryConfig {
+	type: "midi";
 	src: string;
-	seekable?: boolean;
-	style?: string;
-	seekMarginLeft?: number;
-	seekMarginRight?: number;
+	/** See `AudioMediaEntryConfig.timelineUnit`. */
+	timelineUnit?: TimelineUnit;
 }
 
-export interface TrackSwitchPerTrackImageConfig {
-	seekable?: boolean;
-	style?: string;
-	seekMarginLeft?: number;
-	seekMarginRight?: number;
+export interface MusicXmlMediaEntryConfig {
+	type: "musicxml";
+	src: string;
+	/** See `AudioMediaEntryConfig.timelineUnit`. */
+	timelineUnit?: TimelineUnit;
 }
 
-export interface TrackSwitchWaveformConfig {
+/**
+ * An image with a time axis — a spectrogram, a scanned page, a structure plot.
+ * Its native coordinate is percent of its width; `timelineUnit: "pixels"` reads
+ * its column as pixel columns instead.
+ */
+export interface ImageMediaEntryConfig {
+	type: "image";
+	src: string;
+	/** See `AudioMediaEntryConfig.timelineUnit`. */
+	timelineUnit?: TimelineUnit;
+}
+
+export type MediaEntryConfig =
+	| AudioMediaEntryConfig
+	| MidiMediaEntryConfig
+	| MusicXmlMediaEntryConfig
+	| ImageMediaEntryConfig;
+
+export type MediaConfig = Record<MediaId, MediaEntryConfig>;
+
+export interface AlignmentConfig {
+	src: string;
+	referenceTimeline: string;
+	/**
+	 * timeline id -> CSV column name. What the column's numbers mean is the
+	 * medium's business: see `media.timelineUnit`.
+	 */
+	timelines: Record<string, string>;
+	outsideCoverage?: OutsideCoverageMode;
+	duplicatePlacements?: DuplicatePlacementPolicy;
+}
+
+export interface MarkerSetSourceConfig {
+	src: string;
+	/** Defaults to the reference timeline; meaningless (and omittable) with no alignment block. */
+	timeline?: string;
+	/** CSV column with marker positions, read in the timeline unit of the timeline they belong to. */
+	timeCol: string;
+	labelCol?: string;
+}
+
+export type MarkersConfig = Record<MarkerSetId, MarkerSetSourceConfig>;
+
+export interface PresetConfig {
+	label?: string;
+	tracks: TrackId[];
+}
+
+export type PresetsConfig = Record<PresetId, PresetConfig>;
+
+export interface MarkerLayerConfig {
+	set: MarkerSetId;
+	color?: string;
+	line?: MarkerLineStyle;
+	/** Marker line width in CSS pixels. */
+	lineWidth?: number;
+	/** Resting opacity (0–1) of markers in this layer. Defaults to the stylesheet's --ts-marker-opacity. */
+	opacity?: number;
+	/** Draw a connector from this timeline to the reference timeline. Ignored when the view's timeline IS the reference. */
+	foldToReference?: boolean;
+}
+
+// ═══════════ config: views ═══════════
+
+export interface TrackSwitchImageViewConfig {
+	type: "image";
+	/** Names the `image` media entry this view displays. */
+	mediaID: MediaId;
+	seekable?: boolean;
+	css?: TrackSwitchCssOverrides;
+	seekMarginLeft?: number;
+	seekMarginRight?: number;
+	markerLayers?: MarkerLayerConfig[];
+}
+
+export interface TrackSwitchPerTrackImageViewConfig {
+	type: "perTrackImage";
+	seekable?: boolean;
+	css?: TrackSwitchCssOverrides;
+	seekMarginLeft?: number;
+	seekMarginRight?: number;
+	markerLayers?: MarkerLayerConfig[];
+}
+
+export interface TrackSwitchWaveformViewConfig {
+	type: "waveform";
+	tracks?: TrackId[] | "audible";
 	height?: number;
 	waveformBarWidth?: number;
 	maxZoom?: number;
-	waveformSource?: WaveformSource;
 	playbackFollowMode?: WaveformPlaybackFollowMode;
+	timeAxis?: WaveformTimeAxis;
 	timer?: boolean;
 	alignedPlayhead?: boolean;
-	showAlignmentPoints?: boolean;
-	style?: string;
-	seekMarginLeft?: number;
-	seekMarginRight?: number;
+	markerLayers?: MarkerLayerConfig[];
+	css?: TrackSwitchCssOverrides;
 }
 
-export interface TrackSwitchMidiConfig {
-	src: string;
-	alignmentColumn?: string;
+export interface TrackSwitchMidiViewConfig {
+	type: "midi";
+	mediaID: MediaId;
 	height?: number;
 	maxZoom?: number;
 	playbackFollowMode?: WaveformPlaybackFollowMode;
 	timer?: boolean;
-	style?: string;
-	seekMarginLeft?: number;
-	seekMarginRight?: number;
+	markerLayers?: MarkerLayerConfig[];
+	css?: TrackSwitchCssOverrides;
 }
 
-export interface TrackSwitchSheetMusicConfig {
-	src: string;
-	measureColumn?: string;
+export interface TrackSwitchSheetMusicViewConfig {
+	type: "sheetMusic";
+	mediaID: MediaId;
 	maxWidth?: number;
 	maxHeight?: number;
 	renderScale?: number;
 	followPlayback?: boolean;
-	style?: string;
+	css?: TrackSwitchCssOverrides;
 	cursorColor?: string;
 	cursorAlpha?: number;
 }
 
-export interface TrackSwitchWarpingMatrixConfig {
-	style?: string;
+export interface TrackSwitchWarpingMatrixViewConfig {
+	type: "warpingMatrix";
+	x: TrackId;
+	y: TrackId;
+	css?: TrackSwitchCssOverrides;
 	height?: number;
 	tempoSmoothingSeconds?: number;
-	bpm?: number | "infer_score" | null;
 }
 
-export interface TrackSwitchTextConfig {
+export interface TrackSwitchTextViewConfig {
+	type: "text";
 	text: string;
 	bold?: boolean;
 	italic?: boolean;
 	fontSize?: number;
 	align?: TrackSwitchTextAlign;
-	style?: string;
+	css?: TrackSwitchCssOverrides;
 }
 
-export interface TrackSwitchImageUiElement extends TrackSwitchImageConfig {
-	type: "image";
+/** A horizontal rule between panels. Replaces the hairline the stack draws on its own. */
+export interface TrackSwitchSeparatorViewConfig {
+	type: "separator";
+	thickness?: number;
 }
 
-export interface TrackSwitchPerTrackImageUiElement
-	extends TrackSwitchPerTrackImageConfig {
-	type: "perTrackImage";
-}
-
-export interface TrackSwitchWaveformUiElement
-	extends TrackSwitchWaveformConfig {
-	type: "waveform";
-}
-
-export interface TrackSwitchMidiUiElement extends TrackSwitchMidiConfig {
-	type: "midi";
-}
-
-export interface TrackSwitchSheetMusicUiElement
-	extends TrackSwitchSheetMusicConfig {
-	type: "sheetMusic";
-}
-
-export interface TrackSwitchWarpingMatrixUiElement
-	extends TrackSwitchWarpingMatrixConfig {
-	type: "warpingMatrix";
-}
-
-export interface TrackSwitchTextUiElement extends TrackSwitchTextConfig {
-	type: "text";
-}
-
-export interface TrackSwitchTrackGroupUiElement {
-	type: "trackGroup";
+export interface TrackSwitchTrackListViewConfig {
+	type: "trackList";
+	tracks: TrackId[];
+	/** Labels the list. Alignment shows it on the row that selects the list as a whole. */
+	title?: string;
+	/**
+	 * Names the selection this list belongs to, which permits only one audible
+	 * track at a time — its rows behave as radio buttons. Lists that name the same
+	 * number share that one selection, so picking a track in one of them
+	 * deselects whatever the others had. Any non-negative integer works; distinct
+	 * numbers are independent selections.
+	 *
+	 * Omit it to let the list's tracks sound together, each row an ordinary toggle.
+	 *
+	 * Under alignment it decides which level of the selection hierarchy the list
+	 * contributes: with a `soloGroup` every row is a selectable timeline of its own,
+	 * without one the list is a single selectable timeline whose rows mix freely
+	 * inside it — which requires all of its tracks to share one alignment timeline.
+	 * Alignment plays one timeline at a time across the whole player, so an aligned
+	 * player has at most one `soloGroup` to share.
+	 */
+	soloGroup?: number;
 	rowHeight?: number;
-	trackGroup: TrackDefinition[];
+	trackVolumeControls?: boolean;
+	trackPanControls?: TrackPanAlgorithm | false;
 }
 
-export interface NormalizedTrackGroupLayout {
-	groupIndex: number;
-	startTrackIndex: number;
-	trackCount: number;
-	rowHeight?: number;
+export type TrackSwitchNavigationBarControl =
+	| "playback"
+	| "globalVolume"
+	| "markerNavigation"
+	| "looping"
+	| "sync"
+	| "presets"
+	| "timer"
+	| "seekBar";
+
+export interface TrackSwitchNavigationBarViewConfig {
+	type: "navigationBar";
+	controls: TrackSwitchNavigationBarControl[];
+	repeatEnabled?: boolean;
 }
 
-export type TrackSwitchUiElement =
-	| TrackSwitchImageUiElement
-	| TrackSwitchPerTrackImageUiElement
-	| TrackSwitchWaveformUiElement
-	| TrackSwitchMidiUiElement
-	| TrackSwitchSheetMusicUiElement
-	| TrackSwitchWarpingMatrixUiElement
-	| TrackSwitchTextUiElement
-	| TrackSwitchTrackGroupUiElement;
-export type TrackSwitchUiConfig = TrackSwitchUiElement[];
+export type TrackSwitchViewConfig =
+	| TrackSwitchImageViewConfig
+	| TrackSwitchPerTrackImageViewConfig
+	| TrackSwitchWaveformViewConfig
+	| TrackSwitchMidiViewConfig
+	| TrackSwitchSheetMusicViewConfig
+	| TrackSwitchWarpingMatrixViewConfig
+	| TrackSwitchTextViewConfig
+	| TrackSwitchSeparatorViewConfig
+	| TrackSwitchTrackListViewConfig
+	| TrackSwitchNavigationBarViewConfig;
 
-export interface TrackSwitchConfig {
-	tracks: TrackDefinition[];
-	presetNames?: string[];
-	features?: Partial<TrackSwitchFeatures>;
-	alignment?: TrackAlignmentConfig;
-	ui?: TrackSwitchUiConfig;
-}
-
-export interface NormalizedTrackSwitchConfig extends TrackSwitchConfig {
-	variant: TrackSwitchVariant;
-	trackGroups: NormalizedTrackGroupLayout[];
+export interface TrackSwitchFeatures {
+	muteOtherPlayerInstances: boolean;
+	customizablePanelOrder: boolean;
+	tabView: boolean;
+	keyboard: boolean;
 }
 
 export interface TrackSwitchInit {
-	presetNames?: string[];
+	/**
+	 * URL of the published JSON Schema. Ignored by the player; editors read it to
+	 * offer completion and validation while a config file is being written.
+	 */
+	$schema?: string;
+	media: MediaConfig;
+	alignment?: AlignmentConfig;
+	markers?: MarkersConfig;
+	presets?: PresetsConfig;
+	views: TrackSwitchViewConfig[];
 	features?: Partial<TrackSwitchFeatures>;
-	alignment?: TrackAlignmentConfig;
-	ui: TrackSwitchUiConfig;
+	/** Theming overrides for the whole player. */
+	css?: TrackSwitchCssOverrides;
+}
+
+// ═══════════ resolved / runtime ═══════════
+
+/** One `trackList` view, resolved to the track ids it lists (row index = declaration order among trackList views). */
+export interface TrackListGroup {
+	groupIndex: number;
+	trackIds: TrackId[];
+	title?: string;
+	/** The selection this list shares with every other list of the same number, or null when its tracks mix freely. */
+	soloGroup: number | null;
+	/** Derived from `soloGroup`: a list that belongs to a selection lets one of its tracks sound. */
+	exclusiveSolo: boolean;
+	rowHeight?: number;
+	trackVolumeControls: boolean;
+	trackPanControls: TrackPanAlgorithm | false;
+}
+
+export interface TrackDefinition {
+	id: TrackId;
+	title?: string;
+	/** Id of the `image` media entry shown while this track is soloed. */
+	imageID?: MediaId;
+	css?: TrackSwitchCssOverrides;
+	solo?: boolean;
+	volume?: number;
+	pan?: number;
+	sources: TrackSourceDefinition[];
+	syncedSources?: TrackSourceDefinition[];
+}
+
+export interface ResolvedAlignment {
+	referenceTimeline: TimelineId;
+	timelines: ReadonlyMap<TimelineId, Timeline>;
+	/** Native unit, extent and unit conversions per timeline. */
+	profiles: ReadonlyMap<TimelineId, MediaProfile>;
+	outsideCoverage: OutsideCoverageMode;
+	markerSet: MarkerSet;
+	projection: ProjectionService;
+	referenceExtent: TimelineExtent;
+}
+
+export interface ResolvedMarkerSet {
+	id: BrandedMarkerSetId;
+	timeline: TimelineId;
+	hasLabels: boolean;
+	markerSet: MarkerSet;
+}
+
+/**
+ * Structurally validated config, ids cross-checked. Alignment/marker CSVs are not
+ * fetched here — that happens asynchronously during controller.load(), same as today.
+ */
+export interface NormalizedTrackSwitchConfig {
+	tracks: TrackDefinition[];
+	media: MediaConfig;
+	alignment?: AlignmentConfig;
+	markers: MarkersConfig;
+	presets: PresetsConfig;
+	/** Fully resolved: defaults merged and the alignment implications applied. */
+	features: TrackSwitchFeatures;
+	views: TrackSwitchViewConfig[];
+	css?: TrackSwitchCssOverrides;
 }
 
 export interface TrackTiming {
@@ -205,7 +409,7 @@ export interface TrackTiming {
 	effectiveDuration: number;
 }
 
-export type AudioDownloadSizeStatus =
+type AudioDownloadSizeStatus =
 	| "calculating"
 	| "known"
 	| "partial"
@@ -243,16 +447,30 @@ export interface TrackLoadedSource {
 	buffer: AudioBuffer | null;
 	timing: TrackTiming | null;
 	sourceIndex: number;
+	/**
+	 * The rate stored in the encoded file, read from its container header. The
+	 * decoded `buffer` always reports the AudioContext's rate instead, so this is
+	 * what a `samples` alignment column has to be converted with.
+	 */
+	sourceSampleRate: number | null;
 	waveformSummary: WaveformSummary | null;
 }
 
 export interface TrackRuntime {
 	definition: TrackDefinition;
 	state: TrackState;
+	panAlgorithm: TrackPanAlgorithm;
 	gainNode: GainNode | null;
 	pannerNode: StereoPannerNode | null;
+	panUpmixNode: GainNode | null;
+	panSplitterNode: ChannelSplitterNode | null;
+	panGainLeftNode: GainNode | null;
+	panGainRightNode: GainNode | null;
+	panMergerNode: ChannelMergerNode | null;
 	buffer: AudioBuffer | null;
 	timing: TrackTiming | null;
+	/** Mirrors the active variant's `TrackLoadedSource.sourceSampleRate`. */
+	sourceSampleRate: number | null;
 	activeSource: AudioBufferSourceNode | null;
 	sourceIndex: number;
 	activeVariant: TrackSourceVariant;
@@ -263,16 +481,31 @@ export interface TrackRuntime {
 	waveformSummary: WaveformSummary | null;
 }
 
-export interface LoopState {
+interface LoopState {
 	pointA: number | null;
 	pointB: number | null;
 	enabled: boolean;
+}
+
+/**
+ * Where playback stands at full resolution: a value on the timeline the
+ * position was established on — the lead track's own clock, or the surface a
+ * seek landed on. The reference position derived from it is a lossy summary
+ * wherever the alignment holds one reference value across a stretch of that
+ * timeline (a recording sounding on past the last measure of a score), so
+ * surfaces project from the anchor and fall back to the reference without one.
+ */
+export interface PlaybackAnchor {
+	timeline: TimelineId;
+	value: number;
 }
 
 export interface PlayerState {
 	playing: boolean;
 	repeat: boolean;
 	position: number;
+	/** Null whenever the position was set in reference coordinates alone. */
+	positionAnchor: PlaybackAnchor | null;
 	startTime: number;
 	currentlySeeking: boolean;
 	loop: LoopState;
@@ -323,8 +556,13 @@ export interface TrackSwitchController {
 	setLoopPoint(marker: LoopMarker): boolean;
 	toggleLoop(): boolean;
 	clearLoop(): void;
-	toggleSolo(trackIndex: number, exclusive?: boolean): void;
-	applyPreset(presetIndex: number): void;
+	/** `groupIndex` picks which trackList the toggle acts within; defaults to the track's first list. */
+	toggleSolo(
+		trackIndex: number,
+		exclusive?: boolean,
+		groupIndex?: number,
+	): void;
+	applyPreset(presetId: PresetId): void;
 	getState(): TrackSwitchSnapshot;
 	on<K extends TrackSwitchEventName>(
 		eventName: K,

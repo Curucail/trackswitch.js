@@ -1,0 +1,59 @@
+{
+	"$schema": "https://audiolabs.github.io/trackswitch.js/schema/trackswitch.schema.json",
+	"media": {
+		"score": {
+			"type": "musicxml",
+			"src": "../../assets/alignment/Schubert_D911-03.xml"
+		},
+		"notes": {
+			"type": "midi",
+			"src": "../../assets/alignment/Schubert_D911-03.mid",
+			"timelineUnit": "ticks"
+		},
+		"hu33": {
+			"type": "audio",
+			"title": "Performance HU33",
+			"src": "../../assets/alignment/Schubert_D911-03_HU33.wav",
+			"timelineUnit": "samples"
+		}
+	},
+	"alignment": {
+		"src": "alignment.csv",
+		"referenceTimeline": "score",
+		"timelines": {
+			"score": "measure",
+			"hu33": "hu33_samples",
+			"notes": "notes_ticks"
+		},
+		"outsideCoverage": "hold",
+		"duplicatePlacements": "average"
+	},
+	"views": [
+		{
+			"type": "navigationBar",
+			"controls": ["playback", "globalVolume", "looping", "sync", "timer"]
+		},
+		{
+			"type": "sheetMusic",
+			"mediaID": "score",
+			"maxHeight": 300,
+			"cursorColor": "#999999"
+		},
+		{
+			"type": "midi",
+			"mediaID": "notes",
+			"height": 200
+		},
+		{
+			"type": "waveform",
+			"tracks": ["hu33"],
+			"height": 60
+		},
+		{
+			"type": "trackList",
+			"tracks": ["hu33"],
+			"soloGroup": 0,
+			"trackVolumeControls": true
+		}
+	]
+}

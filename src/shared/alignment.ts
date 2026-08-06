@@ -1,8 +1,10 @@
-import type { AlignmentOutOfRangeMode } from "../domain/types";
+import type {
+	DuplicatePlacementPolicy,
+	OutsideCoverageMode,
+} from "../domain/types";
 import { parseCsvRecords } from "./csv";
-import { requestText } from "./request-text";
 
-export interface CsvNumericRow {
+interface CsvNumericRow {
 	[column: string]: number;
 }
 
@@ -16,12 +18,24 @@ export interface TimeMappingPoint {
 	y: number;
 }
 
-export interface TimeMappingSeries {
+/** A stretch of the correspondence path over which the source value never decreases. */
+export interface MappingRun {
 	points: TimeMappingPoint[];
 }
 
-export function loadNumericCsv(url: string): Promise<ParsedNumericCsv> {
-	return requestText(url, "CSV source").then((text) => parseNumericCsv(text));
+export interface TimeMappingSeries {
+	runs: MappingRun[];
+	/** The annotated span on the source axis, across every run. */
+	extent: { start: number; end: number };
+	/**
+	 * The earliest placement at each end of the span, which the ends map to
+	 * whatever the duplicate policy is. Where the source holds one value across
+	 * several rows, that value names the whole stretch, and arriving at it means
+	 * arriving at its beginning — seeking to the last measure of a score reaches
+	 * the moment that measure starts sounding, not the end of its decay.
+	 */
+	edgeValues: { start: number; end: number };
+	duplicatePlacements: DuplicatePlacementPolicy;
 }
 
 export function parseNumericCsv(csvText: string): ParsedNumericCsv {
@@ -62,8 +76,34 @@ export function parseNumericCsv(csvText: string): ParsedNumericCsv {
 	};
 }
 
+/**
+ * Splits the correspondence path into maximal stretches over which the source
+ * value never decreases. A performance that plays a repeat its counterpart
+ * skips walks the same span of the other timeline twice, so projecting *from*
+ * that timeline has two answers — one run each — while projecting *to* it stays
+ * a single run that steps backwards at the repeat boundary.
+ */
+function splitIntoRuns(points: TimeMappingPoint[]): MappingRun[] {
+	const runs: MappingRun[] = [];
+	let current: TimeMappingPoint[] = [points[0]];
+
+	for (let index = 1; index < points.length; index += 1) {
+		const point = points[index];
+		if (point.x < current[current.length - 1].x) {
+			runs.push({ points: current });
+			current = [point];
+			continue;
+		}
+		current.push(point);
+	}
+
+	runs.push({ points: current });
+	return runs;
+}
+
 export function createTimeMappingSeries(
 	points: TimeMappingPoint[],
+	duplicatePlacements: DuplicatePlacementPolicy,
 ): TimeMappingSeries {
 	if (!Array.isArray(points) || points.length === 0) {
 		throw new Error("Time mapping series requires at least one point.");
@@ -80,98 +120,163 @@ export function createTimeMappingSeries(
 		throw new Error("Time mapping series requires finite numeric points.");
 	}
 
-	normalized.sort((a, b) => {
-		if (a.x === b.x) {
-			return a.y - b.y;
+	const runs = splitIntoRuns(normalized);
+	let start = Number.POSITIVE_INFINITY;
+	let end = Number.NEGATIVE_INFINITY;
+	for (const run of runs) {
+		start = Math.min(start, run.points[0].x);
+		end = Math.max(end, run.points[run.points.length - 1].x);
+	}
+
+	let startValue = Number.POSITIVE_INFINITY;
+	let endValue = Number.POSITIVE_INFINITY;
+	for (const point of normalized) {
+		if (point.x === start) {
+			startValue = Math.min(startValue, point.y);
 		}
-		return a.x - b.x;
-	});
+		if (point.x === end) {
+			endValue = Math.min(endValue, point.y);
+		}
+	}
 
 	return {
-		points: normalized,
+		runs,
+		extent: { start, end },
+		edgeValues: { start: startValue, end: endValue },
+		duplicatePlacements,
 	};
 }
 
-export function buildColumnTimeMapping(
-	rows: CsvNumericRow[],
-	fromColumn: string,
-	toColumn: string,
-): TimeMappingSeries {
-	const points: TimeMappingPoint[] = [];
+/** The y this run gives for a value known to lie inside its span. */
+function mapWithinRun(
+	run: MappingRun,
+	value: number,
+	duplicatePlacements: DuplicatePlacementPolicy,
+	preferredValue?: number,
+): number {
+	const points = run.points;
+	// The first index whose x reaches `value`, so an exact hit lands on the
+	// earliest of any points sharing that x — what "first" selects.
+	const rightIndex = firstIndexGreaterOrEqual(points, value);
+	const right = points[rightIndex];
 
-	rows.forEach((row) => {
-		const x = Number(row[fromColumn]);
-		const y = Number(row[toColumn]);
-		if (!Number.isFinite(x) || !Number.isFinite(y)) {
-			return;
+	if (right.x === value) {
+		if (Number.isFinite(preferredValue)) {
+			let closest = right.y;
+			let closestDistance = Math.abs(right.y - (preferredValue as number));
+			for (
+				let index = rightIndex + 1;
+				index < points.length && points[index].x === value;
+				index += 1
+			) {
+				const distance = Math.abs(points[index].y - (preferredValue as number));
+				if (distance < closestDistance) {
+					closest = points[index].y;
+					closestDistance = distance;
+				}
+			}
+			return closest;
 		}
-
-		points.push({ x: x, y: y });
-	});
-
-	if (points.length === 0) {
-		throw new Error(
-			"Alignment CSV does not contain valid mapping points for columns " +
-				fromColumn +
-				" -> " +
-				toColumn +
-				".",
-		);
+		if (duplicatePlacements !== "average") {
+			return right.y;
+		}
+		let total = 0;
+		let count = 0;
+		for (
+			let index = rightIndex;
+			index < points.length && points[index].x === value;
+			index += 1
+		) {
+			total += points[index].y;
+			count += 1;
+		}
+		return total / count;
 	}
 
-	return createTimeMappingSeries(points);
-}
+	if (rightIndex === 0) {
+		return right.y;
+	}
 
-export function resolveAlignmentOutOfRangeMode(
-	mode: AlignmentOutOfRangeMode | undefined,
-): AlignmentOutOfRangeMode {
-	return mode === "linear" ? "linear" : "clamp";
+	return interpolate(points[rightIndex - 1], right, value);
 }
 
 export function mapTime(
 	series: TimeMappingSeries,
 	time: number,
-	outOfRange: AlignmentOutOfRangeMode,
+	outsideCoverage: OutsideCoverageMode,
+	preferredValue?: number,
 ): number {
-	const points = series.points;
-	if (points.length === 0 || !Number.isFinite(time)) {
+	const runs = series.runs;
+	if (runs.length === 0 || !Number.isFinite(time)) {
 		return 0;
 	}
 
-	if (points.length === 1) {
-		return points[0].y;
+	// The ends of the span answer with the first placement there rather than the
+	// middle of a held value, so arriving at a held value arrives at the start of
+	// the stretch it names and playback runs through the rest of it.
+	if (time === series.extent.start && !Number.isFinite(preferredValue)) {
+		return series.edgeValues.start;
+	}
+	if (time === series.extent.end && !Number.isFinite(preferredValue)) {
+		return series.edgeValues.end;
 	}
 
-	const first = points[0];
-	const last = points[points.length - 1];
-
-	if (time <= first.x) {
-		if (outOfRange === "clamp") {
-			return first.y;
+	const candidates: number[] = [];
+	for (const run of runs) {
+		const points = run.points;
+		if (time < points[0].x || time > points[points.length - 1].x) {
+			continue;
 		}
-		return extrapolateFromStart(points, time);
+		candidates.push(
+			mapWithinRun(run, time, series.duplicatePlacements, preferredValue),
+		);
 	}
 
-	if (time >= last.x) {
-		if (outOfRange === "clamp") {
-			return last.y;
+	if (candidates.length === 1) {
+		return candidates[0];
+	}
+
+	if (candidates.length > 1) {
+		if (Number.isFinite(preferredValue)) {
+			return candidates.reduce((closest, candidate) =>
+				Math.abs(candidate - (preferredValue as number)) <
+				Math.abs(closest - (preferredValue as number))
+					? candidate
+					: closest,
+			);
 		}
-		return extrapolateFromEnd(points, time);
+		if (series.duplicatePlacements !== "average") {
+			// Runs are in CSV order, so the earliest one is "the first in the list".
+			return candidates[0];
+		}
+		let total = 0;
+		for (const candidate of candidates) {
+			total += candidate;
+		}
+		return total / candidates.length;
 	}
 
-	const rightIndex = firstIndexGreaterOrEqual(points, time);
-	if (rightIndex <= 0) {
-		return points[0].y;
+	const extent = series.extent;
+	if (outsideCoverage === "error") {
+		throw new Error(
+			`Value ${time} is outside the mapped coverage [${extent.start}, ${extent.end}].`,
+		);
 	}
 
-	if (points[rightIndex].x === time) {
-		return averageExactMatch(points, rightIndex, time);
+	const firstRun = runs[0].points;
+	const lastRun = runs[runs.length - 1].points;
+
+	if (time < extent.start) {
+		if (outsideCoverage === "hold") {
+			return firstRun[0].y;
+		}
+		return extrapolateFromStart(firstRun, time);
 	}
 
-	const left = points[rightIndex - 1];
-	const right = points[rightIndex];
-
-	return interpolate(left, right, time);
+	if (outsideCoverage === "hold") {
+		return lastRun[lastRun.length - 1].y;
+	}
+	return extrapolateFromEnd(lastRun, time);
 }
 
 function firstIndexGreaterOrEqual(
@@ -191,33 +296,6 @@ function firstIndexGreaterOrEqual(
 	}
 
 	return low;
-}
-
-function averageExactMatch(
-	points: TimeMappingPoint[],
-	index: number,
-	x: number,
-): number {
-	let start = index;
-	let end = index;
-
-	while (start > 0 && points[start - 1].x === x) {
-		start -= 1;
-	}
-
-	while (end < points.length - 1 && points[end + 1].x === x) {
-		end += 1;
-	}
-
-	let total = 0;
-	let count = 0;
-
-	for (let currentIndex = start; currentIndex <= end; currentIndex += 1) {
-		total += points[currentIndex].y;
-		count += 1;
-	}
-
-	return count > 0 ? total / count : points[index].y;
 }
 
 function extrapolateFromStart(

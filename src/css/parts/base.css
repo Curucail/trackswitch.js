@@ -237,7 +237,8 @@
 }
 
 /* Normalize FA volume glyphs that ship with different viewBox widths. */
-.trackswitch.trackswitch .volume-icon
+.trackswitch.trackswitch
+	.volume-icon
 	.ts-icon-slot[data-icon="volume-xmark"]
 	.ts-icon-svg {
 	transform: scale(1.125);

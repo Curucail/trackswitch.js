@@ -86,7 +86,7 @@ const ALIGNMENT_HELP_TOOLTIP_CONTENT: Record<
 	},
 	"sync-generation": {
 		heading:
-			"Render synchronized version of audio sources to enable simultaneous playback.",
+			"Render time-synchronized versions of audio sources to enable simultaneous playback.",
 		items: [
 			{
 				title: "Enables sync mode in the player",
@@ -96,7 +96,23 @@ const ALIGNMENT_HELP_TOOLTIP_CONTENT: Record<
 			{
 				title: "Uses time-scale modification",
 				description:
-					"The synchronized versions are rendered with a time-scale modification algorithm. Audio pitch shift is also applied if the algorithm detects a key mismatch between source and reference.",
+					"The synchronized versions are rendered with a time-scale modification algorithm so every source shares the reference timeline.",
+			},
+		],
+	},
+	"pitch-shift": {
+		heading:
+			"Additionally pitch-shift synchronized audio to the reference's key.",
+		items: [
+			{
+				title: "Requires time-stretching",
+				description:
+					"Only available once synchronized audio generation is enabled.",
+			},
+			{
+				title: "Uses the optimal DTW pitch shift",
+				description:
+					"Applies the pitch shift (in cents) detected by the alignment algorithm when a source is in a different key than the reference.",
 			},
 		],
 	},

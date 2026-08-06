@@ -9,10 +9,23 @@ export function inferSourceMimeType(
 		return sourceType.endsWith(";") ? sourceType : `${sourceType};`;
 	}
 
+	// Object URLs carry no filename, so there is nothing to sniff. Sniffing them
+	// anyway picks up the dot in the origin's hostname and yields a bogus type.
+	if (sourceUrl.startsWith("blob:")) {
+		return "";
+	}
+
+	// Data URLs state their media type up front.
+	if (sourceUrl.startsWith("data:")) {
+		const declared = sourceUrl.slice("data:".length).split(/[;,]/)[0].trim();
+		return declared ? `${declared};` : "";
+	}
+
 	const withoutHash = sourceUrl.split("#")[0];
 	const cleanUrl = withoutHash.split("?")[0];
-	const extIndex = cleanUrl.lastIndexOf(".");
-	const ext = extIndex >= 0 ? cleanUrl.slice(extIndex).toLowerCase() : "";
+	const lastSegment = cleanUrl.slice(cleanUrl.lastIndexOf("/") + 1);
+	const extIndex = lastSegment.lastIndexOf(".");
+	const ext = extIndex >= 0 ? lastSegment.slice(extIndex).toLowerCase() : "";
 
 	if (!ext) {
 		return "";

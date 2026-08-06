@@ -1,12 +1,12 @@
 ---
 layout: default
 title: Cite
-description: Citation information for trackswitch.js
+description: Citation information for trackswitch
 ---
 
 # Cite
 
-If you use trackswitch.js to present your results, please cite:
+If you plan to use trackswitch for a publication, please cite:
 
 Werner, Nils, et al. **"trackswitch.js: A Versatile Web-Based Audio Player for Presenting Scientific Results."** 3rd web audio conference, London, UK. 2017.
 

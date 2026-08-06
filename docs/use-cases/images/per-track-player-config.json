@@ -1,0 +1,72 @@
+{
+	"media": {
+		"input": {
+			"type": "audio",
+			"title": "Input signal",
+			"src": "../../assets/per-track-image/input.wav",
+			"imageID": "inputPlot",
+			"solo": true
+		},
+		"desired": {
+			"type": "audio",
+			"title": "Desired non-reverberant signal",
+			"src": "../../assets/per-track-image/desired.wav",
+			"imageID": "desiredPlot"
+		},
+		"rlsScd": {
+			"type": "audio",
+			"title": "RLS-SCD with original variance estimator",
+			"src": "../../assets/per-track-image/rls-scd.wav",
+			"imageID": "rlsScdPlot"
+		},
+		"rlsScdMle": {
+			"type": "audio",
+			"title": "RLS-SCD with ML variance estimator",
+			"src": "../../assets/per-track-image/rls-scd-mle.wav",
+			"imageID": "rlsScdMlePlot"
+		},
+		"kalman": {
+			"type": "audio",
+			"title": "Proposed Kalman filter",
+			"src": "../../assets/per-track-image/kalman.wav",
+			"imageID": "kalmanPlot"
+		},
+		"inputPlot": {
+			"type": "image",
+			"src": "../../assets/per-track-image/input.png"
+		},
+		"desiredPlot": {
+			"type": "image",
+			"src": "../../assets/per-track-image/desired.png"
+		},
+		"rlsScdPlot": {
+			"type": "image",
+			"src": "../../assets/per-track-image/rls-scd.png"
+		},
+		"rlsScdMlePlot": {
+			"type": "image",
+			"src": "../../assets/per-track-image/rls-scd-mle.png"
+		},
+		"kalmanPlot": {
+			"type": "image",
+			"src": "../../assets/per-track-image/kalman.png"
+		}
+	},
+	"views": [
+		{
+			"type": "navigationBar",
+			"controls": ["playback", "globalVolume", "looping", "timer"]
+		},
+		{
+			"type": "perTrackImage",
+			"seekable": true,
+			"seekMarginLeft": 12.4,
+			"seekMarginRight": 13.5
+		},
+		{
+			"type": "trackList",
+			"tracks": ["input", "desired", "rlsScd", "rlsScdMle", "kalman"],
+			"soloGroup": 0
+		}
+	]
+}

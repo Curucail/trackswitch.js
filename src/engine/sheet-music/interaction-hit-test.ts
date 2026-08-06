@@ -108,7 +108,7 @@ export function handleHostTouch(
 	handleHostInteraction(ctx, entry, event);
 }
 
-export function findTouchByIdentifier(
+function findTouchByIdentifier(
 	touchList: TouchList | ArrayLike<Touch>,
 	identifier: number,
 ): Touch | null {
@@ -122,7 +122,7 @@ export function findTouchByIdentifier(
 	return null;
 }
 
-export function handleHostInteraction(
+function handleHostInteraction(
 	ctx: SheetMusicInteractionContext,
 	entry: SheetMusicEntryModel,
 	event: MouseEvent | TouchEvent,
@@ -159,7 +159,7 @@ export function handleHostInteraction(
 	ctx.onSeekReferenceTime(Math.max(0, referenceTime));
 }
 
-export function resolveClickedMeasure(
+function resolveClickedMeasure(
 	entry: SheetMusicEntryModel,
 	event: MouseEvent | TouchEvent,
 ): number | null {
@@ -226,9 +226,13 @@ export function resolveClickedMeasure(
 	const pointCandidates = extractInteractionPointCandidates(event);
 	for (let index = 0; index < pointCandidates.length; index += 1) {
 		const point = pointCandidates[index];
+		// The hit test reads OSMD objects, so it lands on an internal measure
+		// number; the alignment speaks printed ones.
 		const resolvedMeasure = attemptFromPoint(point.x, point.y);
 		if (resolvedMeasure !== null) {
-			return resolvedMeasure;
+			return (
+				entry.measureNumbering.printedByInternal.get(resolvedMeasure) ?? null
+			);
 		}
 	}
 

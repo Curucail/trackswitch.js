@@ -1,8 +1,20 @@
+import type { WaveformPlaybackFollowMode } from "../core-adapter";
+
 export interface PlayerSettingsMenuState {
 	waveformAlignedPlayhead: boolean;
 	waveformShowAlignmentPoints: boolean;
 	showWarpingMatrix: boolean;
+	playbackFollowMode: WaveformPlaybackFollowMode;
 }
+
+const PLAYBACK_FOLLOW_MODE_OPTIONS: Array<{
+	value: WaveformPlaybackFollowMode;
+	label: string;
+}> = [
+	{ value: "off", label: "Off" },
+	{ value: "center", label: "Center" },
+	{ value: "jump", label: "Jump" },
+];
 
 export function buildPlayerSettingsMenuHtml(
 	state: PlayerSettingsMenuState,
@@ -26,6 +38,12 @@ export function buildPlayerSettingsMenuHtml(
 			"Show warping matrix",
 			state.showWarpingMatrix,
 		) +
+		buildSelectRowHtml(
+			"playback-follow-mode",
+			"Follow playback",
+			PLAYBACK_FOLLOW_MODE_OPTIONS,
+			state.playbackFollowMode,
+		) +
 		"</div>" +
 		'<div class="ts-player-settings-footer">' +
 		'<button class="ts-player-settings-action" type="button" data-settings-action="export-csv">' +
@@ -36,6 +54,39 @@ export function buildPlayerSettingsMenuHtml(
 		"</button>" +
 		"</div>" +
 		"</div>"
+	);
+}
+
+function buildSelectRowHtml(
+	id: string,
+	title: string,
+	options: Array<{ value: string; label: string }>,
+	selectedValue: string,
+): string {
+	const optionsHtml = options
+		.map(
+			(option) =>
+				'<option value="' +
+				option.value +
+				'"' +
+				(option.value === selectedValue ? " selected" : "") +
+				">" +
+				option.label +
+				"</option>",
+		)
+		.join("");
+
+	return (
+		'<label class="ts-player-settings-row">' +
+		'<span class="ts-player-settings-label">' +
+		title +
+		"</span>" +
+		'<select class="ts-player-settings-select" data-setting-id="' +
+		id +
+		'">' +
+		optionsHtml +
+		"</select>" +
+		"</label>"
 	);
 }
 

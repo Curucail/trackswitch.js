@@ -3,155 +3,31 @@ import {
 	axisLeft,
 	axisRight,
 	line,
-	type ScaleContinuousNumeric,
-	type ScaleLinear,
 	type Selection,
 	scaleLinear,
 	scaleLog,
 	select,
 } from "d3";
-import { sanitizeInlineStyle } from "../shared/dom";
+import type { TrackSwitchWarpingMatrixViewConfig } from "../domain/types";
+import { applyCssOverrides } from "../shared/dom";
+import type {
+	ViewRenderer,
+	WarpingMatrixDataPoint,
+	WarpingMatrixHostMetadata,
+	WarpingMatrixMatrixData,
+	WarpingMatrixPathPoint,
+	WarpingMatrixPathSeriesData,
+	WarpingMatrixPlotState,
+	WarpingMatrixRenderContext,
+	WarpingMatrixTempoData,
+	WarpingMatrixTempoPoint,
+	WarpingMatrixTempoSeriesData,
+	WarpingMatrixTrackSeries,
+	WarpingPlotMargins,
+	WarpingTempoPlotState,
+} from "./view-renderer";
 
-type SvgSelection = Selection<SVGSVGElement, unknown, null, undefined>;
-type GroupSelection = Selection<SVGGElement, unknown, null, undefined>;
 type PathSelection = Selection<SVGPathElement, unknown, null, undefined>;
-type RectSelection = Selection<SVGRectElement, unknown, null, undefined>;
-type LineSelection = Selection<SVGLineElement, unknown, null, undefined>;
-type CircleSelection = Selection<SVGCircleElement, unknown, null, undefined>;
-type TextSelection = Selection<SVGTextElement, unknown, null, undefined>;
-
-interface WarpingMatrixDataPoint {
-	referenceTime: number;
-	trackTime: number;
-}
-
-interface WarpingMatrixTrackSeries {
-	trackIndex: number;
-	columnKey: string;
-	points: WarpingMatrixDataPoint[];
-	trackDuration: number;
-}
-
-interface WarpingMatrixPathPoint {
-	referenceTime: number;
-	trackTime: number;
-}
-
-interface WarpingMatrixPathSeriesData {
-	pointsByReferenceTime: WarpingMatrixPathPoint[];
-	pointsByTrackTime: WarpingMatrixPathPoint[];
-	trackDuration: number;
-}
-
-interface WarpingMatrixMatrixData {
-	byColumn: Map<string, WarpingMatrixPathSeriesData>;
-}
-
-interface WarpingMatrixTempoPoint {
-	trackTime: number;
-	referenceTime: number;
-	tempoPercent: number;
-}
-
-interface WarpingMatrixTempoSeriesData {
-	points: WarpingMatrixTempoPoint[];
-	isStrictlyMonotonic: boolean;
-	warningMessage: string | null;
-}
-
-interface WarpingMatrixTempoData {
-	byColumn: Map<string, WarpingMatrixTempoSeriesData>;
-}
-
-interface WarpingPlotMargins {
-	top: number;
-	right: number;
-	bottom: number;
-	left: number;
-}
-
-interface WarpingMatrixPlotState {
-	svg: SvgSelection;
-	title: TextSelection;
-	xAxis: GroupSelection;
-	yAxis: GroupSelection;
-	xLabel: TextSelection;
-	yLabel: TextSelection;
-	plotRoot: GroupSelection;
-	pathLayer: GroupSelection;
-	clipRect: RectSelection;
-	pathByColumn: Map<string, PathSelection>;
-	guideDiagonal: LineSelection;
-	playhead: CircleSelection;
-	xScale: ScaleLinear<number, number>;
-	yScale: ScaleLinear<number, number>;
-	margins: WarpingPlotMargins;
-	innerWidth: number;
-	innerHeight: number;
-}
-
-interface WarpingTempoPlotState {
-	svg: SvgSelection;
-	title: TextSelection;
-	xAxis: GroupSelection;
-	yAxis: GroupSelection;
-	yAxisRight: GroupSelection;
-	xLabel: TextSelection;
-	yLabel: TextSelection;
-	yLabelRight: TextSelection;
-	plotRoot: GroupSelection;
-	clipRect: RectSelection;
-	path: PathSelection;
-	baseline: LineSelection;
-	centerLine: LineSelection;
-	xScale: ScaleLinear<number, number>;
-	yScale: ScaleContinuousNumeric<number, number>;
-	margins: WarpingPlotMargins;
-	innerWidth: number;
-	innerHeight: number;
-}
-
-interface WarpingMatrixHostMetadata {
-	wrapper: HTMLElement;
-	host: HTMLElement;
-	visible: boolean;
-	syncDisabledOverlay: HTMLElement;
-	matrixPanel: HTMLElement;
-	matrixPlotHost: HTMLElement;
-	matrixPlot: WarpingMatrixPlotState | null;
-	tempoPanel: HTMLElement;
-	tempoPlotHost: HTMLElement;
-	tempoPlot: WarpingTempoPlotState | null;
-	tempoControls: HTMLElement;
-	tempoMessage: HTMLElement;
-	tempoWindowSlider: HTMLInputElement;
-	tempoWindowValueNode: HTMLSpanElement;
-	tempoSmoothingSlider: HTMLInputElement;
-	tempoSmoothingValueNode: HTMLSpanElement;
-	matrixSeriesSignature: string | null;
-	matrixDataCache: WarpingMatrixMatrixData | null;
-	matrixDataCacheKey: string | null;
-	tempoDataCache: WarpingMatrixTempoData | null;
-	tempoDataCacheKey: string | null;
-	matrixDisabled: boolean;
-	tempoCurveValid: boolean;
-	trackSeries: WarpingMatrixTrackSeries[];
-	matrixTrackDuration: number;
-	configuredHeight: number | null;
-	configuredBpm: number | "infer_score" | null;
-	tempoWindowSeconds: number;
-	tempoSmoothingSeconds: number;
-	colorByColumn: Map<string, string>;
-	activeColumnKey: string | null;
-	referenceDuration: number;
-	currentReferenceTime: number;
-	currentTrackTime: number;
-	currentScoreBpm: number | null;
-	matrixActivePointerId: number | null;
-	lastSizeKey: string | null;
-	layoutDirty: boolean;
-	staticPlotDirty: boolean;
-}
 
 const WARPING_MATRIX_PRIMARY_COLOR = "#ED8C01";
 const DEFAULT_WARPING_MATRIX_PATH_STROKE_WIDTH = 3;
@@ -246,20 +122,6 @@ function parseWarpingMatrixTempoSmoothingSeconds(
 	return parsePositiveNumberAttribute(value);
 }
 
-function parseWarpingMatrixBpm(
-	value: string | null,
-): number | "infer_score" | null {
-	if (value === null) {
-		return null;
-	}
-
-	if (value === "infer_score") {
-		return "infer_score";
-	}
-
-	return parsePositiveNumberAttribute(value);
-}
-
 function parseRoundedPositiveIntegerAttribute(
 	value: string | null,
 ): number | null {
@@ -339,67 +201,77 @@ function applyTempoSmoothingSeconds(
 	host.tempoSmoothingSlider.value = String(normalized);
 }
 
-export function getWarpingMatrixPathStrokeWidth(ctx: any): any {
-	return function (this: any) {
+export function getWarpingMatrixPathStrokeWidth(ctx: ViewRenderer): number {
+	return function (this: ViewRenderer) {
 		return DEFAULT_WARPING_MATRIX_PATH_STROKE_WIDTH;
 	}.call(ctx);
 }
 
 export function getWarpingMatrixLocalTempoWindowSeconds(
-	ctx: any,
-	host: any,
-): any {
-	return function (this: any, host: any) {
+	ctx: ViewRenderer,
+	host: WarpingMatrixHostMetadata,
+): number {
+	return function (this: ViewRenderer, host: WarpingMatrixHostMetadata) {
 		return normalizeTempoWindowSeconds(host.tempoWindowSeconds);
 	}.call(ctx, host);
 }
 
 export function getWarpingMatrixLocalTempoSmoothingSeconds(
-	ctx: any,
-	host: any,
-): any {
-	return function (this: any, host: any) {
+	ctx: ViewRenderer,
+	host: WarpingMatrixHostMetadata,
+): number {
+	return function (this: ViewRenderer, host: WarpingMatrixHostMetadata) {
 		return normalizeTempoSmoothingSeconds(host.tempoSmoothingSeconds);
 	}.call(ctx, host);
 }
 
 export function updateWarpingMatrixTempoControlLabels(
-	ctx: any,
-	host: any,
-): any {
-	return function (this: any, host: any) {
+	ctx: ViewRenderer,
+	host: WarpingMatrixHostMetadata,
+): void {
+	(function (this: ViewRenderer, host: WarpingMatrixHostMetadata) {
 		host.tempoWindowValueNode.textContent = `${this.getWarpingMatrixLocalTempoWindowSeconds(host).toFixed(1)}s`;
 		host.tempoSmoothingValueNode.textContent = `${this.getWarpingMatrixLocalTempoSmoothingSeconds(host).toFixed(1)}s`;
-	}.call(ctx, host);
+	}).call(ctx, host);
 }
 
-export function persistWarpingMatrixTempoControls(ctx: any, host: any): any {
-	return function (this: any, host: any) {
+export function persistWarpingMatrixTempoControls(
+	ctx: ViewRenderer,
+	host: WarpingMatrixHostMetadata,
+): void {
+	(function (this: ViewRenderer, host: WarpingMatrixHostMetadata) {
 		this.warpingMatrixTempoControlState.set(host.host, {
 			windowSeconds: this.getWarpingMatrixLocalTempoWindowSeconds(host),
 			smoothingSeconds: this.getWarpingMatrixLocalTempoSmoothingSeconds(host),
 		});
-	}.call(ctx, host);
+	}).call(ctx, host);
 }
 
-export function getWarpingMatrixSquarePlotSize(ctx: any, plot: any): any {
-	return function (this: any, plot: any) {
+export function getWarpingMatrixSquarePlotSize(
+	ctx: ViewRenderer,
+	plot: WarpingMatrixPlotState,
+): number {
+	return function (this: ViewRenderer, plot: WarpingMatrixPlotState) {
 		return Math.max(1, Math.min(plot.innerWidth, plot.innerHeight));
 	}.call(ctx, plot);
 }
 
 export function resolveWarpingMatrixColumnColor(
-	ctx: any,
-	_columnKey: any,
-	_columnOrder: any,
-): any {
-	return function (this: any, _columnKey: any, _columnOrder: any) {
+	ctx: ViewRenderer,
+	_columnKey: string,
+	_columnOrder: string[],
+): string {
+	return function (
+		this: ViewRenderer,
+		_columnKey: string,
+		_columnOrder: string[],
+	) {
 		return WARPING_MATRIX_PRIMARY_COLOR;
 	}.call(ctx, _columnKey, _columnOrder);
 }
 
-export function wrapWarpingMatrixContainers(ctx: any): any {
-	return function (this: any) {
+export function wrapWarpingMatrixContainers(ctx: ViewRenderer): void {
+	(function (this: ViewRenderer) {
 		this.warpingMatrixHosts.length = 0;
 
 		const hosts = this.root.querySelectorAll(".warping-matrix");
@@ -414,12 +286,9 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
 			if (!wrapper) {
 				wrapper = document.createElement("div");
 				wrapper.className = "warping-matrix-wrap ts-stack-section";
-				wrapper.setAttribute(
-					"style",
-					`${sanitizeInlineStyle(
-						hostElement.getAttribute("data-warping-matrix-style"),
-					)}; display: block;`,
-				);
+				const config = this.getConfiguredViewHost(hostElement)
+					.view as TrackSwitchWarpingMatrixViewConfig;
+				applyCssOverrides(wrapper, config.css);
 
 				const parent = hostElement.parentElement;
 				if (!parent) {
@@ -441,9 +310,6 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
 						"data-warping-matrix-tempo-smoothing-seconds",
 					),
 				);
-			const configuredBpm = parseWarpingMatrixBpm(
-				hostElement.getAttribute("data-warping-matrix-bpm"),
-			);
 			hostElement.style.removeProperty("height");
 
 			hostElement.classList.add("warping-matrix-host");
@@ -569,7 +435,6 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
 				trackSeries: [],
 				matrixTrackDuration: 1,
 				configuredHeight: configuredHeight,
-				configuredBpm: configuredBpm,
 				tempoWindowSeconds: initialTempoWindowSeconds,
 				tempoSmoothingSeconds: initialTempoSmoothingSeconds,
 				colorByColumn: new Map<string, string>(),
@@ -577,8 +442,7 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
 				referenceDuration: 0,
 				currentReferenceTime: 0,
 				currentTrackTime: 0,
-				currentScoreBpm:
-					typeof configuredBpm === "number" ? configuredBpm : null,
+				currentScoreBpm: null,
 				matrixActivePointerId: null,
 				lastSizeKey: null,
 				layoutDirty: true,
@@ -670,16 +534,21 @@ export function wrapWarpingMatrixContainers(ctx: any): any {
 
 			this.warpingMatrixHosts.push(metadata);
 		});
-	}.call(ctx);
+	}).call(ctx);
 }
 
 export function createWarpingMatrixPlotState(
-	ctx: any,
-	plotHost: any,
-	width: any,
-	height: any,
-): any {
-	return function (this: any, plotHost: any, width: any, height: any) {
+	ctx: ViewRenderer,
+	plotHost: HTMLElement,
+	width: number,
+	height: number,
+): WarpingMatrixPlotState {
+	return function (
+		this: ViewRenderer,
+		plotHost: HTMLElement,
+		width: number,
+		height: number,
+	) {
 		plotHost.textContent = "";
 
 		const margins: WarpingPlotMargins = {
@@ -766,12 +635,17 @@ export function createWarpingMatrixPlotState(
 }
 
 export function createWarpingTempoPlotState(
-	ctx: any,
-	plotHost: any,
-	width: any,
-	height: any,
-): any {
-	return function (this: any, plotHost: any, width: any, height: any) {
+	ctx: ViewRenderer,
+	plotHost: HTMLElement,
+	width: number,
+	height: number,
+): WarpingTempoPlotState {
+	return function (
+		this: ViewRenderer,
+		plotHost: HTMLElement,
+		width: number,
+		height: number,
+	) {
 		plotHost.textContent = "";
 
 		const margins: WarpingPlotMargins = {
@@ -866,12 +740,17 @@ export function createWarpingTempoPlotState(
 }
 
 export function applyWarpingMatrixPlotDimensions(
-	ctx: any,
-	plot: any,
-	width: any,
-	height: any,
-): any {
-	return function (this: any, plot: any, width: any, height: any) {
+	ctx: ViewRenderer,
+	plot: WarpingMatrixPlotState,
+	width: number,
+	height: number,
+): void {
+	(function (
+		this: ViewRenderer,
+		plot: WarpingMatrixPlotState,
+		width: number,
+		height: number,
+	) {
 		plot.innerWidth = Math.max(
 			1,
 			width - plot.margins.left - plot.margins.right,
@@ -917,16 +796,21 @@ export function applyWarpingMatrixPlotDimensions(
 					(plot.margins.top + plot.innerHeight / 2) +
 					") rotate(-90)",
 			);
-	}.call(ctx, plot, width, height);
+	}).call(ctx, plot, width, height);
 }
 
 export function applyWarpingTempoPlotDimensions(
-	ctx: any,
-	plot: any,
-	width: any,
-	height: any,
-): any {
-	return function (this: any, plot: any, width: any, height: any) {
+	ctx: ViewRenderer,
+	plot: WarpingTempoPlotState,
+	width: number,
+	height: number,
+): void {
+	(function (
+		this: ViewRenderer,
+		plot: WarpingTempoPlotState,
+		width: number,
+		height: number,
+	) {
 		plot.innerWidth = Math.max(
 			1,
 			width - plot.margins.left - plot.margins.right,
@@ -991,26 +875,26 @@ export function applyWarpingTempoPlotDimensions(
 					(plot.margins.top + plot.innerHeight / 2) +
 					") rotate(90)",
 			);
-	}.call(ctx, plot, width, height);
+	}).call(ctx, plot, width, height);
 }
 
 export function isPointerInsidePlotArea(
-	ctx: any,
-	plotHost: any,
-	margins: any,
-	innerWidth: any,
-	innerHeight: any,
-	clientX: any,
-	clientY: any,
-): any {
+	ctx: ViewRenderer,
+	plotHost: HTMLElement,
+	margins: WarpingPlotMargins,
+	innerWidth: number,
+	innerHeight: number,
+	clientX: number,
+	clientY: number,
+): boolean {
 	return function (
-		this: any,
-		plotHost: any,
-		margins: any,
-		innerWidth: any,
-		innerHeight: any,
-		clientX: any,
-		clientY: any,
+		this: ViewRenderer,
+		plotHost: HTMLElement,
+		margins: WarpingPlotMargins,
+		innerWidth: number,
+		innerHeight: number,
+		clientX: number,
+		clientY: number,
 	) {
 		const rect = plotHost.getBoundingClientRect();
 		const pointerX = clientX - rect.left - margins.left;
@@ -1025,11 +909,15 @@ export function isPointerInsidePlotArea(
 }
 
 export function onWarpingMatrixPointerDown(
-	ctx: any,
-	host: any,
-	event: any,
-): any {
-	return function (this: any, host: any, event: any) {
+	ctx: ViewRenderer,
+	host: WarpingMatrixHostMetadata,
+	event: PointerEvent,
+): void {
+	(function (
+		this: ViewRenderer,
+		host: WarpingMatrixHostMetadata,
+		event: PointerEvent,
+	) {
 		if (
 			!this.onWarpingMatrixSeek ||
 			!host.matrixPlot ||
@@ -1057,15 +945,19 @@ export function onWarpingMatrixPointerDown(
 		host.matrixPlotHost.setPointerCapture(event.pointerId);
 		this.seekWarpingMatrixFromPointerX(host, event.clientX);
 		event.preventDefault();
-	}.call(ctx, host, event);
+	}).call(ctx, host, event);
 }
 
 export function onWarpingMatrixPointerMove(
-	ctx: any,
-	host: any,
-	event: any,
-): any {
-	return function (this: any, host: any, event: any) {
+	ctx: ViewRenderer,
+	host: WarpingMatrixHostMetadata,
+	event: PointerEvent,
+): void {
+	(function (
+		this: ViewRenderer,
+		host: WarpingMatrixHostMetadata,
+		event: PointerEvent,
+	) {
 		if (!this.onWarpingMatrixSeek || !host.matrixPlot) {
 			return;
 		}
@@ -1079,11 +971,19 @@ export function onWarpingMatrixPointerMove(
 
 		this.seekWarpingMatrixFromPointerX(host, event.clientX);
 		event.preventDefault();
-	}.call(ctx, host, event);
+	}).call(ctx, host, event);
 }
 
-export function onWarpingMatrixPointerUp(ctx: any, host: any, event: any): any {
-	return function (this: any, host: any, event: any) {
+export function onWarpingMatrixPointerUp(
+	ctx: ViewRenderer,
+	host: WarpingMatrixHostMetadata,
+	event: PointerEvent,
+): void {
+	(function (
+		this: ViewRenderer,
+		host: WarpingMatrixHostMetadata,
+		event: PointerEvent,
+	) {
 		if (!host.matrixPlot) {
 			return;
 		}
@@ -1101,15 +1001,19 @@ export function onWarpingMatrixPointerUp(ctx: any, host: any, event: any): any {
 			host.matrixPlotHost.releasePointerCapture(event.pointerId);
 		}
 		event.preventDefault();
-	}.call(ctx, host, event);
+	}).call(ctx, host, event);
 }
 
 export function seekWarpingMatrixFromPointerX(
-	ctx: any,
-	host: any,
-	clientX: any,
-): any {
-	return function (this: any, host: any, clientX: any) {
+	ctx: ViewRenderer,
+	host: WarpingMatrixHostMetadata,
+	clientX: number,
+): void {
+	(function (
+		this: ViewRenderer,
+		host: WarpingMatrixHostMetadata,
+		clientX: number,
+	) {
 		if (!this.onWarpingMatrixSeek || !host.matrixPlot) {
 			return;
 		}
@@ -1125,15 +1029,19 @@ export function seekWarpingMatrixFromPointerX(
 		this.onWarpingMatrixSeek(
 			clampTime(referenceTime, 0, Math.max(0.001, host.referenceDuration)),
 		);
-	}.call(ctx, host, clientX);
+	}).call(ctx, host, clientX);
 }
 
 export function onWarpingTempoPointerDown(
-	ctx: any,
-	host: any,
-	event: any,
-): any {
-	return function (this: any, host: any, event: any) {
+	ctx: ViewRenderer,
+	host: WarpingMatrixHostMetadata,
+	event: PointerEvent,
+): void {
+	(function (
+		this: ViewRenderer,
+		host: WarpingMatrixHostMetadata,
+		event: PointerEvent,
+	) {
 		if (
 			!this.onWarpingMatrixSeek ||
 			!host.tempoPlot ||
@@ -1158,11 +1066,19 @@ export function onWarpingTempoPointerDown(
 
 		this.seekWarpingMatrixFromTempoPointerX(host, event.clientX);
 		event.preventDefault();
-	}.call(ctx, host, event);
+	}).call(ctx, host, event);
 }
 
-export function onWarpingTempoWheel(ctx: any, host: any, event: any): any {
-	return function (this: any, host: any, event: any) {
+export function onWarpingTempoWheel(
+	ctx: ViewRenderer,
+	host: WarpingMatrixHostMetadata,
+	event: WheelEvent,
+): void {
+	(function (
+		this: ViewRenderer,
+		host: WarpingMatrixHostMetadata,
+		event: WheelEvent,
+	) {
 		if (host.matrixDisabled) {
 			return;
 		}
@@ -1186,15 +1102,19 @@ export function onWarpingTempoWheel(ctx: any, host: any, event: any): any {
 		this.updateWarpingMatrixTempoControlLabels(host);
 		this.persistWarpingMatrixTempoControls(host);
 		this.renderWarpingMatrixTempoPlot(host);
-	}.call(ctx, host, event);
+	}).call(ctx, host, event);
 }
 
 export function seekWarpingMatrixFromTempoPointerX(
-	ctx: any,
-	host: any,
-	clientX: any,
-): any {
-	return function (this: any, host: any, clientX: any) {
+	ctx: ViewRenderer,
+	host: WarpingMatrixHostMetadata,
+	clientX: number,
+): void {
+	(function (
+		this: ViewRenderer,
+		host: WarpingMatrixHostMetadata,
+		clientX: number,
+	) {
 		if (!this.onWarpingMatrixSeek || !host.tempoPlot) {
 			return;
 		}
@@ -1218,11 +1138,14 @@ export function seekWarpingMatrixFromTempoPointerX(
 		this.onWarpingMatrixSeek(
 			clampTime(referenceTime, 0, Math.max(0.001, host.referenceDuration)),
 		);
-	}.call(ctx, host, clientX);
+	}).call(ctx, host, clientX);
 }
 
-export function getPrimaryWarpingSeriesData(ctx: any, host: any): any {
-	return function (this: any, host: any) {
+export function getPrimaryWarpingSeriesData(
+	ctx: ViewRenderer,
+	host: WarpingMatrixHostMetadata,
+): WarpingMatrixPathSeriesData | null {
+	return function (this: ViewRenderer, host: WarpingMatrixHostMetadata) {
 		if (!host.matrixDataCache || !host.activeColumnKey) {
 			return null;
 		}
@@ -1231,8 +1154,11 @@ export function getPrimaryWarpingSeriesData(ctx: any, host: any): any {
 	}.call(ctx, host);
 }
 
-export function getPrimaryTempoSeries(ctx: any, host: any): any {
-	return function (this: any, host: any) {
+export function getPrimaryTempoSeries(
+	ctx: ViewRenderer,
+	host: WarpingMatrixHostMetadata,
+): WarpingMatrixTempoPoint[] {
+	return function (this: ViewRenderer, host: WarpingMatrixHostMetadata) {
 		if (!host.tempoDataCache || !host.activeColumnKey) {
 			return [];
 		}
@@ -1242,8 +1168,11 @@ export function getPrimaryTempoSeries(ctx: any, host: any): any {
 	}.call(ctx, host);
 }
 
-export function getPrimaryTempoSeriesData(ctx: any, host: any): any {
-	return function (this: any, host: any) {
+export function getPrimaryTempoSeriesData(
+	ctx: ViewRenderer,
+	host: WarpingMatrixHostMetadata,
+): WarpingMatrixTempoSeriesData | null {
+	return function (this: ViewRenderer, host: WarpingMatrixHostMetadata) {
 		if (!host.tempoDataCache || !host.activeColumnKey) {
 			return null;
 		}
@@ -1252,8 +1181,11 @@ export function getPrimaryTempoSeriesData(ctx: any, host: any): any {
 	}.call(ctx, host);
 }
 
-export function ensureWarpingLayout(ctx: any, host: any): any {
-	return function (this: any, host: any) {
+export function ensureWarpingLayout(
+	ctx: ViewRenderer,
+	host: WarpingMatrixHostMetadata,
+): void {
+	(function (this: ViewRenderer, host: WarpingMatrixHostMetadata) {
 		const renderedHeight =
 			host.configuredHeight ??
 			Math.max(180, host.matrixPanel.clientHeight || 220);
@@ -1382,15 +1314,19 @@ export function ensureWarpingLayout(ctx: any, host: any): any {
 		}
 
 		host.layoutDirty = false;
-	}.call(ctx, host);
+	}).call(ctx, host);
 }
 
 export function applyWarpingMatrixContext(
-	ctx: any,
-	host: any,
-	context: any,
-): any {
-	return function (this: any, host: any, context: any) {
+	ctx: ViewRenderer,
+	host: WarpingMatrixHostMetadata,
+	context: WarpingMatrixRenderContext,
+): void {
+	(function (
+		this: ViewRenderer,
+		host: WarpingMatrixHostMetadata,
+		context: WarpingMatrixRenderContext,
+	) {
 		const referenceDuration = Math.max(
 			0.001,
 			sanitizeDuration(context.referenceDuration),
@@ -1405,7 +1341,9 @@ export function applyWarpingMatrixContext(
 			referenceDuration,
 		);
 		host.currentScoreBpm =
-			Number.isFinite(context.currentScoreBpm) && context.currentScoreBpm > 0
+			context.currentScoreBpm !== null &&
+			Number.isFinite(context.currentScoreBpm) &&
+			context.currentScoreBpm > 0
 				? context.currentScoreBpm
 				: null;
 		host.matrixDisabled = context.syncEnabled;
@@ -1546,16 +1484,25 @@ export function applyWarpingMatrixContext(
 		}
 
 		host.matrixSeriesSignature = matrixSeriesSignature;
-	}.call(ctx, host, context);
+	}).call(ctx, host, context);
 }
 
-export function updateWarpingMatrix(ctx: any, host: any, context: any): any {
-	return function (this: any, host: any, context: any) {
+export function updateWarpingMatrix(
+	ctx: ViewRenderer,
+	host: WarpingMatrixHostMetadata,
+	context: WarpingMatrixRenderContext | undefined,
+): void {
+	(function (
+		this: ViewRenderer,
+		host: WarpingMatrixHostMetadata,
+		context: WarpingMatrixRenderContext | undefined,
+	) {
 		if (!host.visible || !context?.enabled) {
 			host.wrapper.style.display = "none";
 			return;
 		}
 
+		host.wrapper.classList.remove("warping-matrix-preview");
 		host.wrapper.style.display = "block";
 		this.ensureWarpingLayout(host);
 		this.applyWarpingMatrixContext(host, context);
@@ -1569,15 +1516,52 @@ export function updateWarpingMatrix(ctx: any, host: any, context: any): any {
 		}
 
 		this.updateWarpingMatrixPlaybackState(host, context);
-	}.call(ctx, host, context);
+	}).call(ctx, host, context);
+}
+
+export function drawDummyWarpingMatrices(ctx: ViewRenderer): void {
+	(function (this: ViewRenderer) {
+		const previewContext: WarpingMatrixRenderContext = {
+			enabled: true,
+			syncEnabled: false,
+			referenceDuration: 100,
+			currentReferenceTime: 0,
+			currentScoreBpm: null,
+			columnOrder: ["preview"],
+			trackSeries: [
+				{
+					trackIndex: -1,
+					columnKey: "preview",
+					trackDuration: 100,
+					points: [
+						{ referenceTime: 0, trackTime: 0 },
+						{ referenceTime: 18, trackTime: 15 },
+						{ referenceTime: 40, trackTime: 44 },
+						{ referenceTime: 64, trackTime: 58 },
+						{ referenceTime: 82, trackTime: 87 },
+						{ referenceTime: 100, trackTime: 100 },
+					],
+				},
+			],
+		};
+
+		this.warpingMatrixHosts.forEach((host: WarpingMatrixHostMetadata) => {
+			this.updateWarpingMatrix(host, previewContext);
+			host.wrapper.classList.add("warping-matrix-preview");
+		});
+	}).call(ctx);
 }
 
 export function renderWarpingMatrixPathPlot(
-	ctx: any,
-	host: any,
-	pathStrokeWidth: any,
-): any {
-	return function (this: any, host: any, pathStrokeWidth: any) {
+	ctx: ViewRenderer,
+	host: WarpingMatrixHostMetadata,
+	pathStrokeWidth: number,
+): void {
+	(function (
+		this: ViewRenderer,
+		host: WarpingMatrixHostMetadata,
+		pathStrokeWidth: number,
+	) {
 		if (!host.matrixPlot) {
 			return;
 		}
@@ -1679,11 +1663,14 @@ export function renderWarpingMatrixPathPlot(
 		}
 
 		this.renderWarpingMatrixPlayhead(host);
-	}.call(ctx, host, pathStrokeWidth);
+	}).call(ctx, host, pathStrokeWidth);
 }
 
-export function renderWarpingMatrixPlayhead(ctx: any, host: any): any {
-	return function (this: any, host: any) {
+export function renderWarpingMatrixPlayhead(
+	ctx: ViewRenderer,
+	host: WarpingMatrixHostMetadata,
+): void {
+	(function (this: ViewRenderer, host: WarpingMatrixHostMetadata) {
 		if (!host.matrixPlot) {
 			return;
 		}
@@ -1713,7 +1700,7 @@ export function renderWarpingMatrixPlayhead(ctx: any, host: any): any {
 			.attr("cx", plot.xScale(playheadReferenceTime))
 			.attr("cy", plot.yScale(host.currentTrackTime))
 			.raise();
-	}.call(ctx, host);
+	}).call(ctx, host);
 }
 
 function findLowerBoundByTrackTime(
@@ -1755,23 +1742,11 @@ function sliceTempoSeriesForDomain(
 }
 
 function resolveDisplayedWarpingMatrixScoreBpm(
-	renderer: any,
+	renderer: ViewRenderer,
 	host: WarpingMatrixHostMetadata,
 	primarySeriesData: WarpingMatrixPathSeriesData | null,
 	xDomain: [number, number],
 ): number | null {
-	if (
-		typeof host.configuredBpm === "number" &&
-		Number.isFinite(host.configuredBpm) &&
-		host.configuredBpm > 0
-	) {
-		return host.configuredBpm;
-	}
-
-	if (host.configuredBpm !== "infer_score") {
-		return null;
-	}
-
 	if (
 		!primarySeriesData ||
 		typeof renderer.resolveWarpingMatrixScoreBpm !== "function"
@@ -1800,11 +1775,15 @@ function resolveDisplayedWarpingMatrixScoreBpm(
 }
 
 export function updateWarpingMatrixPlaybackState(
-	ctx: any,
-	host: any,
-	context: any,
-): any {
-	return function (this: any, host: any, context: any) {
+	ctx: ViewRenderer,
+	host: WarpingMatrixHostMetadata,
+	context: WarpingMatrixRenderContext | undefined,
+): void {
+	(function (
+		this: ViewRenderer,
+		host: WarpingMatrixHostMetadata,
+		context: WarpingMatrixRenderContext | undefined,
+	) {
 		if (!host.visible || !context?.enabled) {
 			host.wrapper.style.display = "none";
 			return;
@@ -1831,21 +1810,27 @@ export function updateWarpingMatrixPlaybackState(
 
 		this.renderWarpingMatrixPlayhead(host);
 		this.renderWarpingMatrixTempoPlot(host);
-	}.call(ctx, host, context);
+	}).call(ctx, host, context);
 }
 
-export function setWarpingMatrixVisible(ctx: any, visible: any): any {
-	return function (this: any, visible: boolean) {
+export function setWarpingMatrixVisible(
+	ctx: ViewRenderer,
+	visible: boolean,
+): void {
+	(function (this: ViewRenderer, visible: boolean) {
 		this.warpingMatrixHosts.forEach((host: WarpingMatrixHostMetadata) => {
 			host.visible = visible;
 			host.wrapper.style.display = visible ? "" : "none";
 			host.wrapper.classList.toggle("ts-stack-section-hidden", !visible);
 		});
-	}.call(ctx, visible === true);
+	}).call(ctx, visible === true);
 }
 
-export function renderWarpingMatrixTempoPlot(ctx: any, host: any): any {
-	return function (this: any, host: any) {
+export function renderWarpingMatrixTempoPlot(
+	ctx: ViewRenderer,
+	host: WarpingMatrixHostMetadata,
+): void {
+	(function (this: ViewRenderer, host: WarpingMatrixHostMetadata) {
 		if (!host.tempoPlot) {
 			return;
 		}
@@ -1928,9 +1913,12 @@ export function renderWarpingMatrixTempoPlot(ctx: any, host: any): any {
 			tempoPlot.yAxisRight.style("display", "none");
 		}
 		tempoPlot.yLabel.text(showBpmAxis ? "Tempo (BPM)" : "Tempo (%)");
-		tempoPlot.yLabelRight
-			.text("Tempo (%)")
-			.style("display", showBpmAxis ? null : "none");
+		tempoPlot.yLabelRight.text("Tempo (%)");
+		if (showBpmAxis) {
+			tempoPlot.yLabelRight.style("display", null);
+		} else {
+			tempoPlot.yLabelRight.style("display", "none");
+		}
 
 		const visibleTempoSeries = showMonotonicityMessage
 			? []
@@ -1968,28 +1956,19 @@ export function renderWarpingMatrixTempoPlot(ctx: any, host: any): any {
 			.attr("y1", 0)
 			.attr("y2", tempoPlot.innerHeight)
 			.raise();
-	}.call(ctx, host);
-}
-
-export function resolveCenteredWarpingWindow(
-	ctx: any,
-	center: any,
-	windowSeconds: any,
-	_maxTime: any,
-): any {
-	return function (this: any, center: any, windowSeconds: any, _maxTime: any) {
-		const safeCenter = Number.isFinite(center) ? center : 0;
-		const halfWindow = Math.max(0.0005, windowSeconds / 2);
-		return [safeCenter - halfWindow, safeCenter + halfWindow];
-	}.call(ctx, center, windowSeconds, _maxTime);
+	}).call(ctx, host);
 }
 
 export function buildWarpingMatrixData(
-	ctx: any,
-	trackSeries: any,
-	referenceDuration: any,
-): any {
-	return function (this: any, trackSeries: any, referenceDuration: any) {
+	ctx: ViewRenderer,
+	trackSeries: WarpingMatrixTrackSeries[],
+	referenceDuration: number,
+): WarpingMatrixMatrixData {
+	return function (
+		this: ViewRenderer,
+		trackSeries: WarpingMatrixTrackSeries[],
+		referenceDuration: number,
+	) {
 		const byColumn = new Map<string, WarpingMatrixPathSeriesData>();
 
 		trackSeries.forEach((series: WarpingMatrixTrackSeries) => {
@@ -2077,11 +2056,15 @@ export function buildWarpingMatrixData(
 }
 
 export function buildWarpingTempoData(
-	ctx: any,
-	matrixData: any,
-	smoothingSeconds: any,
-): any {
-	return function (this: any, matrixData: any, smoothingSeconds: any) {
+	ctx: ViewRenderer,
+	matrixData: WarpingMatrixMatrixData | null,
+	smoothingSeconds: number,
+): WarpingMatrixTempoData {
+	return function (
+		this: ViewRenderer,
+		matrixData: WarpingMatrixMatrixData | null,
+		smoothingSeconds: number,
+	) {
 		const byColumn = new Map<string, WarpingMatrixTempoSeriesData>();
 		const normalizedSmoothingSeconds = normalizeTempoSmoothingSeconds(
 			Number(smoothingSeconds),
@@ -2337,11 +2320,15 @@ function buildPointWindowBeatDurationRatios(
 }
 
 export function interpolateWarpingTrackTime(
-	ctx: any,
-	points: any,
-	referenceTime: any,
-): any {
-	return function (this: any, points: any, referenceTime: any) {
+	ctx: ViewRenderer,
+	points: WarpingMatrixPathPoint[],
+	referenceTime: number,
+): number {
+	return function (
+		this: ViewRenderer,
+		points: WarpingMatrixPathPoint[],
+		referenceTime: number,
+	) {
 		if (!Array.isArray(points) || points.length === 0) {
 			return 0;
 		}
@@ -2394,11 +2381,15 @@ export function interpolateWarpingTrackTime(
 }
 
 export function interpolateWarpingReferenceTime(
-	ctx: any,
-	pointsByTrackTime: any,
-	trackTime: any,
-): any {
-	return function (this: any, pointsByTrackTime: any, trackTime: any) {
+	ctx: ViewRenderer,
+	pointsByTrackTime: WarpingMatrixPathPoint[],
+	trackTime: number,
+): number {
+	return function (
+		this: ViewRenderer,
+		pointsByTrackTime: WarpingMatrixPathPoint[],
+		trackTime: number,
+	) {
 		if (!Array.isArray(pointsByTrackTime) || pointsByTrackTime.length === 0) {
 			return 0;
 		}

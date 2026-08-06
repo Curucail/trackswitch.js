@@ -17,7 +17,7 @@ export function setActiveKeyboardController(instanceId: number): void {
 	activeKeyboardInstanceId = instanceId;
 }
 
-export function clearActiveKeyboardController(instanceId: number): void {
+function clearActiveKeyboardController(instanceId: number): void {
 	if (activeKeyboardInstanceId === instanceId) {
 		activeKeyboardInstanceId = null;
 	}

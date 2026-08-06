@@ -1,8 +1,7 @@
 /* MAIN CONTROL STYLES ------------------------------------------------------ */
 
-/* Desktop (default): auto-compacting flex layout
-   Row 1: playback | volume | loop | preset | seekbar | timing
-   Seekbar moves to row 2 (full width) if container is too narrow */
+/* Desktop (default): auto-compacting flex layout in configured control order.
+   Full-width controls wrap when the container is too narrow. */
 
 .trackswitch .main-control {
 	container-type: inline-size;
@@ -32,39 +31,9 @@
 	align-items: center;
 }
 
-.trackswitch .main-control .playback-group {
-	order: 10;
-}
-
-.trackswitch .main-control .sync-global {
-	order: 15;
-}
-
-.trackswitch .main-control .sync-global.sync-after-loop {
-	order: 35;
-}
-
-.trackswitch .main-control .volume {
-	order: 20;
-}
-
-.trackswitch .main-control .loop-group {
-	order: 30;
-}
-
-.trackswitch .main-control .preset-selector-wrap {
-	order: 40;
-}
-
 .trackswitch .main-control .timing {
-	order: 90;
-	margin-left: 0;
-}
-
-@container ts-main-control (min-width: 1001px) {
-	.trackswitch .main-control ul.control:not(:has(> .seekwrap)) > .timing {
-		margin-left: auto;
-	}
+	margin-left: auto;
+	text-align: right;
 }
 
 .trackswitch .main-control .settings-button {
@@ -73,7 +42,6 @@
 }
 
 .trackswitch .main-control .seekwrap {
-	order: 50;
 	flex: 1 1 240px;
 }
 
@@ -88,16 +56,6 @@
 	width: var(--ts-main-control-icon-size);
 	height: var(--ts-main-control-icon-size);
 	margin: 0;
-}
-
-.trackswitch
-	.main-control
-	.playback-group
-	> .playback-controls
-	> li.button
-	.ts-icon-slot,
-.trackswitch .main-control .settings-button .ts-icon-slot {
-	font-size: var(--ts-main-control-icon-size);
 }
 
 /* Generic button styles within main-control */
@@ -142,6 +100,9 @@
 .trackswitch .main-control .timing {
 	font-family: monospace;
 	white-space: nowrap;
+	/* The row is a flex container, so the whitespace around the "/" separator is
+	   dropped. A word unit like "measure 3" needs it back. */
+	gap: 0.35em;
 }
 
 /* Seekbar */
@@ -195,11 +156,66 @@
 	--ts-slider-track-color: var(--ts-color-surface-control);
 }
 
+/* Marker navigation */
+.trackswitch .main-control .marker-navigation-controls {
+	display: flex;
+	align-items: center;
+	gap: 0;
+}
+
+.trackswitch .main-control .marker-navigation-controls > .button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 17px;
+	height: var(--ts-main-control-large-button-size);
+	color: var(--ts-color-text-muted);
+	transition:
+		color 100ms ease-out,
+		opacity 100ms ease-out;
+}
+
+.trackswitch
+	.main-control
+	.marker-navigation-controls
+	> .button:hover:not(:disabled),
+.trackswitch .main-control .marker-navigation-controls > .button:focus-visible {
+	color: var(--ts-color-text-inverse);
+}
+
+.trackswitch .main-control .marker-navigation-controls > .button:focus-visible {
+	outline: 2px solid var(--ts-focus-ring-color);
+	outline-offset: 2px;
+}
+
+.trackswitch .main-control .marker-navigation-controls > .button:disabled {
+	opacity: 0.3;
+	cursor: default;
+}
+
+.trackswitch .main-control .marker-navigation-controls .ts-icon-slot,
+.trackswitch .main-control .marker-navigation-controls .ts-icon-svg {
+	width: 16px;
+	height: 16px;
+	font-size: 16px;
+}
+
+.trackswitch
+	.main-control
+	.playback-group
+	> .playback-controls
+	> li.button
+	.ts-icon-slot,
+.trackswitch .main-control .settings-button .ts-icon-slot {
+	font-size: var(--ts-main-control-icon-size);
+}
+
 /* Loop group */
 .trackswitch .main-control .control > li.loop-group > .loop-controls {
 	display: flex;
 	align-items: center;
 	gap: var(--ts-main-control-loop-gap);
+	margin-right: -6px;
 }
 
 .trackswitch

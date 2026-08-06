@@ -90,7 +90,6 @@ export class WaveformEngine {
 		trackTimelineProjector?: TrackTimelineProjector,
 		startSeconds = 0,
 		durationSeconds?: number,
-		ignoreTrackPadding = false,
 	): WaveformPeakBuckets | null {
 		if (!runtimes.length || peakCount <= 0) {
 			return null;
@@ -145,7 +144,6 @@ export class WaveformEngine {
 					trackTimelineProjector,
 					safeStartSeconds,
 					safeDurationSeconds,
-					ignoreTrackPadding,
 				);
 				if (!buckets) {
 					return null;
@@ -395,7 +393,6 @@ export class WaveformEngine {
 		trackTimelineProjector?: TrackTimelineProjector,
 		startSeconds = 0,
 		durationSeconds?: number,
-		ignoreTrackPadding = false,
 	): WaveformPeakBuckets | null {
 		if (!runtime.waveformSummary) {
 			return null;
@@ -409,7 +406,7 @@ export class WaveformEngine {
 
 		const timing = WaveformEngine.normalizeTiming(runtime);
 		const trimStart = timing ? timing.trimStart : 0;
-		const padStart = ignoreTrackPadding ? 0 : timing ? timing.padStart : 0;
+		const padStart = timing ? timing.padStart : 0;
 		const audioDuration = timing
 			? timing.audioDuration
 			: WaveformEngine.getRuntimeDuration(runtime);

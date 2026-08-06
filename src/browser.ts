@@ -1,50 +1,39 @@
+import { ElementConfigError, loadElementConfig } from "./config/element-config";
 import {
-	defineTrackSwitchSyncPlayerElement,
 	defineTrackswitchDefaultElement,
-	defineTrackswitchElement,
-	defineTrackswitchElements,
 	TRACKSWITCH_DEFAULT_ELEMENT_NAME,
-	TRACKSWITCH_ELEMENT_NAME,
-	TRACKSWITCH_SYNC_PLAYER_ELEMENT_NAME,
 	TrackswitchPlayer,
-	TrackswitchSyncPlayer,
 } from "./element";
+import { createTrackSwitch } from "./player/factory";
+import { parseNumericCsv } from "./shared/alignment";
+import { ensureTrackSwitchStyles } from "./shared/styles";
+import { renderIconSlotHtml } from "./ui/icons";
 import {
-	defineTrackSwitchSyncInteractiveElement,
-	TRACKSWITCH_SYNC_INTERACTIVE_ELEMENT_NAME,
-	TrackswitchSyncInteractive,
-} from "./interactive/interactive-element";
-import {
-	createInteractiveTrackSwitch,
-	createTrackSwitchSyncInteractive,
-} from "./interactive/interactive-factory";
-import {
-	createDefaultTrackSwitch,
-	createTrackSwitch,
-	createTrackSwitchSyncPlayer,
-} from "./player/factory";
+	describeError,
+	renderTrackSwitchErrorPanel,
+	renderTrackSwitchLoadingPanel,
+} from "./ui/render-status-panel";
 
-defineTrackswitchElements();
-defineTrackSwitchSyncInteractiveElement();
+defineTrackswitchDefaultElement();
+
+export const interactiveExtensionApi = {
+	createTrackSwitch,
+	describeError,
+	ensureTrackSwitchStyles,
+	isElementConfigError: (error: unknown) => error instanceof ElementConfigError,
+	loadElementConfig,
+	parseNumericCsv,
+	renderIconSlotHtml,
+	renderTrackSwitchErrorPanel,
+	renderTrackSwitchLoadingPanel,
+};
 
 const TrackSwitch = {
-	TrackswitchSyncPlayer,
-	TrackswitchSyncInteractive,
 	TrackswitchPlayer,
-	TRACKSWITCH_SYNC_PLAYER_ELEMENT_NAME,
-	TRACKSWITCH_SYNC_INTERACTIVE_ELEMENT_NAME,
 	TRACKSWITCH_DEFAULT_ELEMENT_NAME,
-	TRACKSWITCH_ELEMENT_NAME,
-	createTrackSwitchSyncInteractive,
-	createTrackSwitchSyncPlayer,
-	createDefaultTrackSwitch,
-	createInteractiveTrackSwitch,
 	createTrackSwitch,
-	defineTrackSwitchSyncPlayerElement,
 	defineTrackswitchDefaultElement,
-	defineTrackswitchElement,
-	defineTrackswitchElements,
-	defineTrackSwitchSyncInteractiveElement,
+	interactiveExtensionApi,
 };
 
 declare global {
@@ -58,21 +47,8 @@ if (typeof window !== "undefined") {
 }
 
 export {
-	createDefaultTrackSwitch,
-	createInteractiveTrackSwitch,
 	createTrackSwitch,
-	createTrackSwitchSyncInteractive,
-	createTrackSwitchSyncPlayer,
-	defineTrackSwitchSyncInteractiveElement,
-	defineTrackSwitchSyncPlayerElement,
 	defineTrackswitchDefaultElement,
-	defineTrackswitchElement,
-	defineTrackswitchElements,
 	TRACKSWITCH_DEFAULT_ELEMENT_NAME,
-	TRACKSWITCH_ELEMENT_NAME,
-	TRACKSWITCH_SYNC_INTERACTIVE_ELEMENT_NAME,
-	TRACKSWITCH_SYNC_PLAYER_ELEMENT_NAME,
 	TrackswitchPlayer,
-	TrackswitchSyncInteractive,
-	TrackswitchSyncPlayer,
 };
