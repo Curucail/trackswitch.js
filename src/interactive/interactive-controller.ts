@@ -643,6 +643,7 @@ export class InteractiveTrackSwitchControllerImpl
 		views.push({
 			type: "trackList",
 			tracks: audioTrackIds,
+			soloGroup: 0,
 			trackVolumeControls: true,
 			trackPanControls: "balance",
 		});
