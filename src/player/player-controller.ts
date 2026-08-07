@@ -46,6 +46,7 @@ import {
 import { InputBinder, type InputController } from "../input/dom-event-binder";
 import type { MeasureMapPoint } from "../shared/measure-map";
 import type { ControllerPointerEvent } from "../shared/seek";
+import { isWaveformTrackAudible } from "../shared/waveform-source";
 import {
 	createRuntimeMarkerSet,
 	type RuntimeMarkerSet,
@@ -252,6 +253,16 @@ export class TrackSwitchControllerImpl
 			this.isGroupExclusive(groupIndex);
 		this.renderer.isTrackListUnitActive = (groupIndex: number) =>
 			this.isTrackListUnitActive(groupIndex);
+		// The rule an `audible` waveform follows, so a piano roll showing the same
+		// selection can never disagree with the waveform beside it.
+		this.renderer.isTrackAudible = (trackIndex: number) =>
+			isWaveformTrackAudible(
+				this.runtimes,
+				trackIndex,
+				"audible",
+				this.isAlignmentMode(),
+				(index: number) => this.isTrackExclusive(index),
+			);
 		if (config.alignment) {
 			// Pre-load readout unit; the resolved alignment replaces this with the
 			// declared unit and its converter once the media are profiled.

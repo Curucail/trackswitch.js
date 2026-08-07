@@ -1535,8 +1535,19 @@ export function updateTrackControls(
 
 			const isLocked =
 				!!syncLockedTrackIndexes && syncLockedTrackIndexes.has(index);
+			// A row repeats the colour its track carries in a piano roll, so the
+			// list and the notes read as one code.
+			const channelColor = this.resolveMidiTrackChannelColor(
+				runtime.definition.id,
+			);
 
 			rows.forEach((row: HTMLElement) => {
+				if (channelColor) {
+					row.style.setProperty("--ts-track-channel-color", channelColor);
+				} else {
+					row.style.removeProperty("--ts-track-channel-color");
+				}
+
 				const solo = row.querySelector(".solo");
 				// A track may be listed twice, so each row follows the list it sits in.
 				const singleSoloMode = this.isGroupExclusive(trackGroupIndexOfRow(row));

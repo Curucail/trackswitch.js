@@ -1,5 +1,6 @@
 import { Midi } from "@tonejs/midi";
 import type {
+	TrackRuntime,
 	TrackSwitchMidiViewConfig,
 	TrackSwitchUiState,
 	WaveformPlaybackFollowMode,
@@ -33,12 +34,16 @@ const MIDI_NOTE_BORDER_MIN_HEIGHT = 4;
 const MIDI_VELOCITY_BAR_MIN_HEIGHT = 8;
 const MIDI_VELOCITY_BAR_MIN_WIDTH = 6;
 
+/** How many channel colours the stylesheet declares, cycled past the last one. */
+const MIDI_CHANNEL_PALETTE_SIZE = 4;
+
 interface MidiNoteEvent {
 	midi: number;
 	time: number;
 	duration: number;
 	name: string;
 	velocity: number;
+	channel: number;
 }
 
 interface MidiNoteColors {
@@ -76,7 +81,15 @@ export interface MidiSeekSurfaceMetadata {
 	midiDurationSeconds: number;
 	/** Longest note in `notes`; lets the draw loop bound its backwards scan. */
 	maxNoteDuration: number;
+	/** The audio track each paired channel follows, from the view config. */
+	channelTrackIds: Map<number, string>;
+	/** Palette slot of a paired channel, by ascending channel number. */
+	channelPaletteIndex: Map<number, number>;
+	/** Channels currently silent, and so left out of the drawing. */
+	hiddenChannels: Set<number>;
 	noteColors: MidiNoteColors | null;
+	/** Resolved colours per palette slot, alongside the `noteColors` cache. */
+	channelColors: Map<number, MidiNoteColors>;
 	lastRenderKey: string | null;
 	lastMinimapKey: string | null;
 	lastPlaybackKey: string | null;
@@ -195,6 +208,8 @@ function flattenMidiNotes(midi: Midi, source: string): MidiNoteEvent[] {
 				duration: note.duration,
 				name: note.name,
 				velocity: note.velocity,
+				// A note carries no channel of its own; it belongs to its track.
+				channel: track.channel,
 			});
 		}
 	}
@@ -222,6 +237,8 @@ function applyMidiNotes(
 		maxNoteDuration = Math.max(maxNoteDuration, note.duration);
 	}
 
+	// The range spans every note, hidden channels included, so that switching a
+	// channel off leaves the pitch axis — and every remaining note — where it is.
 	surface.notes = notes;
 	surface.minMidi = Math.floor(minMidi) - MIDI_RANGE_PADDING;
 	surface.maxMidi = Math.ceil(maxMidi) + MIDI_RANGE_PADDING;
@@ -248,6 +265,41 @@ function resolveMidiNoteColors(
 	};
 	surface.noteColors = colors;
 	return colors;
+}
+
+/**
+ * The colours of one channel: its palette slot when the view pairs it with a
+ * track, and the plain note colours when it does not.
+ */
+function resolveMidiChannelColors(
+	surface: MidiSeekSurfaceMetadata,
+	channel: number,
+): MidiNoteColors {
+	const paletteIndex = surface.channelPaletteIndex.get(channel);
+	if (paletteIndex === undefined) {
+		return resolveMidiNoteColors(surface);
+	}
+
+	const cached = surface.channelColors.get(paletteIndex);
+	if (cached) {
+		return cached;
+	}
+
+	const computed = getComputedStyle(surface.noteCanvas);
+	const read = (property: string): string =>
+		computed.getPropertyValue(property).trim();
+	const colors: MidiNoteColors = {
+		fill: read(`--midi-channel-${paletteIndex}-fill`),
+		border: read(`--midi-channel-${paletteIndex}-border`),
+		velocity: read(`--midi-channel-${paletteIndex}-color`),
+	};
+	surface.channelColors.set(paletteIndex, colors);
+	return colors;
+}
+
+/** A draw key ingredient, so hiding a channel invalidates the memoized render. */
+function hiddenChannelsKey(surface: MidiSeekSurfaceMetadata): string {
+	return [...surface.hiddenChannels].sort((a, b) => a - b).join(",");
 }
 
 /**
@@ -286,6 +338,7 @@ function renderMidiMinimap(
 		surface.notes.length,
 		surface.minMidi,
 		surface.maxMidi,
+		hiddenChannelsKey(surface),
 		Math.max(1, window.devicePixelRatio || 1),
 	].join("#");
 	if (surface.lastMinimapKey === drawKey) {
@@ -299,15 +352,16 @@ function renderMidiMinimap(
 	}
 
 	const safeDuration = sanitizeDuration(durationSeconds);
-	context.fillStyle = getComputedStyle(surface.zoomCanvas)
-		.getPropertyValue("--midi-note-color")
-		.trim();
 	const range = Math.max(1, surface.maxMidi - surface.minMidi + 1);
 	for (const note of surface.notes) {
-		if (safeDuration <= 0) {
+		if (safeDuration <= 0 || surface.hiddenChannels.has(note.channel)) {
 			continue;
 		}
 
+		context.fillStyle = resolveMidiChannelColors(
+			surface,
+			note.channel,
+		).velocity;
 		const x = (note.time / safeDuration) * width;
 		const w = Math.max(1, (note.duration / safeDuration) * width);
 		const y = ((surface.maxMidi - note.midi) / range) * height;
@@ -345,6 +399,7 @@ function renderMidiNotes(
 		surface.notes.length,
 		surface.minMidi,
 		surface.maxMidi,
+		hiddenChannelsKey(surface),
 		Math.max(1, window.devicePixelRatio || 1),
 	].join("#");
 	if (surface.lastRenderKey === renderKey) {
@@ -368,7 +423,6 @@ function renderMidiNotes(
 	// Draw in surface coordinates; the canvas only covers [tileStartPx, +width).
 	context.translate(-tileStartPx, 0);
 
-	const colors = resolveMidiNoteColors(surface);
 	const range = Math.max(1, surface.maxMidi - surface.minMidi + 1);
 	const rowHeight = height / range;
 	const noteHeight = Math.max(3, rowHeight - 2);
@@ -379,7 +433,6 @@ function renderMidiNotes(
 	const drawVelocityBar = noteHeight >= MIDI_VELOCITY_BAR_MIN_HEIGHT;
 
 	context.lineWidth = 1;
-	context.strokeStyle = colors.border;
 
 	const notes = surface.notes;
 	const startIndex = findFirstVisibleNoteIndex(
@@ -392,10 +445,14 @@ function renderMidiNotes(
 			break;
 		}
 
-		if (note.time + note.duration < visibleStartTime) {
+		if (
+			note.time + note.duration < visibleStartTime ||
+			surface.hiddenChannels.has(note.channel)
+		) {
 			continue;
 		}
 
+		const colors = resolveMidiChannelColors(surface, note.channel);
 		const left = note.time * pixelsPerSecond;
 		const width = Math.max(
 			MIN_MIDI_NOTE_WIDTH,
@@ -408,6 +465,7 @@ function renderMidiNotes(
 		context.fillStyle = colors.fill;
 		context.fillRect(left, top, width, noteHeight);
 		if (drawBorder) {
+			context.strokeStyle = colors.border;
 			context.strokeRect(left + 0.5, top + 0.5, width - 1, noteHeight - 1);
 		}
 
@@ -454,6 +512,32 @@ function resolveMidiTimelinePosition(
 	}
 
 	return clampTime(playerPosition, 0, duration);
+}
+
+/**
+ * Reads the `channels` block of a view. Palette slots are handed out by
+ * ascending channel number, so the colours stay put however the block is
+ * written down, and cycle once the file uses more channels than there are.
+ */
+function resolveChannelPairing(channels: Record<string, string> | undefined): {
+	channelTrackIds: Map<number, string>;
+	channelPaletteIndex: Map<number, number>;
+} {
+	const channelTrackIds = new Map<number, string>();
+	const channelPaletteIndex = new Map<number, number>();
+	if (!channels) {
+		return { channelTrackIds, channelPaletteIndex };
+	}
+
+	const ascending = Object.keys(channels)
+		.map((key) => Number(key))
+		.sort((a, b) => a - b);
+	ascending.forEach((channel, index) => {
+		channelTrackIds.set(channel, channels[String(channel)]);
+		channelPaletteIndex.set(channel, (index % MIDI_CHANNEL_PALETTE_SIZE) + 1);
+	});
+
+	return { channelTrackIds, channelPaletteIndex };
 }
 
 export function wrapMidiCanvases(ctx: ViewRenderer): void {
@@ -519,6 +603,10 @@ export function wrapMidiCanvases(ctx: ViewRenderer): void {
 			);
 			seekWrap.setAttribute("data-seek-surface", "midi");
 
+			const { channelTrackIds, channelPaletteIndex } = resolveChannelPairing(
+				config.channels,
+			);
+
 			const originalHeight = Math.max(1, canvasElement.height);
 			surface.style.height = `${originalHeight}px`;
 			noteCanvas.style.height = `${originalHeight}px`;
@@ -568,7 +656,11 @@ export function wrapMidiCanvases(ctx: ViewRenderer): void {
 				maxMidi: 0,
 				midiDurationSeconds: 0,
 				maxNoteDuration: 0,
+				channelTrackIds,
+				channelPaletteIndex,
+				hiddenChannels: new Set<number>(),
 				noteColors: null,
+				channelColors: new Map<number, MidiNoteColors>(),
 				lastRenderKey: null,
 				lastMinimapKey: null,
 				lastPlaybackKey: null,
@@ -610,6 +702,7 @@ export function reflowMidiDisplays(ctx: ViewRenderer): void {
 		this.midiSeekSurfaces.forEach((surface: MidiSeekSurfaceMetadata) => {
 			// Theme variables may have changed along with the layout.
 			surface.noteColors = null;
+			surface.channelColors.clear();
 			reflowTimelineSurface(surface, setMidiSurfaceWidth);
 		});
 	}).call(ctx);
@@ -722,6 +815,57 @@ export function refreshMidiNoteTiles(ctx: ViewRenderer): void {
 			renderMidiMinimap(surface, surfaceDuration);
 		});
 	}).call(ctx);
+}
+
+/**
+ * Points every paired channel at the current solo state. The draw keys carry the
+ * hidden set, so a refresh that changes nothing costs a key comparison.
+ */
+export function updateMidiChannelVisibility(
+	ctx: ViewRenderer,
+	runtimes: TrackRuntime[],
+): void {
+	(function (this: ViewRenderer) {
+		if (this.midiSeekSurfaces.length === 0) {
+			return;
+		}
+
+		const indexByTrackId = new Map<string, number>();
+		runtimes.forEach((runtime, index) => {
+			indexByTrackId.set(runtime.definition.id, index);
+		});
+
+		this.midiSeekSurfaces.forEach((surface: MidiSeekSurfaceMetadata) => {
+			surface.hiddenChannels.clear();
+			surface.channelTrackIds.forEach((trackId, channel) => {
+				const trackIndex = indexByTrackId.get(trackId);
+				if (trackIndex === undefined || !this.isTrackAudible(trackIndex)) {
+					surface.hiddenChannels.add(channel);
+				}
+			});
+		});
+
+		this.scheduleMidiNoteRefresh();
+	}).call(ctx);
+}
+
+/**
+ * The colour a track carries in the piano roll, for the views that repeat the
+ * channel code outside it. Null when no roll pairs the track with a channel.
+ */
+export function resolveMidiTrackChannelColor(
+	ctx: ViewRenderer,
+	trackId: string,
+): string | null {
+	for (const surface of ctx.midiSeekSurfaces) {
+		for (const [channel, pairedTrackId] of surface.channelTrackIds) {
+			if (pairedTrackId === trackId) {
+				return resolveMidiChannelColors(surface, channel).velocity;
+			}
+		}
+	}
+
+	return null;
 }
 
 export function scheduleMidiNoteRefresh(ctx: ViewRenderer): void {

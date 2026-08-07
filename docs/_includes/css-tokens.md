@@ -4,6 +4,7 @@
 
 | Token | Default |
 | --- | --- |
+| `--ts-font-ui` | `system-ui, sans-serif` |
 | `--ts-color-text-primary` | `#000000` |
 | `--ts-color-text-inverse` | `#ffffff` |
 | `--ts-color-text-muted` | `#dddddd` |
@@ -59,6 +60,18 @@
 | `--ts-color-accent-soft-50` | `rgba(237, 140, 1, 0.5)` |
 | `--ts-color-accent-soft-55` | `rgba(237, 140, 1, 0.55)` |
 | `--ts-color-accent-shadow` | `rgba(237, 140, 1, 0.18)` |
+| `--ts-color-channel-1` | `var(--ts-color-accent)` |
+| `--ts-color-channel-1-soft-30` | `var(--ts-color-accent-soft-30)` |
+| `--ts-color-channel-1-soft-55` | `var(--ts-color-accent-soft-55)` |
+| `--ts-color-channel-2` | `#c03328` |
+| `--ts-color-channel-2-soft-30` | `rgba(192, 51, 40, 0.25)` |
+| `--ts-color-channel-2-soft-55` | `rgba(192, 51, 40, 0.55)` |
+| `--ts-color-channel-3` | `#3d8b37` |
+| `--ts-color-channel-3-soft-30` | `rgba(61, 139, 55, 0.25)` |
+| `--ts-color-channel-3-soft-55` | `rgba(61, 139, 55, 0.55)` |
+| `--ts-color-channel-4` | `#2f6fb0` |
+| `--ts-color-channel-4-soft-30` | `rgba(47, 111, 176, 0.25)` |
+| `--ts-color-channel-4-soft-55` | `rgba(47, 111, 176, 0.55)` |
 | `--ts-color-overlay-dim` | `rgba(0, 0, 0, 0.5)` |
 | `--ts-color-overlay-dim-68` | `rgba(0, 0, 0, 0.65)` |
 | `--ts-color-overlay-dim-48` | `rgba(0, 0, 0, 0.48)` |

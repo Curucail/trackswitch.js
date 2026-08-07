@@ -4,6 +4,7 @@
 
 /** Every `--ts-*` custom property a config may override through a `css` block. */
 export const cssTokens = [
+	"--ts-font-ui",
 	"--ts-color-text-primary",
 	"--ts-color-text-inverse",
 	"--ts-color-text-muted",
@@ -59,6 +60,18 @@ export const cssTokens = [
 	"--ts-color-accent-soft-50",
 	"--ts-color-accent-soft-55",
 	"--ts-color-accent-shadow",
+	"--ts-color-channel-1",
+	"--ts-color-channel-1-soft-30",
+	"--ts-color-channel-1-soft-55",
+	"--ts-color-channel-2",
+	"--ts-color-channel-2-soft-30",
+	"--ts-color-channel-2-soft-55",
+	"--ts-color-channel-3",
+	"--ts-color-channel-3-soft-30",
+	"--ts-color-channel-3-soft-55",
+	"--ts-color-channel-4",
+	"--ts-color-channel-4-soft-30",
+	"--ts-color-channel-4-soft-55",
 	"--ts-color-overlay-dim",
 	"--ts-color-overlay-dim-68",
 	"--ts-color-overlay-dim-48",

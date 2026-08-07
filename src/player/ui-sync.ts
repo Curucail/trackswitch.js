@@ -61,6 +61,7 @@ export function applyTrackProperties(ctx: TrackSwitchControllerImpl): void {
 		ctx.getWaveformTimelineProjector(),
 		ctx.getWaveformTimelineContext(),
 	);
+	ctx.renderer.updateMidiChannelVisibility(ctx.runtimes);
 	ctx.renderMarkerLayers();
 	ctx.updateMarkerNavigation();
 

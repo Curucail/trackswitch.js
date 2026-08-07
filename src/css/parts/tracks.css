@@ -189,6 +189,11 @@
 	align-items: center;
 	justify-content: center;
 	transform: none;
+	/*
+	 * The renderer writes this property on a row whose track a piano roll pairs
+	 * with a MIDI channel; every other row keeps the inherited text colour.
+	 */
+	color: var(--ts-track-channel-color, currentColor);
 }
 
 .trackswitch .control li.solo .ts-icon-slot .ts-icon-svg {

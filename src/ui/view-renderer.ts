@@ -340,6 +340,8 @@ export class ViewRenderer {
 	public isTrackExclusive: (trackIndex: number) => boolean = () => false;
 	/** The same question for one `trackList`, used where a row's own list is known. */
 	public isGroupExclusive: (groupIndex: number) => boolean = () => false;
+	/** Whether a track is currently sounding, as an `audible` waveform reads it. */
+	public isTrackAudible: (trackIndex: number) => boolean = () => true;
 	/** Whether a `trackList` is the selected timeline of an aligned player. */
 	public isTrackListUnitActive: (groupIndex: number) => boolean = () => false;
 	public hasAlignment = false;
@@ -1346,6 +1348,14 @@ export class ViewRenderer {
 			timelineDuration,
 			useMidiLocalTimeline,
 		);
+	}
+
+	public updateMidiChannelVisibility(runtimes: TrackRuntime[]): void {
+		viewRendererMidi.updateMidiChannelVisibility(this, runtimes);
+	}
+
+	public resolveMidiTrackChannelColor(trackId: TrackId): string | null {
+		return viewRendererMidi.resolveMidiTrackChannelColor(this, trackId);
 	}
 
 	public updateMidiPlaybackState(

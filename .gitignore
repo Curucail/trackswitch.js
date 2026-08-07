@@ -19,6 +19,11 @@ docs/js/basic-pitch/
 docs/css/trackswitch.min.css
 docs/assets/multitracks/
 docs/assets/alignment/
+docs/assets/chorale-bricks/
+docs/assets/per-track-image/
+docs/assets/global-image/
+docs/assets/repeat/
+docs/assets/separation/
 .jekyll-cache/
 .jekyll-metadata
 .sass-cache/

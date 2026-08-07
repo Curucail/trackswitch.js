@@ -73,6 +73,14 @@ We show pre-configured players and explain the main concepts behind it.
   </li>
 
   <li class="ts-usecase-card">
+    <h2><a href="{{ '/use-cases/multi-instrument-transcription/' | relative_url }}">Multi-Instrument Transcription</a></h2>
+    <p>
+      One MIDI file transcribes a four-part ensemble. Each channel is paired with a recording,
+      takes a colour of its own, and is drawn only while that instrument is audible.
+    </p>
+  </li>
+
+  <li class="ts-usecase-card">
     <h2><a href="{{ '/use-cases/timeline-units/' | relative_url }}">Timeline Units</a></h2>
     <p>
       Alignment columns do not have to be in seconds. Declare samples, MIDI ticks, measures or pixels

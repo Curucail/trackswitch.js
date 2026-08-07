@@ -193,6 +193,9 @@ export function load(ctx: TrackSwitchControllerImpl): Promise<void> {
 				this.longestDuration,
 				this.isAlignmentMode(),
 			);
+			// The notes exist now, so the first paint can already drop the channels
+			// whose track starts out silent.
+			this.renderer.updateMidiChannelVisibility(this.runtimes);
 
 			if (this.isDestroyed) {
 				return;

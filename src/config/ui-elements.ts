@@ -73,6 +73,7 @@ const uiMidiAllowedKeys = keysOf<TrackSwitchMidiViewConfig>()([
 	"maxZoom",
 	"playbackFollowMode",
 	"timer",
+	"channels",
 	"markerLayers",
 	"css",
 ] as const);
@@ -498,6 +499,53 @@ function normalizeWaveformConfig(
 	return normalized;
 }
 
+/** The 16 channels of the MIDI specification, numbered as the files number them. */
+const MAX_MIDI_CHANNEL = 15;
+
+/**
+ * The channel-to-track pairing of a piano roll. Two channels may name the same
+ * track — one recording can carry two staves — so the values are not required
+ * to be distinct.
+ */
+function normalizeMidiChannels(
+	value: Record<string, TrackId> | undefined,
+	ctx: ViewNormalizeContext,
+): Record<string, TrackId> | undefined {
+	if (value === undefined) {
+		return undefined;
+	}
+
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		throw new Error(
+			"Invalid midi configuration: channels must be an object keyed by channel number.",
+		);
+	}
+
+	const normalized: Record<string, TrackId> = {};
+	for (const [key, trackId] of Object.entries(value)) {
+		const channel = Number(key);
+		if (
+			!Number.isInteger(channel) ||
+			channel < 0 ||
+			channel > MAX_MIDI_CHANNEL
+		) {
+			throw new Error(
+				`Invalid midi configuration: channel "${key}" must be an integer between 0 and ${MAX_MIDI_CHANNEL}.`,
+			);
+		}
+
+		if (ctx.media[trackId]?.type !== "audio") {
+			throw new Error(
+				`Invalid midi configuration: channel "${key}" names "${trackId}", which is not declared as type "audio" in media.`,
+			);
+		}
+
+		normalized[String(channel)] = trackId;
+	}
+
+	return normalized;
+}
+
 function normalizeMidiConfig(
 	midi: TrackSwitchMidiViewConfig,
 	ctx: ViewNormalizeContext,
@@ -523,6 +571,7 @@ function normalizeMidiConfig(
 			"midi",
 		),
 		timer: normalizeOptionalBoolean(midi.timer, "midi.timer"),
+		channels: normalizeMidiChannels(midi.channels, ctx),
 		markerLayers: normalizeMarkerLayers(midi.markerLayers, "midi", ctx),
 		css: normalizeCssOverrides(midi.css, "midi"),
 	};

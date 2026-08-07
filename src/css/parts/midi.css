@@ -7,6 +7,25 @@
 	margin: 0;
 	container-type: inline-size;
 	container-name: ts-midi;
+
+	/*
+	 * The theming hooks for a paired channel, declared here rather than on the
+	 * note layer so the zoom minimap inherits the same values. A view's `css`
+	 * block lands on this element too, so overriding a channel token recolours
+	 * that channel in this view alone.
+	 */
+	--midi-channel-1-fill: var(--ts-color-channel-1-soft-30);
+	--midi-channel-1-border: var(--ts-color-channel-1-soft-55);
+	--midi-channel-1-color: var(--ts-color-channel-1);
+	--midi-channel-2-fill: var(--ts-color-channel-2-soft-30);
+	--midi-channel-2-border: var(--ts-color-channel-2-soft-55);
+	--midi-channel-2-color: var(--ts-color-channel-2);
+	--midi-channel-3-fill: var(--ts-color-channel-3-soft-30);
+	--midi-channel-3-border: var(--ts-color-channel-3-soft-55);
+	--midi-channel-3-color: var(--ts-color-channel-3);
+	--midi-channel-4-fill: var(--ts-color-channel-4-soft-30);
+	--midi-channel-4-border: var(--ts-color-channel-4-soft-55);
+	--midi-channel-4-color: var(--ts-color-channel-4);
 }
 
 .trackswitch .midi-wrap .midi-scroll {

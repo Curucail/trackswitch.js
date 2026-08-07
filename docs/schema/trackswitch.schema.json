@@ -146,6 +146,10 @@
 		"TrackSwitchCssOverrides": {
 			"type": "object",
 			"properties": {
+				"--ts-font-ui": {
+					"type": "string",
+					"description": "Default: system-ui, sans-serif"
+				},
 				"--ts-color-text-primary": {
 					"type": "string",
 					"description": "Default: #000000"
@@ -365,6 +369,54 @@
 				"--ts-color-accent-shadow": {
 					"type": "string",
 					"description": "Default: rgba(237, 140, 1, 0.18)"
+				},
+				"--ts-color-channel-1": {
+					"type": "string",
+					"description": "Default: var(--ts-color-accent)"
+				},
+				"--ts-color-channel-1-soft-30": {
+					"type": "string",
+					"description": "Default: var(--ts-color-accent-soft-30)"
+				},
+				"--ts-color-channel-1-soft-55": {
+					"type": "string",
+					"description": "Default: var(--ts-color-accent-soft-55)"
+				},
+				"--ts-color-channel-2": {
+					"type": "string",
+					"description": "Default: #c03328"
+				},
+				"--ts-color-channel-2-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(192, 51, 40, 0.25)"
+				},
+				"--ts-color-channel-2-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(192, 51, 40, 0.55)"
+				},
+				"--ts-color-channel-3": {
+					"type": "string",
+					"description": "Default: #3d8b37"
+				},
+				"--ts-color-channel-3-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(61, 139, 55, 0.25)"
+				},
+				"--ts-color-channel-3-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(61, 139, 55, 0.55)"
+				},
+				"--ts-color-channel-4": {
+					"type": "string",
+					"description": "Default: #2f6fb0"
+				},
+				"--ts-color-channel-4-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(47, 111, 176, 0.25)"
+				},
+				"--ts-color-channel-4-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(47, 111, 176, 0.55)"
 				},
 				"--ts-color-overlay-dim": {
 					"type": "string",
@@ -1007,6 +1059,13 @@
 				},
 				"timer": {
 					"type": "boolean"
+				},
+				"channels": {
+					"type": "object",
+					"additionalProperties": {
+						"$ref": "#/definitions/TrackId"
+					},
+					"description": "Pairs MIDI channels with audio tracks, keyed by channel number. A paired channel takes a channel colour and is drawn only while its track is audible; a channel left out here is always drawn, in the accent colour."
 				},
 				"markerLayers": {
 					"type": "array",

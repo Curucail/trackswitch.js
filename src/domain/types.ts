@@ -220,6 +220,12 @@ export interface TrackSwitchMidiViewConfig {
 	maxZoom?: number;
 	playbackFollowMode?: WaveformPlaybackFollowMode;
 	timer?: boolean;
+	/**
+	 * Pairs MIDI channels with audio tracks, keyed by channel number. A paired
+	 * channel takes a channel colour and is drawn only while its track is
+	 * audible; a channel left out here is always drawn, in the accent colour.
+	 */
+	channels?: Record<string, TrackId>;
 	markerLayers?: MarkerLayerConfig[];
 	css?: TrackSwitchCssOverrides;
 }

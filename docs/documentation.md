@@ -964,12 +964,35 @@ A `midi` view shows a MIDI file as a piano roll. MIDI files do not create audio 
 | `maxZoom?` | `number` | `5` | Specifies the smallest visible interval in seconds, where `0` lifts the zoom limit. |
 | `playbackFollowMode?` | `"off" \| "center" \| "jump"` | `"center"` | Controls how the MIDI view moves with playback. |
 | `timer?` | `boolean` | `false` | Shows a local timer in the MIDI view. |
+| `channels?` | `object` | none | Pairs MIDI channels with audio tracks, keyed by channel number. |
 | `markerLayers?` | `MarkerLayerConfig[]` | none | Specifies marker layers on the piano roll. |
 | `css?` | `object` | none | Overrides [theming tokens](#theming) for this view. |
 
 `mediaID` must identify a `media` entry with `type: "midi"`.
 
 If `alignment.timelines` contains the same ID, the piano roll uses its local timeline for seeking, playback movement, loops, and markers.
+
+#### Channels
+
+A file that transcribes several instruments carries one channel per instrument. `channels` pairs those channels with the audio tracks of the player:
+
+```json
+{
+  "type": "midi",
+  "mediaID": "notes",
+  "channels": { "0": "soprano", "1": "alto", "2": "tenor", "3": "bass" }
+}
+```
+
+Each key is a channel number from 0 to 15, and each value names a `media` entry with `type: "audio"`. Two channels may name the same track.
+
+A paired channel is drawn only while its track is audible, following the same rule as a waveform with `"tracks": "audible"`. A channel the block leaves out is always drawn, in the accent colour.
+
+Paired channels take the colours `--ts-color-channel-1` to `--ts-color-channel-4` by ascending channel number, cycling after the fourth. The first colour is the accent, so a roll pairing a single channel looks like an unpaired one. A track row repeats the colour of its channel.
+
+The pitch axis spans every note of the file, hidden channels included, so switching a track off never rescales the roll.
+
+See [Multi-Instrument Transcription]({{ '/use-cases/multi-instrument-transcription/' | relative_url }}) for a complete player.
 
 ### `sheetMusic`
 
