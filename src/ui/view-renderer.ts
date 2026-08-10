@@ -1354,8 +1354,8 @@ export class ViewRenderer {
 		viewRendererMidi.updateMidiChannelVisibility(this, runtimes);
 	}
 
-	public resolveMidiTrackChannelColor(trackId: TrackId): string | null {
-		return viewRendererMidi.resolveMidiTrackChannelColor(this, trackId);
+	public resolveMidiTrackChannelColors(trackId: TrackId): string[] | null {
+		return viewRendererMidi.resolveMidiTrackChannelColors(this, trackId);
 	}
 
 	public updateMidiPlaybackState(

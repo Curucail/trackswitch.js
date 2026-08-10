@@ -106,6 +106,28 @@ export function renderIconSlotHtml(
 	);
 }
 
+const iconMaskDataUriByName = new Map<TrackSwitchIconName, string>();
+
+/**
+ * A CSS `mask-image` source shaped like the given icon, for colouring it with
+ * something a plain `color` can't express — a hard-edged split, for instance.
+ * Alpha-masks from the icon's own outline, so it stays exact through icon
+ * swaps (e.g. a `solo` button's circle/circle-check/circle-dot states).
+ */
+export function getIconMaskDataUri(iconName: TrackSwitchIconName): string {
+	let uri = iconMaskDataUriByName.get(iconName);
+	if (uri === undefined) {
+		// The inline markup skips xmlns since it's only ever set via innerHTML;
+		// a standalone image source (what a CSS mask needs) requires it.
+		const masked = ICON_SVG_BY_NAME[iconName]
+			.replace(/currentColor/g, "#000")
+			.replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" ');
+		uri = `url("data:image/svg+xml,${encodeURIComponent(masked)}")`;
+		iconMaskDataUriByName.set(iconName, uri);
+	}
+	return uri;
+}
+
 export function getHostIconSlot(host: HTMLElement): HTMLElement | null {
 	const slot = host.querySelector(".ts-icon-slot");
 	return slot instanceof HTMLElement ? slot : null;

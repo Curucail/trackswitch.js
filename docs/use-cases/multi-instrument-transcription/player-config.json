@@ -4,22 +4,22 @@
 		"soprano": {
 			"type": "audio",
 			"title": "Soprano - Alto saxophone",
-			"src": "../../assets/multi-instrument-transcription/01_as.m4a"
+			"src": "../../assets/multi-instrument-transcription/01_as.mp3"
 		},
 		"alto": {
 			"type": "audio",
 			"title": "Alto - Clarinet",
-			"src": "../../assets/multi-instrument-transcription/02_cl.m4a"
+			"src": "../../assets/multi-instrument-transcription/02_cl.mp3"
 		},
 		"tenor": {
 			"type": "audio",
 			"title": "Tenor - Trombone",
-			"src": "../../assets/multi-instrument-transcription/03_tb.m4a"
+			"src": "../../assets/multi-instrument-transcription/03_tb.mp3"
 		},
 		"bass": {
 			"type": "audio",
 			"title": "Bass - Tuba",
-			"src": "../../assets/multi-instrument-transcription/04_tba.m4a"
+			"src": "../../assets/multi-instrument-transcription/04_tba.mp3"
 		},
 		"notes": {
 			"type": "midi",
@@ -29,13 +29,13 @@
 	"views": [
 		{
 			"type": "navigationBar",
-			"controls": ["playback", "globalVolume", "looping", "timer", "seekBar"]
+			"controls": ["playback", "globalVolume", "looping", "timer"]
 		},
 		{
 			"type": "midi",
 			"mediaID": "notes",
 			"height": 260,
-			"channels": {
+			"channelToTrackIDMap": {
 				"0": "soprano",
 				"1": "alto",
 				"2": "tenor",
@@ -45,7 +45,7 @@
 		{
 			"type": "trackList",
 			"tracks": ["soprano", "alto", "tenor", "bass"],
-			"trackVolumeControls": true
+			"trackPanControls": "balance"
 		}
 	]
 }

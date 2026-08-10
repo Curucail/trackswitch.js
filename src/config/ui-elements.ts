@@ -73,7 +73,8 @@ const uiMidiAllowedKeys = keysOf<TrackSwitchMidiViewConfig>()([
 	"maxZoom",
 	"playbackFollowMode",
 	"timer",
-	"channels",
+	"channelToTrackIDMap",
+	"colorPerChannel",
 	"markerLayers",
 	"css",
 ] as const);
@@ -507,7 +508,7 @@ const MAX_MIDI_CHANNEL = 15;
  * track — one recording can carry two staves — so the values are not required
  * to be distinct.
  */
-function normalizeMidiChannels(
+function normalizeMidiChannelToTrackIDMap(
 	value: Record<string, TrackId> | undefined,
 	ctx: ViewNormalizeContext,
 ): Record<string, TrackId> | undefined {
@@ -517,7 +518,7 @@ function normalizeMidiChannels(
 
 	if (typeof value !== "object" || value === null || Array.isArray(value)) {
 		throw new Error(
-			"Invalid midi configuration: channels must be an object keyed by channel number.",
+			"Invalid midi configuration: channelToTrackIDMap must be an object keyed by channel number.",
 		);
 	}
 
@@ -571,7 +572,14 @@ function normalizeMidiConfig(
 			"midi",
 		),
 		timer: normalizeOptionalBoolean(midi.timer, "midi.timer"),
-		channels: normalizeMidiChannels(midi.channels, ctx),
+		channelToTrackIDMap: normalizeMidiChannelToTrackIDMap(
+			midi.channelToTrackIDMap,
+			ctx,
+		),
+		colorPerChannel: normalizeOptionalBoolean(
+			midi.colorPerChannel,
+			"midi.colorPerChannel",
+		),
 		markerLayers: normalizeMarkerLayers(midi.markerLayers, "midi", ctx),
 		css: normalizeCssOverrides(midi.css, "midi"),
 	};

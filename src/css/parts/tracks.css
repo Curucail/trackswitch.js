@@ -219,6 +219,35 @@
 	transform: none;
 }
 
+/*
+ * A track paired with more than one MIDI channel repeats every channel's
+ * colour instead of picking one: the plain SVG hides behind a masked,
+ * hard-stopped gradient shaped like the icon itself, so the split survives
+ * the icon swapping between circle/circle-check/circle-dot.
+ */
+.trackswitch .control li.solo .ts-icon-slot.split-channel-color {
+	position: relative;
+}
+
+.trackswitch .control li.solo .ts-icon-slot.split-channel-color .ts-icon-svg {
+	visibility: hidden;
+}
+
+.trackswitch .control li.solo .ts-icon-slot.split-channel-color::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background: var(--ts-track-split-gradient);
+	-webkit-mask-image: var(--ts-track-split-mask);
+	mask-image: var(--ts-track-split-mask);
+	-webkit-mask-repeat: no-repeat;
+	mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+	mask-position: center;
+	-webkit-mask-size: contain;
+	mask-size: contain;
+}
+
 .trackswitch .control li.solo.radio {
 	margin: 0;
 }

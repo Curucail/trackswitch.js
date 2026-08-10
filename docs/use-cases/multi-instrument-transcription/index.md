@@ -1,18 +1,17 @@
 ---
 layout: default
-title: Multi-Instrument Transcription
+title: Multi-Channel MIDI
 description: One MIDI transcription of a four-part ensemble, coloured per channel and following the audible tracks.
 permalink: /use-cases/multi-instrument-transcription/
 body_class: docs-page docs-page--narrow
 ---
 
-# Multi-Instrument Transcription
+# Multi-Channel MIDI
 
-A transcription of an ensemble recording usually arrives as a single MIDI file with one channel per instrument. Drawn in one colour, such a file tells you what was played but not by whom.
-
-A `midi` view can pair its channels with the audio tracks of the player. A paired channel takes a colour of its own and is drawn only while its track is audible, so the piano roll always shows exactly the instruments you are hearing.
-
-The player below contains a four-part chorale, each voice recorded separately, together with one MIDI transcription of all four. Switch a voice off and its notes leave the roll; the remaining notes stay where they are.
+MIDI files can contain note events on multiple channels.
+This is often used to encode different instruments playing at the same time.
+One example where this is useful is Multi-Instrument Transcription.
+Trackswitch supports displaying multiple MIDI channels in MIDI views, where note events are colored per channel.
 
 <div class="ts-usecase-showcase">
   <aside class="ts-usecase-showcase__code-callout" aria-label="Copy player code">
@@ -31,18 +30,28 @@ The player below contains a four-part chorale, each voice recorded separately, t
   </div>
 </div>
 
-Audio data: [Chorale Bricks](https://www.audiolabs-erlangen.de/resources/MIR/2025-ChoraleBricks), Drese, *Jesu geh voran*. The same recording session appears in [Shared Timeline - Groups]({{ '/use-cases/shared-timeline-groups/' | relative_url }}), where each voice can be heard on several different instruments.
+Audio data: [ChoraleWind](https://www.audiolabs-erlangen.de/resources/MIR/2026-ChoraleWind), Drese, *Jesu geh voran*.
 
-## Pairing channels with tracks
+## How it works
 
-The pairing is declared on the `midi` view, keyed by channel number:
+MIDI views color the note events separately per channel by default — `colorPerChannel` defaults to `true`, so this needs no configuration even for a single combined recording:
+
+```json
+{
+  "type": "midi",
+  "mediaID": "notes",
+  "height": 260
+}
+```
+
+Additionally, specific tracks can be assigned to each MIDI channel to show or hide MIDI note events depending on the audible track selection:
 
 ```json
 {
   "type": "midi",
   "mediaID": "notes",
   "height": 260,
-  "channels": {
+  "channelToTrackIDMap": {
     "0": "soprano",
     "1": "alto",
     "2": "tenor",
@@ -51,43 +60,26 @@ The pairing is declared on the `midi` view, keyed by channel number:
 }
 ```
 
-Each value names a `media` entry of type `audio`. Two channels may name the same track, which is what a transcription of a two-handed piano part needs.
+Each value names a media entry of type `audio`. Two channels may name the same track, which is what a transcription of a two-handed piano part needs — the track's row then shows both colours, split with a hard edge.
 
-Colours are handed out by ascending channel number — orange, red, green, blue, then around again. The first colour is the accent of the player, so a roll that pairs a single channel keeps the appearance of an unpaired one. Every colour is a [theming token](../../documentation.html#theming), so a view can override one on its own:
+A channel `channelToTrackIDMap` leaves out is still coloured — it's just always drawn, regardless of which tracks are audible. Setting `colorPerChannel` to `false` turns coloring off entirely, so every channel falls back to the plain accent, whether or not it's paired with a track:
 
 ```json
 {
   "type": "midi",
   "mediaID": "notes",
-  "channels": { "0": "soprano", "1": "alto" },
-  "css": { "--ts-color-channel-2": "#8844cc" }
+  "colorPerChannel": false,
+  "channelToTrackIDMap": { "0": "soprano", "1": "alto" }
 }
 ```
 
-The track rows repeat the colour of their channel, so the list and the notes read as one code.
-
-## Visibility follows the audible tracks
-
-A paired channel is drawn while its track sounds and is left out while it does not, which is the same rule a waveform with `"tracks": "audible"` follows. Anything that changes the selection therefore changes the roll: a solo button, a preset, a track volume of zero.
-
-A channel the `channels` block leaves out is always drawn, in the accent colour. That way a percussion or click channel with no recording of its own stays visible whatever is selected.
-
-The pitch axis spans every note of the file, hidden channels included. Switching a voice off empties its band of the roll but never rescales the others.
-
-## The track list
-
-The four tracks belong to one `trackList` without a `soloGroup`:
+Colours are handed out by ascending channel number — orange, red, green, blue, purple, brown, pink, gray, olive, cyan, then around again. The first colour is the accent of the player, so a roll with a single channel keeps the appearance of an unpaired one. Every colour is a [theming token](../../documentation.html#theming), so a view can override one on its own:
 
 ```json
 {
-  "type": "trackList",
-  "tracks": ["soprano", "alto", "tenor", "bass"],
-  "trackVolumeControls": true
+  "type": "midi",
+  "mediaID": "notes",
+  "channelToTrackIDMap": { "0": "soprano", "1": "alto" },
+  "css": { "--ts-color-channel-2": "#8844cc" }
 }
 ```
-
-Without a `soloGroup` the rows are ordinary toggles, so the four voices sound together and any subset of them can be switched off. A list that declares a `soloGroup` works just as well — its rows behave as radio buttons, and the roll then shows one channel at a time.
-
-## Timelines
-
-The recordings and the transcription share one timeline here, so the player needs no `alignment` block. A transcription that runs on its own clock — a MIDI rendition of a different performance, or one authored in ticks — is aligned like any other medium; see [Aligned Timelines]({{ '/use-cases/aligned-timelines/' | relative_url }}) and [Timeline Units]({{ '/use-cases/timeline-units/' | relative_url }}). Channel colours and channel visibility work the same way in an aligned player.

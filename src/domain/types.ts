@@ -222,10 +222,16 @@ export interface TrackSwitchMidiViewConfig {
 	timer?: boolean;
 	/**
 	 * Pairs MIDI channels with audio tracks, keyed by channel number. A paired
-	 * channel takes a channel colour and is drawn only while its track is
-	 * audible; a channel left out here is always drawn, in the accent colour.
+	 * channel is drawn only while its track is audible. Two channels may name
+	 * the same track; the track's row then splits its colour across both.
 	 */
-	channels?: Record<string, TrackId>;
+	channelToTrackIDMap?: Record<string, TrackId>;
+	/**
+	 * Gives every channel in the file its own palette colour, independently of
+	 * `channelToTrackIDMap`. Defaults to `true`. With this off, every channel
+	 * draws in the plain, unpaired colour regardless of the map.
+	 */
+	colorPerChannel?: boolean;
 	markerLayers?: MarkerLayerConfig[];
 	css?: TrackSwitchCssOverrides;
 }

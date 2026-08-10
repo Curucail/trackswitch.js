@@ -26,6 +26,24 @@
 	--midi-channel-4-fill: var(--ts-color-channel-4-soft-30);
 	--midi-channel-4-border: var(--ts-color-channel-4-soft-55);
 	--midi-channel-4-color: var(--ts-color-channel-4);
+	--midi-channel-5-fill: var(--ts-color-channel-5-soft-30);
+	--midi-channel-5-border: var(--ts-color-channel-5-soft-55);
+	--midi-channel-5-color: var(--ts-color-channel-5);
+	--midi-channel-6-fill: var(--ts-color-channel-6-soft-30);
+	--midi-channel-6-border: var(--ts-color-channel-6-soft-55);
+	--midi-channel-6-color: var(--ts-color-channel-6);
+	--midi-channel-7-fill: var(--ts-color-channel-7-soft-30);
+	--midi-channel-7-border: var(--ts-color-channel-7-soft-55);
+	--midi-channel-7-color: var(--ts-color-channel-7);
+	--midi-channel-8-fill: var(--ts-color-channel-8-soft-30);
+	--midi-channel-8-border: var(--ts-color-channel-8-soft-55);
+	--midi-channel-8-color: var(--ts-color-channel-8);
+	--midi-channel-9-fill: var(--ts-color-channel-9-soft-30);
+	--midi-channel-9-border: var(--ts-color-channel-9-soft-55);
+	--midi-channel-9-color: var(--ts-color-channel-9);
+	--midi-channel-10-fill: var(--ts-color-channel-10-soft-30);
+	--midi-channel-10-border: var(--ts-color-channel-10-soft-55);
+	--midi-channel-10-color: var(--ts-color-channel-10);
 }
 
 .trackswitch .midi-wrap .midi-scroll {

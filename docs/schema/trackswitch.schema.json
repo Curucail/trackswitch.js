@@ -418,6 +418,78 @@
 					"type": "string",
 					"description": "Default: rgba(47, 111, 176, 0.55)"
 				},
+				"--ts-color-channel-5": {
+					"type": "string",
+					"description": "Default: #9467bd"
+				},
+				"--ts-color-channel-5-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(148, 103, 189, 0.25)"
+				},
+				"--ts-color-channel-5-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(148, 103, 189, 0.55)"
+				},
+				"--ts-color-channel-6": {
+					"type": "string",
+					"description": "Default: #8c564b"
+				},
+				"--ts-color-channel-6-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(140, 86, 75, 0.25)"
+				},
+				"--ts-color-channel-6-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(140, 86, 75, 0.55)"
+				},
+				"--ts-color-channel-7": {
+					"type": "string",
+					"description": "Default: #e377c2"
+				},
+				"--ts-color-channel-7-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(227, 119, 194, 0.25)"
+				},
+				"--ts-color-channel-7-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(227, 119, 194, 0.55)"
+				},
+				"--ts-color-channel-8": {
+					"type": "string",
+					"description": "Default: #7f7f7f"
+				},
+				"--ts-color-channel-8-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(127, 127, 127, 0.25)"
+				},
+				"--ts-color-channel-8-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(127, 127, 127, 0.55)"
+				},
+				"--ts-color-channel-9": {
+					"type": "string",
+					"description": "Default: #bcbd22"
+				},
+				"--ts-color-channel-9-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(188, 189, 34, 0.25)"
+				},
+				"--ts-color-channel-9-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(188, 189, 34, 0.55)"
+				},
+				"--ts-color-channel-10": {
+					"type": "string",
+					"description": "Default: #17becf"
+				},
+				"--ts-color-channel-10-soft-30": {
+					"type": "string",
+					"description": "Default: rgba(23, 190, 207, 0.25)"
+				},
+				"--ts-color-channel-10-soft-55": {
+					"type": "string",
+					"description": "Default: rgba(23, 190, 207, 0.55)"
+				},
 				"--ts-color-overlay-dim": {
 					"type": "string",
 					"description": "Default: rgba(0, 0, 0, 0.5)"
@@ -1060,12 +1132,16 @@
 				"timer": {
 					"type": "boolean"
 				},
-				"channels": {
+				"channelToTrackIDMap": {
 					"type": "object",
 					"additionalProperties": {
 						"$ref": "#/definitions/TrackId"
 					},
-					"description": "Pairs MIDI channels with audio tracks, keyed by channel number. A paired channel takes a channel colour and is drawn only while its track is audible; a channel left out here is always drawn, in the accent colour."
+					"description": "Pairs MIDI channels with audio tracks, keyed by channel number. A paired channel is drawn only while its track is audible. Two channels may name the same track; the track's row then splits its colour across both."
+				},
+				"colorPerChannel": {
+					"type": "boolean",
+					"description": "Gives every channel in the file its own palette colour, independently of `channelToTrackIDMap`. Defaults to `true`. With this off, every channel draws in the plain, unpaired colour regardless of the map."
 				},
 				"markerLayers": {
 					"type": "array",

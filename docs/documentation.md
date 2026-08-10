@@ -964,7 +964,8 @@ A `midi` view shows a MIDI file as a piano roll. MIDI files do not create audio 
 | `maxZoom?` | `number` | `5` | Specifies the smallest visible interval in seconds, where `0` lifts the zoom limit. |
 | `playbackFollowMode?` | `"off" \| "center" \| "jump"` | `"center"` | Controls how the MIDI view moves with playback. |
 | `timer?` | `boolean` | `false` | Shows a local timer in the MIDI view. |
-| `channels?` | `object` | none | Pairs MIDI channels with audio tracks, keyed by channel number. |
+| `channelToTrackIDMap?` | `object` | none | Pairs MIDI channels with audio tracks, keyed by channel number. |
+| `colorPerChannel?` | `boolean` | `true` | Gives every channel in the file its own palette colour. |
 | `markerLayers?` | `MarkerLayerConfig[]` | none | Specifies marker layers on the piano roll. |
 | `css?` | `object` | none | Overrides [theming tokens](#theming) for this view. |
 
@@ -974,21 +975,23 @@ If `alignment.timelines` contains the same ID, the piano roll uses its local tim
 
 #### Channels
 
-A file that transcribes several instruments carries one channel per instrument. `channels` pairs those channels with the audio tracks of the player:
+A file that transcribes several instruments carries one channel per instrument. With `colorPerChannel` at its default of `true`, every channel already takes its own colour — a single combined recording gets a legible piano roll with no further configuration.
+
+`channelToTrackIDMap` additionally pairs channels with the audio tracks of the player, so a channel is drawn only while its track is audible:
 
 ```json
 {
   "type": "midi",
   "mediaID": "notes",
-  "channels": { "0": "soprano", "1": "alto", "2": "tenor", "3": "bass" }
+  "channelToTrackIDMap": { "0": "soprano", "1": "alto", "2": "tenor", "3": "bass" }
 }
 ```
 
-Each key is a channel number from 0 to 15, and each value names a `media` entry with `type: "audio"`. Two channels may name the same track.
+Each key is a channel number from 0 to 15, and each value names a `media` entry with `type: "audio"`. Two channels may name the same track — the track's row then splits its colour across both, with a hard edge, instead of picking just one.
 
-A paired channel is drawn only while its track is audible, following the same rule as a waveform with `"tracks": "audible"`. A channel the block leaves out is always drawn, in the accent colour.
+A paired channel is drawn only while its track is audible, following the same rule as a waveform with `"tracks": "audible"`. A channel the map leaves out is always drawn, still in its own colour by default. Set `colorPerChannel` to `false` to turn off per-channel colour entirely — every channel then falls back to the plain, unpaired colour, whether or not it's in the map.
 
-Paired channels take the colours `--ts-color-channel-1` to `--ts-color-channel-4` by ascending channel number, cycling after the fourth. The first colour is the accent, so a roll pairing a single channel looks like an unpaired one. A track row repeats the colour of its channel.
+Coloured channels take the colours `--ts-color-channel-1` to `--ts-color-channel-10` by ascending channel number, cycling after the tenth. The first colour is the accent, so a file with a single channel looks like it did before this view had a palette at all.
 
 The pitch axis spans every note of the file, hidden channels included, so switching a track off never rescales the roll.
 

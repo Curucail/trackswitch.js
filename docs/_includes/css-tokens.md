@@ -72,6 +72,24 @@
 | `--ts-color-channel-4` | `#2f6fb0` |
 | `--ts-color-channel-4-soft-30` | `rgba(47, 111, 176, 0.25)` |
 | `--ts-color-channel-4-soft-55` | `rgba(47, 111, 176, 0.55)` |
+| `--ts-color-channel-5` | `#9467bd` |
+| `--ts-color-channel-5-soft-30` | `rgba(148, 103, 189, 0.25)` |
+| `--ts-color-channel-5-soft-55` | `rgba(148, 103, 189, 0.55)` |
+| `--ts-color-channel-6` | `#8c564b` |
+| `--ts-color-channel-6-soft-30` | `rgba(140, 86, 75, 0.25)` |
+| `--ts-color-channel-6-soft-55` | `rgba(140, 86, 75, 0.55)` |
+| `--ts-color-channel-7` | `#e377c2` |
+| `--ts-color-channel-7-soft-30` | `rgba(227, 119, 194, 0.25)` |
+| `--ts-color-channel-7-soft-55` | `rgba(227, 119, 194, 0.55)` |
+| `--ts-color-channel-8` | `#7f7f7f` |
+| `--ts-color-channel-8-soft-30` | `rgba(127, 127, 127, 0.25)` |
+| `--ts-color-channel-8-soft-55` | `rgba(127, 127, 127, 0.55)` |
+| `--ts-color-channel-9` | `#bcbd22` |
+| `--ts-color-channel-9-soft-30` | `rgba(188, 189, 34, 0.25)` |
+| `--ts-color-channel-9-soft-55` | `rgba(188, 189, 34, 0.55)` |
+| `--ts-color-channel-10` | `#17becf` |
+| `--ts-color-channel-10-soft-30` | `rgba(23, 190, 207, 0.25)` |
+| `--ts-color-channel-10-soft-55` | `rgba(23, 190, 207, 0.55)` |
 | `--ts-color-overlay-dim` | `rgba(0, 0, 0, 0.5)` |
 | `--ts-color-overlay-dim-68` | `rgba(0, 0, 0, 0.65)` |
 | `--ts-color-overlay-dim-48` | `rgba(0, 0, 0, 0.48)` |

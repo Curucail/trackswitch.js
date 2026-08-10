@@ -63,8 +63,9 @@
 
 	/*
 	 * Piano-roll channel colours, handed out in this order to the channels a
-	 * `midi` view pairs with a track. The first one is the accent, so a roll
-	 * that pairs a single channel keeps the look of an unpaired one.
+	 * `midi` view colours (see `colorPerChannel`). The first one is the accent,
+	 * so a roll with a single channel keeps the look of an unpaired one. 5-10
+	 * continue with the tab10 categorical palette's remaining entries.
 	 */
 	--ts-color-channel-1: var(--ts-color-accent);
 	--ts-color-channel-1-soft-30: var(--ts-color-accent-soft-30);
@@ -78,6 +79,24 @@
 	--ts-color-channel-4: #2f6fb0;
 	--ts-color-channel-4-soft-30: rgba(47, 111, 176, 0.25);
 	--ts-color-channel-4-soft-55: rgba(47, 111, 176, 0.55);
+	--ts-color-channel-5: #9467bd;
+	--ts-color-channel-5-soft-30: rgba(148, 103, 189, 0.25);
+	--ts-color-channel-5-soft-55: rgba(148, 103, 189, 0.55);
+	--ts-color-channel-6: #8c564b;
+	--ts-color-channel-6-soft-30: rgba(140, 86, 75, 0.25);
+	--ts-color-channel-6-soft-55: rgba(140, 86, 75, 0.55);
+	--ts-color-channel-7: #e377c2;
+	--ts-color-channel-7-soft-30: rgba(227, 119, 194, 0.25);
+	--ts-color-channel-7-soft-55: rgba(227, 119, 194, 0.55);
+	--ts-color-channel-8: #7f7f7f;
+	--ts-color-channel-8-soft-30: rgba(127, 127, 127, 0.25);
+	--ts-color-channel-8-soft-55: rgba(127, 127, 127, 0.55);
+	--ts-color-channel-9: #bcbd22;
+	--ts-color-channel-9-soft-30: rgba(188, 189, 34, 0.25);
+	--ts-color-channel-9-soft-55: rgba(188, 189, 34, 0.55);
+	--ts-color-channel-10: #17becf;
+	--ts-color-channel-10-soft-30: rgba(23, 190, 207, 0.25);
+	--ts-color-channel-10-soft-55: rgba(23, 190, 207, 0.55);
 
 	--ts-color-overlay-dim: rgba(0, 0, 0, 0.5);
 	--ts-color-overlay-dim-68: rgba(0, 0, 0, 0.65);

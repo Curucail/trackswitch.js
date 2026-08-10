@@ -15,7 +15,13 @@ import {
 } from "../shared/dom";
 import { formatBytesToHumanReadable } from "../shared/format";
 import { clampPercent } from "../shared/math";
-import { getHostIconSlot, renderIconSlotHtml, setHostIcon } from "./icons";
+import type { TrackSwitchIconName } from "./icons";
+import {
+	getHostIconSlot,
+	getIconMaskDataUri,
+	renderIconSlotHtml,
+	setHostIcon,
+} from "./icons";
 import type {
 	PerTrackImageSource,
 	ViewRenderer,
@@ -211,6 +217,61 @@ function sanitizePan(value: number): number {
 	}
 
 	return clampTime(value, -1, 1);
+}
+
+/** A top-to-bottom gradient with hard edges, one even band per colour. */
+function buildHardStopGradient(colors: string[]): string {
+	const bandPercent = 100 / colors.length;
+	const stops = colors.map((color, index) => {
+		const start = (index * bandPercent).toFixed(4);
+		const end = ((index + 1) * bandPercent).toFixed(4);
+		return `${color} ${start}%, ${color} ${end}%`;
+	});
+	return `linear-gradient(180deg, ${stops.join(", ")})`;
+}
+
+/**
+ * Colours a track row's `solo` icon: a plain `currentColor` swap for one
+ * channel, a hard-edged vertical split — masked to the icon's own outline, so
+ * it survives the icon swapping between circle/circle-check/circle-dot — when
+ * more than one channel shares the track.
+ */
+function applyTrackChannelColors(
+	row: HTMLElement,
+	solo: Element | null,
+	colors: string[] | null,
+): void {
+	const iconSlot = solo instanceof HTMLElement ? getHostIconSlot(solo) : null;
+
+	if (!colors || colors.length <= 1) {
+		if (colors?.[0]) {
+			row.style.setProperty("--ts-track-channel-color", colors[0]);
+		} else {
+			row.style.removeProperty("--ts-track-channel-color");
+		}
+		if (iconSlot) {
+			iconSlot.classList.remove("split-channel-color");
+			iconSlot.style.removeProperty("--ts-track-split-mask");
+			iconSlot.style.removeProperty("--ts-track-split-gradient");
+		}
+		return;
+	}
+
+	row.style.removeProperty("--ts-track-channel-color");
+	if (!iconSlot) {
+		return;
+	}
+
+	const iconName = iconSlot.getAttribute("data-icon") as TrackSwitchIconName;
+	iconSlot.classList.add("split-channel-color");
+	iconSlot.style.setProperty(
+		"--ts-track-split-mask",
+		getIconMaskDataUri(iconName),
+	);
+	iconSlot.style.setProperty(
+		"--ts-track-split-gradient",
+		buildHardStopGradient(colors),
+	);
 }
 
 function applySoloIconState(
@@ -1535,19 +1596,13 @@ export function updateTrackControls(
 
 			const isLocked =
 				!!syncLockedTrackIndexes && syncLockedTrackIndexes.has(index);
-			// A row repeats the colour its track carries in a piano roll, so the
+			// A row repeats the colour(s) its track carries in a piano roll, so the
 			// list and the notes read as one code.
-			const channelColor = this.resolveMidiTrackChannelColor(
+			const channelColors = this.resolveMidiTrackChannelColors(
 				runtime.definition.id,
 			);
 
 			rows.forEach((row: HTMLElement) => {
-				if (channelColor) {
-					row.style.setProperty("--ts-track-channel-color", channelColor);
-				} else {
-					row.style.removeProperty("--ts-track-channel-color");
-				}
-
 				const solo = row.querySelector(".solo");
 				// A track may be listed twice, so each row follows the list it sits in.
 				const singleSoloMode = this.isGroupExclusive(trackGroupIndexOfRow(row));
@@ -1564,6 +1619,8 @@ export function updateTrackControls(
 						!!syncEnabled,
 					);
 				}
+
+				applyTrackChannelColors(row, solo, channelColors);
 
 				const trackVolumeSlider = row.querySelector(".track-volume-slider");
 				if (trackVolumeSlider instanceof HTMLInputElement) {

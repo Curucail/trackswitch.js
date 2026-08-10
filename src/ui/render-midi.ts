@@ -35,7 +35,7 @@ const MIDI_VELOCITY_BAR_MIN_HEIGHT = 8;
 const MIDI_VELOCITY_BAR_MIN_WIDTH = 6;
 
 /** How many channel colours the stylesheet declares, cycled past the last one. */
-const MIDI_CHANNEL_PALETTE_SIZE = 4;
+const MIDI_CHANNEL_PALETTE_SIZE = 10;
 
 interface MidiNoteEvent {
 	midi: number;
@@ -83,7 +83,9 @@ export interface MidiSeekSurfaceMetadata {
 	maxNoteDuration: number;
 	/** The audio track each paired channel follows, from the view config. */
 	channelTrackIds: Map<number, string>;
-	/** Palette slot of a paired channel, by ascending channel number. */
+	/** Whether every channel in the file takes its own palette colour. */
+	colorPerChannel: boolean;
+	/** Palette slot of a coloured channel, by ascending channel number. */
 	channelPaletteIndex: Map<number, number>;
 	/** Channels currently silent, and so left out of the drawing. */
 	hiddenChannels: Set<number>;
@@ -244,8 +246,41 @@ function applyMidiNotes(
 	surface.maxMidi = Math.ceil(maxMidi) + MIDI_RANGE_PADDING;
 	surface.midiDurationSeconds = durationSeconds;
 	surface.maxNoteDuration = maxNoteDuration;
+	assignChannelPalette(surface, notes);
 	surface.lastRenderKey = null;
 	surface.lastMinimapKey = null;
+}
+
+/**
+ * Hands out palette slots by ascending channel number, once the file's own
+ * channels are known. With `colorPerChannel` on, every channel the file uses
+ * gets a slot — paired with a track or not — so the block is a pure
+ * audibility pairing and coloring no longer depends on it. Off, no channel
+ * gets a slot and every note falls back to the plain, unpaired colour.
+ */
+function assignChannelPalette(
+	surface: MidiSeekSurfaceMetadata,
+	notes: MidiNoteEvent[],
+): void {
+	surface.channelPaletteIndex.clear();
+	surface.channelColors.clear();
+	if (!surface.colorPerChannel) {
+		return;
+	}
+
+	const channels = new Set<number>(surface.channelTrackIds.keys());
+	for (const note of notes) {
+		channels.add(note.channel);
+	}
+
+	[...channels]
+		.sort((a, b) => a - b)
+		.forEach((channel, index) => {
+			surface.channelPaletteIndex.set(
+				channel,
+				(index % MIDI_CHANNEL_PALETTE_SIZE) + 1,
+			);
+		});
 }
 
 function resolveMidiNoteColors(
@@ -514,30 +549,20 @@ function resolveMidiTimelinePosition(
 	return clampTime(playerPosition, 0, duration);
 }
 
-/**
- * Reads the `channels` block of a view. Palette slots are handed out by
- * ascending channel number, so the colours stay put however the block is
- * written down, and cycle once the file uses more channels than there are.
- */
-function resolveChannelPairing(channels: Record<string, string> | undefined): {
-	channelTrackIds: Map<number, string>;
-	channelPaletteIndex: Map<number, number>;
-} {
+/** Reads the `channelToTrackIDMap` block of a view into a channel → track lookup. */
+function resolveChannelTrackIds(
+	channelToTrackIDMap: Record<string, string> | undefined,
+): Map<number, string> {
 	const channelTrackIds = new Map<number, string>();
-	const channelPaletteIndex = new Map<number, number>();
-	if (!channels) {
-		return { channelTrackIds, channelPaletteIndex };
+	if (!channelToTrackIDMap) {
+		return channelTrackIds;
 	}
 
-	const ascending = Object.keys(channels)
-		.map((key) => Number(key))
-		.sort((a, b) => a - b);
-	ascending.forEach((channel, index) => {
-		channelTrackIds.set(channel, channels[String(channel)]);
-		channelPaletteIndex.set(channel, (index % MIDI_CHANNEL_PALETTE_SIZE) + 1);
-	});
+	for (const [key, trackId] of Object.entries(channelToTrackIDMap)) {
+		channelTrackIds.set(Number(key), trackId);
+	}
 
-	return { channelTrackIds, channelPaletteIndex };
+	return channelTrackIds;
 }
 
 export function wrapMidiCanvases(ctx: ViewRenderer): void {
@@ -603,8 +628,8 @@ export function wrapMidiCanvases(ctx: ViewRenderer): void {
 			);
 			seekWrap.setAttribute("data-seek-surface", "midi");
 
-			const { channelTrackIds, channelPaletteIndex } = resolveChannelPairing(
-				config.channels,
+			const channelTrackIds = resolveChannelTrackIds(
+				config.channelToTrackIDMap,
 			);
 
 			const originalHeight = Math.max(1, canvasElement.height);
@@ -657,7 +682,8 @@ export function wrapMidiCanvases(ctx: ViewRenderer): void {
 				midiDurationSeconds: 0,
 				maxNoteDuration: 0,
 				channelTrackIds,
-				channelPaletteIndex,
+				colorPerChannel: config.colorPerChannel ?? true,
+				channelPaletteIndex: new Map<number, number>(),
 				hiddenChannels: new Set<number>(),
 				noteColors: null,
 				channelColors: new Map<number, MidiNoteColors>(),
@@ -850,18 +876,26 @@ export function updateMidiChannelVisibility(
 }
 
 /**
- * The colour a track carries in the piano roll, for the views that repeat the
- * channel code outside it. Null when no roll pairs the track with a channel.
+ * The colours a track carries in the piano roll, for the views that repeat
+ * the channel code outside it — one per channel paired with the track, in
+ * ascending channel order. Null when no roll colours a channel paired with
+ * this track (no pairing, or `colorPerChannel` is off).
  */
-export function resolveMidiTrackChannelColor(
+export function resolveMidiTrackChannelColors(
 	ctx: ViewRenderer,
 	trackId: string,
-): string | null {
+): string[] | null {
 	for (const surface of ctx.midiSeekSurfaces) {
-		for (const [channel, pairedTrackId] of surface.channelTrackIds) {
-			if (pairedTrackId === trackId) {
-				return resolveMidiChannelColors(surface, channel).velocity;
-			}
+		const channels = [...surface.channelTrackIds]
+			.filter(([, pairedTrackId]) => pairedTrackId === trackId)
+			.map(([channel]) => channel)
+			.sort((a, b) => a - b)
+			.filter((channel) => surface.channelPaletteIndex.has(channel));
+
+		if (channels.length > 0) {
+			return channels.map(
+				(channel) => resolveMidiChannelColors(surface, channel).velocity,
+			);
 		}
 	}
 

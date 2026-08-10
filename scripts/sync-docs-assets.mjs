@@ -74,6 +74,18 @@ const remoteDocsAssets = [
 		],
 	},
 	{
+		docs: "docs/assets/multi-instrument-transcription",
+		baseUrl:
+			"https://www.audiolabs-erlangen.de/content/resources/MIR/00_2026-ChoraleWind/0_Drese_JesuGehVoran/tracks",
+		files: ["01_as.mp3", "02_cl.mp3", "03_tb.mp3", "04_tba.mp3"],
+	},
+	{
+		docs: "docs/assets/multi-instrument-transcription",
+		baseUrl:
+			"https://www.audiolabs-erlangen.de/content/resources/MIR/00_2026-ChoraleWind/0_Drese_JesuGehVoran",
+		files: [{ from: "126_Drese_JesuGehVoran_02-expr.mid", to: "transcription.mid" }],
+	},
+	{
 		docs: "docs/assets/global-image",
 		baseUrl:
 			"https://www.audiolabs-erlangen.de/content/resources/MIR/00_2024-RealTimePLP-ControlSignals",
