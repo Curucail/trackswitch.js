@@ -469,7 +469,8 @@ kbd {
 		inset 0 1px 0 rgba(255, 255, 255, 0.78);
 }
 
-.ts-usecase-showcase.is-snippet-preview-visible .ts-usecase-showcase__snippet-panel {
+.ts-usecase-showcase.is-snippet-preview-visible
+	.ts-usecase-showcase__snippet-panel {
 	display: block;
 }
 
@@ -1110,9 +1111,9 @@ kbd {
 		margin-inline: calc(var(--ts-doc-page-gutter) * -1);
 	}
 
-.ts-showcase__player-shell {
-	width: 100%;
-}
+	.ts-showcase__player-shell {
+		width: 100%;
+	}
 
 	#ts-showcase-player .trackswitch {
 		border-radius: 0;

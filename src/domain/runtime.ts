@@ -233,7 +233,9 @@ export function resetDisabledTrackVolumeControls(
 		if (!group.trackVolumeControls) {
 			return;
 		}
-		group.trackIds.forEach((trackId) => tracksWithVolumeControls.add(trackId));
+		group.trackIds.forEach((trackId) => {
+			tracksWithVolumeControls.add(trackId);
+		});
 	});
 
 	runtimes.forEach((runtime) => {

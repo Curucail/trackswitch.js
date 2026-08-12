@@ -104,7 +104,6 @@ function computeBalanceGains(pan: number): { gainL: number; gainR: number } {
 
 export class AudioEngine {
 	private context: AudioContext | null;
-	private readonly features: TrackSwitchFeatures;
 	private readonly alignmentEnabled: boolean;
 	private globalVolumeEnabled: boolean;
 	private gainNodeMaster: GainNode | null;
@@ -112,12 +111,11 @@ export class AudioEngine {
 	private masterVolume: number;
 
 	constructor(
-		features: TrackSwitchFeatures,
+		_features: TrackSwitchFeatures,
 		initialVolume: number,
 		alignmentEnabled = false,
 		globalVolumeEnabled = false,
 	) {
-		this.features = features;
 		this.alignmentEnabled = alignmentEnabled;
 		this.globalVolumeEnabled = globalVolumeEnabled;
 		this.context = null;
