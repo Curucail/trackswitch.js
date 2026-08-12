@@ -977,7 +977,7 @@ If `alignment.timelines` contains the same ID, the piano roll uses its local tim
 
 A file that transcribes several instruments carries one channel per instrument. With `colorPerChannel` at its default of `true`, every channel already takes its own colour — a single combined recording gets a legible piano roll with no further configuration.
 
-`channelToTrackIDMap` additionally pairs channels with the audio tracks of the player, so a channel is drawn only while its track is audible:
+`channelToTrackIDMap` additionally pairs channels with the audio tracks of the player, so a channel is drawn only while one of its tracks is audible:
 
 ```json
 {
@@ -987,9 +987,24 @@ A file that transcribes several instruments carries one channel per instrument. 
 }
 ```
 
-Each key is a channel number from 0 to 15, and each value names a `media` entry with `type: "audio"`. Two channels may name the same track — the track's row then splits its colour across both, with a hard edge, instead of picking just one.
+Each key is a channel number from 0 to 15, and each value names a `media` entry with `type: "audio"`, or an array of several. Two channels may name the same track — the track's row then splits its colour across both, with a hard edge, instead of picking just one.
 
-A paired channel is drawn only while its track is audible, following the same rule as a waveform with `"tracks": "audible"`. A channel the map leaves out is always drawn, still in its own colour by default. Set `colorPerChannel` to `false` to turn off per-channel colour entirely — every channel then falls back to the plain, unpaired colour, whether or not it's in the map.
+A value can also be a list of tracks, which keeps the channel visible while any one of them is audible. This suits a channel that belongs to a `soloGroup` of alternate takes — one mixed recording, say, standing in for four solo tracks that are never audible at the same time:
+
+```json
+{
+  "type": "midi",
+  "mediaID": "notes",
+  "channelToTrackIDMap": {
+    "0": ["soprano", "mix"],
+    "1": ["alto", "mix"],
+    "2": ["tenor", "mix"],
+    "3": ["bass", "mix"]
+  }
+}
+```
+
+A paired channel is drawn only while one of its tracks is audible, following the same rule as a waveform with `"tracks": "audible"`. A channel the map leaves out is always drawn, still in its own colour by default. Set `colorPerChannel` to `false` to turn off per-channel colour entirely — every channel then falls back to the plain, unpaired colour, whether or not it's in the map.
 
 Coloured channels take the colours `--ts-color-channel-1` to `--ts-color-channel-10` by ascending channel number, cycling after the tenth. The first colour is the accent, so a file with a single channel looks like it did before this view had a palette at all.
 

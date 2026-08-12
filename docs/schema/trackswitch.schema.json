@@ -1135,9 +1135,19 @@
 				"channelToTrackIDMap": {
 					"type": "object",
 					"additionalProperties": {
-						"$ref": "#/definitions/TrackId"
+						"anyOf": [
+							{
+								"$ref": "#/definitions/TrackId"
+							},
+							{
+								"type": "array",
+								"items": {
+									"$ref": "#/definitions/TrackId"
+								}
+							}
+						]
 					},
-					"description": "Pairs MIDI channels with audio tracks, keyed by channel number. A paired channel is drawn only while its track is audible. Two channels may name the same track; the track's row then splits its colour across both."
+					"description": "Pairs MIDI channels with audio tracks, keyed by channel number. A paired channel is drawn while any of its tracks is audible — naming every track of a `soloGroup` keeps the channel visible as the selection moves between them. Two channels may name the same track; the track's row then splits its colour across both."
 				},
 				"colorPerChannel": {
 					"type": "boolean",

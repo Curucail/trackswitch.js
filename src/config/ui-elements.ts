@@ -506,12 +506,14 @@ const MAX_MIDI_CHANNEL = 15;
 /**
  * The channel-to-track pairing of a piano roll. Two channels may name the same
  * track — one recording can carry two staves — so the values are not required
- * to be distinct.
+ * to be distinct. A channel may also name several tracks (e.g. every track of
+ * a `soloGroup`), in which case it stays visible while any one of them is
+ * audible.
  */
 function normalizeMidiChannelToTrackIDMap(
-	value: Record<string, TrackId> | undefined,
+	value: Record<string, TrackId | TrackId[]> | undefined,
 	ctx: ViewNormalizeContext,
-): Record<string, TrackId> | undefined {
+): Record<string, TrackId[]> | undefined {
 	if (value === undefined) {
 		return undefined;
 	}
@@ -522,8 +524,8 @@ function normalizeMidiChannelToTrackIDMap(
 		);
 	}
 
-	const normalized: Record<string, TrackId> = {};
-	for (const [key, trackId] of Object.entries(value)) {
+	const normalized: Record<string, TrackId[]> = {};
+	for (const [key, rawTrackIds] of Object.entries(value)) {
 		const channel = Number(key);
 		if (
 			!Number.isInteger(channel) ||
@@ -535,13 +537,22 @@ function normalizeMidiChannelToTrackIDMap(
 			);
 		}
 
-		if (ctx.media[trackId]?.type !== "audio") {
+		const trackIds = Array.isArray(rawTrackIds) ? rawTrackIds : [rawTrackIds];
+		if (trackIds.length === 0) {
 			throw new Error(
-				`Invalid midi configuration: channel "${key}" names "${trackId}", which is not declared as type "audio" in media.`,
+				`Invalid midi configuration: channel "${key}" must name at least one track.`,
 			);
 		}
 
-		normalized[String(channel)] = trackId;
+		for (const trackId of trackIds) {
+			if (typeof trackId !== "string" || ctx.media[trackId]?.type !== "audio") {
+				throw new Error(
+					`Invalid midi configuration: channel "${key}" names "${trackId}", which is not declared as type "audio" in media.`,
+				);
+			}
+		}
+
+		normalized[String(channel)] = trackIds;
 	}
 
 	return normalized;

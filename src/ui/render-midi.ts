@@ -81,8 +81,8 @@ export interface MidiSeekSurfaceMetadata {
 	midiDurationSeconds: number;
 	/** Longest note in `notes`; lets the draw loop bound its backwards scan. */
 	maxNoteDuration: number;
-	/** The audio track each paired channel follows, from the view config. */
-	channelTrackIds: Map<number, string>;
+	/** The audio tracks each paired channel follows, from the view config. */
+	channelTrackIds: Map<number, string[]>;
 	/** Whether every channel in the file takes its own palette colour. */
 	colorPerChannel: boolean;
 	/** Palette slot of a coloured channel, by ascending channel number. */
@@ -549,17 +549,20 @@ function resolveMidiTimelinePosition(
 	return clampTime(playerPosition, 0, duration);
 }
 
-/** Reads the `channelToTrackIDMap` block of a view into a channel → track lookup. */
+/** Reads the `channelToTrackIDMap` block of a view into a channel → tracks lookup. */
 function resolveChannelTrackIds(
-	channelToTrackIDMap: Record<string, string> | undefined,
-): Map<number, string> {
-	const channelTrackIds = new Map<number, string>();
+	channelToTrackIDMap: Record<string, string | string[]> | undefined,
+): Map<number, string[]> {
+	const channelTrackIds = new Map<number, string[]>();
 	if (!channelToTrackIDMap) {
 		return channelTrackIds;
 	}
 
-	for (const [key, trackId] of Object.entries(channelToTrackIDMap)) {
-		channelTrackIds.set(Number(key), trackId);
+	for (const [key, trackIds] of Object.entries(channelToTrackIDMap)) {
+		channelTrackIds.set(
+			Number(key),
+			Array.isArray(trackIds) ? trackIds : [trackIds],
+		);
 	}
 
 	return channelTrackIds;
@@ -844,8 +847,10 @@ export function refreshMidiNoteTiles(ctx: ViewRenderer): void {
 }
 
 /**
- * Points every paired channel at the current solo state. The draw keys carry the
- * hidden set, so a refresh that changes nothing costs a key comparison.
+ * Points every paired channel at the current solo state. A channel paired with
+ * several tracks (e.g. every track of a `soloGroup`) stays visible as long as
+ * any one of them is audible. The draw keys carry the hidden set, so a refresh
+ * that changes nothing costs a key comparison.
  */
 export function updateMidiChannelVisibility(
 	ctx: ViewRenderer,
@@ -863,9 +868,12 @@ export function updateMidiChannelVisibility(
 
 		this.midiSeekSurfaces.forEach((surface: MidiSeekSurfaceMetadata) => {
 			surface.hiddenChannels.clear();
-			surface.channelTrackIds.forEach((trackId, channel) => {
-				const trackIndex = indexByTrackId.get(trackId);
-				if (trackIndex === undefined || !this.isTrackAudible(trackIndex)) {
+			surface.channelTrackIds.forEach((trackIds, channel) => {
+				const audible = trackIds.some((trackId) => {
+					const trackIndex = indexByTrackId.get(trackId);
+					return trackIndex !== undefined && this.isTrackAudible(trackIndex);
+				});
+				if (!audible) {
 					surface.hiddenChannels.add(channel);
 				}
 			});
@@ -887,7 +895,7 @@ export function resolveMidiTrackChannelColors(
 ): string[] | null {
 	for (const surface of ctx.midiSeekSurfaces) {
 		const channels = [...surface.channelTrackIds]
-			.filter(([, pairedTrackId]) => pairedTrackId === trackId)
+			.filter(([, pairedTrackIds]) => pairedTrackIds.includes(trackId))
 			.map(([channel]) => channel)
 			.sort((a, b) => a - b)
 			.filter((channel) => surface.channelPaletteIndex.has(channel));
