@@ -84,6 +84,7 @@
 	"scripts": {
 		"clean": "rimraf dist",
 		"build": "npm run build:browser && npm run build:esm && npm run build:types && npm run generate",
+		"postbuild": "node scripts/copy-dist-notices.mjs",
 		"build:browser": "vite build --mode browser",
 		"build:interactive": "npm run build:interactive-browser && npm run build:interactive-worker",
 		"build:interactive-browser": "vite build --mode interactive-browser",
