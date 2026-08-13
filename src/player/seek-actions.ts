@@ -6,7 +6,7 @@ import type { ControllerPointerEvent } from "../shared/seek";
 import { getSeekMetrics } from "../shared/seek";
 import { resolveAudibleWaveformTrackIndex } from "../shared/waveform-source";
 import { timelineId } from "../timeline/timeline";
-import type { MidiSeekSurfaceMetadata } from "../ui/render-midi";
+import type { PianoRollSeekSurfaceMetadata } from "../ui/render-piano-roll";
 import type {
 	ImageSeekSurfaceMetadata,
 	WaveformTimelineContext,
@@ -302,7 +302,7 @@ export function onWaveformZoomWheel(
 	}).call(ctx, event);
 }
 
-export function onMidiZoomWheel(
+export function onPianoRollZoomWheel(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
@@ -317,24 +317,24 @@ export function onMidiZoomWheel(
 			return;
 		}
 
-		const wrapper = closestInRoot(this.root, event.target, ".midi-wrap");
+		const wrapper = closestInRoot(this.root, event.target, ".piano-roll-wrap");
 		if (!wrapper) {
 			return;
 		}
 
 		const seekWrap = wrapper.querySelector(
-			'.seekwrap[data-seek-surface="midi"]',
+			'.seekwrap[data-seek-surface="piano-roll"]',
 		);
 		if (!(seekWrap instanceof HTMLElement)) {
 			return;
 		}
 
 		const zoomDuration = this.getSeekTimelineContext(seekWrap).duration;
-		if (!this.renderer.isMidiZoomEnabled(seekWrap, zoomDuration)) {
+		if (!this.renderer.isPianoRollZoomEnabled(seekWrap, zoomDuration)) {
 			return;
 		}
 
-		const currentZoom = this.renderer.getMidiZoom(seekWrap);
+		const currentZoom = this.renderer.getPianoRollZoom(seekWrap);
 		if (currentZoom === null) {
 			return;
 		}
@@ -344,7 +344,7 @@ export function onMidiZoomWheel(
 
 		const zoomFactor = Math.exp(-1 * deltaY * WAVEFORM_WHEEL_ZOOM_SPEED);
 		const nextZoom = currentZoom * zoomFactor;
-		const changed = this.renderer.setMidiZoom(
+		const changed = this.renderer.setPianoRollZoom(
 			seekWrap,
 			nextZoom,
 			zoomDuration,
@@ -396,8 +396,8 @@ function updateTimelineMinimapDrag(
 		const seekWrap = this.waveformMinimapDragState.seekWrap;
 		const startRatio =
 			pointerRatio - this.waveformMinimapDragState.pointerOffsetRatio;
-		if (this.isMidiSeekSurface(seekWrap)) {
-			this.renderer.setMidiMinimapViewportStart(seekWrap, startRatio);
+		if (this.isPianoRollSeekSurface(seekWrap)) {
+			this.renderer.setPianoRollMinimapViewportStart(seekWrap, startRatio);
 		} else {
 			this.renderer.setWaveformMinimapViewportStart(seekWrap, startRatio);
 		}
@@ -451,7 +451,7 @@ export function isWaveformSeekSurface(
 	}.call(ctx, seekWrap);
 }
 
-export function isMidiSeekSurface(
+export function isPianoRollSeekSurface(
 	ctx: TrackSwitchControllerImpl,
 	seekWrap: HTMLElement | null,
 ): boolean {
@@ -459,7 +459,9 @@ export function isMidiSeekSurface(
 		this: TrackSwitchControllerImpl,
 		seekWrap: HTMLElement | null,
 	) {
-		return !!seekWrap && seekWrap.getAttribute("data-seek-surface") === "midi";
+		return (
+			!!seekWrap && seekWrap.getAttribute("data-seek-surface") === "piano-roll"
+		);
 	}.call(ctx, seekWrap);
 }
 
@@ -515,7 +517,7 @@ export function tryStartPendingWaveformTouchSeek(
 		if (
 			event.type !== "touchstart" ||
 			(!this.isWaveformSeekSurface(seekWrap) &&
-				!this.isMidiSeekSurface(seekWrap)) ||
+				!this.isPianoRollSeekSurface(seekWrap)) ||
 			this.getActiveTouchCount(event) !== 1 ||
 			!seekWrap
 		) {
@@ -726,14 +728,14 @@ export function tryStartPinchZoom(
 		if (
 			!seekWrap ||
 			(seekWrap.getAttribute("data-seek-surface") !== "waveform" &&
-				seekWrap.getAttribute("data-seek-surface") !== "midi")
+				seekWrap.getAttribute("data-seek-surface") !== "piano-roll")
 		) {
 			return false;
 		}
 
 		const zoomDuration = this.getSeekTimelineContext(seekWrap).duration;
-		const zoomEnabled = this.isMidiSeekSurface(seekWrap)
-			? this.renderer.isMidiZoomEnabled(seekWrap, zoomDuration)
+		const zoomEnabled = this.isPianoRollSeekSurface(seekWrap)
+			? this.renderer.isPianoRollZoomEnabled(seekWrap, zoomDuration)
 			: this.renderer.isWaveformZoomEnabled(seekWrap, zoomDuration);
 		if (!zoomEnabled) {
 			return false;
@@ -744,8 +746,8 @@ export function tryStartPinchZoom(
 			return false;
 		}
 
-		const initialZoom = this.isMidiSeekSurface(seekWrap)
-			? this.renderer.getMidiZoom(seekWrap)
+		const initialZoom = this.isPianoRollSeekSurface(seekWrap)
+			? this.renderer.getPianoRollZoom(seekWrap)
 			: this.renderer.getWaveformZoom(seekWrap);
 		if (initialZoom === null) {
 			return false;
@@ -793,8 +795,8 @@ export function updatePinchZoom(
 		const zoomDuration = this.getSeekTimelineContext(
 			this.pinchZoomState.seekWrap,
 		).duration;
-		const changed = this.isMidiSeekSurface(this.pinchZoomState.seekWrap)
-			? this.renderer.setMidiZoom(
+		const changed = this.isPianoRollSeekSurface(this.pinchZoomState.seekWrap)
+			? this.renderer.setPianoRollZoom(
 					this.pinchZoomState.seekWrap,
 					this.pinchZoomState.initialZoom * scale,
 					zoomDuration,
@@ -912,9 +914,12 @@ export function getSeekTimelineContext(
 			return referenceContext;
 		}
 
-		if (this.isMidiSeekSurface(seekingElement) && this.isAlignmentMode()) {
-			const midiSurface = this.renderer.findMidiSurface(seekingElement);
-			return this.getMidiTimelineContext(midiSurface) || referenceContext;
+		if (this.isPianoRollSeekSurface(seekingElement) && this.isAlignmentMode()) {
+			const pianoRollSurface =
+				this.renderer.findPianoRollSurface(seekingElement);
+			return (
+				this.getPianoRollTimelineContext(pianoRollSurface) || referenceContext
+			);
 		}
 
 		if (this.isAlignmentMode()) {
@@ -1006,40 +1011,46 @@ export function getSeekTimelineContext(
 	}.call(ctx, seekingElement);
 }
 
-export function getMidiTimelineContext(
+export function getPianoRollTimelineContext(
 	ctx: TrackSwitchControllerImpl,
-	midiSurface: MidiSeekSurfaceMetadata | null,
+	pianoRollSurface: PianoRollSeekSurfaceMetadata | null,
 ): SeekTimelineContext | null {
 	return function (
 		this: TrackSwitchControllerImpl,
-		midiSurface: MidiSeekSurfaceMetadata | null,
+		pianoRollSurface: PianoRollSeekSurfaceMetadata | null,
 	) {
-		if (!midiSurface || !this.isAlignmentMode()) {
+		if (!pianoRollSurface || !this.isAlignmentMode()) {
 			return null;
 		}
 
-		const midiDuration = Number(midiSurface.midiDurationSeconds);
-		if (!Number.isFinite(midiDuration) || midiDuration <= 0) {
+		const pianoRollDuration = Number(pianoRollSurface.pianoRollDurationSeconds);
+		if (!Number.isFinite(pianoRollDuration) || pianoRollDuration <= 0) {
 			return null;
 		}
 
 		const alignmentColumn =
-			typeof midiSurface.alignmentColumn === "string"
-				? midiSurface.alignmentColumn.trim()
+			typeof pianoRollSurface.alignmentColumn === "string"
+				? pianoRollSurface.alignmentColumn.trim()
 				: "";
-		const midiTimeline = alignmentColumn ? timelineId(alignmentColumn) : null;
+		const pianoRollTimeline = alignmentColumn
+			? timelineId(alignmentColumn)
+			: null;
 		return (
-			buildProjectedTimelineContext(this, midiTimeline, midiDuration) ?? {
+			buildProjectedTimelineContext(
+				this,
+				pianoRollTimeline,
+				pianoRollDuration,
+			) ?? {
 				// No timeline declared for this MIDI: it shares the reference
 				// timeline, so local and reference coordinates coincide.
-				duration: midiDuration,
-				toReferenceTime: (midiTime: number): number =>
-					clamp(midiTime, 0, this.longestDuration),
+				duration: pianoRollDuration,
+				toReferenceTime: (pianoRollTime: number): number =>
+					clamp(pianoRollTime, 0, this.longestDuration),
 				fromReferenceTime: (referenceTime: number): number =>
-					clamp(referenceTime, 0, midiDuration),
+					clamp(referenceTime, 0, pianoRollDuration),
 			}
 		);
-	}.call(ctx, midiSurface);
+	}.call(ctx, pianoRollSurface);
 }
 
 export function getImageTimelineContext(

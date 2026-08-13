@@ -55,7 +55,7 @@
 				// No `timer`: a waveform reads `config.timer ?? isAlignmentMode()`, so
 				// omitting it is not the same as setting it false once aligned.
 			},
-			midi: {
+			pianoRoll: {
 				height: 180,
 				maxZoom: 5,
 				playbackFollowMode: "center",
@@ -219,7 +219,7 @@
 				src: basePath + "/Schubert_D911-03.xml",
 			};
 		}
-		if (controls.midi) {
+		if (controls.pianoRoll) {
 			media.midi = { type: "midi", src: basePath + "/Schubert_D911-03.mid" };
 		}
 		Object.assign(media, {
@@ -263,11 +263,11 @@
 				cursorAlpha: 0.4,
 			});
 		}
-		if (controls.midi) {
+		if (controls.pianoRoll) {
 			views.push(
 				withMarkerLayers(
 					{
-						type: "midi",
+						type: "pianoRoll",
 						mediaID: "midi",
 						height: 180,
 						maxZoom: 5,
@@ -458,7 +458,7 @@
 			var names = [
 				"looping", "globalVolume", "trackVolumeControls",
 				"customizablePanelOrder", "presets", "seekBar", "timer", "keyboard",
-				"waveform", "midi", "text", "alignedPlayhead", "showAlignmentPoints",
+				"waveform", "pianoRoll", "text", "alignedPlayhead", "showAlignmentPoints",
 				"markers", "sheetNotePreview", "warpingMatrix", "customImage",
 				"trackImageBySolo", "exclusiveSolo", "tabView",
 				"muteOtherPlayerInstances", "repeatEnabled"
@@ -551,7 +551,7 @@
 				"alignedPlayhead",
 				"showAlignmentPoints",
 				"waveformTimeAxis",
-				"midi",
+				"pianoRoll",
 				"sheetNotePreview",
 				"warpingMatrix",
 			].forEach(function (name) {

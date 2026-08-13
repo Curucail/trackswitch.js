@@ -40,7 +40,7 @@
 			"cursorColor": "#999999"
 		},
 		{
-			"type": "midi",
+			"type": "pianoRoll",
 			"mediaID": "notes",
 			"height": 200
 		},

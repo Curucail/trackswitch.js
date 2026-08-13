@@ -32,7 +32,7 @@
 			"controls": ["playback", "globalVolume", "looping", "timer"]
 		},
 		{
-			"type": "midi",
+			"type": "pianoRoll",
 			"mediaID": "notes",
 			"height": 380,
 			"pianoKeyboard": true,

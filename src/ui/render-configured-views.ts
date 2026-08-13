@@ -3,8 +3,8 @@ import type {
 	MediaId,
 	TrackId,
 	TrackSwitchImageViewConfig,
-	TrackSwitchMidiViewConfig,
 	TrackSwitchPerTrackImageViewConfig,
+	TrackSwitchPianoRollViewConfig,
 	TrackSwitchSeparatorViewConfig,
 	TrackSwitchSheetMusicViewConfig,
 	TrackSwitchTextViewConfig,
@@ -208,19 +208,22 @@ function resolveAlignmentTimelineAttribute(
 	return ctx.hasAlignment && ctx.alignmentTimelines.has(mediaID) ? mediaID : "";
 }
 
-function renderMidi(
+function renderPianoRoll(
 	renderer: ConfiguredViewRenderer,
-	midi: TrackSwitchMidiViewConfig,
+	pianoRoll: TrackSwitchPianoRollViewConfig,
 	ctx: ViewNormalizeContext,
 ): void {
 	const canvas = document.createElement("canvas");
-	canvas.className = "midi";
+	canvas.className = "piano-roll";
 	canvas.width = 1200;
-	canvas.height = resolvedSize(midi.height, "midi.height");
+	canvas.height = resolvedSize(pianoRoll.height, "pianoRoll.height");
 	renderer.registerConfiguredViewHost(canvas, {
-		view: midi,
-		alignmentTimeline: resolveAlignmentTimelineAttribute(midi.mediaID, ctx),
-		source: ctx.media[midi.mediaID]?.src,
+		view: pianoRoll,
+		alignmentTimeline: resolveAlignmentTimelineAttribute(
+			pianoRoll.mediaID,
+			ctx,
+		),
+		source: ctx.media[pianoRoll.mediaID]?.src,
 	});
 	renderer.root.appendChild(canvas);
 }
@@ -280,8 +283,8 @@ export function renderConfiguredViews(
 			renderWaveform(renderer, entry, ctx);
 			return;
 		}
-		if (entry.type === "midi") {
-			renderMidi(renderer, entry, ctx);
+		if (entry.type === "pianoRoll") {
+			renderPianoRoll(renderer, entry, ctx);
 			return;
 		}
 		if (entry.type === "sheetMusic") {

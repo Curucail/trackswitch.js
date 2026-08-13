@@ -146,8 +146,8 @@ function resolvePanelHandleLabel(panel: HTMLElement): string {
 		return "Reorder waveform panel";
 	}
 
-	if (panel.classList.contains("midi-wrap")) {
-		return "Reorder MIDI panel";
+	if (panel.classList.contains("piano-roll-wrap")) {
+		return "Reorder piano roll panel";
 	}
 
 	if (panel.classList.contains("sheetmusic-wrap")) {
@@ -545,12 +545,12 @@ export function initialize(ctx: ViewRenderer, runtimes: TrackRuntime[]): void {
 
 		this.wrapSeekableImages();
 		this.wrapWaveformCanvases();
-		this.wrapMidiCanvases();
+		this.wrapPianoRollCanvases();
 		this.prepareTextPanels();
 		this.wrapSheetMusicContainers();
 		this.wrapWarpingMatrixContainers();
 		this.reflowWaveforms();
-		this.reflowMidiDisplays();
+		this.reflowPianoRollDisplays();
 		this.renderTrackList(runtimes);
 		this.prepareCustomizablePanels();
 
@@ -1585,8 +1585,8 @@ export function updatePlaybackPosition(
 
 		this.updateWaveformTiming(state, runtimes, waveformTimelineContext);
 		this.updateWaveformZoomIndicators();
-		this.updateMidiPlaybackState(state, true, false);
-		this.updateMidiZoomIndicators();
+		this.updatePianoRollPlaybackState(state, true, false);
+		this.updatePianoRollZoomIndicators();
 		this.warpingMatrixHosts.forEach((host) => {
 			this.updateWarpingMatrixPlaybackState(host, warpingMatrixContext);
 		});
@@ -1617,7 +1617,7 @@ export function updateTrackControls(
 				!!syncLockedTrackIndexes && syncLockedTrackIndexes.has(index);
 			// A row repeats the colour(s) its track carries in a piano roll, so the
 			// list and the notes read as one code.
-			const channelColors = this.resolveMidiTrackChannelColors(
+			const channelColors = this.resolvePianoRollTrackChannelColors(
 				runtime.definition.id,
 			);
 
@@ -2049,7 +2049,7 @@ export function destroy(ctx: ViewRenderer): void {
 
 		this.latestWaveformRenderInput = null;
 		this.waveformSeekSurfaces.length = 0;
-		this.midiSeekSurfaces.length = 0;
+		this.pianoRollSeekSurfaces.length = 0;
 		this.imageSeekSurfaces.length = 0;
 		this.sheetMusicHosts.length = 0;
 		this.warpingMatrixHosts.length = 0;

@@ -133,7 +133,7 @@ interface TimelineZoomState {
 
 interface PlayerZoomState {
 	waveforms: TimelineZoomState[];
-	midi: TimelineZoomState[];
+	pianoRoll: TimelineZoomState[];
 }
 
 function captureZoomState(
@@ -146,10 +146,10 @@ function captureZoomState(
 				controller.renderer.getWaveformMinimapViewport(surface.seekWrap)
 					?.startRatio ?? 0,
 		})),
-		midi: controller.renderer.midiSeekSurfaces.map((surface) => ({
+		pianoRoll: controller.renderer.pianoRollSeekSurfaces.map((surface) => ({
 			zoom: surface.zoom,
 			viewportStart:
-				controller.renderer.getMidiMinimapViewport(surface.seekWrap)
+				controller.renderer.getPianoRollMinimapViewport(surface.seekWrap)
 					?.startRatio ?? 0,
 		})),
 	};
@@ -172,14 +172,18 @@ function restoreZoomState(
 		);
 	});
 
-	zoomState.midi.forEach((state, index) => {
-		const surface = controller.renderer.midiSeekSurfaces[index];
+	zoomState.pianoRoll.forEach((state, index) => {
+		const surface = controller.renderer.pianoRollSeekSurfaces[index];
 		if (!surface) return;
 		const duration = controller.getSeekTimelineContext(
 			surface.seekWrap,
 		).duration;
-		controller.renderer.setMidiZoom(surface.seekWrap, state.zoom, duration);
-		controller.renderer.setMidiMinimapViewportStart(
+		controller.renderer.setPianoRollZoom(
+			surface.seekWrap,
+			state.zoom,
+			duration,
+		);
+		controller.renderer.setPianoRollMinimapViewportStart(
 			surface.seekWrap,
 			state.viewportStart,
 		);
@@ -293,7 +297,7 @@ async function applyAudioPreservingConfig(
 		await controller.renderSheetMusic();
 	}
 	await controller.attachSheetMusicMeasureMaps();
-	await controller.renderer.initializeMidiDisplays(
+	await controller.renderer.initializePianoRollDisplays(
 		controller.longestDuration,
 		controller.isAlignmentMode(),
 	);
@@ -503,7 +507,7 @@ async function updateConfigNow(
 			await controller.renderSheetMusic();
 		}
 		await controller.attachSheetMusicMeasureMaps();
-		await controller.renderer.initializeMidiDisplays(
+		await controller.renderer.initializePianoRollDisplays(
 			controller.longestDuration,
 			controller.isAlignmentMode(),
 		);

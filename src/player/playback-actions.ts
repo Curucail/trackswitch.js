@@ -189,13 +189,13 @@ export function load(ctx: TrackSwitchControllerImpl): Promise<void> {
 				return;
 			}
 
-			await this.renderer.initializeMidiDisplays(
+			await this.renderer.initializePianoRollDisplays(
 				this.longestDuration,
 				this.isAlignmentMode(),
 			);
 			// The notes exist now, so the first paint can already drop the channels
 			// whose track starts out silent.
-			this.renderer.updateMidiChannelVisibility(this.runtimes);
+			this.renderer.updatePianoRollChannelVisibility(this.runtimes);
 
 			if (this.isDestroyed) {
 				return;
@@ -1003,7 +1003,7 @@ export function handleError(
 		this.pinchZoomState = null;
 		this.waveformMinimapDragState = null;
 		this.sheetMusicEngine.destroy();
-		this.renderer.destroyMidiDisplays();
+		this.renderer.destroyPianoRollDisplays();
 
 		this.renderer.showError(message, this.runtimes);
 		this.emit("error", { message: message });

@@ -11,7 +11,7 @@ body_class: docs-page docs-page--narrow
 MIDI files can contain note events on multiple channels.
 This is often used to encode different instruments playing at the same time.
 One example where this is useful is Multi-Instrument Transcription.
-Trackswitch supports displaying multiple MIDI channels in MIDI views, where note events are colored per channel.
+Trackswitch supports displaying multiple MIDI channels in piano roll views, where note events are colored per channel.
 
 <div class="ts-usecase-showcase">
   <aside class="ts-usecase-showcase__code-callout" aria-label="Copy player code">
@@ -34,11 +34,11 @@ Audio data: [ChoraleWind](https://www.audiolabs-erlangen.de/resources/MIR/2026-C
 
 ## How it works
 
-MIDI views color the note events separately per channel by default — `colorPerChannel` defaults to `true`, so this needs no configuration even for a single combined recording:
+Piano roll views color the note events separately per channel by default — `colorPerChannel` defaults to `true`, so this needs no configuration even for a single combined recording:
 
 ```json
 {
-  "type": "midi",
+  "type": "pianoRoll",
   "mediaID": "notes",
   "height": 260
 }
@@ -48,7 +48,7 @@ Additionally, specific tracks can be assigned to each MIDI channel to show or hi
 
 ```json
 {
-  "type": "midi",
+  "type": "pianoRoll",
   "mediaID": "notes",
   "height": 260,
   "channelToTrackIDMap": {
@@ -66,7 +66,7 @@ A channel `channelToTrackIDMap` leaves out is still coloured — it's just alway
 
 ```json
 {
-  "type": "midi",
+  "type": "pianoRoll",
   "mediaID": "notes",
   "colorPerChannel": false,
   "channelToTrackIDMap": { "0": "soprano", "1": "alto" }
@@ -77,7 +77,7 @@ Colours are handed out by ascending channel number — orange, red, green, blue,
 
 ```json
 {
-  "type": "midi",
+  "type": "pianoRoll",
   "mediaID": "notes",
   "channelToTrackIDMap": { "0": "soprano", "1": "alto" },
   "css": { "--ts-color-channel-2": "#8844cc" }
@@ -106,7 +106,7 @@ The same transcription again, this time as a falling-notes display: `pianoKeyboa
 
 ```json
 {
-  "type": "midi",
+  "type": "pianoRoll",
   "mediaID": "notes",
   "height": 380,
   "pianoKeyboard": true,
@@ -139,7 +139,7 @@ Note events are drawn solid by default. Velocity is opt-in, through two switches
 
 ```json
 {
-  "type": "midi",
+  "type": "pianoRoll",
   "mediaID": "notes",
   "velocityBars": true,
   "velocityOpacity": true

@@ -20,7 +20,7 @@ const expectedViewTypes = [
 	"image",
 	"perTrackImage",
 	"waveform",
-	"midi",
+	"pianoRoll",
 	"sheetMusic",
 	"warpingMatrix",
 	"text",

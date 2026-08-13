@@ -35,8 +35,8 @@ export interface InputController {
 	onPresetScroll(event: ControllerPointerEvent): void;
 	onWaveformZoomWheel(event: ControllerPointerEvent): void;
 	onWaveformMinimapStart(event: ControllerPointerEvent): void;
-	onMidiZoomWheel(event: ControllerPointerEvent): void;
-	onMidiMinimapStart(event: ControllerPointerEvent): void;
+	onPianoRollZoomWheel(event: ControllerPointerEvent): void;
+	onPianoRollMinimapStart(event: ControllerPointerEvent): void;
 	onPanelReorderStart(event: ControllerPointerEvent): void;
 	onPanelReorderMove(event: ControllerPointerEvent): void;
 	onPanelReorderEnd(event: ControllerPointerEvent): void;
@@ -574,14 +574,14 @@ export class InputBinder {
 	}
 
 	private bindMidiControls(): void {
-		this.addPointerDelegatedListener(".midi-zoom-minimap", (event) => {
-			this.controller.onMidiMinimapStart(event);
+		this.addPointerDelegatedListener(".piano-roll-zoom-minimap", (event) => {
+			this.controller.onPianoRollMinimapStart(event);
 		});
 		this.addDelegatedListener(
 			"wheel",
-			".midi-wrap",
+			".piano-roll-wrap",
 			(event) => {
-				this.controller.onMidiZoomWheel(event);
+				this.controller.onPianoRollZoomWheel(event);
 			},
 			undefined,
 			{ passive: false },
@@ -616,17 +616,19 @@ export class InputBinder {
 		const hasSheetMusicUi = !!this.root.querySelector(
 			".sheetmusic, .sheetmusic-wrap",
 		);
-		const hasMidiUi = !!this.root.querySelector(".midi, .midi-wrap");
+		const hasPianoRollUi = !!this.root.querySelector(
+			".piano-roll, .piano-roll-wrap",
+		);
 
 		if (hasWaveformUi) {
 			this.bindWaveformControls();
 		}
 
-		if (hasMidiUi) {
+		if (hasPianoRollUi) {
 			this.bindMidiControls();
 		}
 
-		if (hasWaveformUi || hasSheetMusicUi || hasMidiUi) {
+		if (hasWaveformUi || hasSheetMusicUi || hasPianoRollUi) {
 			this.addListener(getOwnerWindow(this.root), "resize", () => {
 				this.controller.onResize();
 			});

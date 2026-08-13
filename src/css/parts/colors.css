@@ -63,7 +63,7 @@
 
 	/*
 	 * Piano-roll channel colours, handed out in this order to the channels a
-	 * `midi` view colours (see `colorPerChannel`). The first one is the accent,
+	 * `pianoRoll` view colours (see `colorPerChannel`). The first one is the accent,
 	 * so a roll with a single channel keeps the look of an unpaired one. 5-10
 	 * continue with the tab10 categorical palette's remaining entries.
 	 */

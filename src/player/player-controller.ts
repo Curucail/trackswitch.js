@@ -60,7 +60,7 @@ import {
 	type TimelineId,
 	timelineId,
 } from "../timeline/timeline";
-import type { MidiSeekSurfaceMetadata } from "../ui/render-midi";
+import type { PianoRollSeekSurfaceMetadata } from "../ui/render-piano-roll";
 import {
 	type ImageSeekSurfaceMetadata,
 	ViewRenderer,
@@ -627,12 +627,12 @@ export class TrackSwitchControllerImpl
 		controllerInput.onWaveformMinimapStart(this, event);
 	}
 
-	onMidiZoomWheel(event: ControllerPointerEvent): void {
-		controllerSeek.onMidiZoomWheel(this, event);
+	onPianoRollZoomWheel(event: ControllerPointerEvent): void {
+		controllerSeek.onPianoRollZoomWheel(this, event);
 	}
 
-	onMidiMinimapStart(event: ControllerPointerEvent): void {
-		controllerInput.onMidiMinimapStart(this, event);
+	onPianoRollMinimapStart(event: ControllerPointerEvent): void {
+		controllerInput.onPianoRollMinimapStart(this, event);
 	}
 
 	onPanelReorderStart(event: ControllerPointerEvent): void {
@@ -731,8 +731,8 @@ export class TrackSwitchControllerImpl
 		return controllerSeek.isWaveformSeekSurface(this, seekWrap);
 	}
 
-	public isMidiSeekSurface(seekWrap: HTMLElement | null): boolean {
-		return controllerSeek.isMidiSeekSurface(this, seekWrap);
+	public isPianoRollSeekSurface(seekWrap: HTMLElement | null): boolean {
+		return controllerSeek.isPianoRollSeekSurface(this, seekWrap);
 	}
 
 	public startInteractiveSeek(
@@ -1062,10 +1062,10 @@ export class TrackSwitchControllerImpl
 		return controllerSeek.getSeekTimelineContext(this, seekingElement);
 	}
 
-	public getMidiTimelineContext(
-		midiSurface: MidiSeekSurfaceMetadata | null,
+	public getPianoRollTimelineContext(
+		pianoRollSurface: PianoRollSeekSurfaceMetadata | null,
 	): SeekTimelineContext | null {
-		return controllerSeek.getMidiTimelineContext(this, midiSurface);
+		return controllerSeek.getPianoRollTimelineContext(this, pianoRollSurface);
 	}
 
 	public getImageTimelineContext(

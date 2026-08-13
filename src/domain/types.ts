@@ -238,8 +238,8 @@ export type MidiNoteRef = string | number;
 /** The pitch axis of a piano roll: derived from the file, or fixed to a range. */
 export type MidiNoteRange = "automatic" | [MidiNoteRef, MidiNoteRef];
 
-export interface TrackSwitchMidiViewConfig {
-	type: "midi";
+export interface TrackSwitchPianoRollViewConfig {
+	type: "pianoRoll";
 	mediaID: MediaId;
 	height?: number;
 	maxZoom?: number;
@@ -364,7 +364,7 @@ export type TrackSwitchViewConfig =
 	| TrackSwitchImageViewConfig
 	| TrackSwitchPerTrackImageViewConfig
 	| TrackSwitchWaveformViewConfig
-	| TrackSwitchMidiViewConfig
+	| TrackSwitchPianoRollViewConfig
 	| TrackSwitchSheetMusicViewConfig
 	| TrackSwitchWarpingMatrixViewConfig
 	| TrackSwitchTextViewConfig

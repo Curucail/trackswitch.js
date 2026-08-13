@@ -564,7 +564,7 @@ export class InteractiveTrackSwitchControllerImpl
 				media[columnName] = { type: "midi", src: midiUrl };
 				timelines[columnName] = columnName;
 				views.push({
-					type: "midi",
+					type: "pianoRoll",
 					mediaID: columnName,
 					height: 180,
 					maxZoom: 5,

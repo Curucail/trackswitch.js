@@ -171,8 +171,8 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
           <input type="checkbox" name="trackImageBySolo" />
         </label>
         <label class="ts-control-row">
-          <span>MIDI</span>
-          <input type="checkbox" name="midi" />
+          <span>Piano Roll</span>
+          <input type="checkbox" name="pianoRoll" />
         </label>
         <label class="ts-control-row">
           <span>Sheet Music</span>

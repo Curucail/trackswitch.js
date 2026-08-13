@@ -15,7 +15,7 @@ const BLACK_KEY_LENGTH_RATIO = 0.58;
 const LABEL_MIN_KEY_HEIGHT = 9;
 const LABEL_FONT_SIZE = 9;
 
-export interface MidiKeyboardColors {
+export interface PianoRollKeyboardColors {
 	white: string;
 	black: string;
 	border: string;
@@ -23,11 +23,11 @@ export interface MidiKeyboardColors {
 	labelFont: string;
 }
 
-export interface MidiKeyboardOptions {
+export interface PianoRollKeyboardOptions {
 	minMidi: number;
 	maxMidi: number;
 	height: number;
-	colors: MidiKeyboardColors;
+	colors: PianoRollKeyboardColors;
 	/**
 	 * Sounding pitches, each with the colours lighting its key in channel order.
 	 * Several colours split the key along its length, one box each.
@@ -35,17 +35,17 @@ export interface MidiKeyboardOptions {
 	active: ReadonlyMap<number, string[]>;
 }
 
-export function resolveMidiKeyboardColors(
+export function resolvePianoRollKeyboardColors(
 	canvas: HTMLCanvasElement,
-): MidiKeyboardColors {
+): PianoRollKeyboardColors {
 	const computed = getComputedStyle(canvas);
 	const read = (property: string, fallback: string): string =>
 		computed.getPropertyValue(property).trim() || fallback;
 	return {
-		white: read("--midi-keyboard-white", "#ffffff"),
-		black: read("--midi-keyboard-black", "#222222"),
-		border: read("--midi-keyboard-border", "rgba(0, 0, 0, 0.35)"),
-		label: read("--midi-keyboard-label", "#808080"),
+		white: read("--piano-roll-keyboard-white", "#ffffff"),
+		black: read("--piano-roll-keyboard-black", "#222222"),
+		border: read("--piano-roll-keyboard-border", "rgba(0, 0, 0, 0.35)"),
+		label: read("--piano-roll-keyboard-label", "#808080"),
 		labelFont: `${LABEL_FONT_SIZE}px ${read("--ts-font-ui", "sans-serif")}`,
 	};
 }
@@ -130,9 +130,9 @@ function fillActiveBoxes(
 	});
 }
 
-export function drawMidiKeyboard(
+export function drawPianoRollKeyboard(
 	canvas: HTMLCanvasElement,
-	options: MidiKeyboardOptions,
+	options: PianoRollKeyboardOptions,
 ): void {
 	const width = Math.max(1, canvas.clientWidth);
 	const height = Math.max(1, options.height);

@@ -1,0 +1,233 @@
+/* PIANO ROLL VISUALIZATION STYLES ----------------------------------------------- */
+
+.trackswitch .piano-roll-wrap {
+	display: block;
+	position: relative;
+	width: 100%;
+	margin: 0;
+	container-type: inline-size;
+	container-name: ts-piano-roll;
+
+	/*
+	 * The theming hooks for a paired channel, declared here rather than on the
+	 * note layer so the zoom minimap inherits the same values. A view's `css`
+	 * block lands on this element too, so overriding a channel token recolours
+	 * that channel in this view alone.
+	 */
+	--piano-roll-channel-1-fill: var(--ts-color-channel-1-soft-30);
+	--piano-roll-channel-1-border: var(--ts-color-channel-1-soft-55);
+	--piano-roll-channel-1-color: var(--ts-color-channel-1);
+	--piano-roll-channel-2-fill: var(--ts-color-channel-2-soft-30);
+	--piano-roll-channel-2-border: var(--ts-color-channel-2-soft-55);
+	--piano-roll-channel-2-color: var(--ts-color-channel-2);
+	--piano-roll-channel-3-fill: var(--ts-color-channel-3-soft-30);
+	--piano-roll-channel-3-border: var(--ts-color-channel-3-soft-55);
+	--piano-roll-channel-3-color: var(--ts-color-channel-3);
+	--piano-roll-channel-4-fill: var(--ts-color-channel-4-soft-30);
+	--piano-roll-channel-4-border: var(--ts-color-channel-4-soft-55);
+	--piano-roll-channel-4-color: var(--ts-color-channel-4);
+	--piano-roll-channel-5-fill: var(--ts-color-channel-5-soft-30);
+	--piano-roll-channel-5-border: var(--ts-color-channel-5-soft-55);
+	--piano-roll-channel-5-color: var(--ts-color-channel-5);
+	--piano-roll-channel-6-fill: var(--ts-color-channel-6-soft-30);
+	--piano-roll-channel-6-border: var(--ts-color-channel-6-soft-55);
+	--piano-roll-channel-6-color: var(--ts-color-channel-6);
+	--piano-roll-channel-7-fill: var(--ts-color-channel-7-soft-30);
+	--piano-roll-channel-7-border: var(--ts-color-channel-7-soft-55);
+	--piano-roll-channel-7-color: var(--ts-color-channel-7);
+	--piano-roll-channel-8-fill: var(--ts-color-channel-8-soft-30);
+	--piano-roll-channel-8-border: var(--ts-color-channel-8-soft-55);
+	--piano-roll-channel-8-color: var(--ts-color-channel-8);
+	--piano-roll-channel-9-fill: var(--ts-color-channel-9-soft-30);
+	--piano-roll-channel-9-border: var(--ts-color-channel-9-soft-55);
+	--piano-roll-channel-9-color: var(--ts-color-channel-9);
+	--piano-roll-channel-10-fill: var(--ts-color-channel-10-soft-30);
+	--piano-roll-channel-10-border: var(--ts-color-channel-10-soft-55);
+	--piano-roll-channel-10-color: var(--ts-color-channel-10);
+
+	/* The keyboard column, when `pianoKeyboard` draws one. */
+	--piano-roll-keyboard-white: var(--ts-color-surface-raised-98);
+	--piano-roll-keyboard-black: var(--ts-color-surface-panel-dark);
+	--piano-roll-keyboard-border: var(--ts-color-border-mid);
+	--piano-roll-keyboard-label: var(--ts-color-text-secondary);
+}
+
+.trackswitch .piano-roll-wrap .piano-roll-scroll {
+	overflow-x: auto;
+	overflow-y: hidden;
+	-webkit-overflow-scrolling: touch;
+	scrollbar-width: none;
+	-ms-overflow-style: none;
+	position: relative;
+}
+
+.trackswitch .piano-roll-wrap .piano-roll-scroll::-webkit-scrollbar {
+	width: 0;
+	height: 0;
+	display: none;
+}
+
+.trackswitch .piano-roll-wrap .piano-roll-surface {
+	position: relative;
+	min-width: 100%;
+	overflow: hidden;
+	background: var(--ts-color-surface-base);
+}
+
+/*
+ * A single canvas that slides over the virtual surface; `left`, `width` and
+ * `height` are written by the renderer. The custom properties below are the
+ * theming hooks the note drawing reads.
+ */
+.trackswitch .piano-roll-wrap .piano-roll-note-layer {
+	position: absolute;
+	top: 0;
+	left: 0;
+	display: block;
+	pointer-events: none;
+	--piano-roll-note-fill: var(--ts-color-accent-soft-30);
+	--piano-roll-note-border: var(--ts-color-accent-soft-55);
+	--piano-roll-note-color: var(--ts-color-accent);
+	--piano-roll-velocity-bar: var(--ts-color-surface-inverse-soft-78);
+}
+
+.trackswitch .piano-roll-wrap .piano-roll-overlay {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	z-index: 5;
+}
+
+/*
+ * With a keyboard the wrapper becomes a row: the keys stay put on the left
+ * while the roll scrolls past them, which puts the playhead — pinned to the
+ * left edge of the scroller — exactly on the near edge of the keys.
+ */
+.trackswitch .piano-roll-wrap.piano-roll-has-keyboard {
+	display: flex;
+	align-items: stretch;
+}
+
+.trackswitch .piano-roll-wrap.piano-roll-has-keyboard .piano-roll-scroll {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.trackswitch .piano-roll-wrap .piano-roll-keyboard {
+	flex: 0 0 auto;
+	display: block;
+	width: var(--ts-piano-roll-keyboard-width);
+	background: var(--ts-color-surface-base);
+}
+
+.trackswitch .piano-roll-wrap.piano-roll-has-keyboard .piano-roll-overlay {
+	left: var(--ts-piano-roll-keyboard-width);
+}
+
+/* Spans the file rather than the whole surface: `width` is written by the
+ * renderer, so a trailing pad past the end of the file is not seekable and
+ * carries no markers. */
+.trackswitch .piano-roll-wrap .seekwrap {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	cursor: pointer;
+	pointer-events: auto;
+	touch-action: pan-y;
+	--seekhead-vertical-extent: 0.35;
+	--seekhead-color: var(--ts-color-surface-panel-dark);
+}
+
+.trackswitch .piano-roll-wrap .seekwrap .seekhead {
+	inset-block: 0;
+	width: var(--ts-waveform-seekhead-width);
+	background-color: var(--seekhead-color);
+}
+
+.trackswitch .piano-roll-wrap .piano-roll-timing,
+.trackswitch .piano-roll-wrap .piano-roll-zoom {
+	position: absolute;
+	top: 4px;
+	width: max-content;
+	z-index: 1;
+	border-radius: 4px;
+	font-family: monospace;
+	font-size: 11px;
+	color: var(--ts-color-text-inverse);
+	background: var(--ts-color-surface-panel-dark);
+	user-select: none;
+}
+
+.trackswitch .piano-roll-wrap .piano-roll-timing {
+	right: 8px;
+	padding: 4px 6px;
+	background: var(--ts-color-surface-panel-dark-50);
+	pointer-events: none;
+}
+
+.trackswitch .piano-roll-wrap .piano-roll-zoom {
+	left: 6px;
+	display: none;
+	align-items: center;
+	gap: 6px;
+	padding: 2px 3px;
+	background: var(--ts-color-surface-panel-dark-50);
+	pointer-events: auto;
+}
+
+.trackswitch .piano-roll-wrap .piano-roll-zoom .piano-roll-zoom-label {
+	pointer-events: none;
+}
+
+.trackswitch .piano-roll-wrap .piano-roll-zoom .piano-roll-zoom-minimap {
+	position: relative;
+	width: clamp(50px, 16cqw, 220px);
+	height: 18px;
+	overflow: hidden;
+	border-radius: 5px;
+	background: var(--ts-color-surface-raised-94);
+	box-shadow: inset 0 0 0 1px var(--ts-color-surface-raised-18);
+	pointer-events: auto;
+	cursor: grab;
+	--piano-roll-note-color: var(--ts-color-accent);
+}
+
+.trackswitch .piano-roll-wrap .piano-roll-zoom .piano-roll-zoom-minimap:active {
+	cursor: grabbing;
+}
+
+.trackswitch .piano-roll-wrap .piano-roll-zoom .piano-roll-zoom-canvas {
+	display: block;
+	width: 100%;
+	height: 100%;
+	opacity: 0.95;
+	pointer-events: none;
+	overflow: hidden;
+}
+
+.trackswitch .piano-roll-wrap .piano-roll-zoom .piano-roll-zoom-viewport {
+	position: absolute;
+	left: var(--ts-zoom-viewport-left);
+	width: var(--ts-zoom-viewport-width);
+	top: 1px;
+	bottom: 1px;
+	min-width: 0;
+	border-radius: 4px;
+	border: 1px solid var(--ts-color-text-inverse);
+	background: var(--ts-color-surface-raised-16);
+	box-shadow: 0 0 0 1px var(--ts-color-overlay-ring);
+	pointer-events: none;
+}
+
+.trackswitch .piano-roll-wrap.piano-roll-loading .piano-roll-surface::before {
+	content: "Loading piano roll...";
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--ts-color-text-secondary);
+	font-family: var(--ts-font-ui);
+	font-size: 13px;
+}

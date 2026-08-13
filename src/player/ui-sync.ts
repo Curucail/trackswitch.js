@@ -21,14 +21,14 @@ function shouldSuppressWaveformPlaybackFollow(
 	);
 }
 
-function shouldSuppressMidiPlaybackFollow(
+function shouldSuppressPianoRollPlaybackFollow(
 	controller: TrackSwitchControllerImpl,
 ): boolean {
 	return (
 		!!controller.waveformMinimapDragState ||
 		!!controller.pinchZoomState ||
 		(controller.state.currentlySeeking &&
-			controller.isMidiSeekSurface(controller.seekingElement))
+			controller.isPianoRollSeekSurface(controller.seekingElement))
 	);
 }
 
@@ -61,7 +61,7 @@ export function applyTrackProperties(ctx: TrackSwitchControllerImpl): void {
 		ctx.getWaveformTimelineProjector(),
 		ctx.getWaveformTimelineContext(),
 	);
-	ctx.renderer.updateMidiChannelVisibility(ctx.runtimes);
+	ctx.renderer.updatePianoRollChannelVisibility(ctx.runtimes);
 	ctx.renderMarkerLayers();
 	ctx.updateMarkerNavigation();
 
@@ -88,11 +88,11 @@ export function updateMainControls(ctx: TrackSwitchControllerImpl): void {
 		ctx.getWaveformTimelineContext(),
 		suppressWaveformPlaybackFollow,
 	);
-	ctx.renderer.updateMidiPlaybackState(
+	ctx.renderer.updatePianoRollPlaybackState(
 		uiState,
-		shouldSuppressMidiPlaybackFollow(ctx),
+		shouldSuppressPianoRollPlaybackFollow(ctx),
 		ctx.isAlignmentMode(),
-		(surface) => ctx.getMidiTimelineContext(surface),
+		(surface) => ctx.getPianoRollTimelineContext(surface),
 	);
 	ctx.updateMarkerNavigation();
 	ctx.sheetMusicEngine.updatePosition(
@@ -122,11 +122,11 @@ export function updatePlaybackPositionUi(ctx: TrackSwitchControllerImpl): void {
 		ctx.getWaveformTimelineContext(),
 		suppressWaveformPlaybackFollow,
 	);
-	ctx.renderer.updateMidiPlaybackState(
+	ctx.renderer.updatePianoRollPlaybackState(
 		uiState,
-		shouldSuppressMidiPlaybackFollow(ctx),
+		shouldSuppressPianoRollPlaybackFollow(ctx),
 		ctx.isAlignmentMode(),
-		(surface) => ctx.getMidiTimelineContext(surface),
+		(surface) => ctx.getPianoRollTimelineContext(surface),
 	);
 	ctx.updateMarkerNavigation();
 	ctx.sheetMusicEngine.updatePosition(

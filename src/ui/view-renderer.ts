@@ -32,10 +32,10 @@ import * as viewRendererCore from "./render-layout";
 import type { MarkerRenderData } from "./render-markers";
 import * as viewRendererMarkers from "./render-markers";
 import type {
-	MidiSeekSurfaceMetadata,
-	MidiTimelineContextResolver,
-} from "./render-midi";
-import * as viewRendererMidi from "./render-midi";
+	PianoRollSeekSurfaceMetadata,
+	PianoRollTimelineContextResolver,
+} from "./render-piano-roll";
+import * as viewRendererPianoRoll from "./render-piano-roll";
 import * as viewRendererSeek from "./render-seek";
 import * as viewRendererWarping from "./render-warping-matrix";
 import * as viewRendererWaveform from "./render-waveforms";
@@ -208,9 +208,9 @@ interface LatestWaveformRenderInput {
 	waveformTimelineContext?: WaveformTimelineContext;
 }
 
-interface LatestMidiRenderInput {
+interface LatestPianoRollRenderInput {
 	timelineDuration: number;
-	useMidiLocalTimeline: boolean;
+	usePianoRollLocalTimeline: boolean;
 }
 
 export interface WarpingMatrixPathPoint {
@@ -382,7 +382,7 @@ export class ViewRenderer {
 	public timelineReadouts: ReadonlyMap<string, TimelineReadout> = new Map();
 
 	public readonly waveformSeekSurfaces: WaveformSeekSurfaceMetadata[] = [];
-	public readonly midiSeekSurfaces: MidiSeekSurfaceMetadata[] = [];
+	public readonly pianoRollSeekSurfaces: PianoRollSeekSurfaceMetadata[] = [];
 	public readonly imageSeekSurfaces: ImageSeekSurfaceMetadata[] = [];
 	public readonly sheetMusicHosts: SheetMusicHostConfig[] = [];
 	public readonly warpingMatrixHosts: WarpingMatrixHostMetadata[] = [];
@@ -403,8 +403,8 @@ export class ViewRenderer {
 	>();
 	public waveformTileRefreshFrameId: number | null = null;
 	public latestWaveformRenderInput: LatestWaveformRenderInput | null = null;
-	public midiNoteRefreshFrameId: number | null = null;
-	public latestMidiRenderInput: LatestMidiRenderInput | null = null;
+	public pianoRollNoteRefreshFrameId: number | null = null;
+	public latestPianoRollRenderInput: LatestPianoRollRenderInput | null = null;
 	public readonly onWarpingMatrixSeek?: (referenceTime: number) => void;
 	public readonly resolveWarpingMatrixScoreBpm?: (
 		referenceTime: number,
@@ -880,8 +880,8 @@ export class ViewRenderer {
 		viewRendererWaveform.wrapWaveformCanvases(this);
 	}
 
-	public wrapMidiCanvases(): void {
-		viewRendererMidi.wrapMidiCanvases(this);
+	public wrapPianoRollCanvases(): void {
+		viewRendererPianoRoll.wrapPianoRollCanvases(this);
 	}
 
 	public wrapSheetMusicContainers(): void {
@@ -1161,11 +1161,11 @@ export class ViewRenderer {
 		);
 	}
 
-	public resolveMidiBaseWidth(
+	public resolvePianoRollBaseWidth(
 		scrollContainer: HTMLElement,
 		fallback: number,
 	): number {
-		return viewRendererMidi.resolveMidiBaseWidth(
+		return viewRendererPianoRoll.resolvePianoRollBaseWidth(
 			this,
 			scrollContainer,
 			fallback,
@@ -1257,18 +1257,18 @@ export class ViewRenderer {
 		return viewRendererWaveform.findWaveformSurface(this, seekWrap);
 	}
 
-	public findMidiSurface(
+	public findPianoRollSurface(
 		seekWrap: HTMLElement | null,
-	): MidiSeekSurfaceMetadata | null {
-		return viewRendererMidi.findMidiSurface(this, seekWrap);
+	): PianoRollSeekSurfaceMetadata | null {
+		return viewRendererPianoRoll.findPianoRollSurface(this, seekWrap);
 	}
 
 	reflowWaveforms(): void {
 		viewRendererWaveform.reflowWaveforms(this);
 	}
 
-	reflowMidiDisplays(): void {
-		viewRendererMidi.reflowMidiDisplays(this);
+	reflowPianoRollDisplays(): void {
+		viewRendererPianoRoll.reflowPianoRollDisplays(this);
 	}
 
 	getWaveformZoom(seekWrap: HTMLElement): number | null {
@@ -1318,38 +1318,45 @@ export class ViewRenderer {
 		);
 	}
 
-	getMidiZoom(seekWrap: HTMLElement): number | null {
-		return viewRendererMidi.getMidiZoom(this, seekWrap);
+	getPianoRollZoom(seekWrap: HTMLElement): number | null {
+		return viewRendererPianoRoll.getPianoRollZoom(this, seekWrap);
 	}
 
-	isMidiZoomEnabled(seekWrap: HTMLElement, durationSeconds: number): boolean {
-		return viewRendererMidi.isMidiZoomEnabled(this, seekWrap, durationSeconds);
+	isPianoRollZoomEnabled(
+		seekWrap: HTMLElement,
+		durationSeconds: number,
+	): boolean {
+		return viewRendererPianoRoll.isPianoRollZoomEnabled(
+			this,
+			seekWrap,
+			durationSeconds,
+		);
 	}
 
-	public getMidiMinimapViewport(
+	public getPianoRollMinimapViewport(
 		seekWrap: HTMLElement,
 	): { startRatio: number; widthRatio: number } | null {
-		return viewRendererMidi.getMidiMinimapViewport(this, seekWrap);
+		return viewRendererPianoRoll.getPianoRollMinimapViewport(this, seekWrap);
 	}
 
-	setMidiMinimapViewportStart(
+	setPianoRollMinimapViewportStart(
 		seekWrap: HTMLElement,
 		startRatio: number,
 	): boolean {
-		return viewRendererMidi.setMidiMinimapViewportStart(
+		return viewRendererPianoRoll.setPianoRollMinimapViewportStart(
 			this,
 			seekWrap,
 			startRatio,
 		);
 	}
 
-	setMidiZoom(
+	setPianoRollZoom(
 		seekWrap: HTMLElement,
 		zoom: number,
 		durationSeconds: number,
 		anchorPageX?: number,
 	): boolean {
-		return viewRendererMidi.setMidiZoom(
+		return viewRendererPianoRoll.setPianoRollZoom(
 			this,
 			seekWrap,
 			zoom,
@@ -1380,72 +1387,75 @@ export class ViewRenderer {
 	}
 
 	public async loadMidiSources(): Promise<void> {
-		return viewRendererMidi.loadMidiSources(this);
+		return viewRendererPianoRoll.loadMidiSources(this);
 	}
 
 	public getLoadedMidiBySource(): Map<string, Midi> {
-		return viewRendererMidi.getLoadedMidiBySource(this);
+		return viewRendererPianoRoll.getLoadedMidiBySource(this);
 	}
 
-	public async initializeMidiDisplays(
+	public async initializePianoRollDisplays(
 		timelineDuration: number,
-		useMidiLocalTimeline = false,
+		usePianoRollLocalTimeline = false,
 	): Promise<void> {
-		return viewRendererMidi.initializeMidiDisplays(
+		return viewRendererPianoRoll.initializePianoRollDisplays(
 			this,
 			timelineDuration,
-			useMidiLocalTimeline,
+			usePianoRollLocalTimeline,
 		);
 	}
 
-	public renderMidiDisplays(
+	public renderPianoRollDisplays(
 		timelineDuration: number,
-		useMidiLocalTimeline = false,
+		usePianoRollLocalTimeline = false,
 	): void {
-		viewRendererMidi.renderMidiDisplays(
+		viewRendererPianoRoll.renderPianoRollDisplays(
 			this,
 			timelineDuration,
-			useMidiLocalTimeline,
+			usePianoRollLocalTimeline,
 		);
 	}
 
-	public updateMidiChannelVisibility(runtimes: TrackRuntime[]): void {
-		viewRendererMidi.updateMidiChannelVisibility(this, runtimes);
+	public updatePianoRollChannelVisibility(runtimes: TrackRuntime[]): void {
+		viewRendererPianoRoll.updatePianoRollChannelVisibility(this, runtimes);
 	}
 
-	public resolveMidiTrackChannelColors(trackId: TrackId): string[] | null {
-		return viewRendererMidi.resolveMidiTrackChannelColors(this, trackId);
+	public resolvePianoRollTrackChannelColors(trackId: TrackId): string[] | null {
+		return viewRendererPianoRoll.resolvePianoRollTrackChannelColors(
+			this,
+			trackId,
+		);
 	}
 
-	public updateMidiPlaybackState(
+	public updatePianoRollPlaybackState(
 		state: TrackSwitchUiState,
 		suppressPlaybackFollow: boolean,
-		useMidiLocalTimeline = false,
-		timelineContextResolver?: MidiTimelineContextResolver,
+		usePianoRollLocalTimeline = false,
+		timelineContextResolver?: PianoRollTimelineContextResolver,
 	): void {
-		viewRendererMidi.updateMidiPlaybackState(
+		viewRendererPianoRoll.updatePianoRollPlaybackState(
 			this,
 			state,
 			suppressPlaybackFollow,
-			useMidiLocalTimeline,
+			usePianoRollLocalTimeline,
 			timelineContextResolver,
 		);
 	}
 
-	public refreshMidiNoteTiles(): void {
-		viewRendererMidi.refreshMidiNoteTiles(this);
+	public refreshPianoRollNoteTiles(): void {
+		viewRendererPianoRoll.refreshPianoRollNoteTiles(this);
 	}
 
-	public scheduleMidiNoteRefresh(): void {
-		viewRendererMidi.scheduleMidiNoteRefresh(this);
+	public schedulePianoRollNoteRefresh(): void {
+		viewRendererPianoRoll.schedulePianoRollNoteRefresh(this);
 	}
 
-	public updateMidiZoomIndicators(): void {
-		viewRendererMidi.updateMidiZoomIndicators(this);
+	public updatePianoRollZoomIndicators(): void {
+		viewRendererPianoRoll.updatePianoRollZoomIndicators(this);
 	}
 
-	public destroyMidiDisplays(): void {
-		viewRendererMidi.destroyMidiDisplays(this);
+	public destroyPianoRollDisplays(): void {
+		viewRendererPianoRoll.destroyPianoRollDisplays(this);
 	}
 
 	public renderWaveformsInternal(
@@ -1586,7 +1596,7 @@ export class ViewRenderer {
 
 		const surfaceKind = seekWrap.getAttribute("data-seek-surface");
 		let formatValue: (value: number) => string;
-		if (surfaceKind === "waveform" || surfaceKind === "midi") {
+		if (surfaceKind === "waveform" || surfaceKind === "piano-roll") {
 			formatValue = formatSecondsToHHMMSSmmm;
 		} else if (surfaceKind === "image") {
 			// An aligned image reports its own axis, in percent of its width.
@@ -1661,7 +1671,7 @@ export class ViewRenderer {
 
 		viewRendererCore.setFullscreen(this, active);
 		this.reflowWaveforms();
-		this.reflowMidiDisplays();
+		this.reflowPianoRollDisplays();
 		this.applyFullscreenPanelHeights(active);
 	}
 
@@ -1677,7 +1687,7 @@ export class ViewRenderer {
 
 	/**
 	 * Redistributes the extra vertical space fullscreen mode opens up among the
-	 * panels that have a configured height — waveform/midi surfaces, a bounded
+	 * panels that have a configured height — waveform/piano-roll surfaces, a bounded
 	 * sheet music panel, and an unconfigured (auto-sized) warping matrix. Panels
 	 * with no notion of a configured height (text, images, separators) are left
 	 * alone; an explicit `warpingMatrix.height` is also left alone, since that is
@@ -1694,11 +1704,15 @@ export class ViewRenderer {
 			});
 		});
 
-		this.midiSeekSurfaces.forEach((surface) => {
+		this.pianoRollSeekSurfaces.forEach((surface) => {
 			targets.push({
 				baseHeight: surface.configuredHeight,
 				setHeight: (height) =>
-					viewRendererMidi.setMidiSurfaceHeight(this, surface, height),
+					viewRendererPianoRoll.setPianoRollSurfaceHeight(
+						this,
+						surface,
+						height,
+					),
 			});
 		});
 

@@ -2,17 +2,17 @@ import { Midi } from "@tonejs/midi";
 import type {
 	MidiNoteRange,
 	TrackRuntime,
-	TrackSwitchMidiViewConfig,
+	TrackSwitchPianoRollViewConfig,
 	TrackSwitchUiState,
 	WaveformPlaybackFollowMode,
 } from "../domain/types";
 import { applyCssOverrides } from "../shared/dom";
 import { parseMidiNoteRef } from "../shared/midi-notes";
 import {
-	drawMidiKeyboard,
-	type MidiKeyboardColors,
-	resolveMidiKeyboardColors,
-} from "./render-midi-keyboard";
+	drawPianoRollKeyboard,
+	type PianoRollKeyboardColors,
+	resolvePianoRollKeyboardColors,
+} from "./render-piano-roll-keyboard";
 import {
 	clampTimelineValue,
 	getTimelineMaximumZoom,
@@ -34,21 +34,21 @@ import {
 } from "./timeline-surface";
 import type { ConfiguredViewHost, ViewRenderer } from "./view-renderer";
 
-const MIN_MIDI_ZOOM = MIN_TIMELINE_ZOOM;
-const MIDI_RANGE_PADDING = 2;
-const MIN_MIDI_NOTE_WIDTH = 1;
+const MIN_PIANO_ROLL_ZOOM = MIN_TIMELINE_ZOOM;
+const PIANO_ROLL_RANGE_PADDING = 2;
+const MIN_PIANO_ROLL_NOTE_WIDTH = 1;
 /** Below this row height an outline would swallow the note body, so skip it. */
-const MIDI_NOTE_BORDER_MIN_HEIGHT = 4;
+const PIANO_ROLL_NOTE_BORDER_MIN_HEIGHT = 4;
 /** A velocity bar is only legible once the note rect is at least this large. */
-const MIDI_VELOCITY_BAR_MIN_HEIGHT = 8;
-const MIDI_VELOCITY_BAR_MIN_WIDTH = 6;
+const PIANO_ROLL_VELOCITY_BAR_MIN_HEIGHT = 8;
+const PIANO_ROLL_VELOCITY_BAR_MIN_WIDTH = 6;
 /** Below this a checkerboard cell reads as noise rather than as a pattern. */
 const MIN_CHECKERBOARD_CELL = 6;
 /** The window a keyboard roll opens on when the view names no `defaultZoom`. */
 const DEFAULT_PIANO_KEYBOARD_ZOOM_SECONDS = 10;
 
 /** How many channel colours the stylesheet declares, cycled past the last one. */
-const MIDI_CHANNEL_PALETTE_SIZE = 10;
+const PIANO_ROLL_CHANNEL_PALETTE_SIZE = 10;
 
 interface MidiNoteEvent {
 	midi: number;
@@ -59,7 +59,7 @@ interface MidiNoteEvent {
 	channel: number;
 }
 
-export interface MidiNoteColors {
+export interface PianoRollNoteColors {
 	fill: string;
 	border: string;
 	velocity: string;
@@ -67,7 +67,7 @@ export interface MidiNoteColors {
 	velocityBar: string;
 }
 
-export interface MidiSeekSurfaceMetadata {
+export interface PianoRollSeekSurfaceMetadata {
 	wrapper: HTMLElement;
 	scrollContainer: HTMLElement;
 	surface: HTMLElement;
@@ -105,7 +105,7 @@ export interface MidiSeekSurfaceMetadata {
 	lastKeyboardKey: string | null;
 	/** The position the keys were last drawn for, so a reflow can repeat it. */
 	lastKeyboardPosition: number;
-	keyboardColors: MidiKeyboardColors | null;
+	keyboardColors: PianoRollKeyboardColors | null;
 	/** Parsed file, cached so the header is available for tick conversion. */
 	midi: Midi | null;
 	notes: MidiNoteEvent[];
@@ -116,7 +116,7 @@ export interface MidiSeekSurfaceMetadata {
 	velocityOpacity: boolean;
 	minMidi: number;
 	maxMidi: number;
-	midiDurationSeconds: number;
+	pianoRollDurationSeconds: number;
 	/** Longest note in `notes`; lets the draw loop bound its backwards scan. */
 	maxNoteDuration: number;
 	/** The audio tracks each paired channel follows, from the view config. */
@@ -127,16 +127,16 @@ export interface MidiSeekSurfaceMetadata {
 	channelPaletteIndex: Map<number, number>;
 	/** Channels currently silent, and so left out of the drawing. */
 	hiddenChannels: Set<number>;
-	noteColors: MidiNoteColors | null;
+	noteColors: PianoRollNoteColors | null;
 	/** Resolved colours per palette slot, alongside the `noteColors` cache. */
-	channelColors: Map<number, MidiNoteColors>;
+	channelColors: Map<number, PianoRollNoteColors>;
 	lastRenderKey: string | null;
 	lastMinimapKey: string | null;
 	lastPlaybackKey: string | null;
 	lastFollowScrollLeft: number | null;
 }
 
-interface MidiTimelineContext {
+interface PianoRollTimelineContext {
 	duration: number;
 	toReferenceTime(timelineTime: number): number;
 	fromReferenceTime(referenceTime: number): number;
@@ -144,9 +144,9 @@ interface MidiTimelineContext {
 	playbackPosition?(): number | null;
 }
 
-export type MidiTimelineContextResolver = (
-	surface: MidiSeekSurfaceMetadata,
-) => MidiTimelineContext | null;
+export type PianoRollTimelineContextResolver = (
+	surface: PianoRollSeekSurfaceMetadata,
+) => PianoRollTimelineContext | null;
 
 function clampTime(value: number, minimum: number, maximum: number): number {
 	return clampTimelineValue(value, minimum, maximum);
@@ -168,56 +168,60 @@ function buildSeekWrap(): string {
 	);
 }
 
-function getMidiSurfaceWidth(surface: MidiSeekSurfaceMetadata): number {
+function getPianoRollSurfaceWidth(
+	surface: PianoRollSeekSurfaceMetadata,
+): number {
 	return getTimelineSurfaceWidth(surface);
 }
 
 /** The stretch of surface the MIDI file itself occupies, without the trailing pad. */
-function getMidiTimeWidth(surface: MidiSeekSurfaceMetadata): number {
+function getPianoRollTimeWidth(surface: PianoRollSeekSurfaceMetadata): number {
 	return getTimelineTimeWidth(surface);
 }
 
-function getMidiMaximumZoom(
-	surface: MidiSeekSurfaceMetadata,
+function getPianoRollMaximumZoom(
+	surface: PianoRollSeekSurfaceMetadata,
 	durationSeconds: number,
 ): number {
 	return getTimelineMaximumZoom(durationSeconds, surface.maxZoomSeconds);
 }
 
-function getMidiViewportState(surface: MidiSeekSurfaceMetadata): {
+function getPianoRollViewportState(surface: PianoRollSeekSurfaceMetadata): {
 	startRatio: number;
 	widthRatio: number;
 } {
 	return getTimelineViewportState(surface);
 }
 
-function updateMidiMinimapViewport(surface: MidiSeekSurfaceMetadata): void {
+function updatePianoRollMinimapViewport(
+	surface: PianoRollSeekSurfaceMetadata,
+): void {
 	updateTimelineMinimapViewport(surface);
 }
 
-function setMidiSurfaceWidth(
-	surface: MidiSeekSurfaceMetadata,
+function setPianoRollSurfaceWidth(
+	surface: PianoRollSeekSurfaceMetadata,
 	width?: number,
 ): void {
-	const surfaceWidth = width ?? getMidiSurfaceWidth(surface);
+	const surfaceWidth = width ?? getPianoRollSurfaceWidth(surface);
 	surface.surface.style.width = `${surfaceWidth}px`;
 	surface.surface.style.height = `${surface.originalHeight}px`;
 	surface.noteCanvas.style.height = `${surface.originalHeight}px`;
 	// The seek surface covers the file, not the pad past its end, so a seek
 	// ratio, a loop marker and a marker layer all still land on the right time.
-	surface.seekWrap.style.width = `${getMidiTimeWidth(surface)}px`;
-	updateMidiMinimapViewport(surface);
+	surface.seekWrap.style.width = `${getPianoRollTimeWidth(surface)}px`;
+	updatePianoRollMinimapViewport(surface);
 }
 
 /** Resizes a surface's rendered height (fullscreen growth/restore) and redraws it. */
-export function setMidiSurfaceHeight(
+export function setPianoRollSurfaceHeight(
 	ctx: ViewRenderer,
-	surface: MidiSeekSurfaceMetadata,
+	surface: PianoRollSeekSurfaceMetadata,
 	height: number,
 ): void {
 	(function (
 		this: ViewRenderer,
-		surface: MidiSeekSurfaceMetadata,
+		surface: PianoRollSeekSurfaceMetadata,
 		height: number,
 	) {
 		if (surface.originalHeight === height) {
@@ -233,12 +237,12 @@ export function setMidiSurfaceHeight(
 		}
 		surface.lastRenderKey = null;
 		surface.lastMinimapKey = null;
-		this.refreshMidiNoteTiles();
+		this.refreshPianoRollNoteTiles();
 	}).call(ctx, surface, height);
 }
 
-function setMidiZoomForSurface(
-	surface: MidiSeekSurfaceMetadata,
+function setPianoRollZoomForSurface(
+	surface: PianoRollSeekSurfaceMetadata,
 	zoom: number,
 	maximum: number,
 	anchorPageX?: number,
@@ -248,26 +252,26 @@ function setMidiZoomForSurface(
 		zoom,
 		maximum,
 		anchorPageX,
-		setMidiSurfaceWidth,
+		setPianoRollSurfaceWidth,
 	);
 }
 
-function createMidiTimingNode(overlay: HTMLElement): HTMLElement {
+function createPianoRollTimingNode(overlay: HTMLElement): HTMLElement {
 	const timing = document.createElement("div");
-	timing.className = "midi-timing";
+	timing.className = "piano-roll-timing";
 	timing.textContent = "--:--:--:--- / --:--:--:---";
 	overlay.appendChild(timing);
 	return timing;
 }
 
-function createMidiZoomNode(overlay: HTMLElement): HTMLElement {
+function createPianoRollZoomNode(overlay: HTMLElement): HTMLElement {
 	const zoom = document.createElement("div");
-	zoom.className = "midi-zoom";
+	zoom.className = "piano-roll-zoom";
 	zoom.innerHTML =
-		'<span class="midi-zoom-label">Zoom</span>' +
-		'<div class="midi-zoom-minimap">' +
-		'<canvas class="midi-zoom-canvas"></canvas>' +
-		'<div class="midi-zoom-viewport"></div>' +
+		'<span class="piano-roll-zoom-label">Zoom</span>' +
+		'<div class="piano-roll-zoom-minimap">' +
+		'<canvas class="piano-roll-zoom-canvas"></canvas>' +
+		'<div class="piano-roll-zoom-viewport"></div>' +
 		"</div>";
 	zoom.style.display = "none";
 	overlay.appendChild(zoom);
@@ -319,7 +323,7 @@ function applyRetriggers(notes: MidiNoteEvent[]): void {
 }
 
 function applyMidiNotes(
-	surface: MidiSeekSurfaceMetadata,
+	surface: PianoRollSeekSurfaceMetadata,
 	notes: MidiNoteEvent[],
 ): void {
 	let minMidi = Number.POSITIVE_INFINITY;
@@ -338,12 +342,12 @@ function applyMidiNotes(
 	// where it is. A configured one stands as written.
 	surface.notes = notes;
 	if (surface.noteRange === "automatic") {
-		surface.minMidi = Math.floor(minMidi) - MIDI_RANGE_PADDING;
-		surface.maxMidi = Math.ceil(maxMidi) + MIDI_RANGE_PADDING;
+		surface.minMidi = Math.floor(minMidi) - PIANO_ROLL_RANGE_PADDING;
+		surface.maxMidi = Math.ceil(maxMidi) + PIANO_ROLL_RANGE_PADDING;
 	} else {
 		[surface.minMidi, surface.maxMidi] = surface.noteRange;
 	}
-	surface.midiDurationSeconds = durationSeconds;
+	surface.pianoRollDurationSeconds = durationSeconds;
 	surface.maxNoteDuration = maxNoteDuration;
 	assignChannelPalette(surface, notes);
 	surface.lastRenderKey = null;
@@ -358,7 +362,7 @@ function applyMidiNotes(
  * gets a slot and every note falls back to the plain, unpaired colour.
  */
 function assignChannelPalette(
-	surface: MidiSeekSurfaceMetadata,
+	surface: PianoRollSeekSurfaceMetadata,
 	notes: MidiNoteEvent[],
 ): void {
 	surface.channelPaletteIndex.clear();
@@ -377,14 +381,14 @@ function assignChannelPalette(
 		.forEach((channel, index) => {
 			surface.channelPaletteIndex.set(
 				channel,
-				(index % MIDI_CHANNEL_PALETTE_SIZE) + 1,
+				(index % PIANO_ROLL_CHANNEL_PALETTE_SIZE) + 1,
 			);
 		});
 }
 
-function resolveMidiNoteColors(
-	surface: MidiSeekSurfaceMetadata,
-): MidiNoteColors {
+function resolvePianoRollNoteColors(
+	surface: PianoRollSeekSurfaceMetadata,
+): PianoRollNoteColors {
 	if (surface.noteColors) {
 		return surface.noteColors;
 	}
@@ -392,11 +396,11 @@ function resolveMidiNoteColors(
 	const computed = getComputedStyle(surface.noteCanvas);
 	const read = (property: string, fallback: string): string =>
 		computed.getPropertyValue(property).trim() || fallback;
-	const colors: MidiNoteColors = {
-		fill: read("--midi-note-fill", "rgba(0, 0, 0, 0.3)"),
-		border: read("--midi-note-border", "rgba(0, 0, 0, 0.55)"),
-		velocity: read("--midi-note-color", "#000"),
-		velocityBar: read("--midi-velocity-bar", "rgba(255, 255, 255, 0.85)"),
+	const colors: PianoRollNoteColors = {
+		fill: read("--piano-roll-note-fill", "rgba(0, 0, 0, 0.3)"),
+		border: read("--piano-roll-note-border", "rgba(0, 0, 0, 0.55)"),
+		velocity: read("--piano-roll-note-color", "#000"),
+		velocityBar: read("--piano-roll-velocity-bar", "rgba(255, 255, 255, 0.85)"),
 	};
 	surface.noteColors = colors;
 	return colors;
@@ -406,13 +410,13 @@ function resolveMidiNoteColors(
  * The colours of one channel: its palette slot when the view pairs it with a
  * track, and the plain note colours when it does not.
  */
-function resolveMidiChannelColors(
-	surface: MidiSeekSurfaceMetadata,
+function resolvePianoRollChannelColors(
+	surface: PianoRollSeekSurfaceMetadata,
 	channel: number,
-): MidiNoteColors {
+): PianoRollNoteColors {
 	const paletteIndex = surface.channelPaletteIndex.get(channel);
 	if (paletteIndex === undefined) {
-		return resolveMidiNoteColors(surface);
+		return resolvePianoRollNoteColors(surface);
 	}
 
 	const cached = surface.channelColors.get(paletteIndex);
@@ -423,18 +427,18 @@ function resolveMidiChannelColors(
 	const computed = getComputedStyle(surface.noteCanvas);
 	const read = (property: string): string =>
 		computed.getPropertyValue(property).trim();
-	const colors: MidiNoteColors = {
-		fill: read(`--midi-channel-${paletteIndex}-fill`),
-		border: read(`--midi-channel-${paletteIndex}-border`),
-		velocity: read(`--midi-channel-${paletteIndex}-color`),
-		velocityBar: read("--midi-velocity-bar"),
+	const colors: PianoRollNoteColors = {
+		fill: read(`--piano-roll-channel-${paletteIndex}-fill`),
+		border: read(`--piano-roll-channel-${paletteIndex}-border`),
+		velocity: read(`--piano-roll-channel-${paletteIndex}-color`),
+		velocityBar: read("--piano-roll-velocity-bar"),
 	};
 	surface.channelColors.set(paletteIndex, colors);
 	return colors;
 }
 
 /** A draw key ingredient, so hiding a channel invalidates the memoized render. */
-function hiddenChannelsKey(surface: MidiSeekSurfaceMetadata): string {
+function hiddenChannelsKey(surface: PianoRollSeekSurfaceMetadata): string {
 	return [...surface.hiddenChannels].sort((a, b) => a - b).join(",");
 }
 
@@ -443,7 +447,7 @@ function hiddenChannelsKey(surface: MidiSeekSurfaceMetadata): string {
  * the softest note still keeps a third of its opacity.
  */
 function resolveNoteAlpha(
-	surface: MidiSeekSurfaceMetadata,
+	surface: PianoRollSeekSurfaceMetadata,
 	note: MidiNoteEvent,
 ): number {
 	return surface.velocityOpacity
@@ -457,10 +461,10 @@ function resolveNoteAlpha(
  * "no velocity" really means one flat block of the channel's colour.
  */
 function resolveNoteFill(
-	surface: MidiSeekSurfaceMetadata,
+	surface: PianoRollSeekSurfaceMetadata,
 	channel: number,
 ): string {
-	const colors = resolveMidiChannelColors(surface, channel);
+	const colors = resolvePianoRollChannelColors(surface, channel);
 	return surface.velocityOpacity ? colors.fill : colors.velocity;
 }
 
@@ -487,8 +491,8 @@ function findFirstVisibleNoteIndex(
 	return low;
 }
 
-function renderMidiMinimap(
-	surface: MidiSeekSurfaceMetadata,
+function renderPianoRollMinimap(
+	surface: PianoRollSeekSurfaceMetadata,
 	durationSeconds: number,
 ): void {
 	const width = Math.max(1, surface.zoomMinimapNode.clientWidth);
@@ -504,7 +508,7 @@ function renderMidiMinimap(
 		Math.max(1, window.devicePixelRatio || 1),
 	].join("#");
 	if (surface.lastMinimapKey === drawKey) {
-		updateMidiMinimapViewport(surface);
+		updatePianoRollMinimapViewport(surface);
 		return;
 	}
 
@@ -520,7 +524,7 @@ function renderMidiMinimap(
 			continue;
 		}
 
-		context.fillStyle = resolveMidiChannelColors(
+		context.fillStyle = resolvePianoRollChannelColors(
 			surface,
 			note.channel,
 		).velocity;
@@ -533,7 +537,7 @@ function renderMidiMinimap(
 	}
 	context.globalAlpha = 1;
 	surface.lastMinimapKey = drawKey;
-	updateMidiMinimapViewport(surface);
+	updatePianoRollMinimapViewport(surface);
 }
 
 /**
@@ -542,8 +546,8 @@ function renderMidiMinimap(
  * the buffered window are visited, so the cost tracks the viewport rather than
  * the size of the MIDI file.
  */
-function renderMidiNotes(
-	surface: MidiSeekSurfaceMetadata,
+function renderPianoRollNotes(
+	surface: PianoRollSeekSurfaceMetadata,
 	durationSeconds: number,
 ): void {
 	const height = surface.originalHeight;
@@ -552,7 +556,7 @@ function renderMidiNotes(
 	positionTileCanvas(surface.noteCanvas, tileWindow);
 
 	const { tileStartPx, tileCssWidth, tileCssHeight, surfaceWidth } = tileWindow;
-	const timeWidth = getMidiTimeWidth(surface);
+	const timeWidth = getPianoRollTimeWidth(surface);
 	const renderKey = [
 		tileStartPx,
 		tileCssWidth,
@@ -594,9 +598,9 @@ function renderMidiNotes(
 	const pixelsPerSecond = timeWidth / safeDuration;
 	const visibleStartTime = tileStartPx / pixelsPerSecond;
 	const visibleEndTime = (tileStartPx + tileCssWidth) / pixelsPerSecond;
-	const drawBorder = rowHeight >= MIDI_NOTE_BORDER_MIN_HEIGHT;
+	const drawBorder = rowHeight >= PIANO_ROLL_NOTE_BORDER_MIN_HEIGHT;
 	const drawVelocityBar =
-		surface.velocityBars && noteHeight >= MIDI_VELOCITY_BAR_MIN_HEIGHT;
+		surface.velocityBars && noteHeight >= PIANO_ROLL_VELOCITY_BAR_MIN_HEIGHT;
 
 	context.lineWidth = 1;
 
@@ -621,13 +625,13 @@ function renderMidiNotes(
 	context.globalAlpha = 1;
 	for (const note of visible) {
 		const { left, width, top } = resolveNoteRect(surface, note, geometry);
-		const colors = resolveMidiChannelColors(surface, note.channel);
+		const colors = resolvePianoRollChannelColors(surface, note.channel);
 		if (drawBorder) {
 			context.strokeStyle = colors.border;
 			context.strokeRect(left + 0.5, top + 0.5, width - 1, noteHeight - 1);
 		}
 
-		if (drawVelocityBar && width >= MIDI_VELOCITY_BAR_MIN_WIDTH) {
+		if (drawVelocityBar && width >= PIANO_ROLL_VELOCITY_BAR_MIN_WIDTH) {
 			const barWidth = Math.max(
 				1,
 				(width - 6) * clampTime(note.velocity, 0, 1),
@@ -636,7 +640,7 @@ function renderMidiNotes(
 			// one only the contrast colour does.
 			context.fillStyle = surface.velocityOpacity
 				? colors.velocity
-				: resolveMidiNoteColors(surface).velocityBar;
+				: resolvePianoRollNoteColors(surface).velocityBar;
 			context.fillRect(left + 3, top + noteHeight - 5, barWidth, 3);
 		}
 	}
@@ -655,14 +659,14 @@ interface NoteRect {
 }
 
 function resolveNoteRect(
-	surface: MidiSeekSurfaceMetadata,
+	surface: PianoRollSeekSurfaceMetadata,
 	note: MidiNoteEvent,
 	geometry: NoteGeometry,
 ): NoteRect {
 	return {
 		left: note.time * geometry.pixelsPerSecond,
 		width: Math.max(
-			MIN_MIDI_NOTE_WIDTH,
+			MIN_PIANO_ROLL_NOTE_WIDTH,
 			note.duration * geometry.pixelsPerSecond,
 		),
 		top: (surface.maxMidi - note.midi) * geometry.rowHeight + 1,
@@ -674,7 +678,7 @@ function resolveNoteRect(
  * and the early break keep the cost on the viewport rather than the file.
  */
 function collectVisibleNotes(
-	surface: MidiSeekSurfaceMetadata,
+	surface: PianoRollSeekSurfaceMetadata,
 	visibleStartTime: number,
 	visibleEndTime: number,
 ): MidiNoteEvent[] {
@@ -711,7 +715,7 @@ function collectVisibleNotes(
  */
 function drawOverlapCheckerboards(
 	context: CanvasRenderingContext2D,
-	surface: MidiSeekSurfaceMetadata,
+	surface: PianoRollSeekSurfaceMetadata,
 	visible: MidiNoteEvent[],
 	geometry: NoteGeometry,
 ): void {
@@ -737,7 +741,7 @@ function drawOverlapCheckerboards(
 			const rows = channels.length;
 			const left = segment.start * pixelsPerSecond;
 			const width = Math.max(
-				MIN_MIDI_NOTE_WIDTH,
+				MIN_PIANO_ROLL_NOTE_WIDTH,
 				(segment.end - segment.start) * pixelsPerSecond,
 			);
 			const rowPixels = noteHeight / rows;
@@ -824,32 +828,32 @@ function sameNotes(left: MidiNoteEvent[], right: MidiNoteEvent[]): boolean {
 }
 
 function resolvePlaybackFollowScrollLeft(
-	surface: MidiSeekSurfaceMetadata,
+	surface: PianoRollSeekSurfaceMetadata,
 	playheadRatio: number,
 ): number | null {
 	return resolveTimelinePlaybackFollowScrollLeft(surface, playheadRatio);
 }
 
-function resolveMidiTimelineDuration(
-	surface: MidiSeekSurfaceMetadata,
+function resolvePianoRollTimelineDuration(
+	surface: PianoRollSeekSurfaceMetadata,
 	playerDuration: number,
-	useMidiLocalTimeline: boolean,
+	usePianoRollLocalTimeline: boolean,
 ): number {
-	return useMidiLocalTimeline
-		? sanitizeDuration(surface.midiDurationSeconds)
+	return usePianoRollLocalTimeline
+		? sanitizeDuration(surface.pianoRollDurationSeconds)
 		: sanitizeDuration(playerDuration);
 }
 
-function resolveMidiTimelinePosition(
-	surface: MidiSeekSurfaceMetadata,
+function resolvePianoRollTimelinePosition(
+	surface: PianoRollSeekSurfaceMetadata,
 	playerPosition: number,
 	playerDuration: number,
-	useMidiLocalTimeline: boolean,
+	usePianoRollLocalTimeline: boolean,
 ): number {
-	const duration = resolveMidiTimelineDuration(
+	const duration = resolvePianoRollTimelineDuration(
 		surface,
 		playerDuration,
-		useMidiLocalTimeline,
+		usePianoRollLocalTimeline,
 	);
 	if (duration <= 0) {
 		return 0;
@@ -884,9 +888,9 @@ function resolveConfiguredNoteRange(
  * written in the unit the medium declares, which is only known once the timeline
  * readouts are in place — after the layout that built this surface.
  */
-function resolveMidiZoomUnits(
+function resolvePianoRollZoomUnits(
 	ctx: ViewRenderer,
-	surface: MidiSeekSurfaceMetadata,
+	surface: PianoRollSeekSurfaceMetadata,
 ): void {
 	if (surface.zoomUnitsResolved) {
 		return;
@@ -925,44 +929,44 @@ function resolveChannelTrackIds(
 	return channelTrackIds;
 }
 
-export function wrapMidiCanvases(ctx: ViewRenderer): void {
+export function wrapPianoRollCanvases(ctx: ViewRenderer): void {
 	(function (this: ViewRenderer) {
-		this.midiSeekSurfaces.length = 0;
+		this.pianoRollSeekSurfaces.length = 0;
 
-		const canvases = this.root.querySelectorAll("canvas.midi");
+		const canvases = this.root.querySelectorAll("canvas.piano-roll");
 		canvases.forEach((canvasElement: Element) => {
 			if (!(canvasElement instanceof HTMLCanvasElement)) {
 				return;
 			}
 
-			if (canvasElement.closest(".midi-wrap")) {
+			if (canvasElement.closest(".piano-roll-wrap")) {
 				return;
 			}
 
 			const definition: ConfiguredViewHost =
 				this.getConfiguredViewHost(canvasElement);
-			if (definition.view.type !== "midi") return;
-			const config = definition.view as TrackSwitchMidiViewConfig;
+			if (definition.view.type !== "pianoRoll") return;
+			const config = definition.view as TrackSwitchPianoRollViewConfig;
 			const source = definition.source;
 			if (!source) return;
 
 			const wrapper = document.createElement("div");
-			wrapper.className = "midi-wrap ts-stack-section";
+			wrapper.className = "piano-roll-wrap ts-stack-section";
 			applyCssOverrides(wrapper, config.css);
 
 			const scrollContainer = document.createElement("div");
-			scrollContainer.className = "midi-scroll";
+			scrollContainer.className = "piano-roll-scroll";
 
 			const surface = document.createElement("div");
-			surface.className = "midi-surface";
+			surface.className = "piano-roll-surface";
 
-			// One viewport-sized canvas slides over the virtual MIDI surface, so the
+			// One viewport-sized canvas slides over the virtual piano-roll surface, so the
 			// note count no longer drives the DOM node count.
 			const noteCanvas = document.createElement("canvas");
-			noteCanvas.className = "midi-note-layer";
+			noteCanvas.className = "piano-roll-note-layer";
 
 			const overlay = document.createElement("div");
-			overlay.className = "midi-overlay";
+			overlay.className = "piano-roll-overlay";
 
 			const parent = canvasElement.parentElement;
 			if (!parent) {
@@ -974,9 +978,9 @@ export function wrapMidiCanvases(ctx: ViewRenderer): void {
 			const pianoKeyboard = config.pianoKeyboard === true;
 			let keyboardCanvas: HTMLCanvasElement | null = null;
 			if (pianoKeyboard) {
-				wrapper.classList.add("midi-has-keyboard");
+				wrapper.classList.add("piano-roll-has-keyboard");
 				keyboardCanvas = document.createElement("canvas");
-				keyboardCanvas.className = "midi-keyboard";
+				keyboardCanvas.className = "piano-roll-keyboard";
 			}
 
 			parent.insertBefore(wrapper, canvasElement);
@@ -999,7 +1003,7 @@ export function wrapMidiCanvases(ctx: ViewRenderer): void {
 				seekWrap,
 				definition.alignmentTimeline?.trim() || null,
 			);
-			seekWrap.setAttribute("data-seek-surface", "midi");
+			seekWrap.setAttribute("data-seek-surface", "piano-roll");
 
 			const channelTrackIds = resolveChannelTrackIds(
 				config.channelToTrackIDMap,
@@ -1015,11 +1019,17 @@ export function wrapMidiCanvases(ctx: ViewRenderer): void {
 			// Same default as a waveform: an aligned player runs every surface on its
 			// own local clock, which is only readable with the timer on.
 			const timerEnabled = config.timer ?? this.isAlignmentMode();
-			const timingNode = timerEnabled ? createMidiTimingNode(overlay) : null;
-			const zoomNode = createMidiZoomNode(overlay);
-			const zoomMinimapNode = zoomNode.querySelector(".midi-zoom-minimap");
-			const zoomCanvas = zoomNode.querySelector(".midi-zoom-canvas");
-			const zoomViewportNode = zoomNode.querySelector(".midi-zoom-viewport");
+			const timingNode = timerEnabled
+				? createPianoRollTimingNode(overlay)
+				: null;
+			const zoomNode = createPianoRollZoomNode(overlay);
+			const zoomMinimapNode = zoomNode.querySelector(
+				".piano-roll-zoom-minimap",
+			);
+			const zoomCanvas = zoomNode.querySelector(".piano-roll-zoom-canvas");
+			const zoomViewportNode = zoomNode.querySelector(
+				".piano-roll-zoom-viewport",
+			);
 			if (
 				!(zoomMinimapNode instanceof HTMLElement) ||
 				!(zoomCanvas instanceof HTMLCanvasElement) ||
@@ -1028,7 +1038,7 @@ export function wrapMidiCanvases(ctx: ViewRenderer): void {
 				return;
 			}
 
-			const metadata: MidiSeekSurfaceMetadata = {
+			const metadata: PianoRollSeekSurfaceMetadata = {
 				wrapper,
 				scrollContainer,
 				surface,
@@ -1050,11 +1060,11 @@ export function wrapMidiCanvases(ctx: ViewRenderer): void {
 				defaultZoomSeconds: null,
 				zoomUnitsResolved: false,
 				defaultZoomApplied: false,
-				baseWidth: this.resolveMidiBaseWidth(
+				baseWidth: this.resolvePianoRollBaseWidth(
 					scrollContainer,
 					canvasElement.width,
 				),
-				zoom: MIN_MIDI_ZOOM,
+				zoom: MIN_PIANO_ROLL_ZOOM,
 				timingNode,
 				zoomNode,
 				zoomMinimapNode,
@@ -1071,20 +1081,20 @@ export function wrapMidiCanvases(ctx: ViewRenderer): void {
 				velocityOpacity: config.velocityOpacity === true,
 				minMidi: 0,
 				maxMidi: 0,
-				midiDurationSeconds: 0,
+				pianoRollDurationSeconds: 0,
 				maxNoteDuration: 0,
 				channelTrackIds,
 				colorPerChannel: config.colorPerChannel ?? true,
 				channelPaletteIndex: new Map<number, number>(),
 				hiddenChannels: new Set<number>(),
 				noteColors: null,
-				channelColors: new Map<number, MidiNoteColors>(),
+				channelColors: new Map<number, PianoRollNoteColors>(),
 				lastRenderKey: null,
 				lastMinimapKey: null,
 				lastPlaybackKey: null,
 				lastFollowScrollLeft: null,
 			};
-			this.midiSeekSurfaces.push(metadata);
+			this.pianoRollSeekSurfaces.push(metadata);
 
 			scrollContainer.addEventListener(
 				"scroll",
@@ -1092,8 +1102,8 @@ export function wrapMidiCanvases(ctx: ViewRenderer): void {
 					// Scroll handlers run after layout, so refreshing the cached width
 					// here is free and keeps the per-frame paths off the layout path.
 					refreshTimelineViewportWidth(metadata);
-					updateMidiMinimapViewport(metadata);
-					this.scheduleMidiNoteRefresh();
+					updatePianoRollMinimapViewport(metadata);
+					this.schedulePianoRollNoteRefresh();
 				},
 				{ passive: true },
 			);
@@ -1101,7 +1111,7 @@ export function wrapMidiCanvases(ctx: ViewRenderer): void {
 	}).call(ctx);
 }
 
-export function resolveMidiBaseWidth(
+export function resolvePianoRollBaseWidth(
 	ctx: ViewRenderer,
 	scrollContainer: HTMLElement,
 	fallback: number,
@@ -1115,27 +1125,29 @@ export function resolveMidiBaseWidth(
 	}.call(ctx, scrollContainer, fallback);
 }
 
-export function reflowMidiDisplays(ctx: ViewRenderer): void {
+export function reflowPianoRollDisplays(ctx: ViewRenderer): void {
 	(function (this: ViewRenderer) {
-		this.midiSeekSurfaces.forEach((surface: MidiSeekSurfaceMetadata) => {
-			// Theme variables may have changed along with the layout.
-			surface.noteColors = null;
-			surface.keyboardColors = null;
-			surface.lastKeyboardKey = null;
-			surface.channelColors.clear();
-			reflowTimelineSurface(surface, setMidiSurfaceWidth);
-		});
+		this.pianoRollSeekSurfaces.forEach(
+			(surface: PianoRollSeekSurfaceMetadata) => {
+				// Theme variables may have changed along with the layout.
+				surface.noteColors = null;
+				surface.keyboardColors = null;
+				surface.lastKeyboardKey = null;
+				surface.channelColors.clear();
+				reflowTimelineSurface(surface, setPianoRollSurfaceWidth);
+			},
+		);
 	}).call(ctx);
 }
 
 /**
  * Fetch and decode every MIDI source. Split out of rendering so that
- * `midiDurationSeconds` and the parsed header — which the alignment needs for
+ * `pianoRollDurationSeconds` and the parsed header — which the alignment needs for
  * extents and tick conversion — are available before the alignment resolves.
  * The parsed file is cached on the surface so nothing is fetched twice.
  */
 export async function loadMidiSources(ctx: ViewRenderer): Promise<void> {
-	const surfaces = ctx.midiSeekSurfaces;
+	const surfaces = ctx.pianoRollSeekSurfaces;
 	if (surfaces.length === 0) {
 		return;
 	}
@@ -1145,11 +1157,11 @@ export async function loadMidiSources(ctx: ViewRenderer): Promise<void> {
 			if (surface.midi) {
 				return;
 			}
-			surface.wrapper.classList.add("midi-loading");
+			surface.wrapper.classList.add("piano-roll-loading");
 			const midi = await Midi.fromUrl(surface.source);
 			surface.midi = midi;
 			applyMidiNotes(surface, flattenMidiNotes(midi, surface.source));
-			surface.wrapper.classList.remove("midi-loading");
+			surface.wrapper.classList.remove("piano-roll-loading");
 		}),
 	);
 }
@@ -1157,7 +1169,7 @@ export async function loadMidiSources(ctx: ViewRenderer): Promise<void> {
 /** Parsed MIDI files keyed by source url, for reuse by the media profiler. */
 export function getLoadedMidiBySource(ctx: ViewRenderer): Map<string, Midi> {
 	const bySource = new Map<string, Midi>();
-	ctx.midiSeekSurfaces.forEach((surface) => {
+	ctx.pianoRollSeekSurfaces.forEach((surface) => {
 		if (surface.midi) {
 			bySource.set(surface.source, surface.midi);
 		}
@@ -1165,85 +1177,92 @@ export function getLoadedMidiBySource(ctx: ViewRenderer): Map<string, Midi> {
 	return bySource;
 }
 
-export async function initializeMidiDisplays(
+export async function initializePianoRollDisplays(
 	ctx: ViewRenderer,
 	timelineDuration: number,
-	useMidiLocalTimeline = false,
+	usePianoRollLocalTimeline = false,
 ): Promise<void> {
-	const surfaces = ctx.midiSeekSurfaces;
+	const surfaces = ctx.pianoRollSeekSurfaces;
 	if (surfaces.length === 0) {
 		return;
 	}
 
 	await loadMidiSources(ctx);
-	ctx.renderMidiDisplays(timelineDuration, useMidiLocalTimeline);
+	ctx.renderPianoRollDisplays(timelineDuration, usePianoRollLocalTimeline);
 }
 
-export function renderMidiDisplays(
+export function renderPianoRollDisplays(
 	ctx: ViewRenderer,
 	timelineDuration: number,
-	useMidiLocalTimeline = false,
+	usePianoRollLocalTimeline = false,
 ): void {
 	(function (
 		this: ViewRenderer,
 		timelineDuration: number,
-		useMidiLocalTimeline: boolean,
+		usePianoRollLocalTimeline: boolean,
 	) {
-		if (this.midiSeekSurfaces.length === 0) {
+		if (this.pianoRollSeekSurfaces.length === 0) {
 			return;
 		}
 
-		this.latestMidiRenderInput = { timelineDuration, useMidiLocalTimeline };
-		this.reflowMidiDisplays();
-		this.midiSeekSurfaces.forEach((surface: MidiSeekSurfaceMetadata) => {
-			const surfaceDuration = resolveMidiTimelineDuration(
-				surface,
-				timelineDuration,
-				useMidiLocalTimeline,
-			);
-			resolveMidiZoomUnits(this, surface);
-			const maximumZoom = getMidiMaximumZoom(surface, surfaceDuration);
-			// `defaultZoom` only ever opens the surface: once it has, a reflow or a
-			// hot reload leaves whatever zoom the listener is on.
-			let targetZoom = surface.zoom;
-			if (!surface.defaultZoomApplied && surfaceDuration > 0) {
-				surface.defaultZoomApplied = true;
-				targetZoom = resolveTimelineDefaultZoom(
-					surfaceDuration,
-					surface.defaultZoomSeconds,
-					maximumZoom,
+		this.latestPianoRollRenderInput = {
+			timelineDuration,
+			usePianoRollLocalTimeline,
+		};
+		this.reflowPianoRollDisplays();
+		this.pianoRollSeekSurfaces.forEach(
+			(surface: PianoRollSeekSurfaceMetadata) => {
+				const surfaceDuration = resolvePianoRollTimelineDuration(
+					surface,
+					timelineDuration,
+					usePianoRollLocalTimeline,
 				);
-			}
-			setMidiZoomForSurface(surface, targetZoom, maximumZoom);
-			renderMidiNotes(surface, surfaceDuration);
-			renderMidiMinimap(surface, surfaceDuration);
-			refreshMidiKeyboard(surface, surface.lastKeyboardPosition);
-		});
-		this.updateMidiZoomIndicators();
-	}).call(ctx, timelineDuration, useMidiLocalTimeline);
+				resolvePianoRollZoomUnits(this, surface);
+				const maximumZoom = getPianoRollMaximumZoom(surface, surfaceDuration);
+				// `defaultZoom` only ever opens the surface: once it has, a reflow or a
+				// hot reload leaves whatever zoom the listener is on.
+				let targetZoom = surface.zoom;
+				if (!surface.defaultZoomApplied && surfaceDuration > 0) {
+					surface.defaultZoomApplied = true;
+					targetZoom = resolveTimelineDefaultZoom(
+						surfaceDuration,
+						surface.defaultZoomSeconds,
+						maximumZoom,
+					);
+				}
+				setPianoRollZoomForSurface(surface, targetZoom, maximumZoom);
+				renderPianoRollNotes(surface, surfaceDuration);
+				renderPianoRollMinimap(surface, surfaceDuration);
+				refreshPianoRollKeyboard(surface, surface.lastKeyboardPosition);
+			},
+		);
+		this.updatePianoRollZoomIndicators();
+	}).call(ctx, timelineDuration, usePianoRollLocalTimeline);
 }
 
 /**
  * Redraws the sliding note canvases from the inputs of the last full render.
- * Unlike `renderMidiDisplays` this touches no layout and never writes
+ * Unlike `renderPianoRollDisplays` this touches no layout and never writes
  * `scrollLeft`, so it is safe to run from scroll and zoom handlers.
  */
-export function refreshMidiNoteTiles(ctx: ViewRenderer): void {
+export function refreshPianoRollNoteTiles(ctx: ViewRenderer): void {
 	(function (this: ViewRenderer) {
-		const latestInput = this.latestMidiRenderInput;
-		if (!latestInput || this.midiSeekSurfaces.length === 0) {
+		const latestInput = this.latestPianoRollRenderInput;
+		if (!latestInput || this.pianoRollSeekSurfaces.length === 0) {
 			return;
 		}
 
-		this.midiSeekSurfaces.forEach((surface: MidiSeekSurfaceMetadata) => {
-			const surfaceDuration = resolveMidiTimelineDuration(
-				surface,
-				latestInput.timelineDuration,
-				latestInput.useMidiLocalTimeline,
-			);
-			renderMidiNotes(surface, surfaceDuration);
-			renderMidiMinimap(surface, surfaceDuration);
-		});
+		this.pianoRollSeekSurfaces.forEach(
+			(surface: PianoRollSeekSurfaceMetadata) => {
+				const surfaceDuration = resolvePianoRollTimelineDuration(
+					surface,
+					latestInput.timelineDuration,
+					latestInput.usePianoRollLocalTimeline,
+				);
+				renderPianoRollNotes(surface, surfaceDuration);
+				renderPianoRollMinimap(surface, surfaceDuration);
+			},
+		);
 	}).call(ctx);
 }
 
@@ -1253,12 +1272,12 @@ export function refreshMidiNoteTiles(ctx: ViewRenderer): void {
  * any one of them is audible. The draw keys carry the hidden set, so a refresh
  * that changes nothing costs a key comparison.
  */
-export function updateMidiChannelVisibility(
+export function updatePianoRollChannelVisibility(
 	ctx: ViewRenderer,
 	runtimes: TrackRuntime[],
 ): void {
 	(function (this: ViewRenderer) {
-		if (this.midiSeekSurfaces.length === 0) {
+		if (this.pianoRollSeekSurfaces.length === 0) {
 			return;
 		}
 
@@ -1267,20 +1286,22 @@ export function updateMidiChannelVisibility(
 			indexByTrackId.set(runtime.definition.id, index);
 		});
 
-		this.midiSeekSurfaces.forEach((surface: MidiSeekSurfaceMetadata) => {
-			surface.hiddenChannels.clear();
-			surface.channelTrackIds.forEach((trackIds, channel) => {
-				const audible = trackIds.some((trackId) => {
-					const trackIndex = indexByTrackId.get(trackId);
-					return trackIndex !== undefined && this.isTrackAudible(trackIndex);
+		this.pianoRollSeekSurfaces.forEach(
+			(surface: PianoRollSeekSurfaceMetadata) => {
+				surface.hiddenChannels.clear();
+				surface.channelTrackIds.forEach((trackIds, channel) => {
+					const audible = trackIds.some((trackId) => {
+						const trackIndex = indexByTrackId.get(trackId);
+						return trackIndex !== undefined && this.isTrackAudible(trackIndex);
+					});
+					if (!audible) {
+						surface.hiddenChannels.add(channel);
+					}
 				});
-				if (!audible) {
-					surface.hiddenChannels.add(channel);
-				}
-			});
-		});
+			},
+		);
 
-		this.scheduleMidiNoteRefresh();
+		this.schedulePianoRollNoteRefresh();
 	}).call(ctx);
 }
 
@@ -1290,11 +1311,11 @@ export function updateMidiChannelVisibility(
  * ascending channel order. Null when no roll colours a channel paired with
  * this track (no pairing, or `colorPerChannel` is off).
  */
-export function resolveMidiTrackChannelColors(
+export function resolvePianoRollTrackChannelColors(
 	ctx: ViewRenderer,
 	trackId: string,
 ): string[] | null {
-	for (const surface of ctx.midiSeekSurfaces) {
+	for (const surface of ctx.pianoRollSeekSurfaces) {
 		const channels = [...surface.channelTrackIds]
 			.filter(([, pairedTrackIds]) => pairedTrackIds.includes(trackId))
 			.map(([channel]) => channel)
@@ -1303,7 +1324,7 @@ export function resolveMidiTrackChannelColors(
 
 		if (channels.length > 0) {
 			return channels.map(
-				(channel) => resolveMidiChannelColors(surface, channel).velocity,
+				(channel) => resolvePianoRollChannelColors(surface, channel).velocity,
 			);
 		}
 	}
@@ -1311,133 +1332,135 @@ export function resolveMidiTrackChannelColors(
 	return null;
 }
 
-export function scheduleMidiNoteRefresh(ctx: ViewRenderer): void {
+export function schedulePianoRollNoteRefresh(ctx: ViewRenderer): void {
 	(function (this: ViewRenderer) {
-		if (this.midiNoteRefreshFrameId !== null) {
+		if (this.pianoRollNoteRefreshFrameId !== null) {
 			return;
 		}
 
-		this.midiNoteRefreshFrameId = requestAnimationFrame(() => {
-			this.midiNoteRefreshFrameId = null;
-			this.refreshMidiNoteTiles();
+		this.pianoRollNoteRefreshFrameId = requestAnimationFrame(() => {
+			this.pianoRollNoteRefreshFrameId = null;
+			this.refreshPianoRollNoteTiles();
 		});
 	}).call(ctx);
 }
 
-export function updateMidiPlaybackState(
+export function updatePianoRollPlaybackState(
 	ctx: ViewRenderer,
 	state: TrackSwitchUiState,
 	suppressPlaybackFollow: boolean,
-	useMidiLocalTimeline = false,
-	timelineContextResolver?: MidiTimelineContextResolver,
+	usePianoRollLocalTimeline = false,
+	timelineContextResolver?: PianoRollTimelineContextResolver,
 ): void {
 	(function (
 		this: ViewRenderer,
 		state: TrackSwitchUiState,
 		suppressPlaybackFollow: boolean,
-		useMidiLocalTimeline: boolean,
-		timelineContextResolver?: MidiTimelineContextResolver,
+		usePianoRollLocalTimeline: boolean,
+		timelineContextResolver?: PianoRollTimelineContextResolver,
 	) {
-		this.midiSeekSurfaces.forEach((surface: MidiSeekSurfaceMetadata) => {
-			const timelineContext = timelineContextResolver
-				? timelineContextResolver(surface)
-				: null;
-			const safeDuration = timelineContext
-				? sanitizeDuration(timelineContext.duration)
-				: resolveMidiTimelineDuration(
-						surface,
-						state.longestDuration,
-						useMidiLocalTimeline,
-					);
-			const position = timelineContext
-				? clampTime(
-						timelineContext.playbackPosition?.() ??
-							timelineContext.fromReferenceTime(state.position),
-						0,
-						safeDuration,
-					)
-				: resolveMidiTimelinePosition(
-						surface,
-						state.position,
-						state.longestDuration,
-						useMidiLocalTimeline,
-					);
-			const loopPointA =
-				state.loop?.pointA === null || state.loop?.pointA === undefined
-					? null
-					: timelineContext
-						? clampTime(
-								timelineContext.fromReferenceTime(state.loop.pointA),
-								0,
-								safeDuration,
-							)
-						: clampTime(state.loop.pointA, 0, safeDuration);
-			const loopPointB =
-				state.loop?.pointB === null || state.loop?.pointB === undefined
-					? null
-					: timelineContext
-						? clampTime(
-								timelineContext.fromReferenceTime(state.loop.pointB),
-								0,
-								safeDuration,
-							)
-						: clampTime(state.loop.pointB, 0, safeDuration);
-			// This runs on every 16 ms playback tick, so bail out early when nothing
-			// observable changed since the previous one.
-			const playbackKey = [
-				Math.round(position * 1000),
-				Math.round(safeDuration * 1000),
-				loopPointA === null ? "-" : Math.round(loopPointA * 1000),
-				loopPointB === null ? "-" : Math.round(loopPointB * 1000),
-				state.loop?.enabled === true ? "1" : "0",
-				suppressPlaybackFollow ? "1" : "0",
-			].join("#");
-			if (surface.lastPlaybackKey === playbackKey) {
-				return;
-			}
-			surface.lastPlaybackKey = playbackKey;
-
-			refreshMidiKeyboard(surface, position);
-
-			this.updateSeekWrapVisuals(surface.seekWrap, position, safeDuration, {
-				pointA: loopPointA,
-				pointB: loopPointB,
-				enabled: state.loop?.enabled === true,
-			});
-
-			if (surface.timingNode) {
-				// A MIDI surface always shows its own file's clock, so it reads out
-				// in the unit its own alignment column was declared in.
-				const timeline = surface.mediaId;
-				surface.timingNode.textContent = this.formatLocalTimelinePair(
-					timeline,
-					position,
-					safeDuration,
-				);
-			}
-
-			if (!suppressPlaybackFollow && safeDuration > 0) {
-				const scrollLeft = resolvePlaybackFollowScrollLeft(
-					surface,
-					position / safeDuration,
-				);
-				// Writing scrollLeft and then reading layout back would force a
-				// synchronous reflow every tick. The native scroll event already
-				// refreshes the minimap viewport and the note tiles.
-				if (
-					Number.isFinite(scrollLeft) &&
-					scrollLeft !== surface.lastFollowScrollLeft
-				) {
-					surface.lastFollowScrollLeft = scrollLeft as number;
-					surface.scrollContainer.scrollLeft = scrollLeft as number;
+		this.pianoRollSeekSurfaces.forEach(
+			(surface: PianoRollSeekSurfaceMetadata) => {
+				const timelineContext = timelineContextResolver
+					? timelineContextResolver(surface)
+					: null;
+				const safeDuration = timelineContext
+					? sanitizeDuration(timelineContext.duration)
+					: resolvePianoRollTimelineDuration(
+							surface,
+							state.longestDuration,
+							usePianoRollLocalTimeline,
+						);
+				const position = timelineContext
+					? clampTime(
+							timelineContext.playbackPosition?.() ??
+								timelineContext.fromReferenceTime(state.position),
+							0,
+							safeDuration,
+						)
+					: resolvePianoRollTimelinePosition(
+							surface,
+							state.position,
+							state.longestDuration,
+							usePianoRollLocalTimeline,
+						);
+				const loopPointA =
+					state.loop?.pointA === null || state.loop?.pointA === undefined
+						? null
+						: timelineContext
+							? clampTime(
+									timelineContext.fromReferenceTime(state.loop.pointA),
+									0,
+									safeDuration,
+								)
+							: clampTime(state.loop.pointA, 0, safeDuration);
+				const loopPointB =
+					state.loop?.pointB === null || state.loop?.pointB === undefined
+						? null
+						: timelineContext
+							? clampTime(
+									timelineContext.fromReferenceTime(state.loop.pointB),
+									0,
+									safeDuration,
+								)
+							: clampTime(state.loop.pointB, 0, safeDuration);
+				// This runs on every 16 ms playback tick, so bail out early when nothing
+				// observable changed since the previous one.
+				const playbackKey = [
+					Math.round(position * 1000),
+					Math.round(safeDuration * 1000),
+					loopPointA === null ? "-" : Math.round(loopPointA * 1000),
+					loopPointB === null ? "-" : Math.round(loopPointB * 1000),
+					state.loop?.enabled === true ? "1" : "0",
+					suppressPlaybackFollow ? "1" : "0",
+				].join("#");
+				if (surface.lastPlaybackKey === playbackKey) {
+					return;
 				}
-			}
-		});
+				surface.lastPlaybackKey = playbackKey;
+
+				refreshPianoRollKeyboard(surface, position);
+
+				this.updateSeekWrapVisuals(surface.seekWrap, position, safeDuration, {
+					pointA: loopPointA,
+					pointB: loopPointB,
+					enabled: state.loop?.enabled === true,
+				});
+
+				if (surface.timingNode) {
+					// A piano-roll surface always shows its own file's clock, so it reads out
+					// in the unit its own alignment column was declared in.
+					const timeline = surface.mediaId;
+					surface.timingNode.textContent = this.formatLocalTimelinePair(
+						timeline,
+						position,
+						safeDuration,
+					);
+				}
+
+				if (!suppressPlaybackFollow && safeDuration > 0) {
+					const scrollLeft = resolvePlaybackFollowScrollLeft(
+						surface,
+						position / safeDuration,
+					);
+					// Writing scrollLeft and then reading layout back would force a
+					// synchronous reflow every tick. The native scroll event already
+					// refreshes the minimap viewport and the note tiles.
+					if (
+						Number.isFinite(scrollLeft) &&
+						scrollLeft !== surface.lastFollowScrollLeft
+					) {
+						surface.lastFollowScrollLeft = scrollLeft as number;
+						surface.scrollContainer.scrollLeft = scrollLeft as number;
+					}
+				}
+			},
+		);
 	}).call(
 		ctx,
 		state,
 		suppressPlaybackFollow,
-		useMidiLocalTimeline,
+		usePianoRollLocalTimeline,
 		timelineContextResolver,
 	);
 }
@@ -1448,7 +1471,7 @@ export function updateMidiPlaybackState(
  * key with both.
  */
 function collectSoundingPitches(
-	surface: MidiSeekSurfaceMetadata,
+	surface: PianoRollSeekSurfaceMetadata,
 	position: number,
 ): Map<number, string[]> {
 	const sounding = new Map<number, number[]>();
@@ -1486,15 +1509,17 @@ function collectSoundingPitches(
 			midi,
 			channels
 				.sort((a, b) => a - b)
-				.map((channel) => resolveMidiChannelColors(surface, channel).velocity),
+				.map(
+					(channel) => resolvePianoRollChannelColors(surface, channel).velocity,
+				),
 		);
 	});
 	return colors;
 }
 
 /** Redraws the keyboard column, but only when what it shows has changed. */
-function refreshMidiKeyboard(
-	surface: MidiSeekSurfaceMetadata,
+function refreshPianoRollKeyboard(
+	surface: PianoRollSeekSurfaceMetadata,
 	position: number,
 ): void {
 	const canvas = surface.keyboardCanvas;
@@ -1521,10 +1546,10 @@ function refreshMidiKeyboard(
 
 	surface.lastKeyboardKey = drawKey;
 	if (!surface.keyboardColors) {
-		surface.keyboardColors = resolveMidiKeyboardColors(canvas);
+		surface.keyboardColors = resolvePianoRollKeyboardColors(canvas);
 	}
 
-	drawMidiKeyboard(canvas, {
+	drawPianoRollKeyboard(canvas, {
 		minMidi: surface.minMidi,
 		maxMidi: surface.maxMidi,
 		height: surface.originalHeight,
@@ -1533,30 +1558,32 @@ function refreshMidiKeyboard(
 	});
 }
 
-export function updateMidiZoomIndicators(ctx: ViewRenderer): void {
+export function updatePianoRollZoomIndicators(ctx: ViewRenderer): void {
 	(function (this: ViewRenderer) {
-		this.midiSeekSurfaces.forEach((surface: MidiSeekSurfaceMetadata) => {
-			if (surface.zoom <= MIN_MIDI_ZOOM + 0.000001) {
-				surface.zoomNode.style.display = "none";
-				return;
-			}
+		this.pianoRollSeekSurfaces.forEach(
+			(surface: PianoRollSeekSurfaceMetadata) => {
+				if (surface.zoom <= MIN_PIANO_ROLL_ZOOM + 0.000001) {
+					surface.zoomNode.style.display = "none";
+					return;
+				}
 
-			updateMidiMinimapViewport(surface);
-			surface.zoomNode.style.display = "flex";
-		});
+				updatePianoRollMinimapViewport(surface);
+				surface.zoomNode.style.display = "flex";
+			},
+		);
 	}).call(ctx);
 }
 
-export function findMidiSurface(
+export function findPianoRollSurface(
 	ctx: ViewRenderer,
 	seekWrap: HTMLElement | null,
-): MidiSeekSurfaceMetadata | null {
+): PianoRollSeekSurfaceMetadata | null {
 	return function (this: ViewRenderer, seekWrap: HTMLElement | null) {
 		if (!seekWrap) {
 			return null;
 		}
 
-		for (const surface of this.midiSeekSurfaces) {
+		for (const surface of this.pianoRollSeekSurfaces) {
 			if (surface.seekWrap === seekWrap) {
 				return surface;
 			}
@@ -1566,17 +1593,17 @@ export function findMidiSurface(
 	}.call(ctx, seekWrap);
 }
 
-export function getMidiZoom(
+export function getPianoRollZoom(
 	ctx: ViewRenderer,
 	seekWrap: HTMLElement,
 ): number | null {
 	return function (this: ViewRenderer, seekWrap: HTMLElement) {
-		const surface = this.findMidiSurface(seekWrap);
+		const surface = this.findPianoRollSurface(seekWrap);
 		return surface ? surface.zoom : null;
 	}.call(ctx, seekWrap);
 }
 
-export function isMidiZoomEnabled(
+export function isPianoRollZoomEnabled(
 	ctx: ViewRenderer,
 	seekWrap: HTMLElement,
 	durationSeconds: number,
@@ -1586,14 +1613,14 @@ export function isMidiZoomEnabled(
 		seekWrap: HTMLElement,
 		durationSeconds: number,
 	) {
-		const surface = this.findMidiSurface(seekWrap);
+		const surface = this.findPianoRollSurface(seekWrap);
 		return surface
-			? getMidiMaximumZoom(surface, durationSeconds) > MIN_MIDI_ZOOM
+			? getPianoRollMaximumZoom(surface, durationSeconds) > MIN_PIANO_ROLL_ZOOM
 			: false;
 	}.call(ctx, seekWrap, durationSeconds);
 }
 
-export function setMidiZoom(
+export function setPianoRollZoom(
 	ctx: ViewRenderer,
 	seekWrap: HTMLElement,
 	zoom: number,
@@ -1607,42 +1634,42 @@ export function setMidiZoom(
 		durationSeconds: number,
 		anchorPageX?: number,
 	) {
-		const surface = this.findMidiSurface(seekWrap);
+		const surface = this.findPianoRollSurface(seekWrap);
 		if (!surface) {
 			return false;
 		}
 
-		const changed = setMidiZoomForSurface(
+		const changed = setPianoRollZoomForSurface(
 			surface,
 			zoom,
-			getMidiMaximumZoom(surface, durationSeconds),
+			getPianoRollMaximumZoom(surface, durationSeconds),
 			anchorPageX,
 		);
 		if (changed) {
 			// Geometry is applied synchronously above so the anchor stays under the
 			// cursor; the redraw is coalesced to one per frame.
-			this.latestMidiRenderInput = {
+			this.latestPianoRollRenderInput = {
 				timelineDuration: durationSeconds,
-				useMidiLocalTimeline: false,
+				usePianoRollLocalTimeline: false,
 			};
-			this.updateMidiZoomIndicators();
-			this.scheduleMidiNoteRefresh();
+			this.updatePianoRollZoomIndicators();
+			this.schedulePianoRollNoteRefresh();
 		}
 		return changed;
 	}.call(ctx, seekWrap, zoom, durationSeconds, anchorPageX);
 }
 
-export function getMidiMinimapViewport(
+export function getPianoRollMinimapViewport(
 	ctx: ViewRenderer,
 	seekWrap: HTMLElement,
 ): { startRatio: number; widthRatio: number } | null {
 	return function (this: ViewRenderer, seekWrap: HTMLElement) {
-		const surface = this.findMidiSurface(seekWrap);
-		return surface ? getMidiViewportState(surface) : null;
+		const surface = this.findPianoRollSurface(seekWrap);
+		return surface ? getPianoRollViewportState(surface) : null;
 	}.call(ctx, seekWrap);
 }
 
-export function setMidiMinimapViewportStart(
+export function setPianoRollMinimapViewportStart(
 	ctx: ViewRenderer,
 	seekWrap: HTMLElement,
 	startRatio: number,
@@ -1652,43 +1679,43 @@ export function setMidiMinimapViewportStart(
 		seekWrap: HTMLElement,
 		startRatio: number,
 	) {
-		const surface = this.findMidiSurface(seekWrap);
+		const surface = this.findPianoRollSurface(seekWrap);
 		if (!surface) {
 			return false;
 		}
 
-		const viewportState = getMidiViewportState(surface);
+		const viewportState = getPianoRollViewportState(surface);
 		const maxStartRatio = Math.max(0, 1 - viewportState.widthRatio);
 		const nextStartRatio = clampTime(startRatio, 0, maxStartRatio);
 		// The minimap shows the file, so a ratio on it is a ratio of the time
 		// width; the scroll it maps to is bounded by the padded surface.
-		const nextScrollLeft = nextStartRatio * getMidiTimeWidth(surface);
+		const nextScrollLeft = nextStartRatio * getPianoRollTimeWidth(surface);
 		const maxScrollLeft = Math.max(
 			0,
-			getMidiSurfaceWidth(surface) - surface.scrollContainer.clientWidth,
+			getPianoRollSurfaceWidth(surface) - surface.scrollContainer.clientWidth,
 		);
 		const clampedScrollLeft = clampTime(nextScrollLeft, 0, maxScrollLeft);
 		if (
 			Math.abs(clampedScrollLeft - surface.scrollContainer.scrollLeft) <
 			0.000001
 		) {
-			updateMidiMinimapViewport(surface);
+			updatePianoRollMinimapViewport(surface);
 			return false;
 		}
 
 		surface.scrollContainer.scrollLeft = clampedScrollLeft;
-		updateMidiMinimapViewport(surface);
+		updatePianoRollMinimapViewport(surface);
 		return true;
 	}.call(ctx, seekWrap, startRatio);
 }
 
-export function destroyMidiDisplays(ctx: ViewRenderer): void {
+export function destroyPianoRollDisplays(ctx: ViewRenderer): void {
 	(function (this: ViewRenderer) {
-		if (this.midiNoteRefreshFrameId !== null) {
-			cancelAnimationFrame(this.midiNoteRefreshFrameId);
-			this.midiNoteRefreshFrameId = null;
+		if (this.pianoRollNoteRefreshFrameId !== null) {
+			cancelAnimationFrame(this.pianoRollNoteRefreshFrameId);
+			this.pianoRollNoteRefreshFrameId = null;
 		}
-		this.latestMidiRenderInput = null;
-		this.midiSeekSurfaces.length = 0;
+		this.latestPianoRollRenderInput = null;
+		this.pianoRollSeekSurfaces.length = 0;
 	}).call(ctx);
 }

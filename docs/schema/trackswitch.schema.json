@@ -678,7 +678,7 @@
 					"type": "string",
 					"description": "Default: 2px"
 				},
-				"--ts-midi-keyboard-width": {
+				"--ts-piano-roll-keyboard-width": {
 					"type": "string",
 					"description": "Default: 64px"
 				},
@@ -941,7 +941,7 @@
 					"$ref": "#/definitions/TrackSwitchWaveformViewConfig"
 				},
 				{
-					"$ref": "#/definitions/TrackSwitchMidiViewConfig"
+					"$ref": "#/definitions/TrackSwitchPianoRollViewConfig"
 				},
 				{
 					"$ref": "#/definitions/TrackSwitchSheetMusicViewConfig"
@@ -1142,12 +1142,12 @@
 			],
 			"description": "Whether a fixed-track waveform uses the shared duration or its own duration."
 		},
-		"TrackSwitchMidiViewConfig": {
+		"TrackSwitchPianoRollViewConfig": {
 			"type": "object",
 			"properties": {
 				"type": {
 					"type": "string",
-					"const": "midi"
+					"const": "pianoRoll"
 				},
 				"mediaID": {
 					"$ref": "#/definitions/MediaId"

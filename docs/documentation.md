@@ -21,7 +21,7 @@ toc_script: true
   - [`image`](#image)
   - [`perTrackImage`](#pertrackimage)
   - [`waveform`](#waveform)
-  - [`midi`](#midi)
+  - [`pianoRoll`](#pianoroll)
   - [`sheetMusic`](#sheetmusic)
   - [`warpingMatrix`](#warpingmatrix)
   - [`text`](#text)
@@ -284,7 +284,7 @@ const config: TrackSwitchInit = {
           "controls": ["playback", "globalVolume", "markerNavigation", "looping", "sync", "timer", "seekBar"]
         },
         { "type": "sheetMusic", "mediaID": "score" },
-        { "type": "midi", "mediaID": "notes", "timer": true },
+        { "type": "pianoRoll", "mediaID": "notes", "timer": true },
         {
           "type": "waveform",
           "tracks": ["takeA"],
@@ -700,7 +700,7 @@ Sample indices refer to the file as it was authored. The rate is read from the c
 
 The `takeA` waveform reads out in samples of its own file, the `takeB` waveform stays in `HH:MM:SS.mmm`, and the navigation bar timer takes the first medium that declares a unit — `takeA` here.
 
-A declared unit also sets what the zoom spans of a view are written in. `maxZoom` and `defaultZoom` on a `midi` view are read in the unit of the medium named by its `mediaID`; on a `waveform` view they are read in the unit of the reference timeline. Both fall back to seconds when no unit is declared. A unit that runs at a varying rate against seconds — MIDI ticks under a tempo change, or measures — converts the span at the start of the medium.
+A declared unit also sets what the zoom spans of a view are written in. `maxZoom` and `defaultZoom` on a `pianoRoll` view are read in the unit of the medium named by its `mediaID`; on a `waveform` view they are read in the unit of the reference timeline. Both fall back to seconds when no unit is declared. A unit that runs at a varying rate against seconds — MIDI ticks under a tempo change, or measures — converts the span at the start of the medium.
 
 See [Timeline Units]({{ '/use-cases/timeline-units/' | relative_url }}) for a worked example.
 
@@ -756,7 +756,7 @@ Markers add sparse positions to the player. Use them for musical sections, analy
 
 Previous and next navigation uses the marker sets a view currently shows. A set becomes a navigation target through a `markerLayers` entry, so a set that no view draws is not navigable.
 
-On a waveform with `tracks: "audible"`, the layers follow the audible tracks. Track selection and track-volume changes therefore update the available navigation targets immediately. Layers on a fixed-track waveform, a `midi` view, or an image keep their markers regardless of solo state.
+On a waveform with `tracks: "audible"`, the layers follow the audible tracks. Track selection and track-volume changes therefore update the available navigation targets immediately. Layers on a fixed-track waveform, a `pianoRoll` view, or an image keep their markers regardless of solo state.
 
 The jump and loop-point fields search all annotation sets. Visibility and audible track state do not affect these searches.
 
@@ -825,7 +825,7 @@ tracks it names within one non-exclusive list.
 
 The player shows views in declaration order. Each view has a `type`. Most views accept an optional `css` block of [theming tokens](#theming).
 
-The `image`, `perTrackImage`, `waveform`, and `midi` views can provide seekable surfaces. They accept `markerLayers`.
+The `image`, `perTrackImage`, `waveform`, and `pianoRoll` views can provide seekable surfaces. They accept `markerLayers`.
 
 The two image views also accept `seekMarginLeft` and `seekMarginRight`, because a supplied picture can carry axes or whitespace around its plot area. The player draws waveforms and piano rolls itself, so those surfaces always span their full width.
 
@@ -948,13 +948,13 @@ Both modes show the natural recorded waveform of each track. In `shared` mode, s
 
 The waveform and the zoom overview both show this shading.
 
-### `midi`
+### `pianoRoll`
 
-A `midi` view shows a MIDI file as a piano roll. MIDI files do not create audio output.
+A `pianoRoll` view shows a MIDI file as a piano roll. MIDI files do not create audio output.
 
 ```json
 {
-  "type": "midi",
+  "type": "pianoRoll",
   "mediaID": "notes",
   "height": 180,
   "maxZoom": 5,
@@ -970,8 +970,8 @@ A `midi` view shows a MIDI file as a piano roll. MIDI files do not create audio 
 | `height?` | `number` | `180` | Specifies the piano-roll height in pixels. |
 | `maxZoom?` | `number` | `5` | Specifies the smallest visible interval, where `0` lifts the zoom limit. |
 | `defaultZoom?` | `number` | none (`10` seconds with `pianoKeyboard`) | Specifies the visible interval the view opens on. Unset shows the whole file. |
-| `playbackFollowMode?` | `"off" \| "center" \| "jump" \| "pinnedLeft"` | `"center"` (`"pinnedLeft"` with `pianoKeyboard`) | Controls how the MIDI view moves with playback. |
-| `timer?` | `boolean` | `false` | Shows a local timer in the MIDI view. |
+| `playbackFollowMode?` | `"off" \| "center" \| "jump" \| "pinnedLeft"` | `"center"` (`"pinnedLeft"` with `pianoKeyboard`) | Controls how the piano roll moves with playback. |
+| `timer?` | `boolean` | `false` | Shows a local timer in the piano roll. |
 | `pianoKeyboard?` | `boolean` | `false` | Draws a piano keyboard beside the pitch axis and pins the playhead to its edge. |
 | `noteRange?` | `"automatic" \| [note, note]` | `"automatic"` | Fixes the pitch axis. Each entry is a note name or a MIDI note number. |
 | `velocityBars?` | `boolean` | `false` | Draws a bar inside each note event showing its velocity. |
@@ -993,7 +993,7 @@ A file that transcribes several instruments carries one channel per instrument. 
 
 ```json
 {
-  "type": "midi",
+  "type": "pianoRoll",
   "mediaID": "notes",
   "channelToTrackIDMap": { "0": "soprano", "1": "alto", "2": "tenor", "3": "bass" }
 }
@@ -1005,7 +1005,7 @@ A value can also be a list of tracks, which keeps the channel visible while any 
 
 ```json
 {
-  "type": "midi",
+  "type": "pianoRoll",
   "mediaID": "notes",
   "channelToTrackIDMap": {
     "0": ["soprano", "mix"],
@@ -1025,8 +1025,8 @@ Coloured channels take the colours `--ts-color-channel-1` to `--ts-color-channel
 With `noteRange` at its default of `"automatic"`, the pitch axis spans every note of the file, hidden channels included, so switching a track off never rescales the roll. A pair fixes it instead. Each entry is a MIDI note number or a name in scientific pitch notation, where middle C is `C4` = 60, so these two are the same axis:
 
 ```json
-{ "type": "midi", "mediaID": "notes", "noteRange": ["C1", "C4"] }
-{ "type": "midi", "mediaID": "notes", "noteRange": [24, 60] }
+{ "type": "pianoRoll", "mediaID": "notes", "noteRange": ["C1", "C4"] }
+{ "type": "pianoRoll", "mediaID": "notes", "noteRange": [24, 60] }
 ```
 
 #### Piano keyboard
@@ -1400,7 +1400,7 @@ If `controls` contains `"markerNavigation"`, use these additional shortcuts:
 - Every ID referenced by `trackList`, `waveform.tracks`, presets, or view `mediaID`
   must exist in `media`.
 - `alignment.referenceTimeline` must be one of the keys in `alignment.timelines`.
-- Timeline IDs used by marker sets, MIDI views, and sheet music views must match IDs in `alignment.timelines`.
+- Timeline IDs used by marker sets, piano roll views, and sheet music views must match IDs in `alignment.timelines`.
 - Timeline IDs used by warping matrices must match IDs in `alignment.timelines`, and `x` and `y` must differ.
 - Seekable `image` and `perTrackImage` views need `seekMarginLeft + seekMarginRight` below `100`.
 - If one track is active at a time (a `trackList` with a `soloGroup`), use `perTrackImage`.

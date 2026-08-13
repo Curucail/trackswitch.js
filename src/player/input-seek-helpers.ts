@@ -67,7 +67,7 @@ export function resolveWaveformMinimapStart(
 	};
 }
 
-export function resolveMidiMinimapStart(
+export function resolvePianoRollMinimapStart(
 	controller: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): {
@@ -79,23 +79,29 @@ export function resolveMidiMinimapStart(
 	const minimapNode = closestInRoot(
 		controller.root,
 		event.target,
-		".midi-zoom-minimap",
+		".piano-roll-zoom-minimap",
 	);
 	if (!minimapNode || !Number.isFinite(event.pageX)) {
 		return null;
 	}
 
-	const wrapper = closestInRoot(controller.root, event.target, ".midi-wrap");
+	const wrapper = closestInRoot(
+		controller.root,
+		event.target,
+		".piano-roll-wrap",
+	);
 	if (!wrapper) {
 		return null;
 	}
 
-	const seekWrap = wrapper.querySelector('.seekwrap[data-seek-surface="midi"]');
+	const seekWrap = wrapper.querySelector(
+		'.seekwrap[data-seek-surface="piano-roll"]',
+	);
 	if (!(seekWrap instanceof HTMLElement)) {
 		return null;
 	}
 
-	const viewport = controller.renderer.getMidiMinimapViewport(seekWrap);
+	const viewport = controller.renderer.getPianoRollMinimapViewport(seekWrap);
 	if (!viewport || viewport.widthRatio >= 1) {
 		return null;
 	}

@@ -7,7 +7,7 @@ import {
 import {
 	finalizeRightClickLoopSelection,
 	finishSeekEndInteraction,
-	resolveMidiMinimapStart,
+	resolvePianoRollMinimapStart,
 	resolveWaveformMinimapStart,
 } from "./input-seek-helpers";
 import {
@@ -478,7 +478,7 @@ export function onWaveformMinimapStart(
 	}).call(ctx, event);
 }
 
-export function onMidiMinimapStart(
+export function onPianoRollMinimapStart(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
@@ -491,7 +491,7 @@ export function onMidiMinimapStart(
 			return;
 		}
 
-		const minimapStart = resolveMidiMinimapStart(this, event);
+		const minimapStart = resolvePianoRollMinimapStart(this, event);
 		if (!minimapStart) {
 			return;
 		}
@@ -510,7 +510,7 @@ export function onMidiMinimapStart(
 			this.dispatch({ type: "set-seeking", seeking: false });
 		}
 
-		this.renderer.setMidiMinimapViewportStart(
+		this.renderer.setPianoRollMinimapViewportStart(
 			minimapStart.seekWrap,
 			minimapStart.pointerRatio - minimapStart.pointerOffsetRatio,
 		);
@@ -925,7 +925,7 @@ export function onResize(ctx: TrackSwitchControllerImpl): void {
 				this.getWaveformTimelineProjector(),
 				this.getWaveformTimelineContext(),
 			);
-			this.renderer.renderMidiDisplays(
+			this.renderer.renderPianoRollDisplays(
 				this.longestDuration,
 				this.isAlignmentMode(),
 			);

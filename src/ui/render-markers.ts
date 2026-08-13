@@ -13,7 +13,7 @@ import { getDeepActiveElement } from "../shared/dom";
 import type { Marker, MarkerSet } from "../timeline/marker";
 import type { ProjectionService } from "../timeline/projection";
 import type { TimelineId } from "../timeline/timeline";
-import type { MidiSeekSurfaceMetadata } from "./render-midi";
+import type { PianoRollSeekSurfaceMetadata } from "./render-piano-roll";
 
 export type {
 	MarkerNavigationDialogValues,
@@ -49,7 +49,7 @@ interface MarkerRendererContext {
 		seekWrap: HTMLElement;
 		waveformSource: WaveformSourceIndex;
 	}>;
-	midiSeekSurfaces: MidiSeekSurfaceMetadata[];
+	pianoRollSeekSurfaces: PianoRollSeekSurfaceMetadata[];
 	getSeekMarkerLayers(seekWrap: HTMLElement): MarkerLayerConfig[];
 }
 
@@ -240,7 +240,7 @@ export function renderTimelineMarkers(
 		);
 	});
 
-	ctx.midiSeekSurfaces.forEach((surface) => {
+	ctx.pianoRollSeekSurfaces.forEach((surface) => {
 		renderConfiguredLayers(ctx, surface.seekWrap, data, false, visibleSetIds);
 	});
 

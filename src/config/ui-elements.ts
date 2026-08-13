@@ -5,10 +5,10 @@ import type {
 	TrackId,
 	TrackPanAlgorithm,
 	TrackSwitchImageViewConfig,
-	TrackSwitchMidiViewConfig,
 	TrackSwitchNavigationBarControl,
 	TrackSwitchNavigationBarViewConfig,
 	TrackSwitchPerTrackImageViewConfig,
+	TrackSwitchPianoRollViewConfig,
 	TrackSwitchSeparatorViewConfig,
 	TrackSwitchSheetMusicViewConfig,
 	TrackSwitchTextViewConfig,
@@ -73,7 +73,7 @@ const uiWaveformAllowedKeys = keysOf<TrackSwitchWaveformViewConfig>()([
 	"markerLayers",
 	"css",
 ] as const);
-const uiMidiAllowedKeys = keysOf<TrackSwitchMidiViewConfig>()([
+const uiPianoRollAllowedKeys = keysOf<TrackSwitchPianoRollViewConfig>()([
 	"type",
 	"mediaID",
 	"height",
@@ -142,7 +142,7 @@ const uiAllowedKeysByType: Record<string, readonly string[]> = {
 	image: uiImageAllowedKeys,
 	perTrackImage: uiPerTrackImageAllowedKeys,
 	waveform: uiWaveformAllowedKeys,
-	midi: uiMidiAllowedKeys,
+	pianoRoll: uiPianoRollAllowedKeys,
 	trackList: uiTrackListAllowedKeys,
 	navigationBar: uiNavigationBarAllowedKeys,
 	sheetMusic: uiSheetMusicAllowedKeys,
@@ -546,7 +546,7 @@ const MAX_MIDI_CHANNEL = 15;
  * a `soloGroup`), in which case it stays visible while any one of them is
  * audible.
  */
-function normalizeMidiChannelToTrackIDMap(
+function normalizeChannelToTrackIDMap(
 	value: Record<string, TrackId | TrackId[]> | undefined,
 	ctx: ViewNormalizeContext,
 ): Record<string, TrackId[]> | undefined {
@@ -556,7 +556,7 @@ function normalizeMidiChannelToTrackIDMap(
 
 	if (typeof value !== "object" || value === null || Array.isArray(value)) {
 		throw new Error(
-			"Invalid midi configuration: channelToTrackIDMap must be an object keyed by channel number.",
+			"Invalid pianoRoll configuration: channelToTrackIDMap must be an object keyed by channel number.",
 		);
 	}
 
@@ -569,21 +569,21 @@ function normalizeMidiChannelToTrackIDMap(
 			channel > MAX_MIDI_CHANNEL
 		) {
 			throw new Error(
-				`Invalid midi configuration: channel "${key}" must be an integer between 0 and ${MAX_MIDI_CHANNEL}.`,
+				`Invalid pianoRoll configuration: channel "${key}" must be an integer between 0 and ${MAX_MIDI_CHANNEL}.`,
 			);
 		}
 
 		const trackIds = Array.isArray(rawTrackIds) ? rawTrackIds : [rawTrackIds];
 		if (trackIds.length === 0) {
 			throw new Error(
-				`Invalid midi configuration: channel "${key}" must name at least one track.`,
+				`Invalid pianoRoll configuration: channel "${key}" must name at least one track.`,
 			);
 		}
 
 		for (const trackId of trackIds) {
 			if (typeof trackId !== "string" || ctx.media[trackId]?.type !== "audio") {
 				throw new Error(
-					`Invalid midi configuration: channel "${key}" names "${trackId}", which is not declared as type "audio" in media.`,
+					`Invalid pianoRoll configuration: channel "${key}" names "${trackId}", which is not declared as type "audio" in media.`,
 				);
 			}
 		}
@@ -599,14 +599,14 @@ function normalizeMidiChannelToTrackIDMap(
  * but resolved to note numbers here so the renderer never parses a name — and
  * so a typo is reported next to the property it came from.
  */
-function normalizeMidiNoteRange(value: unknown): MidiNoteRange {
+function normalizeNoteRange(value: unknown): MidiNoteRange {
 	if (value === undefined || value === "automatic") {
 		return "automatic";
 	}
 
 	if (!Array.isArray(value) || value.length !== 2) {
 		throw new Error(
-			'Invalid midi configuration: noteRange must be "automatic" or a pair ' +
+			'Invalid pianoRoll configuration: noteRange must be "automatic" or a pair ' +
 				'of notes, e.g. ["C1", "C4"] or [24, 60].',
 		);
 	}
@@ -615,7 +615,7 @@ function normalizeMidiNoteRange(value: unknown): MidiNoteRange {
 		const midi = parseMidiNoteRef(entry);
 		if (midi === null) {
 			throw new Error(
-				`Invalid midi configuration: noteRange entry ${JSON.stringify(entry)} ` +
+				`Invalid pianoRoll configuration: noteRange entry ${JSON.stringify(entry)} ` +
 					`is neither a note number between ${MIN_MIDI_NOTE} and ${MAX_MIDI_NOTE} ` +
 					'nor a note name such as "C4".',
 			);
@@ -625,26 +625,29 @@ function normalizeMidiNoteRange(value: unknown): MidiNoteRange {
 
 	if (low === high) {
 		throw new Error(
-			"Invalid midi configuration: noteRange must span more than one note.",
+			"Invalid pianoRoll configuration: noteRange must span more than one note.",
 		);
 	}
 
 	return low < high ? [low, high] : [high, low];
 }
 
-function normalizeMidiConfig(
-	midi: TrackSwitchMidiViewConfig,
+function normalizePianoRollConfig(
+	pianoRoll: TrackSwitchPianoRollViewConfig,
 	ctx: ViewNormalizeContext,
-): TrackSwitchMidiViewConfig {
-	if (typeof midi.mediaID !== "string" || midi.mediaID.trim().length === 0) {
+): TrackSwitchPianoRollViewConfig {
+	if (
+		typeof pianoRoll.mediaID !== "string" ||
+		pianoRoll.mediaID.trim().length === 0
+	) {
 		throw new Error(
-			"Invalid midi configuration: mediaID must be a non-empty string.",
+			"Invalid pianoRoll configuration: mediaID must be a non-empty string.",
 		);
 	}
-	const entry = ctx.media[midi.mediaID];
+	const entry = ctx.media[pianoRoll.mediaID];
 	if (entry?.type !== "midi") {
 		throw new Error(
-			`Invalid midi configuration: mediaID "${midi.mediaID}" is not declared as type "midi" in media.`,
+			`Invalid pianoRoll configuration: mediaID "${pianoRoll.mediaID}" is not declared as type "midi" in media.`,
 		);
 	}
 
@@ -653,36 +656,48 @@ function normalizeMidiConfig(
 	// left to the renderer, which states it in seconds rather than in whatever
 	// unit this view's medium declares.
 	const pianoKeyboard =
-		normalizeOptionalBoolean(midi.pianoKeyboard, "midi.pianoKeyboard") ?? false;
+		normalizeOptionalBoolean(
+			pianoRoll.pianoKeyboard,
+			"pianoRoll.pianoKeyboard",
+		) ?? false;
 
 	return {
-		...midi,
-		height: toCanvasSize(midi.height, 180, "midi.height"),
-		maxZoom: normalizeWaveformMaxZoom(midi.maxZoom, "midi"),
-		defaultZoom: normalizeDefaultZoom(midi.defaultZoom, "midi"),
+		...pianoRoll,
+		height: toCanvasSize(pianoRoll.height, 180, "pianoRoll.height"),
+		maxZoom: normalizeWaveformMaxZoom(pianoRoll.maxZoom, "pianoRoll"),
+		defaultZoom: normalizeDefaultZoom(pianoRoll.defaultZoom, "pianoRoll"),
 		playbackFollowMode: normalizePlaybackFollowMode(
-			midi.playbackFollowMode,
-			"midi",
+			pianoRoll.playbackFollowMode,
+			"pianoRoll",
 			pianoKeyboard ? "pinnedLeft" : "center",
 		),
-		timer: normalizeOptionalBoolean(midi.timer, "midi.timer"),
+		timer: normalizeOptionalBoolean(pianoRoll.timer, "pianoRoll.timer"),
 		pianoKeyboard,
-		noteRange: normalizeMidiNoteRange(midi.noteRange),
+		noteRange: normalizeNoteRange(pianoRoll.noteRange),
 		velocityBars:
-			normalizeOptionalBoolean(midi.velocityBars, "midi.velocityBars") ?? false,
+			normalizeOptionalBoolean(
+				pianoRoll.velocityBars,
+				"pianoRoll.velocityBars",
+			) ?? false,
 		velocityOpacity:
-			normalizeOptionalBoolean(midi.velocityOpacity, "midi.velocityOpacity") ??
-			false,
-		channelToTrackIDMap: normalizeMidiChannelToTrackIDMap(
-			midi.channelToTrackIDMap,
+			normalizeOptionalBoolean(
+				pianoRoll.velocityOpacity,
+				"pianoRoll.velocityOpacity",
+			) ?? false,
+		channelToTrackIDMap: normalizeChannelToTrackIDMap(
+			pianoRoll.channelToTrackIDMap,
 			ctx,
 		),
 		colorPerChannel: normalizeOptionalBoolean(
-			midi.colorPerChannel,
-			"midi.colorPerChannel",
+			pianoRoll.colorPerChannel,
+			"pianoRoll.colorPerChannel",
 		),
-		markerLayers: normalizeMarkerLayers(midi.markerLayers, "midi", ctx),
-		css: normalizeCssOverrides(midi.css, "midi"),
+		markerLayers: normalizeMarkerLayers(
+			pianoRoll.markerLayers,
+			"pianoRoll",
+			ctx,
+		),
+		css: normalizeCssOverrides(pianoRoll.css, "pianoRoll"),
 	};
 }
 
@@ -957,8 +972,8 @@ export function normalizeViewConfig(
 	switch (view.type) {
 		case "waveform":
 			return normalizeWaveformConfig(view, ctx);
-		case "midi":
-			return normalizeMidiConfig(view, ctx);
+		case "pianoRoll":
+			return normalizePianoRollConfig(view, ctx);
 		case "sheetMusic":
 			return normalizeSheetMusicConfig(view, ctx);
 		case "warpingMatrix":
