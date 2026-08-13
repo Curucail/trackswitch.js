@@ -35,6 +35,7 @@
 			"type": "pianoRoll",
 			"mediaID": "notes",
 			"height": 260,
+			"palette": "colorblind-light",
 			"channelToTrackIDMap": {
 				"0": "soprano",
 				"1": "alto",

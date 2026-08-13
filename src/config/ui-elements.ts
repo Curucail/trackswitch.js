@@ -87,6 +87,7 @@ const uiPianoRollAllowedKeys = keysOf<TrackSwitchPianoRollViewConfig>()([
 	"velocityOpacity",
 	"channelToTrackIDMap",
 	"colorPerChannel",
+	"palette",
 	"markerLayers",
 	"css",
 ] as const);
@@ -691,6 +692,12 @@ function normalizePianoRollConfig(
 		colorPerChannel: normalizeOptionalBoolean(
 			pianoRoll.colorPerChannel,
 			"pianoRoll.colorPerChannel",
+		),
+		palette: normalizeEnum(
+			pianoRoll.palette,
+			["light", "dark", "colorblind-light", "colorblind-dark"] as const,
+			"pianoRoll.palette",
+			"light",
 		),
 		markerLayers: normalizeMarkerLayers(
 			pianoRoll.markerLayers,

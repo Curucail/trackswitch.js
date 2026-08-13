@@ -12,7 +12,8 @@
 	 * The theming hooks for a paired channel, declared here rather than on the
 	 * note layer so the zoom minimap inherits the same values. A view's `css`
 	 * block lands on this element too, so overriding a channel token recolours
-	 * that channel in this view alone.
+	 * that channel in this view alone. These are the `palette: "light"`
+	 * (default) values; `data-palette="dark"` below swaps in the dark set.
 	 */
 	--piano-roll-channel-1-fill: var(--ts-color-channel-1-soft-30);
 	--piano-roll-channel-1-border: var(--ts-color-channel-1-soft-55);
@@ -44,12 +45,284 @@
 	--piano-roll-channel-10-fill: var(--ts-color-channel-10-soft-30);
 	--piano-roll-channel-10-border: var(--ts-color-channel-10-soft-55);
 	--piano-roll-channel-10-color: var(--ts-color-channel-10);
+	--piano-roll-channel-11-fill: var(--ts-color-channel-11-soft-30);
+	--piano-roll-channel-11-border: var(--ts-color-channel-11-soft-55);
+	--piano-roll-channel-11-color: var(--ts-color-channel-11);
+	--piano-roll-channel-12-fill: var(--ts-color-channel-12-soft-30);
+	--piano-roll-channel-12-border: var(--ts-color-channel-12-soft-55);
+	--piano-roll-channel-12-color: var(--ts-color-channel-12);
+	--piano-roll-channel-13-fill: var(--ts-color-channel-13-soft-30);
+	--piano-roll-channel-13-border: var(--ts-color-channel-13-soft-55);
+	--piano-roll-channel-13-color: var(--ts-color-channel-13);
+	--piano-roll-channel-14-fill: var(--ts-color-channel-14-soft-30);
+	--piano-roll-channel-14-border: var(--ts-color-channel-14-soft-55);
+	--piano-roll-channel-14-color: var(--ts-color-channel-14);
+	--piano-roll-channel-15-fill: var(--ts-color-channel-15-soft-30);
+	--piano-roll-channel-15-border: var(--ts-color-channel-15-soft-55);
+	--piano-roll-channel-15-color: var(--ts-color-channel-15);
+	--piano-roll-channel-16-fill: var(--ts-color-channel-16-soft-30);
+	--piano-roll-channel-16-border: var(--ts-color-channel-16-soft-55);
+	--piano-roll-channel-16-color: var(--ts-color-channel-16);
+
+	/* The plain, unpaired note colour — also the channel-1 (accent) colour. */
+	--piano-roll-note-fill: var(--ts-color-accent-soft-30);
+	--piano-roll-note-border: var(--ts-color-accent-soft-55);
+	--piano-roll-note-color: var(--ts-color-accent);
+	--piano-roll-velocity-bar: var(--ts-color-surface-inverse-soft-78);
 
 	/* The keyboard column, when `pianoKeyboard` draws one. */
 	--piano-roll-keyboard-white: var(--ts-color-surface-raised-98);
 	--piano-roll-keyboard-black: var(--ts-color-surface-panel-dark);
 	--piano-roll-keyboard-border: var(--ts-color-border-mid);
 	--piano-roll-keyboard-label: var(--ts-color-text-secondary);
+
+	/* The background this view's channel colours were tuned against. */
+	--piano-roll-surface-background: var(--ts-color-surface-base);
+}
+
+/*
+ * Each named `palette` re-points every channel hook (and the surface) at a
+ * different set from colors.css. A view's `css` block, applied after this on
+ * the same element, still wins over any of them for an individual token.
+ */
+.trackswitch .piano-roll-wrap[data-palette="dark"] {
+	--piano-roll-channel-1-fill: var(--ts-color-channel-1-dark-soft-30);
+	--piano-roll-channel-1-border: var(--ts-color-channel-1-dark-soft-55);
+	--piano-roll-channel-1-color: var(--ts-color-channel-1-dark);
+	--piano-roll-channel-2-fill: var(--ts-color-channel-2-dark-soft-30);
+	--piano-roll-channel-2-border: var(--ts-color-channel-2-dark-soft-55);
+	--piano-roll-channel-2-color: var(--ts-color-channel-2-dark);
+	--piano-roll-channel-3-fill: var(--ts-color-channel-3-dark-soft-30);
+	--piano-roll-channel-3-border: var(--ts-color-channel-3-dark-soft-55);
+	--piano-roll-channel-3-color: var(--ts-color-channel-3-dark);
+	--piano-roll-channel-4-fill: var(--ts-color-channel-4-dark-soft-30);
+	--piano-roll-channel-4-border: var(--ts-color-channel-4-dark-soft-55);
+	--piano-roll-channel-4-color: var(--ts-color-channel-4-dark);
+	--piano-roll-channel-5-fill: var(--ts-color-channel-5-dark-soft-30);
+	--piano-roll-channel-5-border: var(--ts-color-channel-5-dark-soft-55);
+	--piano-roll-channel-5-color: var(--ts-color-channel-5-dark);
+	--piano-roll-channel-6-fill: var(--ts-color-channel-6-dark-soft-30);
+	--piano-roll-channel-6-border: var(--ts-color-channel-6-dark-soft-55);
+	--piano-roll-channel-6-color: var(--ts-color-channel-6-dark);
+	--piano-roll-channel-7-fill: var(--ts-color-channel-7-dark-soft-30);
+	--piano-roll-channel-7-border: var(--ts-color-channel-7-dark-soft-55);
+	--piano-roll-channel-7-color: var(--ts-color-channel-7-dark);
+	--piano-roll-channel-8-fill: var(--ts-color-channel-8-dark-soft-30);
+	--piano-roll-channel-8-border: var(--ts-color-channel-8-dark-soft-55);
+	--piano-roll-channel-8-color: var(--ts-color-channel-8-dark);
+	--piano-roll-channel-9-fill: var(--ts-color-channel-9-dark-soft-30);
+	--piano-roll-channel-9-border: var(--ts-color-channel-9-dark-soft-55);
+	--piano-roll-channel-9-color: var(--ts-color-channel-9-dark);
+	--piano-roll-channel-10-fill: var(--ts-color-channel-10-dark-soft-30);
+	--piano-roll-channel-10-border: var(--ts-color-channel-10-dark-soft-55);
+	--piano-roll-channel-10-color: var(--ts-color-channel-10-dark);
+	--piano-roll-channel-11-fill: var(--ts-color-channel-11-dark-soft-30);
+	--piano-roll-channel-11-border: var(--ts-color-channel-11-dark-soft-55);
+	--piano-roll-channel-11-color: var(--ts-color-channel-11-dark);
+	--piano-roll-channel-12-fill: var(--ts-color-channel-12-dark-soft-30);
+	--piano-roll-channel-12-border: var(--ts-color-channel-12-dark-soft-55);
+	--piano-roll-channel-12-color: var(--ts-color-channel-12-dark);
+	--piano-roll-channel-13-fill: var(--ts-color-channel-13-dark-soft-30);
+	--piano-roll-channel-13-border: var(--ts-color-channel-13-dark-soft-55);
+	--piano-roll-channel-13-color: var(--ts-color-channel-13-dark);
+	--piano-roll-channel-14-fill: var(--ts-color-channel-14-dark-soft-30);
+	--piano-roll-channel-14-border: var(--ts-color-channel-14-dark-soft-55);
+	--piano-roll-channel-14-color: var(--ts-color-channel-14-dark);
+	--piano-roll-channel-15-fill: var(--ts-color-channel-15-dark-soft-30);
+	--piano-roll-channel-15-border: var(--ts-color-channel-15-dark-soft-55);
+	--piano-roll-channel-15-color: var(--ts-color-channel-15-dark);
+	--piano-roll-channel-16-fill: var(--ts-color-channel-16-dark-soft-30);
+	--piano-roll-channel-16-border: var(--ts-color-channel-16-dark-soft-55);
+	--piano-roll-channel-16-color: var(--ts-color-channel-16-dark);
+
+	/* The plain, unpaired note colour follows the dark-tuned accent too. */
+	--piano-roll-note-fill: var(--ts-color-channel-1-dark-soft-30);
+	--piano-roll-note-border: var(--ts-color-channel-1-dark-soft-55);
+	--piano-roll-note-color: var(--ts-color-channel-1-dark);
+
+	--piano-roll-surface-background: var(--ts-color-surface-base-dark);
+	--piano-roll-keyboard-black: #0d0d0d;
+	--piano-roll-keyboard-border: var(--ts-color-border-mid-45);
+}
+
+.trackswitch .piano-roll-wrap[data-palette="colorblind-light"] {
+	--piano-roll-channel-1-fill: var(--ts-color-channel-1-colorblind-soft-30);
+	--piano-roll-channel-1-border: var(--ts-color-channel-1-colorblind-soft-55);
+	--piano-roll-channel-1-color: var(--ts-color-channel-1-colorblind);
+	--piano-roll-channel-2-fill: var(--ts-color-channel-2-colorblind-soft-30);
+	--piano-roll-channel-2-border: var(--ts-color-channel-2-colorblind-soft-55);
+	--piano-roll-channel-2-color: var(--ts-color-channel-2-colorblind);
+	--piano-roll-channel-3-fill: var(--ts-color-channel-3-colorblind-soft-30);
+	--piano-roll-channel-3-border: var(--ts-color-channel-3-colorblind-soft-55);
+	--piano-roll-channel-3-color: var(--ts-color-channel-3-colorblind);
+	--piano-roll-channel-4-fill: var(--ts-color-channel-4-colorblind-soft-30);
+	--piano-roll-channel-4-border: var(--ts-color-channel-4-colorblind-soft-55);
+	--piano-roll-channel-4-color: var(--ts-color-channel-4-colorblind);
+	--piano-roll-channel-5-fill: var(--ts-color-channel-5-colorblind-soft-30);
+	--piano-roll-channel-5-border: var(--ts-color-channel-5-colorblind-soft-55);
+	--piano-roll-channel-5-color: var(--ts-color-channel-5-colorblind);
+	--piano-roll-channel-6-fill: var(--ts-color-channel-6-colorblind-soft-30);
+	--piano-roll-channel-6-border: var(--ts-color-channel-6-colorblind-soft-55);
+	--piano-roll-channel-6-color: var(--ts-color-channel-6-colorblind);
+	--piano-roll-channel-7-fill: var(--ts-color-channel-7-colorblind-soft-30);
+	--piano-roll-channel-7-border: var(--ts-color-channel-7-colorblind-soft-55);
+	--piano-roll-channel-7-color: var(--ts-color-channel-7-colorblind);
+	--piano-roll-channel-8-fill: var(--ts-color-channel-8-colorblind-soft-30);
+	--piano-roll-channel-8-border: var(--ts-color-channel-8-colorblind-soft-55);
+	--piano-roll-channel-8-color: var(--ts-color-channel-8-colorblind);
+	--piano-roll-channel-9-fill: var(--ts-color-channel-9-colorblind-soft-30);
+	--piano-roll-channel-9-border: var(--ts-color-channel-9-colorblind-soft-55);
+	--piano-roll-channel-9-color: var(--ts-color-channel-9-colorblind);
+	--piano-roll-channel-10-fill: var(--ts-color-channel-10-colorblind-soft-30);
+	--piano-roll-channel-10-border: var(--ts-color-channel-10-colorblind-soft-55);
+	--piano-roll-channel-10-color: var(--ts-color-channel-10-colorblind);
+	--piano-roll-channel-11-fill: var(--ts-color-channel-11-colorblind-soft-30);
+	--piano-roll-channel-11-border: var(--ts-color-channel-11-colorblind-soft-55);
+	--piano-roll-channel-11-color: var(--ts-color-channel-11-colorblind);
+	--piano-roll-channel-12-fill: var(--ts-color-channel-12-colorblind-soft-30);
+	--piano-roll-channel-12-border: var(--ts-color-channel-12-colorblind-soft-55);
+	--piano-roll-channel-12-color: var(--ts-color-channel-12-colorblind);
+	--piano-roll-channel-13-fill: var(--ts-color-channel-13-colorblind-soft-30);
+	--piano-roll-channel-13-border: var(--ts-color-channel-13-colorblind-soft-55);
+	--piano-roll-channel-13-color: var(--ts-color-channel-13-colorblind);
+	--piano-roll-channel-14-fill: var(--ts-color-channel-14-colorblind-soft-30);
+	--piano-roll-channel-14-border: var(--ts-color-channel-14-colorblind-soft-55);
+	--piano-roll-channel-14-color: var(--ts-color-channel-14-colorblind);
+	--piano-roll-channel-15-fill: var(--ts-color-channel-15-colorblind-soft-30);
+	--piano-roll-channel-15-border: var(--ts-color-channel-15-colorblind-soft-55);
+	--piano-roll-channel-15-color: var(--ts-color-channel-15-colorblind);
+	--piano-roll-channel-16-fill: var(--ts-color-channel-16-colorblind-soft-30);
+	--piano-roll-channel-16-border: var(--ts-color-channel-16-colorblind-soft-55);
+	--piano-roll-channel-16-color: var(--ts-color-channel-16-colorblind);
+
+	/* The plain, unpaired note colour is the accent, same as the default palette. */
+	--piano-roll-note-fill: var(--ts-color-channel-1-colorblind-soft-30);
+	--piano-roll-note-border: var(--ts-color-channel-1-colorblind-soft-55);
+	--piano-roll-note-color: var(--ts-color-channel-1-colorblind);
+}
+
+.trackswitch .piano-roll-wrap[data-palette="colorblind-dark"] {
+	--piano-roll-channel-1-fill: var(
+		--ts-color-channel-1-colorblind-dark-soft-30
+	);
+	--piano-roll-channel-1-border: var(
+		--ts-color-channel-1-colorblind-dark-soft-55
+	);
+	--piano-roll-channel-1-color: var(--ts-color-channel-1-colorblind-dark);
+	--piano-roll-channel-2-fill: var(
+		--ts-color-channel-2-colorblind-dark-soft-30
+	);
+	--piano-roll-channel-2-border: var(
+		--ts-color-channel-2-colorblind-dark-soft-55
+	);
+	--piano-roll-channel-2-color: var(--ts-color-channel-2-colorblind-dark);
+	--piano-roll-channel-3-fill: var(
+		--ts-color-channel-3-colorblind-dark-soft-30
+	);
+	--piano-roll-channel-3-border: var(
+		--ts-color-channel-3-colorblind-dark-soft-55
+	);
+	--piano-roll-channel-3-color: var(--ts-color-channel-3-colorblind-dark);
+	--piano-roll-channel-4-fill: var(
+		--ts-color-channel-4-colorblind-dark-soft-30
+	);
+	--piano-roll-channel-4-border: var(
+		--ts-color-channel-4-colorblind-dark-soft-55
+	);
+	--piano-roll-channel-4-color: var(--ts-color-channel-4-colorblind-dark);
+	--piano-roll-channel-5-fill: var(
+		--ts-color-channel-5-colorblind-dark-soft-30
+	);
+	--piano-roll-channel-5-border: var(
+		--ts-color-channel-5-colorblind-dark-soft-55
+	);
+	--piano-roll-channel-5-color: var(--ts-color-channel-5-colorblind-dark);
+	--piano-roll-channel-6-fill: var(
+		--ts-color-channel-6-colorblind-dark-soft-30
+	);
+	--piano-roll-channel-6-border: var(
+		--ts-color-channel-6-colorblind-dark-soft-55
+	);
+	--piano-roll-channel-6-color: var(--ts-color-channel-6-colorblind-dark);
+	--piano-roll-channel-7-fill: var(
+		--ts-color-channel-7-colorblind-dark-soft-30
+	);
+	--piano-roll-channel-7-border: var(
+		--ts-color-channel-7-colorblind-dark-soft-55
+	);
+	--piano-roll-channel-7-color: var(--ts-color-channel-7-colorblind-dark);
+	--piano-roll-channel-8-fill: var(
+		--ts-color-channel-8-colorblind-dark-soft-30
+	);
+	--piano-roll-channel-8-border: var(
+		--ts-color-channel-8-colorblind-dark-soft-55
+	);
+	--piano-roll-channel-8-color: var(--ts-color-channel-8-colorblind-dark);
+	--piano-roll-channel-9-fill: var(
+		--ts-color-channel-9-colorblind-dark-soft-30
+	);
+	--piano-roll-channel-9-border: var(
+		--ts-color-channel-9-colorblind-dark-soft-55
+	);
+	--piano-roll-channel-9-color: var(--ts-color-channel-9-colorblind-dark);
+	--piano-roll-channel-10-fill: var(
+		--ts-color-channel-10-colorblind-dark-soft-30
+	);
+	--piano-roll-channel-10-border: var(
+		--ts-color-channel-10-colorblind-dark-soft-55
+	);
+	--piano-roll-channel-10-color: var(--ts-color-channel-10-colorblind-dark);
+	--piano-roll-channel-11-fill: var(
+		--ts-color-channel-11-colorblind-dark-soft-30
+	);
+	--piano-roll-channel-11-border: var(
+		--ts-color-channel-11-colorblind-dark-soft-55
+	);
+	--piano-roll-channel-11-color: var(--ts-color-channel-11-colorblind-dark);
+	--piano-roll-channel-12-fill: var(
+		--ts-color-channel-12-colorblind-dark-soft-30
+	);
+	--piano-roll-channel-12-border: var(
+		--ts-color-channel-12-colorblind-dark-soft-55
+	);
+	--piano-roll-channel-12-color: var(--ts-color-channel-12-colorblind-dark);
+	--piano-roll-channel-13-fill: var(
+		--ts-color-channel-13-colorblind-dark-soft-30
+	);
+	--piano-roll-channel-13-border: var(
+		--ts-color-channel-13-colorblind-dark-soft-55
+	);
+	--piano-roll-channel-13-color: var(--ts-color-channel-13-colorblind-dark);
+	--piano-roll-channel-14-fill: var(
+		--ts-color-channel-14-colorblind-dark-soft-30
+	);
+	--piano-roll-channel-14-border: var(
+		--ts-color-channel-14-colorblind-dark-soft-55
+	);
+	--piano-roll-channel-14-color: var(--ts-color-channel-14-colorblind-dark);
+	--piano-roll-channel-15-fill: var(
+		--ts-color-channel-15-colorblind-dark-soft-30
+	);
+	--piano-roll-channel-15-border: var(
+		--ts-color-channel-15-colorblind-dark-soft-55
+	);
+	--piano-roll-channel-15-color: var(--ts-color-channel-15-colorblind-dark);
+	--piano-roll-channel-16-fill: var(
+		--ts-color-channel-16-colorblind-dark-soft-30
+	);
+	--piano-roll-channel-16-border: var(
+		--ts-color-channel-16-colorblind-dark-soft-55
+	);
+	--piano-roll-channel-16-color: var(--ts-color-channel-16-colorblind-dark);
+
+	/* The plain, unpaired note colour follows the dark-tuned accent too. */
+	--piano-roll-note-fill: var(--ts-color-channel-1-colorblind-dark-soft-30);
+	--piano-roll-note-border: var(--ts-color-channel-1-colorblind-dark-soft-55);
+	--piano-roll-note-color: var(--ts-color-channel-1-colorblind-dark);
+
+	--piano-roll-surface-background: var(--ts-color-surface-base-dark);
+	--piano-roll-keyboard-black: #0d0d0d;
+	--piano-roll-keyboard-border: var(--ts-color-border-mid-45);
 }
 
 .trackswitch .piano-roll-wrap .piano-roll-scroll {
@@ -71,7 +344,7 @@
 	position: relative;
 	min-width: 100%;
 	overflow: hidden;
-	background: var(--ts-color-surface-base);
+	background: var(--piano-roll-surface-background);
 }
 
 /*
@@ -85,10 +358,6 @@
 	left: 0;
 	display: block;
 	pointer-events: none;
-	--piano-roll-note-fill: var(--ts-color-accent-soft-30);
-	--piano-roll-note-border: var(--ts-color-accent-soft-55);
-	--piano-roll-note-color: var(--ts-color-accent);
-	--piano-roll-velocity-bar: var(--ts-color-surface-inverse-soft-78);
 }
 
 .trackswitch .piano-roll-wrap .piano-roll-overlay {
@@ -117,7 +386,7 @@
 	flex: 0 0 auto;
 	display: block;
 	width: var(--ts-piano-roll-keyboard-width);
-	background: var(--ts-color-surface-base);
+	background: var(--piano-roll-surface-background);
 }
 
 .trackswitch .piano-roll-wrap.piano-roll-has-keyboard .piano-roll-overlay {
@@ -137,6 +406,12 @@
 	touch-action: pan-y;
 	--seekhead-vertical-extent: 0.35;
 	--seekhead-color: var(--ts-color-surface-panel-dark);
+}
+
+/* The dark seekhead is invisible against a dark palette's surface. */
+.trackswitch .piano-roll-wrap[data-palette="dark"] .seekwrap,
+.trackswitch .piano-roll-wrap[data-palette="colorblind-dark"] .seekwrap {
+	--seekhead-color: var(--ts-color-text-inverse);
 }
 
 .trackswitch .piano-roll-wrap .seekwrap .seekhead {
@@ -186,11 +461,10 @@
 	height: 18px;
 	overflow: hidden;
 	border-radius: 5px;
-	background: var(--ts-color-surface-raised-94);
+	background: var(--piano-roll-surface-background);
 	box-shadow: inset 0 0 0 1px var(--ts-color-surface-raised-18);
 	pointer-events: auto;
 	cursor: grab;
-	--piano-roll-note-color: var(--ts-color-accent);
 }
 
 .trackswitch .piano-roll-wrap .piano-roll-zoom .piano-roll-zoom-minimap:active {

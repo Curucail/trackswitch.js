@@ -275,6 +275,14 @@ export interface TrackSwitchPianoRollViewConfig {
 	 * draws in the plain, unpaired colour regardless of the map.
 	 */
 	colorPerChannel?: boolean;
+	/**
+	 * The channel colour set and background this view draws with. `"dark"`
+	 * variants pair a dark surface with channel colours re-tuned for it;
+	 * `"colorblind-*"` variants use a colorblind-friendly hue set instead of
+	 * the default one. Defaults to `"light"`. Individual channels or the
+	 * background can still be overridden with `css`.
+	 */
+	palette?: "light" | "dark" | "colorblind-light" | "colorblind-dark";
 	markerLayers?: MarkerLayerConfig[];
 	css?: TrackSwitchCssOverrides;
 }

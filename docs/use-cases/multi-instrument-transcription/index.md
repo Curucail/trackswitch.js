@@ -112,7 +112,7 @@ The same transcription again, this time as a falling-notes display: `pianoKeyboa
   "pianoKeyboard": true,
   "noteRange": ["F2", "F5"],
   "defaultZoom": 8,
-  "velocityBars": true,
+  "palette": "colorblind-dark",
   "channelToTrackIDMap": {
     "0": "soprano",
     "1": "alto",

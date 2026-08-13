@@ -978,6 +978,7 @@ A `pianoRoll` view shows a MIDI file as a piano roll. MIDI files do not create a
 | `velocityOpacity?` | `boolean` | `false` | Fades note events by their velocity instead of drawing them solid. |
 | `channelToTrackIDMap?` | `object` | none | Pairs MIDI channels with audio tracks, keyed by channel number. |
 | `colorPerChannel?` | `boolean` | `true` | Gives every channel in the file its own palette colour. |
+| `palette?` | `"light" \| "dark" \| "colorblind-light" \| "colorblind-dark"` | `"light"` | Selects the channel colour set and background. |
 | `markerLayers?` | `MarkerLayerConfig[]` | none | Specifies marker layers on the piano roll. |
 | `css?` | `object` | none | Overrides [theming tokens](#theming) for this view. |
 
@@ -1018,7 +1019,41 @@ A value can also be a list of tracks, which keeps the channel visible while any 
 
 A paired channel is drawn only while one of its tracks is audible, following the same rule as a waveform with `"tracks": "audible"`. A channel the map leaves out is always drawn, still in its own colour by default. Set `colorPerChannel` to `false` to turn off per-channel colour entirely — every channel then falls back to the plain, unpaired colour, whether or not it's in the map.
 
-Coloured channels take the colours `--ts-color-channel-1` to `--ts-color-channel-10` by ascending channel number, cycling after the tenth. The first colour is the accent, so a file with a single channel looks like it did before this view had a palette at all.
+Coloured channels take the colours `--ts-color-channel-1` to `--ts-color-channel-16` by ascending channel number — one per MIDI channel, so a 16-channel file never repeats a colour. The first colour is the accent, so a file with a single channel looks like it did before this view had a palette at all.
+
+#### Palette
+
+`palette` picks the channel colour set and the surface behind it:
+
+```json
+{
+  "type": "pianoRoll",
+  "mediaID": "notes",
+  "palette": "dark"
+}
+```
+
+- `"light"` (default) — the colours above on the light `--ts-color-surface-base` background.
+- `"dark"` — the same 16 channels re-tuned for contrast against a dark `--ts-color-surface-base-dark` background, including the piano keyboard column.
+- `"colorblind-light"` — an alternate, colorblind-friendly hue set (derived from the Okabe-Ito palette) on the light background. Channels 1-8 take the eight base hues; 9-16 repeat them as a lighter tint, so every channel still reads as one of the eight.
+- `"colorblind-dark"` — the same colorblind-friendly hues re-tuned for the dark background.
+
+Any of these can still be overridden per view with `css`, for an individual channel or the background. A channel's fill and border are separate tokens from its solid colour, so recolouring one fully means setting all three (with the matching `-dark`/`-colorblind`/`-colorblind-dark` suffix):
+
+```json
+{
+  "type": "pianoRoll",
+  "mediaID": "notes",
+  "palette": "dark",
+  "css": {
+    "--ts-color-channel-3-dark": "#00ffaa",
+    "--ts-color-channel-3-dark-soft-30": "rgba(0, 255, 170, 0.25)",
+    "--ts-color-channel-3-dark-soft-55": "rgba(0, 255, 170, 0.55)"
+  }
+}
+```
+
+The background is `--ts-color-surface-base` (light) or `--ts-color-surface-base-dark` (dark).
 
 #### Pitch axis
 

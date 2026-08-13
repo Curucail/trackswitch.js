@@ -29,7 +29,13 @@
 	"views": [
 		{
 			"type": "navigationBar",
-			"controls": ["playback", "globalVolume", "looping", "timer"]
+			"controls": [
+				"playback",
+				"globalVolume",
+				"looping",
+				"timer",
+				"fullscreen-control"
+			]
 		},
 		{
 			"type": "pianoRoll",
@@ -38,7 +44,7 @@
 			"pianoKeyboard": true,
 			"noteRange": ["F2", "F5"],
 			"defaultZoom": 8,
-			"velocityBars": true,
+			"palette": "colorblind-dark",
 			"channelToTrackIDMap": {
 				"0": "soprano",
 				"1": "alto",

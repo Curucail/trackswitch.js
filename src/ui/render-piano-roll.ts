@@ -48,7 +48,7 @@ const MIN_CHECKERBOARD_CELL = 6;
 const DEFAULT_PIANO_KEYBOARD_ZOOM_SECONDS = 10;
 
 /** How many channel colours the stylesheet declares, cycled past the last one. */
-const PIANO_ROLL_CHANNEL_PALETTE_SIZE = 10;
+const PIANO_ROLL_CHANNEL_PALETTE_SIZE = 16;
 
 interface MidiNoteEvent {
 	midi: number;
@@ -134,6 +134,8 @@ export interface PianoRollSeekSurfaceMetadata {
 	lastMinimapKey: string | null;
 	lastPlaybackKey: string | null;
 	lastFollowScrollLeft: number | null;
+	/** The playhead's position as a 0-1 ratio, last seen on a playback tick. */
+	lastPlayheadRatio: number;
 }
 
 interface PianoRollTimelineContext {
@@ -241,19 +243,36 @@ export function setPianoRollSurfaceHeight(
 	}).call(ctx, surface, height);
 }
 
+/**
+ * A `pinnedLeft` roll always keeps the playhead the same distance from the
+ * left edge, but the anchor-ratio math in `setTimelineZoomForSurface` doesn't
+ * know about that mode — while paused, it would otherwise drift the surface
+ * away from the pinned position on every zoom step. Force it back afterwards.
+ */
 function setPianoRollZoomForSurface(
 	surface: PianoRollSeekSurfaceMetadata,
 	zoom: number,
 	maximum: number,
 	anchorPageX?: number,
 ): boolean {
-	return setTimelineZoomForSurface(
+	const changed = setTimelineZoomForSurface(
 		surface,
 		zoom,
 		maximum,
 		anchorPageX,
 		setPianoRollSurfaceWidth,
 	);
+	if (changed && surface.playbackFollowMode === "pinnedLeft") {
+		const scrollLeft = resolvePlaybackFollowScrollLeft(
+			surface,
+			surface.lastPlayheadRatio,
+		);
+		if (scrollLeft !== null) {
+			surface.lastFollowScrollLeft = scrollLeft;
+			surface.scrollContainer.scrollLeft = scrollLeft;
+		}
+	}
+	return changed;
 }
 
 function createPianoRollTimingNode(overlay: HTMLElement): HTMLElement {
@@ -952,6 +971,7 @@ export function wrapPianoRollCanvases(ctx: ViewRenderer): void {
 
 			const wrapper = document.createElement("div");
 			wrapper.className = "piano-roll-wrap ts-stack-section";
+			wrapper.dataset.palette = config.palette ?? "light";
 			applyCssOverrides(wrapper, config.css);
 
 			const scrollContainer = document.createElement("div");
@@ -1093,6 +1113,7 @@ export function wrapPianoRollCanvases(ctx: ViewRenderer): void {
 				lastMinimapKey: null,
 				lastPlaybackKey: null,
 				lastFollowScrollLeft: null,
+				lastPlayheadRatio: 0,
 			};
 			this.pianoRollSeekSurfaces.push(metadata);
 
@@ -1404,6 +1425,8 @@ export function updatePianoRollPlaybackState(
 									safeDuration,
 								)
 							: clampTime(state.loop.pointB, 0, safeDuration);
+				surface.lastPlayheadRatio =
+					safeDuration > 0 ? position / safeDuration : 0;
 				// This runs on every 16 ms playback tick, so bail out early when nothing
 				// observable changed since the previous one.
 				const playbackKey = [
