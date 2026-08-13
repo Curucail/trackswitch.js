@@ -14,6 +14,13 @@ export interface TimelineSurfaceGeometry {
 	 * cache instead. Refreshed whenever the surface is reflowed or resized.
 	 */
 	cachedViewportWidth?: number;
+	playbackFollowMode?: WaveformPlaybackFollowMode;
+	/**
+	 * Empty surface past the end of the medium. A `pinnedLeft` surface needs one
+	 * viewport of it so the playhead can hold against the left edge while the
+	 * final seconds scroll past; every other mode leaves it at zero.
+	 */
+	trailingPadPx?: number;
 }
 
 export interface TimelineViewportState {
@@ -27,6 +34,8 @@ export interface TimelineTileWindow {
 	tileCssWidth: number;
 	tileCssHeight: number;
 	surfaceWidth: number;
+	/** The part of `surfaceWidth` the medium occupies; see `getTimelineTimeWidth`. */
+	timeWidth: number;
 	viewportWidth: number;
 }
 
@@ -58,10 +67,27 @@ export function sanitizeTimelineDuration(value: number): number {
 	return value;
 }
 
-export function getTimelineSurfaceWidth(
+/**
+ * The stretch of surface the medium's duration maps onto. Everything that
+ * converts between time and pixels — note positions, the playhead, the minimap
+ * viewport — measures against this rather than the full surface, which may carry
+ * a trailing pad past the end of the medium.
+ */
+export function getTimelineTimeWidth(
 	surface: Pick<TimelineSurfaceGeometry, "baseWidth" | "zoom">,
 ): number {
 	return Math.max(1, Math.round(surface.baseWidth * surface.zoom));
+}
+
+export function getTimelineSurfaceWidth(
+	surface: Pick<
+		TimelineSurfaceGeometry,
+		"baseWidth" | "zoom" | "trailingPadPx"
+	>,
+): number {
+	return (
+		getTimelineTimeWidth(surface) + Math.max(0, surface.trailingPadPx ?? 0)
+	);
 }
 
 /**
@@ -83,18 +109,23 @@ export function refreshTimelineViewportWidth(
 ): number {
 	const viewportWidth = Math.max(1, surface.scrollContainer.clientWidth);
 	surface.cachedViewportWidth = viewportWidth;
+	// The pad is exactly one viewport, so the last scroll position puts the end
+	// of the medium under a left-pinned playhead.
+	surface.trailingPadPx =
+		surface.playbackFollowMode === "pinnedLeft" ? viewportWidth : 0;
 	return viewportWidth;
 }
 
+/** The minimap shows the medium, so its viewport is measured against time. */
 export function getTimelineViewportState(
 	surface: TimelineSurfaceGeometry,
 ): TimelineViewportState {
-	const surfaceWidth = getTimelineSurfaceWidth(surface);
+	const timeWidth = getTimelineTimeWidth(surface);
 	const viewportWidth = getTimelineViewportWidth(surface);
-	const widthRatio = clampTimelineValue(viewportWidth / surfaceWidth, 0, 1);
+	const widthRatio = clampTimelineValue(viewportWidth / timeWidth, 0, 1);
 	const maxStartRatio = Math.max(0, 1 - widthRatio);
 	const startRatio = clampTimelineValue(
-		surface.scrollContainer.scrollLeft / surfaceWidth,
+		surface.scrollContainer.scrollLeft / timeWidth,
 		0,
 		maxStartRatio,
 	);
@@ -142,6 +173,33 @@ export function getTimelineMaximumZoom(
 	}
 
 	return Math.max(MIN_TIMELINE_ZOOM, safeDuration / maxZoomSeconds);
+}
+
+/**
+ * The zoom a surface opens on: enough to show `defaultZoomSeconds` of the
+ * medium across the viewport, never further out than unzoomed and never past
+ * the surface's own zoom limit.
+ */
+export function resolveTimelineDefaultZoom(
+	durationSeconds: number,
+	defaultZoomSeconds: number | null,
+	maximumZoom: number,
+): number {
+	const safeDuration = sanitizeTimelineDuration(durationSeconds);
+	if (
+		defaultZoomSeconds === null ||
+		!Number.isFinite(defaultZoomSeconds) ||
+		defaultZoomSeconds <= 0 ||
+		safeDuration <= 0
+	) {
+		return MIN_TIMELINE_ZOOM;
+	}
+
+	return clampTimelineValue(
+		safeDuration / defaultZoomSeconds,
+		MIN_TIMELINE_ZOOM,
+		maximumZoom,
+	);
 }
 
 export function setTimelineZoomForSurface<T extends TimelineSurfaceGeometry>(
@@ -239,7 +297,12 @@ export function resolveTimelinePlaybackFollowScrollLeft(
 		return null;
 	}
 
-	const playheadPx = clampTimelineValue(playheadRatio, 0, 1) * surfaceWidth;
+	const playheadPx =
+		clampTimelineValue(playheadRatio, 0, 1) * getTimelineTimeWidth(surface);
+	if (surface.playbackFollowMode === "pinnedLeft") {
+		return clampTimelineValue(playheadPx, 0, maxScrollLeft);
+	}
+
 	const currentScrollLeft = clampTimelineValue(
 		surface.scrollContainer.scrollLeft,
 		0,
@@ -328,6 +391,7 @@ export function resolveVisibleTileWindow(
 		tileCssWidth: Math.max(1, Math.ceil(visibleEnd - visibleStart)),
 		tileCssHeight: Math.max(1, Math.round(tileHeight)),
 		surfaceWidth,
+		timeWidth: getTimelineTimeWidth(surface),
 		viewportWidth,
 	};
 }

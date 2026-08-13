@@ -22,12 +22,14 @@ import {
 	clampTimelineValue,
 	getTimelineMaximumZoom,
 	getTimelineSurfaceWidth,
+	getTimelineTimeWidth,
 	getTimelineViewportState,
 	MIN_TIMELINE_ZOOM,
 	positionTileCanvas,
 	reflowTimelineSurface,
 	resizeCanvasForCssSize,
 	resolveTimelineBaseWidth,
+	resolveTimelineDefaultZoom,
 	resolveTimelinePlaybackFollowScrollLeft,
 	resolveVisibleTileWindow,
 	sanitizeTimelineDuration,
@@ -46,12 +48,22 @@ interface WaveformSeekSurfaceMetadata {
 	seekWrap: HTMLElement;
 	waveformSource: WaveformSourceIndex;
 	playbackFollowMode: WaveformPlaybackFollowMode;
+	/** Empty surface past the end of the medium; see `TimelineSurfaceGeometry`. */
+	trailingPadPx?: number;
 	timeAxis: WaveformTimeAxis;
 	originalHeight: number;
 	/** The configured `height`, immutable — the base a fullscreen grow restores to. */
 	configuredHeight: number;
 	barWidth: number;
+	/** `maxZoom` and `defaultZoom` as configured, in the reference timeline's unit. */
+	maxZoomValue: number;
+	defaultZoomValue: number | null;
+	/** The same two in seconds, resolved once the timeline readouts are known. */
 	maxZoomSeconds: number;
+	defaultZoomSeconds: number | null;
+	zoomUnitsResolved: boolean;
+	/** Whether `defaultZoom` has opened this surface; a user zoom is never stomped. */
+	defaultZoomApplied: boolean;
 	baseWidth: number;
 	zoom: number;
 	timingNode: HTMLElement | null;
@@ -326,6 +338,21 @@ function clearCanvas(
 	resizeCanvasForCssSize(canvas, width, height);
 }
 
+/**
+ * Writes the geometry of a waveform surface: the virtual width, the height, and
+ * the seek surface, which spans the medium rather than a `pinnedLeft` pad past
+ * the end of it.
+ */
+function applyWaveformSurfaceGeometry(
+	surfaceMetadata: WaveformSeekSurfaceMetadata,
+	width: number,
+): void {
+	surfaceMetadata.surface.style.width = `${width}px`;
+	surfaceMetadata.surface.style.height = `${surfaceMetadata.originalHeight}px`;
+	surfaceMetadata.tileLayer.style.height = `${surfaceMetadata.originalHeight}px`;
+	surfaceMetadata.seekWrap.style.width = `${getTimelineTimeWidth(surfaceMetadata)}px`;
+}
+
 function getWaveformSurfaceWidth(
 	surfaceMetadata: WaveformSeekSurfaceMetadata,
 ): number {
@@ -452,6 +479,29 @@ function applyWaveformPlaybackFollowScroll(
 	return true;
 }
 
+/**
+ * Turns the configured zoom spans into seconds. A waveform seeks on the
+ * reference timeline, so `maxZoom` and `defaultZoom` are written in the unit
+ * that timeline declares — known only once the readouts are in place.
+ */
+function resolveWaveformZoomUnits(
+	ctx: ViewRenderer,
+	surfaceMetadata: WaveformSeekSurfaceMetadata,
+): void {
+	if (surfaceMetadata.zoomUnitsResolved) {
+		return;
+	}
+
+	surfaceMetadata.zoomUnitsResolved = true;
+	surfaceMetadata.maxZoomSeconds = ctx.resolveReferenceSpanSeconds(
+		surfaceMetadata.maxZoomValue,
+	);
+	surfaceMetadata.defaultZoomSeconds =
+		surfaceMetadata.defaultZoomValue === null
+			? null
+			: ctx.resolveReferenceSpanSeconds(surfaceMetadata.defaultZoomValue);
+}
+
 function getWaveformMaximumZoom(
 	surfaceMetadata: WaveformSeekSurfaceMetadata,
 	durationSeconds: number,
@@ -473,11 +523,7 @@ function setWaveformZoomForSurface(
 		zoom,
 		maximum,
 		anchorPageX,
-		(surface, width) => {
-			surface.surface.style.width = `${width}px`;
-			surface.surface.style.height = `${surface.originalHeight}px`;
-			surface.tileLayer.style.height = `${surface.originalHeight}px`;
-		},
+		applyWaveformSurfaceGeometry,
 	);
 }
 
@@ -589,7 +635,12 @@ export function wrapWaveformCanvases(ctx: ViewRenderer): void {
 					originalHeight: originalHeight,
 					configuredHeight: originalHeight,
 					barWidth: barWidth,
+					maxZoomValue: maxZoomSeconds,
+					defaultZoomValue: config.defaultZoom ?? null,
 					maxZoomSeconds: maxZoomSeconds,
+					defaultZoomSeconds: null,
+					zoomUnitsResolved: false,
+					defaultZoomApplied: false,
 					baseWidth: this.resolveWaveformBaseWidth(
 						scrollContainer,
 						canvasElement.width,
@@ -690,10 +741,10 @@ export function setWaveformSurfaceWidth(
 	surfaceMetadata: WaveformSeekSurfaceMetadata,
 ): void {
 	(function (this: ViewRenderer, surfaceMetadata: WaveformSeekSurfaceMetadata) {
-		const width = getWaveformSurfaceWidth(surfaceMetadata);
-		surfaceMetadata.surface.style.width = `${width}px`;
-		surfaceMetadata.surface.style.height = `${surfaceMetadata.originalHeight}px`;
-		surfaceMetadata.tileLayer.style.height = `${surfaceMetadata.originalHeight}px`;
+		applyWaveformSurfaceGeometry(
+			surfaceMetadata,
+			getWaveformSurfaceWidth(surfaceMetadata),
+		);
 		updateWaveformMinimapViewport(surfaceMetadata);
 	}).call(ctx, surfaceMetadata);
 }
@@ -730,6 +781,8 @@ export interface WaveformVisibleTile {
 	tileCssWidth: number;
 	tileCssHeight: number;
 	surfaceWidth: number;
+	/** The part of the surface the medium occupies, without a trailing pad. */
+	timeWidth: number;
 	canvas: HTMLCanvasElement;
 	renderBarWidth: number;
 	isNew: boolean;
@@ -756,8 +809,13 @@ export function forEachVisibleWaveformTile(
 			surfaceMetadata,
 			surfaceMetadata.originalHeight,
 		);
-		const { tileStartPx, tileCssWidth, tileCssHeight, surfaceWidth } =
-			tileWindow;
+		const {
+			tileStartPx,
+			tileCssWidth,
+			tileCssHeight,
+			surfaceWidth,
+			timeWidth,
+		} = tileWindow;
 		positionTileCanvas(tileCanvas, tileWindow);
 		callback({
 			tileIndex: 0,
@@ -765,6 +823,7 @@ export function forEachVisibleWaveformTile(
 			tileCssWidth,
 			tileCssHeight,
 			surfaceWidth,
+			timeWidth,
 			canvas: tileCanvas,
 			renderBarWidth: Math.max(1, Math.round(surfaceMetadata.barWidth)),
 			isNew: false,
@@ -1026,11 +1085,7 @@ export function reflowWaveforms(ctx: ViewRenderer): void {
 	(function (this: ViewRenderer) {
 		this.waveformSeekSurfaces.forEach(
 			(surfaceMetadata: WaveformSeekSurfaceMetadata) => {
-				reflowTimelineSurface(surfaceMetadata, (surface, width) => {
-					surface.surface.style.width = `${width}px`;
-					surface.surface.style.height = `${surface.originalHeight}px`;
-					surface.tileLayer.style.height = `${surface.originalHeight}px`;
-				});
+				reflowTimelineSurface(surfaceMetadata, applyWaveformSurfaceGeometry);
 			},
 		);
 	}).call(ctx);
@@ -1340,11 +1395,20 @@ export function renderWaveformsInternal(
 				fullDuration,
 				useFixedTrackAxis && !useIndividualAxis,
 			);
-			setWaveformZoomForSurface(
-				surfaceMetadata,
-				surfaceMetadata.zoom,
-				getWaveformMaximumZoom(surfaceMetadata, fullDuration),
-			);
+			resolveWaveformZoomUnits(this, surfaceMetadata);
+			const maximumZoom = getWaveformMaximumZoom(surfaceMetadata, fullDuration);
+			// `defaultZoom` only ever opens the surface: once it has, a reflow or a
+			// hot reload leaves whatever zoom the listener is on.
+			let targetZoom = surfaceMetadata.zoom;
+			if (!surfaceMetadata.defaultZoomApplied && fullDuration > 0) {
+				surfaceMetadata.defaultZoomApplied = true;
+				targetZoom = resolveTimelineDefaultZoom(
+					fullDuration,
+					surfaceMetadata.defaultZoomSeconds,
+					maximumZoom,
+				);
+			}
+			setWaveformZoomForSurface(surfaceMetadata, targetZoom, maximumZoom);
 
 			const surfaceRenderBarWidth = Math.max(
 				1,
@@ -1382,6 +1446,7 @@ export function renderWaveformsInternal(
 					tileCssWidth: number;
 					tileCssHeight: number;
 					surfaceWidth: number;
+					timeWidth: number;
 					canvas: HTMLCanvasElement;
 					renderBarWidth: number;
 					isNew: boolean;
@@ -1424,9 +1489,9 @@ export function renderWaveformsInternal(
 					}
 
 					const tileStartTime =
-						fullDuration * (tile.tileStartPx / tile.surfaceWidth);
+						fullDuration * (tile.tileStartPx / tile.timeWidth);
 					const tileDuration =
-						fullDuration * (tile.tileCssWidth / tile.surfaceWidth);
+						fullDuration * (tile.tileCssWidth / tile.timeWidth);
 					if (!Number.isFinite(tileDuration) || tileDuration <= 0) {
 						renderPlaceholderCanvas(
 							tile.canvas,
@@ -1489,7 +1554,7 @@ export function renderWaveformsInternal(
 									0,
 									Math.min(
 										tile.tileCssWidth,
-										(localTrackDuration / fullDuration) * tile.surfaceWidth -
+										(localTrackDuration / fullDuration) * tile.timeWidth -
 											tile.tileStartPx,
 									),
 								)

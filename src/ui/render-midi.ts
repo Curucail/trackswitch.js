@@ -1,15 +1,23 @@
 import { Midi } from "@tonejs/midi";
 import type {
+	MidiNoteRange,
 	TrackRuntime,
 	TrackSwitchMidiViewConfig,
 	TrackSwitchUiState,
 	WaveformPlaybackFollowMode,
 } from "../domain/types";
 import { applyCssOverrides } from "../shared/dom";
+import { parseMidiNoteRef } from "../shared/midi-notes";
+import {
+	drawMidiKeyboard,
+	type MidiKeyboardColors,
+	resolveMidiKeyboardColors,
+} from "./render-midi-keyboard";
 import {
 	clampTimelineValue,
 	getTimelineMaximumZoom,
 	getTimelineSurfaceWidth,
+	getTimelineTimeWidth,
 	getTimelineViewportState,
 	MIN_TIMELINE_ZOOM,
 	positionTileCanvas,
@@ -17,6 +25,7 @@ import {
 	refreshTimelineViewportWidth,
 	resizeCanvasForCssSize,
 	resolveTimelineBaseWidth,
+	resolveTimelineDefaultZoom,
 	resolveTimelinePlaybackFollowScrollLeft,
 	resolveVisibleTileWindow,
 	sanitizeTimelineDuration,
@@ -33,6 +42,10 @@ const MIDI_NOTE_BORDER_MIN_HEIGHT = 4;
 /** A velocity bar is only legible once the note rect is at least this large. */
 const MIDI_VELOCITY_BAR_MIN_HEIGHT = 8;
 const MIDI_VELOCITY_BAR_MIN_WIDTH = 6;
+/** Below this a checkerboard cell reads as noise rather than as a pattern. */
+const MIN_CHECKERBOARD_CELL = 6;
+/** The window a keyboard roll opens on when the view names no `defaultZoom`. */
+const DEFAULT_PIANO_KEYBOARD_ZOOM_SECONDS = 10;
 
 /** How many channel colours the stylesheet declares, cycled past the last one. */
 const MIDI_CHANNEL_PALETTE_SIZE = 10;
@@ -46,10 +59,12 @@ interface MidiNoteEvent {
 	channel: number;
 }
 
-interface MidiNoteColors {
+export interface MidiNoteColors {
 	fill: string;
 	border: string;
 	velocity: string;
+	/** Contrast colour for a velocity bar drawn on a solid note body. */
+	velocityBar: string;
 }
 
 export interface MidiSeekSurfaceMetadata {
@@ -64,10 +79,19 @@ export interface MidiSeekSurfaceMetadata {
 	/** The media entry this roll draws, which is also its timeline id. */
 	mediaId: string;
 	playbackFollowMode: WaveformPlaybackFollowMode;
+	trailingPadPx: number;
 	originalHeight: number;
 	/** The configured `height`, immutable — the base a fullscreen grow restores to. */
 	configuredHeight: number;
+	/** `maxZoom` and `defaultZoom` as configured, in the unit of this view's medium. */
+	maxZoomValue: number;
+	defaultZoomValue: number | null;
+	/** The same two in seconds, resolved once the timeline readouts are known. */
 	maxZoomSeconds: number;
+	defaultZoomSeconds: number | null;
+	zoomUnitsResolved: boolean;
+	/** Whether `defaultZoom` has opened this surface; a user zoom is never stomped. */
+	defaultZoomApplied: boolean;
 	baseWidth: number;
 	zoom: number;
 	timingNode: HTMLElement | null;
@@ -75,9 +99,21 @@ export interface MidiSeekSurfaceMetadata {
 	zoomMinimapNode: HTMLElement;
 	zoomCanvas: HTMLCanvasElement;
 	zoomViewportNode: HTMLElement;
+	/** The keyboard column, drawn beside the roll when `pianoKeyboard` is on. */
+	keyboardCanvas: HTMLCanvasElement | null;
+	/** Serialized sounding pitches, so the keyboard only redraws when they change. */
+	lastKeyboardKey: string | null;
+	/** The position the keys were last drawn for, so a reflow can repeat it. */
+	lastKeyboardPosition: number;
+	keyboardColors: MidiKeyboardColors | null;
 	/** Parsed file, cached so the header is available for tick conversion. */
 	midi: Midi | null;
 	notes: MidiNoteEvent[];
+	/** The configured pitch axis; `"automatic"` derives it from the file. */
+	noteRange: "automatic" | [number, number];
+	/** Whether note events carry a velocity bar, and whether velocity fades them. */
+	velocityBars: boolean;
+	velocityOpacity: boolean;
 	minMidi: number;
 	maxMidi: number;
 	midiDurationSeconds: number;
@@ -136,6 +172,11 @@ function getMidiSurfaceWidth(surface: MidiSeekSurfaceMetadata): number {
 	return getTimelineSurfaceWidth(surface);
 }
 
+/** The stretch of surface the MIDI file itself occupies, without the trailing pad. */
+function getMidiTimeWidth(surface: MidiSeekSurfaceMetadata): number {
+	return getTimelineTimeWidth(surface);
+}
+
 function getMidiMaximumZoom(
 	surface: MidiSeekSurfaceMetadata,
 	durationSeconds: number,
@@ -162,6 +203,9 @@ function setMidiSurfaceWidth(
 	surface.surface.style.width = `${surfaceWidth}px`;
 	surface.surface.style.height = `${surface.originalHeight}px`;
 	surface.noteCanvas.style.height = `${surface.originalHeight}px`;
+	// The seek surface covers the file, not the pad past its end, so a seek
+	// ratio, a loop marker and a marker layer all still land on the right time.
+	surface.seekWrap.style.width = `${getMidiTimeWidth(surface)}px`;
 	updateMidiMinimapViewport(surface);
 }
 
@@ -183,6 +227,10 @@ export function setMidiSurfaceHeight(
 		surface.originalHeight = height;
 		surface.surface.style.height = `${height}px`;
 		surface.noteCanvas.style.height = `${height}px`;
+		if (surface.keyboardCanvas) {
+			surface.keyboardCanvas.style.height = `${height}px`;
+			surface.lastKeyboardKey = null;
+		}
 		surface.lastRenderKey = null;
 		surface.lastMinimapKey = null;
 		this.refreshMidiNoteTiles();
@@ -247,7 +295,27 @@ function flattenMidiNotes(midi: Midi, source: string): MidiNoteEvent[] {
 	}
 
 	notes.sort((a, b) => a.time - b.time || a.midi - b.midi);
+	applyRetriggers(notes);
 	return notes;
+}
+
+/**
+ * A second note-on for a pitch already sounding on the same channel is a
+ * re-trigger: the note that was running ends there. The parser pairs note-ons
+ * with note-offs first-in-first-out, which would otherwise leave two notes
+ * overlapping on one row — a shape the drawing reserves for two channels
+ * sounding the same pitch at once.
+ */
+function applyRetriggers(notes: MidiNoteEvent[]): void {
+	const sounding = new Map<number, MidiNoteEvent>();
+	for (const note of notes) {
+		const voice = note.channel * 128 + note.midi;
+		const previous = sounding.get(voice);
+		if (previous && previous.time + previous.duration > note.time) {
+			previous.duration = Math.max(0, note.time - previous.time);
+		}
+		sounding.set(voice, note);
+	}
 }
 
 function applyMidiNotes(
@@ -265,11 +333,16 @@ function applyMidiNotes(
 		maxNoteDuration = Math.max(maxNoteDuration, note.duration);
 	}
 
-	// The range spans every note, hidden channels included, so that switching a
-	// channel off leaves the pitch axis — and every remaining note — where it is.
+	// An automatic range spans every note, hidden channels included, so that
+	// switching a channel off leaves the pitch axis — and every remaining note —
+	// where it is. A configured one stands as written.
 	surface.notes = notes;
-	surface.minMidi = Math.floor(minMidi) - MIDI_RANGE_PADDING;
-	surface.maxMidi = Math.ceil(maxMidi) + MIDI_RANGE_PADDING;
+	if (surface.noteRange === "automatic") {
+		surface.minMidi = Math.floor(minMidi) - MIDI_RANGE_PADDING;
+		surface.maxMidi = Math.ceil(maxMidi) + MIDI_RANGE_PADDING;
+	} else {
+		[surface.minMidi, surface.maxMidi] = surface.noteRange;
+	}
 	surface.midiDurationSeconds = durationSeconds;
 	surface.maxNoteDuration = maxNoteDuration;
 	assignChannelPalette(surface, notes);
@@ -323,6 +396,7 @@ function resolveMidiNoteColors(
 		fill: read("--midi-note-fill", "rgba(0, 0, 0, 0.3)"),
 		border: read("--midi-note-border", "rgba(0, 0, 0, 0.55)"),
 		velocity: read("--midi-note-color", "#000"),
+		velocityBar: read("--midi-velocity-bar", "rgba(255, 255, 255, 0.85)"),
 	};
 	surface.noteColors = colors;
 	return colors;
@@ -353,6 +427,7 @@ function resolveMidiChannelColors(
 		fill: read(`--midi-channel-${paletteIndex}-fill`),
 		border: read(`--midi-channel-${paletteIndex}-border`),
 		velocity: read(`--midi-channel-${paletteIndex}-color`),
+		velocityBar: read("--midi-velocity-bar"),
 	};
 	surface.channelColors.set(paletteIndex, colors);
 	return colors;
@@ -361,6 +436,32 @@ function resolveMidiChannelColors(
 /** A draw key ingredient, so hiding a channel invalidates the memoized render. */
 function hiddenChannelsKey(surface: MidiSeekSurfaceMetadata): string {
 	return [...surface.hiddenChannels].sort((a, b) => a - b).join(",");
+}
+
+/**
+ * Notes are solid unless the view asks for velocity to fade them, in which case
+ * the softest note still keeps a third of its opacity.
+ */
+function resolveNoteAlpha(
+	surface: MidiSeekSurfaceMetadata,
+	note: MidiNoteEvent,
+): number {
+	return surface.velocityOpacity
+		? 0.35 + clampTime(note.velocity, 0, 1) * 0.55
+		: 1;
+}
+
+/**
+ * The body colour of a note. Fading by velocity draws on the soft channel
+ * colour, which is translucent by design; drawing solid takes the full one, so
+ * "no velocity" really means one flat block of the channel's colour.
+ */
+function resolveNoteFill(
+	surface: MidiSeekSurfaceMetadata,
+	channel: number,
+): string {
+	const colors = resolveMidiChannelColors(surface, channel);
+	return surface.velocityOpacity ? colors.fill : colors.velocity;
 }
 
 /**
@@ -427,7 +528,7 @@ function renderMidiMinimap(
 		const w = Math.max(1, (note.duration / safeDuration) * width);
 		const y = ((surface.maxMidi - note.midi) / range) * height;
 		const h = Math.max(1, height / range);
-		context.globalAlpha = 0.35 + clampTime(note.velocity, 0, 1) * 0.55;
+		context.globalAlpha = resolveNoteAlpha(surface, note);
 		context.fillRect(x, y, w, h);
 	}
 	context.globalAlpha = 1;
@@ -451,6 +552,7 @@ function renderMidiNotes(
 	positionTileCanvas(surface.noteCanvas, tileWindow);
 
 	const { tileStartPx, tileCssWidth, tileCssHeight, surfaceWidth } = tileWindow;
+	const timeWidth = getMidiTimeWidth(surface);
 	const renderKey = [
 		tileStartPx,
 		tileCssWidth,
@@ -461,6 +563,8 @@ function renderMidiNotes(
 		surface.minMidi,
 		surface.maxMidi,
 		hiddenChannelsKey(surface),
+		surface.velocityBars ? "1" : "0",
+		surface.velocityOpacity ? "1" : "0",
 		Math.max(1, window.devicePixelRatio || 1),
 	].join("#");
 	if (surface.lastRenderKey === renderKey) {
@@ -487,15 +591,95 @@ function renderMidiNotes(
 	const range = Math.max(1, surface.maxMidi - surface.minMidi + 1);
 	const rowHeight = height / range;
 	const noteHeight = Math.max(3, rowHeight - 2);
-	const pixelsPerSecond = surfaceWidth / safeDuration;
+	const pixelsPerSecond = timeWidth / safeDuration;
 	const visibleStartTime = tileStartPx / pixelsPerSecond;
 	const visibleEndTime = (tileStartPx + tileCssWidth) / pixelsPerSecond;
 	const drawBorder = rowHeight >= MIDI_NOTE_BORDER_MIN_HEIGHT;
-	const drawVelocityBar = noteHeight >= MIDI_VELOCITY_BAR_MIN_HEIGHT;
+	const drawVelocityBar =
+		surface.velocityBars && noteHeight >= MIDI_VELOCITY_BAR_MIN_HEIGHT;
 
 	context.lineWidth = 1;
 
+	const visible = collectVisibleNotes(
+		surface,
+		visibleStartTime,
+		visibleEndTime,
+	);
+	const geometry: NoteGeometry = { pixelsPerSecond, rowHeight, noteHeight };
+
+	// Solid bodies first, then the checkerboard over the stretches where two or
+	// more channels sound one pitch, then the per-note decorations on top.
+	for (const note of visible) {
+		const { left, width, top } = resolveNoteRect(surface, note, geometry);
+		context.globalAlpha = resolveNoteAlpha(surface, note);
+		context.fillStyle = resolveNoteFill(surface, note.channel);
+		context.fillRect(left, top, width, noteHeight);
+	}
+
+	drawOverlapCheckerboards(context, surface, visible, geometry);
+
+	context.globalAlpha = 1;
+	for (const note of visible) {
+		const { left, width, top } = resolveNoteRect(surface, note, geometry);
+		const colors = resolveMidiChannelColors(surface, note.channel);
+		if (drawBorder) {
+			context.strokeStyle = colors.border;
+			context.strokeRect(left + 0.5, top + 0.5, width - 1, noteHeight - 1);
+		}
+
+		if (drawVelocityBar && width >= MIDI_VELOCITY_BAR_MIN_WIDTH) {
+			const barWidth = Math.max(
+				1,
+				(width - 6) * clampTime(note.velocity, 0, 1),
+			);
+			// On a faded body the full channel colour reads as the bar; on a solid
+			// one only the contrast colour does.
+			context.fillStyle = surface.velocityOpacity
+				? colors.velocity
+				: resolveMidiNoteColors(surface).velocityBar;
+			context.fillRect(left + 3, top + noteHeight - 5, barWidth, 3);
+		}
+	}
+}
+
+interface NoteGeometry {
+	pixelsPerSecond: number;
+	rowHeight: number;
+	noteHeight: number;
+}
+
+interface NoteRect {
+	left: number;
+	width: number;
+	top: number;
+}
+
+function resolveNoteRect(
+	surface: MidiSeekSurfaceMetadata,
+	note: MidiNoteEvent,
+	geometry: NoteGeometry,
+): NoteRect {
+	return {
+		left: note.time * geometry.pixelsPerSecond,
+		width: Math.max(
+			MIN_MIDI_NOTE_WIDTH,
+			note.duration * geometry.pixelsPerSecond,
+		),
+		top: (surface.maxMidi - note.midi) * geometry.rowHeight + 1,
+	};
+}
+
+/**
+ * The audible notes touching the drawn window, in file order. The binary search
+ * and the early break keep the cost on the viewport rather than the file.
+ */
+function collectVisibleNotes(
+	surface: MidiSeekSurfaceMetadata,
+	visibleStartTime: number,
+	visibleEndTime: number,
+): MidiNoteEvent[] {
 	const notes = surface.notes;
+	const visible: MidiNoteEvent[] = [];
 	const startIndex = findFirstVisibleNoteIndex(
 		notes,
 		visibleStartTime - surface.maxNoteDuration,
@@ -513,31 +697,130 @@ function renderMidiNotes(
 			continue;
 		}
 
-		const colors = resolveMidiChannelColors(surface, note.channel);
-		const left = note.time * pixelsPerSecond;
-		const width = Math.max(
-			MIN_MIDI_NOTE_WIDTH,
-			note.duration * pixelsPerSecond,
-		);
-		const top = (surface.maxMidi - note.midi) * rowHeight + 1;
-		const velocity = clampTime(note.velocity, 0, 1);
+		visible.push(note);
+	}
 
-		context.globalAlpha = 0.35 + velocity * 0.55;
-		context.fillStyle = colors.fill;
-		context.fillRect(left, top, width, noteHeight);
-		if (drawBorder) {
-			context.strokeStyle = colors.border;
-			context.strokeRect(left + 0.5, top + 0.5, width - 1, noteHeight - 1);
-		}
+	return visible;
+}
 
-		if (drawVelocityBar && width >= MIDI_VELOCITY_BAR_MIN_WIDTH) {
-			const barWidth = Math.max(1, (width - 6) * velocity);
-			context.globalAlpha = 1;
-			context.fillStyle = colors.velocity;
-			context.fillRect(left + 3, top + noteHeight - 5, barWidth, 3);
+/**
+ * Where several channels sound one pitch at the same time, their colours share
+ * the stretch as a checkerboard: one row per channel, square-ish cells, and the
+ * colours rotating by one row from column to column. Solid notes would otherwise
+ * simply cover one another.
+ */
+function drawOverlapCheckerboards(
+	context: CanvasRenderingContext2D,
+	surface: MidiSeekSurfaceMetadata,
+	visible: MidiNoteEvent[],
+	geometry: NoteGeometry,
+): void {
+	const byPitch = new Map<number, MidiNoteEvent[]>();
+	for (const note of visible) {
+		const pitch = byPitch.get(note.midi);
+		if (pitch) {
+			pitch.push(note);
+		} else {
+			byPitch.set(note.midi, [note]);
 		}
 	}
-	context.globalAlpha = 1;
+
+	const { pixelsPerSecond, rowHeight, noteHeight } = geometry;
+	for (const [midi, pitchNotes] of byPitch) {
+		if (pitchNotes.length < 2) {
+			continue;
+		}
+
+		const top = (surface.maxMidi - midi) * rowHeight + 1;
+		for (const segment of resolveOverlapSegments(pitchNotes)) {
+			const channels = segment.notes.map((note) => note.channel);
+			const rows = channels.length;
+			const left = segment.start * pixelsPerSecond;
+			const width = Math.max(
+				MIN_MIDI_NOTE_WIDTH,
+				(segment.end - segment.start) * pixelsPerSecond,
+			);
+			const rowPixels = noteHeight / rows;
+			const cellWidth = Math.max(MIN_CHECKERBOARD_CELL, rowPixels * 2);
+			const columns = Math.max(1, Math.ceil(width / cellWidth));
+			for (let column = 0; column < columns; column += 1) {
+				const cellLeft = left + column * cellWidth;
+				const cellRight = Math.min(left + width, cellLeft + cellWidth);
+				for (let row = 0; row < rows; row += 1) {
+					const note = segment.notes[(row + column) % rows];
+					context.globalAlpha = resolveNoteAlpha(surface, note);
+					context.fillStyle = resolveNoteFill(surface, note.channel);
+					context.fillRect(
+						cellLeft,
+						top + row * rowPixels,
+						cellRight - cellLeft,
+						rowPixels,
+					);
+				}
+			}
+		}
+	}
+}
+
+interface OverlapSegment {
+	start: number;
+	end: number;
+	/** The notes sounding across the whole segment, by ascending channel. */
+	notes: MidiNoteEvent[];
+}
+
+/**
+ * Sweeps one pitch row for the stretches covered by more than one note. The
+ * parser's re-trigger pass has already removed same-channel overlaps, so every
+ * segment this returns is several channels at once.
+ */
+function resolveOverlapSegments(notes: MidiNoteEvent[]): OverlapSegment[] {
+	const boundaries = new Set<number>();
+	for (const note of notes) {
+		boundaries.add(note.time);
+		boundaries.add(note.time + note.duration);
+	}
+
+	const sorted = [...boundaries].sort((a, b) => a - b);
+	const segments: OverlapSegment[] = [];
+	for (let index = 0; index + 1 < sorted.length; index += 1) {
+		const start = sorted[index];
+		const end = sorted[index + 1];
+		if (end <= start) {
+			continue;
+		}
+
+		const middle = (start + end) / 2;
+		const active = notes
+			.filter(
+				(note) => note.time <= middle && note.time + note.duration > middle,
+			)
+			.sort((a, b) => a.channel - b.channel);
+		if (active.length < 2) {
+			continue;
+		}
+
+		const previous = segments[segments.length - 1];
+		if (
+			previous &&
+			previous.end === start &&
+			sameNotes(previous.notes, active)
+		) {
+			previous.end = end;
+			continue;
+		}
+
+		segments.push({ start, end, notes: active });
+	}
+
+	return segments;
+}
+
+function sameNotes(left: MidiNoteEvent[], right: MidiNoteEvent[]): boolean {
+	return (
+		left.length === right.length &&
+		left.every((note, index) => note === right[index])
+	);
 }
 
 function resolvePlaybackFollowScrollLeft(
@@ -573,6 +856,54 @@ function resolveMidiTimelinePosition(
 	}
 
 	return clampTime(playerPosition, 0, duration);
+}
+
+/**
+ * The configured pitch axis as note numbers. Configuration normalization has
+ * already resolved and ordered the pair; anything it let through that does not
+ * parse falls back to the automatic axis rather than to a broken one.
+ */
+function resolveConfiguredNoteRange(
+	noteRange: MidiNoteRange | undefined,
+): "automatic" | [number, number] {
+	if (!noteRange || noteRange === "automatic") {
+		return "automatic";
+	}
+
+	const low = parseMidiNoteRef(noteRange[0]);
+	const high = parseMidiNoteRef(noteRange[1]);
+	if (low === null || high === null || low === high) {
+		return "automatic";
+	}
+
+	return low < high ? [low, high] : [high, low];
+}
+
+/**
+ * Turns the configured zoom spans into seconds. `maxZoom` and `defaultZoom` are
+ * written in the unit the medium declares, which is only known once the timeline
+ * readouts are in place — after the layout that built this surface.
+ */
+function resolveMidiZoomUnits(
+	ctx: ViewRenderer,
+	surface: MidiSeekSurfaceMetadata,
+): void {
+	if (surface.zoomUnitsResolved) {
+		return;
+	}
+
+	surface.zoomUnitsResolved = true;
+	surface.maxZoomSeconds = ctx.resolveLocalSpanSeconds(
+		surface.mediaId,
+		surface.maxZoomValue,
+	);
+	surface.defaultZoomSeconds =
+		surface.defaultZoomValue === null
+			? // A keyboard roll opens on a phrase rather than on the whole file.
+				surface.keyboardCanvas
+				? DEFAULT_PIANO_KEYBOARD_ZOOM_SECONDS
+				: null
+			: ctx.resolveLocalSpanSeconds(surface.mediaId, surface.defaultZoomValue);
 }
 
 /** Reads the `channelToTrackIDMap` block of a view into a channel → tracks lookup. */
@@ -638,7 +969,20 @@ export function wrapMidiCanvases(ctx: ViewRenderer): void {
 				return;
 			}
 
+			// The keyboard is a column beside the scroller rather than part of the
+			// scrolled surface, so the notes travel into keys that stay put.
+			const pianoKeyboard = config.pianoKeyboard === true;
+			let keyboardCanvas: HTMLCanvasElement | null = null;
+			if (pianoKeyboard) {
+				wrapper.classList.add("midi-has-keyboard");
+				keyboardCanvas = document.createElement("canvas");
+				keyboardCanvas.className = "midi-keyboard";
+			}
+
 			parent.insertBefore(wrapper, canvasElement);
+			if (keyboardCanvas) {
+				wrapper.appendChild(keyboardCanvas);
+			}
 			wrapper.appendChild(scrollContainer);
 			scrollContainer.appendChild(surface);
 			surface.appendChild(noteCanvas);
@@ -664,6 +1008,9 @@ export function wrapMidiCanvases(ctx: ViewRenderer): void {
 			const originalHeight = Math.max(1, canvasElement.height);
 			surface.style.height = `${originalHeight}px`;
 			noteCanvas.style.height = `${originalHeight}px`;
+			if (keyboardCanvas) {
+				keyboardCanvas.style.height = `${originalHeight}px`;
+			}
 
 			// Same default as a waveform: an aligned player runs every surface on its
 			// own local clock, which is only readable with the timer on.
@@ -691,10 +1038,18 @@ export function wrapMidiCanvases(ctx: ViewRenderer): void {
 				source,
 				alignmentColumn: definition.alignmentTimeline?.trim() || null,
 				mediaId: config.mediaID,
-				playbackFollowMode: config.playbackFollowMode ?? "center",
+				playbackFollowMode:
+					config.playbackFollowMode ??
+					(pianoKeyboard ? "pinnedLeft" : "center"),
+				trailingPadPx: 0,
 				originalHeight,
 				configuredHeight: originalHeight,
+				maxZoomValue: config.maxZoom ?? 5,
+				defaultZoomValue: config.defaultZoom ?? null,
 				maxZoomSeconds: config.maxZoom ?? 5,
+				defaultZoomSeconds: null,
+				zoomUnitsResolved: false,
+				defaultZoomApplied: false,
 				baseWidth: this.resolveMidiBaseWidth(
 					scrollContainer,
 					canvasElement.width,
@@ -705,8 +1060,15 @@ export function wrapMidiCanvases(ctx: ViewRenderer): void {
 				zoomMinimapNode,
 				zoomCanvas,
 				zoomViewportNode,
+				keyboardCanvas,
+				lastKeyboardKey: null,
+				lastKeyboardPosition: 0,
+				keyboardColors: null,
 				midi: null,
 				notes: [],
+				noteRange: resolveConfiguredNoteRange(config.noteRange),
+				velocityBars: config.velocityBars === true,
+				velocityOpacity: config.velocityOpacity === true,
 				minMidi: 0,
 				maxMidi: 0,
 				midiDurationSeconds: 0,
@@ -758,6 +1120,8 @@ export function reflowMidiDisplays(ctx: ViewRenderer): void {
 		this.midiSeekSurfaces.forEach((surface: MidiSeekSurfaceMetadata) => {
 			// Theme variables may have changed along with the layout.
 			surface.noteColors = null;
+			surface.keyboardColors = null;
+			surface.lastKeyboardKey = null;
 			surface.channelColors.clear();
 			reflowTimelineSurface(surface, setMidiSurfaceWidth);
 		});
@@ -837,13 +1201,23 @@ export function renderMidiDisplays(
 				timelineDuration,
 				useMidiLocalTimeline,
 			);
-			setMidiZoomForSurface(
-				surface,
-				surface.zoom,
-				getMidiMaximumZoom(surface, surfaceDuration),
-			);
+			resolveMidiZoomUnits(this, surface);
+			const maximumZoom = getMidiMaximumZoom(surface, surfaceDuration);
+			// `defaultZoom` only ever opens the surface: once it has, a reflow or a
+			// hot reload leaves whatever zoom the listener is on.
+			let targetZoom = surface.zoom;
+			if (!surface.defaultZoomApplied && surfaceDuration > 0) {
+				surface.defaultZoomApplied = true;
+				targetZoom = resolveTimelineDefaultZoom(
+					surfaceDuration,
+					surface.defaultZoomSeconds,
+					maximumZoom,
+				);
+			}
+			setMidiZoomForSurface(surface, targetZoom, maximumZoom);
 			renderMidiNotes(surface, surfaceDuration);
 			renderMidiMinimap(surface, surfaceDuration);
+			refreshMidiKeyboard(surface, surface.lastKeyboardPosition);
 		});
 		this.updateMidiZoomIndicators();
 	}).call(ctx, timelineDuration, useMidiLocalTimeline);
@@ -1023,6 +1397,8 @@ export function updateMidiPlaybackState(
 			}
 			surface.lastPlaybackKey = playbackKey;
 
+			refreshMidiKeyboard(surface, position);
+
 			this.updateSeekWrapVisuals(surface.seekWrap, position, safeDuration, {
 				pointA: loopPointA,
 				pointB: loopPointB,
@@ -1064,6 +1440,97 @@ export function updateMidiPlaybackState(
 		useMidiLocalTimeline,
 		timelineContextResolver,
 	);
+}
+
+/**
+ * The pitches sounding at `position`, each with the colours of the channels
+ * playing it, by ascending channel. A pitch two channels hold at once lights its
+ * key with both.
+ */
+function collectSoundingPitches(
+	surface: MidiSeekSurfaceMetadata,
+	position: number,
+): Map<number, string[]> {
+	const sounding = new Map<number, number[]>();
+	const notes = surface.notes;
+	const startIndex = findFirstVisibleNoteIndex(
+		notes,
+		position - surface.maxNoteDuration,
+	);
+	for (let index = startIndex; index < notes.length; index += 1) {
+		const note = notes[index];
+		if (note.time > position) {
+			break;
+		}
+
+		if (
+			note.time + note.duration <= position ||
+			surface.hiddenChannels.has(note.channel)
+		) {
+			continue;
+		}
+
+		const channels = sounding.get(note.midi);
+		if (channels) {
+			if (!channels.includes(note.channel)) {
+				channels.push(note.channel);
+			}
+		} else {
+			sounding.set(note.midi, [note.channel]);
+		}
+	}
+
+	const colors = new Map<number, string[]>();
+	sounding.forEach((channels, midi) => {
+		colors.set(
+			midi,
+			channels
+				.sort((a, b) => a - b)
+				.map((channel) => resolveMidiChannelColors(surface, channel).velocity),
+		);
+	});
+	return colors;
+}
+
+/** Redraws the keyboard column, but only when what it shows has changed. */
+function refreshMidiKeyboard(
+	surface: MidiSeekSurfaceMetadata,
+	position: number,
+): void {
+	const canvas = surface.keyboardCanvas;
+	if (!canvas) {
+		return;
+	}
+
+	surface.lastKeyboardPosition = position;
+	const active = collectSoundingPitches(surface, position);
+	const drawKey = [
+		surface.minMidi,
+		surface.maxMidi,
+		surface.originalHeight,
+		canvas.clientWidth,
+		Math.max(1, window.devicePixelRatio || 1),
+		[...active]
+			.sort((a, b) => a[0] - b[0])
+			.map(([midi, colors]) => `${midi}:${colors.join("|")}`)
+			.join(","),
+	].join("#");
+	if (surface.lastKeyboardKey === drawKey) {
+		return;
+	}
+
+	surface.lastKeyboardKey = drawKey;
+	if (!surface.keyboardColors) {
+		surface.keyboardColors = resolveMidiKeyboardColors(canvas);
+	}
+
+	drawMidiKeyboard(canvas, {
+		minMidi: surface.minMidi,
+		maxMidi: surface.maxMidi,
+		height: surface.originalHeight,
+		colors: surface.keyboardColors,
+		active,
+	});
 }
 
 export function updateMidiZoomIndicators(ctx: ViewRenderer): void {
@@ -1191,13 +1658,14 @@ export function setMidiMinimapViewportStart(
 		}
 
 		const viewportState = getMidiViewportState(surface);
-		const surfaceWidth = getMidiSurfaceWidth(surface);
 		const maxStartRatio = Math.max(0, 1 - viewportState.widthRatio);
 		const nextStartRatio = clampTime(startRatio, 0, maxStartRatio);
-		const nextScrollLeft = nextStartRatio * surfaceWidth;
+		// The minimap shows the file, so a ratio on it is a ratio of the time
+		// width; the scroll it maps to is bounded by the padded surface.
+		const nextScrollLeft = nextStartRatio * getMidiTimeWidth(surface);
 		const maxScrollLeft = Math.max(
 			0,
-			surfaceWidth - surface.scrollContainer.clientWidth,
+			getMidiSurfaceWidth(surface) - surface.scrollContainer.clientWidth,
 		);
 		const clampedScrollLeft = clampTime(nextScrollLeft, 0, maxScrollLeft);
 		if (

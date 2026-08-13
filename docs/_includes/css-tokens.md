@@ -138,6 +138,7 @@
 | `--ts-seek-marker-dash` | `6px` |
 | `--ts-seek-marker-gap` | `2px` |
 | `--ts-waveform-seekhead-width` | `2px` |
+| `--ts-midi-keyboard-width` | `64px` |
 | `--ts-panel-gutter-sm` | `12px` |
 | `--ts-panel-gutter-md` | `16px` |
 | `--ts-panel-gutter-lg` | `22px` |

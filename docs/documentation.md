@@ -698,6 +698,8 @@ Sample indices refer to the file as it was authored. The rate is read from the c
 
 The `takeA` waveform reads out in samples of its own file, the `takeB` waveform stays in `HH:MM:SS.mmm`, and the navigation bar timer takes the first medium that declares a unit — `takeA` here.
 
+A declared unit also sets what the zoom spans of a view are written in. `maxZoom` and `defaultZoom` on a `midi` view are read in the unit of the medium named by its `mediaID`; on a `waveform` view they are read in the unit of the reference timeline. Both fall back to seconds when no unit is declared. A unit that runs at a varying rate against seconds — MIDI ticks under a tempo change, or measures — converts the span at the start of the medium.
+
 See [Timeline Units]({{ '/use-cases/timeline-units/' | relative_url }}) for a worked example.
 
 #### Coverage and playback
@@ -896,6 +898,7 @@ In an aligned player, a fixed-track waveform uses the local timeline of that tra
   "height": 120,
   "waveformBarWidth": 1,
   "maxZoom": 5,
+  "defaultZoom": 30,
   "playbackFollowMode": "center",
   "timeAxis": "individual",
   "timer": true,
@@ -909,8 +912,9 @@ In an aligned player, a fixed-track waveform uses the local timeline of that tra
 | `tracks?` | `"audible" \| string[]` | `"audible"` | Selects the audio tracks for the waveform. |
 | `height?` | `number` | `150` | Specifies the waveform height in pixels. |
 | `waveformBarWidth?` | `number` | `1` | Specifies the thickness of waveform bars. |
-| `maxZoom?` | `number` | `5` | Specifies the smallest visible interval in seconds. A smaller value permits more zoom, and `0` lifts the zoom limit. |
-| `playbackFollowMode?` | `"off" \| "center" \| "jump"` | `"center"` | Controls how the view moves with playback. |
+| `maxZoom?` | `number` | `5` | Specifies the smallest visible interval. A smaller value permits more zoom, and `0` lifts the zoom limit. |
+| `defaultZoom?` | `number` | none | Specifies the visible interval the view opens on. Unset shows the whole timeline. |
+| `playbackFollowMode?` | `"off" \| "center" \| "jump" \| "pinnedLeft"` | `"center"` | Controls how the view moves with playback. |
 | `timeAxis?` | `"shared" \| "individual"` | `"shared"` (`"individual"` for `tracks: "audible"` under `alignment`) | Selects a shared longest-track duration or the duration of each fixed track. |
 | `timer?` | `boolean` | `false` (`true` under `alignment`) | Shows a local timer in the waveform. Each aligned waveform runs on its own timeline, so it carries a timer unless you set this to `false`. |
 | `alignedPlayhead?` | `boolean` | `false` | Shows geometry from the reference playhead to the local playhead. |
@@ -952,6 +956,7 @@ A `midi` view shows a MIDI file as a piano roll. MIDI files do not create audio 
   "mediaID": "notes",
   "height": 180,
   "maxZoom": 5,
+  "defaultZoom": 30,
   "playbackFollowMode": "center",
   "timer": true
 }
@@ -961,9 +966,14 @@ A `midi` view shows a MIDI file as a piano roll. MIDI files do not create audio 
 | --- | --- | --- | --- |
 | `mediaID` | `string` | - | Identifies a `media` entry with `type: "midi"`. |
 | `height?` | `number` | `180` | Specifies the piano-roll height in pixels. |
-| `maxZoom?` | `number` | `5` | Specifies the smallest visible interval in seconds, where `0` lifts the zoom limit. |
-| `playbackFollowMode?` | `"off" \| "center" \| "jump"` | `"center"` | Controls how the MIDI view moves with playback. |
+| `maxZoom?` | `number` | `5` | Specifies the smallest visible interval, where `0` lifts the zoom limit. |
+| `defaultZoom?` | `number` | none (`10` seconds with `pianoKeyboard`) | Specifies the visible interval the view opens on. Unset shows the whole file. |
+| `playbackFollowMode?` | `"off" \| "center" \| "jump" \| "pinnedLeft"` | `"center"` (`"pinnedLeft"` with `pianoKeyboard`) | Controls how the MIDI view moves with playback. |
 | `timer?` | `boolean` | `false` | Shows a local timer in the MIDI view. |
+| `pianoKeyboard?` | `boolean` | `false` | Draws a piano keyboard beside the pitch axis and pins the playhead to its edge. |
+| `noteRange?` | `"automatic" \| [note, note]` | `"automatic"` | Fixes the pitch axis. Each entry is a note name or a MIDI note number. |
+| `velocityBars?` | `boolean` | `false` | Draws a bar inside each note event showing its velocity. |
+| `velocityOpacity?` | `boolean` | `false` | Fades note events by their velocity instead of drawing them solid. |
 | `channelToTrackIDMap?` | `object` | none | Pairs MIDI channels with audio tracks, keyed by channel number. |
 | `colorPerChannel?` | `boolean` | `true` | Gives every channel in the file its own palette colour. |
 | `markerLayers?` | `MarkerLayerConfig[]` | none | Specifies marker layers on the piano roll. |
@@ -1008,7 +1018,33 @@ A paired channel is drawn only while one of its tracks is audible, following the
 
 Coloured channels take the colours `--ts-color-channel-1` to `--ts-color-channel-10` by ascending channel number, cycling after the tenth. The first colour is the accent, so a file with a single channel looks like it did before this view had a palette at all.
 
-The pitch axis spans every note of the file, hidden channels included, so switching a track off never rescales the roll.
+#### Pitch axis
+
+With `noteRange` at its default of `"automatic"`, the pitch axis spans every note of the file, hidden channels included, so switching a track off never rescales the roll. A pair fixes it instead. Each entry is a MIDI note number or a name in scientific pitch notation, where middle C is `C4` = 60, so these two are the same axis:
+
+```json
+{ "type": "midi", "mediaID": "notes", "noteRange": ["C1", "C4"] }
+{ "type": "midi", "mediaID": "notes", "noteRange": [24, 60] }
+```
+
+#### Piano keyboard
+
+`pianoKeyboard` draws a keyboard column beside the pitch axis and turns the roll into a falling-notes display. Its far edge is a real keyboard — seven white keys per octave, with the black keys stopping short of it — while its near edge carries one row per semitone, the grid the roll itself draws on, so a note bar meets its own key. Every C carries a gray label.
+
+A sounding note lights its key in the colour of its channel. Two channels holding one pitch split that key along its length, one box each.
+
+The keyboard changes two defaults, both of which can be set on their own:
+
+- `playbackFollowMode` becomes `"pinnedLeft"`, which holds the playhead against the left edge of the surface — the near edge of the keys — rather than centering on it. The surface carries one viewport of empty space past the end of the medium, so the playhead stays pinned through the final note.
+- `defaultZoom` becomes 10 seconds, so the view opens on a phrase rather than on the whole file.
+
+#### Velocity
+
+Note events are drawn solid. Velocity is opt-in, through two switches that work independently: `velocityBars` draws a small bar inside each note event, and `velocityOpacity` fades the note by its velocity.
+
+Because solid notes cannot be told apart by transparency, a pitch several channels sound at the same time is drawn as a checkerboard over the stretch they share: one row per channel, with the colours rotating by one row from column to column.
+
+A second note-on for a pitch already sounding on the same channel is read as a re-trigger — the note that was running ends there, instead of the two overlapping on one row.
 
 See [Multi-Instrument Transcription]({{ '/use-cases/multi-instrument-transcription/' | relative_url }}) for a complete player.
 

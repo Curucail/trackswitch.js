@@ -83,3 +83,71 @@ Colours are handed out by ascending channel number — orange, red, green, blue,
   "css": { "--ts-color-channel-2": "#8844cc" }
 }
 ```
+## With a piano keyboard
+
+The same transcription again, this time as a falling-notes display: `pianoKeyboard` draws a keyboard column beside the pitch axis, pins the playhead to its edge and scrolls the roll past it, so the notes fly into the keys they sound on.
+
+<div class="ts-usecase-showcase">
+  <aside class="ts-usecase-showcase__code-callout" aria-label="Copy player code">
+    <h4 class="ts-usecase-showcase__code-title">Hover to show player config</h4>
+    <button class="ts-copy-btn" type="button">Copy to clipboard</button>
+  </aside>
+
+  <div class="ts-usecase-showcase__player-stage">
+    <trackswitch-player
+      config-src="piano-config.json"
+      style="display: block;"></trackswitch-player>
+  </div>
+
+  <div class="ts-usecase-showcase__snippet-panel" aria-label="Code preview">
+    <pre class="ts-usecase-showcase__snippet-shell"><code></code></pre>
+  </div>
+</div>
+
+```json
+{
+  "type": "midi",
+  "mediaID": "notes",
+  "height": 380,
+  "pianoKeyboard": true,
+  "noteRange": ["F2", "F5"],
+  "defaultZoom": 8,
+  "velocityBars": true,
+  "channelToTrackIDMap": {
+    "0": "soprano",
+    "1": "alto",
+    "2": "tenor",
+    "3": "bass"
+  }
+}
+```
+
+The keyboard is a real keyboard on its far edge — seven white keys per octave, with the black keys stopping short of it — while its near edge carries one row per semitone, the same grid the roll draws on. That is what lets a note bar meet its own key. Every C is labelled in gray.
+
+A sounding note lights its key in the colour of its channel. Two channels holding the same pitch split that key along its length, one box each, so a unison stays readable.
+
+`pianoKeyboard` turns on two things that are also available on their own:
+
+- `playbackFollowMode: "pinnedLeft"` holds the playhead against the left edge of the surface instead of centering on it. The surface carries one viewport of empty space past the end of the file, so the playhead stays pinned through the final note.
+- `defaultZoom` is the span the view opens on, here 8 seconds of a 22-second piece. It only sets the starting zoom; scrolling and zooming from there work as they always do. Both `defaultZoom` and `maxZoom` are read in the unit the medium declares through `media.timelineUnit` — MIDI ticks for a file that declares them — and in seconds when it declares none.
+
+`noteRange` fixes the pitch axis instead of deriving it from the file. Each entry is a note name or a MIDI note number, so `["F2", "F5"]` and `[41, 77]` are the same range. Left at its default of `"automatic"`, the axis spans every note of the file with two semitones of padding.
+
+## Velocity and overlapping notes
+
+Note events are drawn solid by default. Velocity is opt-in, through two switches that work independently:
+
+```json
+{
+  "type": "midi",
+  "mediaID": "notes",
+  "velocityBars": true,
+  "velocityOpacity": true
+}
+```
+
+`velocityBars` draws a small bar inside each note event, and `velocityOpacity` fades the note by its velocity. With both off — the default — every note is a solid block of its channel colour.
+
+Solid notes cannot be told apart by transparency where they overlap, so a pitch held by several channels at once is drawn as a checkerboard: one row per channel, the colours rotating by one row from column to column. Two channels give the two-row pattern; a third adds a third row.
+
+A second note-on for a pitch that is already sounding on the same channel is read as a re-trigger — the note that was running ends there, rather than the two being drawn on top of each other.

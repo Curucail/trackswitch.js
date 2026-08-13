@@ -133,6 +133,7 @@ export const cssTokens = [
 	"--ts-seek-marker-dash",
 	"--ts-seek-marker-gap",
 	"--ts-waveform-seekhead-width",
+	"--ts-midi-keyboard-width",
 	"--ts-panel-gutter-sm",
 	"--ts-panel-gutter-md",
 	"--ts-panel-gutter-lg",

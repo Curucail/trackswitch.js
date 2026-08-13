@@ -6,6 +6,7 @@ import type {
 } from "../domain/types";
 import { clamp } from "../shared/math";
 import {
+	referenceNativeValue,
 	referenceReadoutValue,
 	resolveImplicitTimelineUnit,
 } from "../timeline/media-profile";
@@ -292,6 +293,10 @@ export function applyReferenceReadoutUnit(
 				profile
 					? referenceReadoutValue(profile, nativeValue, unit)
 					: nativeValue,
+			fromReadout: (readoutValue: number) =>
+				profile
+					? referenceNativeValue(profile, readoutValue, unit)
+					: readoutValue,
 		});
 	});
 	ctx.renderer.setTimelineReadouts(readouts);
@@ -300,11 +305,17 @@ export function applyReferenceReadoutUnit(
 	const unit =
 		alignment.timelines.get(referenceTimeline)?.unit ?? ("seconds" as const);
 	const profile = alignment.profiles.get(referenceTimeline);
-	ctx.renderer.setReferenceTimelineUnit(unit, (referenceValue: number) => {
-		return profile
-			? referenceReadoutValue(profile, referenceValue, unit)
-			: referenceValue;
-	});
+	ctx.renderer.setReferenceTimelineUnit(
+		unit,
+		(referenceValue: number) =>
+			profile
+				? referenceReadoutValue(profile, referenceValue, unit)
+				: referenceValue,
+		(readoutValue: number) =>
+			profile
+				? referenceNativeValue(profile, readoutValue, unit)
+				: readoutValue,
+	);
 }
 
 /**
@@ -323,6 +334,7 @@ function applyImplicitTimelineReadouts(ctx: TrackSwitchControllerImpl): void {
 		readouts.set(mediaId, {
 			unit,
 			toReadout: buildImplicitReadout(ctx, mediaId, unit),
+			fromReadout: buildImplicitNativeValue(ctx, mediaId, unit),
 		});
 	});
 	ctx.renderer.setTimelineReadouts(readouts);
@@ -335,6 +347,7 @@ function applyImplicitTimelineReadouts(ctx: TrackSwitchControllerImpl): void {
 	ctx.renderer.setReferenceTimelineUnit(
 		implicit.unit,
 		buildImplicitReadout(ctx, implicit.mediaId, implicit.unit),
+		buildImplicitNativeValue(ctx, implicit.mediaId, implicit.unit),
 	);
 }
 
@@ -346,6 +359,17 @@ function buildImplicitReadout(
 	return (value: number) => {
 		const profile = ctx.mediaProfiles.get(timelineId(mediaId));
 		return profile ? referenceReadoutValue(profile, value, unit) : value;
+	};
+}
+
+function buildImplicitNativeValue(
+	ctx: TrackSwitchControllerImpl,
+	mediaId: string,
+	unit: TimelineUnit,
+): (value: number) => number {
+	return (value: number) => {
+		const profile = ctx.mediaProfiles.get(timelineId(mediaId));
+		return profile ? referenceNativeValue(profile, value, unit) : value;
 	};
 }
 

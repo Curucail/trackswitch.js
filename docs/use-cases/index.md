@@ -77,6 +77,7 @@ We show pre-configured players and explain the main concepts behind it.
     <p>
       One MIDI file transcribes a four-part ensemble. Each channel is paired with a recording,
       takes a colour of its own, and is drawn only while that instrument is audible.
+      A second player shows the same transcription flying into a piano keyboard.
     </p>
   </li>
 

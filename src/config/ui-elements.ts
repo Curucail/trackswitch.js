@@ -1,6 +1,7 @@
 import type {
 	MarkerLayerConfig,
 	MediaConfig,
+	MidiNoteRange,
 	TrackId,
 	TrackPanAlgorithm,
 	TrackSwitchImageViewConfig,
@@ -19,6 +20,11 @@ import type {
 	WaveformSourceIndex,
 	WaveformTimeAxis,
 } from "../domain/types";
+import {
+	MAX_MIDI_NOTE,
+	MIN_MIDI_NOTE,
+	parseMidiNoteRef,
+} from "../shared/midi-notes";
 import {
 	assertAllowedKeys,
 	keysOf,
@@ -59,6 +65,7 @@ const uiWaveformAllowedKeys = keysOf<TrackSwitchWaveformViewConfig>()([
 	"height",
 	"waveformBarWidth",
 	"maxZoom",
+	"defaultZoom",
 	"playbackFollowMode",
 	"timeAxis",
 	"timer",
@@ -71,8 +78,13 @@ const uiMidiAllowedKeys = keysOf<TrackSwitchMidiViewConfig>()([
 	"mediaID",
 	"height",
 	"maxZoom",
+	"defaultZoom",
 	"playbackFollowMode",
 	"timer",
+	"pianoKeyboard",
+	"noteRange",
+	"velocityBars",
+	"velocityOpacity",
 	"channelToTrackIDMap",
 	"colorPerChannel",
 	"markerLayers",
@@ -197,15 +209,38 @@ function normalizeWaveformMaxZoom(value: unknown, label: string): number {
 	return value;
 }
 
+/**
+ * The visible span a surface opens on, in the unit its medium declares. Unset
+ * leaves the surface unzoomed, showing the whole medium.
+ */
+function normalizeDefaultZoom(
+	value: unknown,
+	label: string,
+): number | undefined {
+	if (value === undefined) {
+		return undefined;
+	}
+
+	if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+		throw new Error(
+			`Invalid ${label} configuration: defaultZoom must be a finite number ` +
+				"greater than 0, in the unit of the medium the view draws.",
+		);
+	}
+
+	return value;
+}
+
 function normalizePlaybackFollowMode(
 	value: unknown,
 	label: string,
+	fallback: WaveformPlaybackFollowMode = "center",
 ): WaveformPlaybackFollowMode {
 	return normalizeEnum(
 		value,
-		["off", "center", "jump"] as const,
+		["off", "center", "jump", "pinnedLeft"] as const,
 		`${label}.playbackFollowMode`,
-		"center",
+		fallback,
 	);
 }
 
@@ -468,6 +503,7 @@ function normalizeWaveformConfig(
 		height: toCanvasSize(waveform.height, 150, "waveform.height"),
 		waveformBarWidth: normalizeWaveformBarWidth(waveform.waveformBarWidth),
 		maxZoom: normalizeWaveformMaxZoom(waveform.maxZoom, "waveform"),
+		defaultZoom: normalizeDefaultZoom(waveform.defaultZoom, "waveform"),
 		playbackFollowMode: normalizePlaybackFollowMode(
 			waveform.playbackFollowMode,
 			"waveform",
@@ -558,6 +594,44 @@ function normalizeMidiChannelToTrackIDMap(
 	return normalized;
 }
 
+/**
+ * The pitch axis of a roll. Kept as the pair the author wrote when it is one,
+ * but resolved to note numbers here so the renderer never parses a name — and
+ * so a typo is reported next to the property it came from.
+ */
+function normalizeMidiNoteRange(value: unknown): MidiNoteRange {
+	if (value === undefined || value === "automatic") {
+		return "automatic";
+	}
+
+	if (!Array.isArray(value) || value.length !== 2) {
+		throw new Error(
+			'Invalid midi configuration: noteRange must be "automatic" or a pair ' +
+				'of notes, e.g. ["C1", "C4"] or [24, 60].',
+		);
+	}
+
+	const [low, high] = value.map((entry) => {
+		const midi = parseMidiNoteRef(entry);
+		if (midi === null) {
+			throw new Error(
+				`Invalid midi configuration: noteRange entry ${JSON.stringify(entry)} ` +
+					`is neither a note number between ${MIN_MIDI_NOTE} and ${MAX_MIDI_NOTE} ` +
+					'nor a note name such as "C4".',
+			);
+		}
+		return midi;
+	});
+
+	if (low === high) {
+		throw new Error(
+			"Invalid midi configuration: noteRange must span more than one note.",
+		);
+	}
+
+	return low < high ? [low, high] : [high, low];
+}
+
 function normalizeMidiConfig(
 	midi: TrackSwitchMidiViewConfig,
 	ctx: ViewNormalizeContext,
@@ -574,15 +648,31 @@ function normalizeMidiConfig(
 		);
 	}
 
+	// A keyboard turns the roll into a falling-notes display: the playhead sits
+	// on the keys and the notes scroll into them. Its `defaultZoom` fallback is
+	// left to the renderer, which states it in seconds rather than in whatever
+	// unit this view's medium declares.
+	const pianoKeyboard =
+		normalizeOptionalBoolean(midi.pianoKeyboard, "midi.pianoKeyboard") ?? false;
+
 	return {
 		...midi,
 		height: toCanvasSize(midi.height, 180, "midi.height"),
 		maxZoom: normalizeWaveformMaxZoom(midi.maxZoom, "midi"),
+		defaultZoom: normalizeDefaultZoom(midi.defaultZoom, "midi"),
 		playbackFollowMode: normalizePlaybackFollowMode(
 			midi.playbackFollowMode,
 			"midi",
+			pianoKeyboard ? "pinnedLeft" : "center",
 		),
 		timer: normalizeOptionalBoolean(midi.timer, "midi.timer"),
+		pianoKeyboard,
+		noteRange: normalizeMidiNoteRange(midi.noteRange),
+		velocityBars:
+			normalizeOptionalBoolean(midi.velocityBars, "midi.velocityBars") ?? false,
+		velocityOpacity:
+			normalizeOptionalBoolean(midi.velocityOpacity, "midi.velocityOpacity") ??
+			false,
 		channelToTrackIDMap: normalizeMidiChannelToTrackIDMap(
 			midi.channelToTrackIDMap,
 			ctx,

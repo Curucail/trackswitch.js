@@ -71,6 +71,7 @@ export interface WaveformTimelineContext {
 export interface TimelineReadout {
 	unit: TimelineUnit;
 	toReadout(nativeValue: number): number;
+	fromReadout(readoutValue: number): number;
 }
 
 export interface ConfiguredViewHost {
@@ -149,12 +150,22 @@ interface WaveformSeekSurfaceMetadata {
 	seekWrap: HTMLElement;
 	waveformSource: WaveformSourceIndex;
 	playbackFollowMode: WaveformPlaybackFollowMode;
+	/** Empty surface past the end of the medium; see `TimelineSurfaceGeometry`. */
+	trailingPadPx?: number;
 	timeAxis: WaveformTimeAxis;
 	originalHeight: number;
 	/** The configured `height`, immutable — the base a fullscreen grow restores to. */
 	configuredHeight: number;
 	barWidth: number;
+	/** `maxZoom` and `defaultZoom` as configured, in the reference timeline's unit. */
+	maxZoomValue: number;
+	defaultZoomValue: number | null;
+	/** The same two in seconds, resolved once the timeline readouts are known. */
 	maxZoomSeconds: number;
+	defaultZoomSeconds: number | null;
+	zoomUnitsResolved: boolean;
+	/** Whether `defaultZoom` has opened this surface; a user zoom is never stomped. */
+	defaultZoomApplied: boolean;
 	baseWidth: number;
 	zoom: number;
 	timingNode: HTMLElement | null;
@@ -362,6 +373,7 @@ export class ViewRenderer {
 	public referenceTimelineUnit: TimelineUnit = "seconds";
 	public referenceTimelineId: string | null = null;
 	public toReferenceReadout: ((referenceValue: number) => number) | null = null;
+	public fromReferenceReadout: ((readoutValue: number) => number) | null = null;
 	/**
 	 * Declared unit and native-to-readout conversion per timeline, so a waveform
 	 * or piano roll can render its own local time in the unit its alignment
@@ -575,9 +587,21 @@ export class ViewRenderer {
 	public setReferenceTimelineUnit(
 		unit: TimelineUnit,
 		toReferenceReadout?: (referenceValue: number) => number,
+		fromReferenceReadout?: (readoutValue: number) => number,
 	): void {
 		this.referenceTimelineUnit = unit;
 		this.toReferenceReadout = toReferenceReadout ?? null;
+		this.fromReferenceReadout = fromReferenceReadout ?? null;
+	}
+
+	/**
+	 * A span authored in the unit of the reference timeline — the axis every
+	 * waveform seeks on — in seconds. Taken at the origin, as
+	 * `resolveLocalSpanSeconds` is.
+	 */
+	public resolveReferenceSpanSeconds(value: number): number {
+		const fromReadout = this.fromReferenceReadout;
+		return fromReadout ? fromReadout(value) - fromReadout(0) : value;
 	}
 
 	public formatReferenceTimelineValue(value: number): string {
@@ -604,6 +628,26 @@ export class ViewRenderer {
 		readouts: ReadonlyMap<string, TimelineReadout>,
 	): void {
 		this.timelineReadouts = readouts;
+	}
+
+	/**
+	 * A span authored in the unit of a timeline — a zoom window, say — in
+	 * seconds. Taken at the origin, so a unit that runs at a varying rate against
+	 * seconds (ticks under a tempo change, measures) yields the span it has at the
+	 * start of the medium. A timeline with no declared unit has nothing but
+	 * seconds to offer, and the value stands as it is.
+	 */
+	public resolveLocalSpanSeconds(
+		timeline: string | null,
+		value: number,
+	): number {
+		const readout =
+			timeline === null ? undefined : this.timelineReadouts.get(timeline);
+		if (!readout) {
+			return value;
+		}
+
+		return readout.fromReadout(value) - readout.fromReadout(0);
 	}
 
 	/**
@@ -1142,6 +1186,7 @@ export class ViewRenderer {
 			tileCssWidth: number;
 			tileCssHeight: number;
 			surfaceWidth: number;
+			timeWidth: number;
 			canvas: HTMLCanvasElement;
 			renderBarWidth: number;
 			isNew: boolean;

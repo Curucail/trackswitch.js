@@ -44,6 +44,12 @@
 	--midi-channel-10-fill: var(--ts-color-channel-10-soft-30);
 	--midi-channel-10-border: var(--ts-color-channel-10-soft-55);
 	--midi-channel-10-color: var(--ts-color-channel-10);
+
+	/* The keyboard column, when `pianoKeyboard` draws one. */
+	--midi-keyboard-white: var(--ts-color-surface-raised-98);
+	--midi-keyboard-black: var(--ts-color-surface-panel-dark);
+	--midi-keyboard-border: var(--ts-color-border-mid);
+	--midi-keyboard-label: var(--ts-color-text-secondary);
 }
 
 .trackswitch .midi-wrap .midi-scroll {
@@ -82,6 +88,7 @@
 	--midi-note-fill: var(--ts-color-accent-soft-30);
 	--midi-note-border: var(--ts-color-accent-soft-55);
 	--midi-note-color: var(--ts-color-accent);
+	--midi-velocity-bar: var(--ts-color-surface-inverse-soft-78);
 }
 
 .trackswitch .midi-wrap .midi-overlay {
@@ -91,9 +98,40 @@
 	z-index: 5;
 }
 
+/*
+ * With a keyboard the wrapper becomes a row: the keys stay put on the left
+ * while the roll scrolls past them, which puts the playhead — pinned to the
+ * left edge of the scroller — exactly on the near edge of the keys.
+ */
+.trackswitch .midi-wrap.midi-has-keyboard {
+	display: flex;
+	align-items: stretch;
+}
+
+.trackswitch .midi-wrap.midi-has-keyboard .midi-scroll {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.trackswitch .midi-wrap .midi-keyboard {
+	flex: 0 0 auto;
+	display: block;
+	width: var(--ts-midi-keyboard-width);
+	background: var(--ts-color-surface-base);
+}
+
+.trackswitch .midi-wrap.midi-has-keyboard .midi-overlay {
+	left: var(--ts-midi-keyboard-width);
+}
+
+/* Spans the file rather than the whole surface: `width` is written by the
+ * renderer, so a trailing pad past the end of the file is not seekable and
+ * carries no markers. */
 .trackswitch .midi-wrap .seekwrap {
 	position: absolute;
-	inset: 0;
+	top: 0;
+	bottom: 0;
+	left: 0;
 	cursor: pointer;
 	pointer-events: auto;
 	touch-action: pan-y;

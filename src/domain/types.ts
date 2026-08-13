@@ -25,7 +25,17 @@ export type OutsideCoverageMode = "hold" | "extrapolate" | "error";
  * revisits a stretch the other plays only once.
  */
 export type DuplicatePlacementPolicy = "first" | "average" | "error";
-export type WaveformPlaybackFollowMode = "off" | "center" | "jump";
+/**
+ * How a zoomable surface moves with playback. `pinnedLeft` holds the playhead
+ * against the left edge of the viewport and scrolls the surface underneath it,
+ * which is what a piano roll with a keyboard column needs; the surface carries a
+ * trailing pad so the playhead stays pinned through the end of the medium.
+ */
+export type WaveformPlaybackFollowMode =
+	| "off"
+	| "center"
+	| "jump"
+	| "pinnedLeft";
 export type TrackSwitchTextAlign = "left" | "center" | "right";
 type MarkerLineStyle = "solid" | "dashed";
 
@@ -205,6 +215,7 @@ export interface TrackSwitchWaveformViewConfig {
 	height?: number;
 	waveformBarWidth?: number;
 	maxZoom?: number;
+	defaultZoom?: number;
 	playbackFollowMode?: WaveformPlaybackFollowMode;
 	timeAxis?: WaveformTimeAxis;
 	timer?: boolean;
@@ -213,13 +224,39 @@ export interface TrackSwitchWaveformViewConfig {
 	css?: TrackSwitchCssOverrides;
 }
 
+/**
+ * A pitch as configuration writes it: a MIDI note number, or a name in
+ * scientific pitch notation such as `"C4"`, `"F#3"` or `"Bb-1"`, where middle C
+ * is C4 = 60.
+ */
+export type MidiNoteRef = string | number;
+
+/** The pitch axis of a piano roll: derived from the file, or fixed to a range. */
+export type MidiNoteRange = "automatic" | [MidiNoteRef, MidiNoteRef];
+
 export interface TrackSwitchMidiViewConfig {
 	type: "midi";
 	mediaID: MediaId;
 	height?: number;
 	maxZoom?: number;
+	defaultZoom?: number;
 	playbackFollowMode?: WaveformPlaybackFollowMode;
 	timer?: boolean;
+	/**
+	 * Draws a piano keyboard beside the pitch axis and pins the playhead to its
+	 * edge, so the notes fly into the keys and the key of every sounding note
+	 * lights up in the colour of its channel. Defaults to `false`.
+	 */
+	pianoKeyboard?: boolean;
+	/**
+	 * The pitch axis of the roll. `"automatic"` (the default) spans every note of
+	 * the file with two semitones of padding on each side; a pair fixes it.
+	 */
+	noteRange?: MidiNoteRange;
+	/** Draws a bar inside each note event showing its velocity. Defaults to `false`. */
+	velocityBars?: boolean;
+	/** Fades note events by their velocity rather than drawing them solid. Defaults to `false`. */
+	velocityOpacity?: boolean;
 	/**
 	 * Pairs MIDI channels with audio tracks, keyed by channel number. A paired
 	 * channel is drawn while any of its tracks is audible — naming every track
