@@ -70,7 +70,10 @@ export function applyTrackProperties(ctx: TrackSwitchControllerImpl): void {
 	});
 }
 
-export function updateMainControls(ctx: TrackSwitchControllerImpl): void {
+export function updateMainControls(
+	ctx: TrackSwitchControllerImpl,
+	animate = false,
+): void {
 	ctx.synchronizeRuntimeMarkers();
 	const uiState = createUiState(ctx);
 	const suppressWaveformPlaybackFollow =
@@ -87,12 +90,14 @@ export function updateMainControls(ctx: TrackSwitchControllerImpl): void {
 		ctx.runtimes,
 		ctx.getWaveformTimelineContext(),
 		suppressWaveformPlaybackFollow,
+		animate,
 	);
 	ctx.renderer.updatePianoRollPlaybackState(
 		uiState,
 		shouldSuppressPianoRollPlaybackFollow(ctx),
 		ctx.isAlignmentMode(),
 		(surface) => ctx.getPianoRollTimelineContext(surface),
+		animate,
 	);
 	ctx.updateMarkerNavigation();
 	ctx.sheetMusicEngine.updatePosition(

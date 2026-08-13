@@ -21,6 +21,22 @@ export interface TimelineSurfaceGeometry {
 	 * final seconds scroll past; every other mode leaves it at zero.
 	 */
 	trailingPadPx?: number;
+	/** An in-flight animated follow-scroll started by `applyTimelineFollowScrollLeft`. */
+	scrollAnimation?: TimelineScrollAnimation | null;
+}
+
+export interface TimelineScrollAnimation {
+	rafId: number;
+	startScrollLeft: number;
+	target: number;
+	startTime: number;
+	duration: number;
+}
+
+const TIMELINE_SEEK_ANIMATION_MS = 180;
+
+function easeOutCubic(t: number): number {
+	return 1 - (1 - t) ** 3;
 }
 
 export interface TimelineViewportState {
@@ -320,6 +336,78 @@ export function resolveTimelinePlaybackFollowScrollLeft(
 	}
 
 	return null;
+}
+
+/**
+ * Writes a follow-scroll position, either directly (the every-tick case,
+ * already smooth since the target barely moves between frames) or as a short
+ * eased tween when `animate` is set — used only for a manual click-to-seek, so
+ * that jump doesn't read as an abrupt cut.
+ *
+ * A tween in flight is not cancelled by a later non-animated call (the ticks a
+ * still-playing surface keeps producing while the tween runs); that call just
+ * retargets it, since the tiny per-tick drift of a moving playhead is not
+ * worth interrupting the animation for. Only another `animate: true` call
+ * (a fresh click) restarts it.
+ */
+export function applyTimelineFollowScrollLeft<
+	T extends TimelineSurfaceGeometry,
+>(
+	surface: T,
+	targetScrollLeft: number,
+	animate: boolean,
+	onFrame: (surface: T) => void,
+): boolean {
+	const current = surface.scrollContainer.scrollLeft;
+	const inFlight = surface.scrollAnimation;
+
+	if (!animate) {
+		if (inFlight) {
+			inFlight.target = targetScrollLeft;
+			return false;
+		}
+		if (Math.abs(targetScrollLeft - current) < 0.000001) {
+			return false;
+		}
+		surface.scrollContainer.scrollLeft = targetScrollLeft;
+		onFrame(surface);
+		return true;
+	}
+
+	if (inFlight) {
+		cancelAnimationFrame(inFlight.rafId);
+		surface.scrollAnimation = null;
+	}
+	if (Math.abs(targetScrollLeft - current) < 0.000001) {
+		return false;
+	}
+
+	const animation: TimelineScrollAnimation = {
+		rafId: 0,
+		startScrollLeft: current,
+		target: targetScrollLeft,
+		startTime: performance.now(),
+		duration: TIMELINE_SEEK_ANIMATION_MS,
+	};
+	surface.scrollAnimation = animation;
+
+	const step = (now: number) => {
+		if (surface.scrollAnimation !== animation) {
+			return;
+		}
+		const t = Math.min(1, (now - animation.startTime) / animation.duration);
+		surface.scrollContainer.scrollLeft =
+			animation.startScrollLeft +
+			(animation.target - animation.startScrollLeft) * easeOutCubic(t);
+		onFrame(surface);
+		if (t < 1) {
+			animation.rafId = requestAnimationFrame(step);
+		} else {
+			surface.scrollAnimation = null;
+		}
+	};
+	animation.rafId = requestAnimationFrame(step);
+	return true;
 }
 
 /**

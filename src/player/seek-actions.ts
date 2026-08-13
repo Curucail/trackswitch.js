@@ -476,7 +476,10 @@ export function startInteractiveSeek(
 		seekWrap: HTMLElement,
 	) {
 		this.seekingElement = seekWrap;
-		this.seekFromEvent(event, true);
+		// The initial click/tap of a seek gesture is a discrete jump, worth
+		// animating; a drag's own per-pixel `onSeekMove` calls track the pointer
+		// live and should not queue an animation behind it.
+		this.seekFromEvent(event, true, true);
 		this.dispatch({ type: "set-seeking", seeking: true });
 		this.disableLoopWhenSeekOutsideRegion();
 	}).call(ctx, event, seekWrap);
@@ -618,7 +621,7 @@ export function applyPendingWaveformTouchSeekTap(
 
 		this.seekingElement = this.pendingWaveformTouchSeek.seekWrap;
 		this.pendingWaveformTouchSeek = null;
-		this.seekFromEvent(event, false);
+		this.seekFromEvent(event, false, true);
 	}).call(ctx, event);
 }
 

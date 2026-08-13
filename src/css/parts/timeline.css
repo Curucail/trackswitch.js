@@ -124,7 +124,8 @@
 	)::after {
 	background: repeating-linear-gradient(
 		to bottom,
-		var(--ts-color-surface-panel-dark) 0 var(--ts-seek-marker-dash),
+		var(--loop-marker-color, var(--ts-color-surface-panel-dark)) 0
+			var(--ts-seek-marker-dash),
 		transparent var(--ts-seek-marker-dash)
 			calc(var(--ts-seek-marker-dash) + var(--ts-seek-marker-gap))
 	);

@@ -869,8 +869,8 @@ export class TrackSwitchControllerImpl
 		controllerUi.applyTrackProperties(this);
 	}
 
-	public updateMainControls(): void {
-		controllerUi.updateMainControls(this);
+	public updateMainControls(animate = false): void {
+		controllerUi.updateMainControls(this, animate);
 	}
 
 	public renderMarkerLayers(): void {
@@ -956,8 +956,9 @@ export class TrackSwitchControllerImpl
 	public seekFromEvent(
 		event: ControllerPointerEvent,
 		usePreviewSnippet = true,
+		animate = false,
 	): void {
-		controllerPlayback.seekFromEvent(this, event, usePreviewSnippet);
+		controllerPlayback.seekFromEvent(this, event, usePreviewSnippet, animate);
 	}
 
 	public findLongestDuration(): number {

@@ -918,11 +918,13 @@ export function seekFromEvent(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 	usePreviewSnippet: boolean,
+	animate = false,
 ): void {
 	(function (
 		this: TrackSwitchControllerImpl,
 		event: ControllerPointerEvent,
 		usePreviewSnippet: boolean,
+		animate: boolean,
 	) {
 		const seekTimelineContext = this.getSeekTimelineContext(
 			this.seekingElement,
@@ -954,8 +956,8 @@ export function seekFromEvent(
 			this.dispatch({ type: "set-position", position: newPosition, anchor });
 		}
 
-		this.updateMainControls();
-	}).call(ctx, event, usePreviewSnippet);
+		this.updateMainControls(animate);
+	}).call(ctx, event, usePreviewSnippet, animate);
 }
 
 export function findLongestDuration(ctx: TrackSwitchControllerImpl): number {

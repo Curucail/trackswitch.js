@@ -14,6 +14,7 @@ import {
 	resolvePianoRollKeyboardColors,
 } from "./render-piano-roll-keyboard";
 import {
+	applyTimelineFollowScrollLeft,
 	clampTimelineValue,
 	getTimelineMaximumZoom,
 	getTimelineSurfaceWidth,
@@ -30,6 +31,7 @@ import {
 	resolveVisibleTileWindow,
 	sanitizeTimelineDuration,
 	setTimelineZoomForSurface,
+	type TimelineScrollAnimation,
 	updateTimelineMinimapViewport,
 } from "./timeline-surface";
 import type { ConfiguredViewHost, ViewRenderer } from "./view-renderer";
@@ -136,6 +138,8 @@ export interface PianoRollSeekSurfaceMetadata {
 	lastFollowScrollLeft: number | null;
 	/** The playhead's position as a 0-1 ratio, last seen on a playback tick. */
 	lastPlayheadRatio: number;
+	/** An in-flight animated follow-scroll started by `applyTimelineFollowScrollLeft`. */
+	scrollAnimation?: TimelineScrollAnimation | null;
 }
 
 interface PianoRollTimelineContext {
@@ -1372,13 +1376,15 @@ export function updatePianoRollPlaybackState(
 	suppressPlaybackFollow: boolean,
 	usePianoRollLocalTimeline = false,
 	timelineContextResolver?: PianoRollTimelineContextResolver,
+	animate = false,
 ): void {
 	(function (
 		this: ViewRenderer,
 		state: TrackSwitchUiState,
 		suppressPlaybackFollow: boolean,
 		usePianoRollLocalTimeline: boolean,
-		timelineContextResolver?: PianoRollTimelineContextResolver,
+		timelineContextResolver: PianoRollTimelineContextResolver | undefined,
+		animate: boolean,
 	) {
 		this.pianoRollSeekSurfaces.forEach(
 			(surface: PianoRollSeekSurfaceMetadata) => {
@@ -1468,13 +1474,19 @@ export function updatePianoRollPlaybackState(
 					);
 					// Writing scrollLeft and then reading layout back would force a
 					// synchronous reflow every tick. The native scroll event already
-					// refreshes the minimap viewport and the note tiles.
+					// refreshes the minimap viewport and the note tiles, including on
+					// each frame of an animated seek.
 					if (
 						Number.isFinite(scrollLeft) &&
 						scrollLeft !== surface.lastFollowScrollLeft
 					) {
 						surface.lastFollowScrollLeft = scrollLeft as number;
-						surface.scrollContainer.scrollLeft = scrollLeft as number;
+						applyTimelineFollowScrollLeft(
+							surface,
+							scrollLeft as number,
+							animate,
+							() => {},
+						);
 					}
 				}
 			},
@@ -1485,6 +1497,7 @@ export function updatePianoRollPlaybackState(
 		suppressPlaybackFollow,
 		usePianoRollLocalTimeline,
 		timelineContextResolver,
+		animate,
 	);
 }
 
@@ -1738,6 +1751,11 @@ export function destroyPianoRollDisplays(ctx: ViewRenderer): void {
 			cancelAnimationFrame(this.pianoRollNoteRefreshFrameId);
 			this.pianoRollNoteRefreshFrameId = null;
 		}
+		this.pianoRollSeekSurfaces.forEach((surface) => {
+			if (surface.scrollAnimation) {
+				cancelAnimationFrame(surface.scrollAnimation.rafId);
+			}
+		});
 		this.latestPianoRollRenderInput = null;
 		this.pianoRollSeekSurfaces.length = 0;
 	}).call(ctx);

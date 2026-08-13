@@ -408,10 +408,27 @@
 	--seekhead-color: var(--ts-color-surface-panel-dark);
 }
 
-/* The dark seekhead is invisible against a dark palette's surface. */
+/*
+ * The seekhead, loop-point markers and timeline markers are all dark by
+ * default, and so invisible against a dark palette's surface. Flip them to
+ * white; the highlighted/active marker colour stays the accent either way.
+ */
 .trackswitch .piano-roll-wrap[data-palette="dark"] .seekwrap,
 .trackswitch .piano-roll-wrap[data-palette="colorblind-dark"] .seekwrap {
 	--seekhead-color: var(--ts-color-text-inverse);
+	--loop-marker-color: var(--ts-color-text-inverse);
+}
+
+.trackswitch .piano-roll-wrap[data-palette="dark"] .timeline-marker,
+.trackswitch .piano-roll-wrap[data-palette="colorblind-dark"] .timeline-marker {
+	color: var(--ts-color-text-inverse);
+}
+
+.trackswitch .piano-roll-wrap[data-palette="dark"] .timeline-marker-label,
+.trackswitch
+	.piano-roll-wrap[data-palette="colorblind-dark"]
+	.timeline-marker-label {
+	background: var(--ts-color-surface-panel-dark);
 }
 
 .trackswitch .piano-roll-wrap .seekwrap .seekhead {

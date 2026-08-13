@@ -19,6 +19,7 @@ import {
 	serializeWaveformSource,
 } from "../shared/waveform-source";
 import {
+	applyTimelineFollowScrollLeft,
 	clampTimelineValue,
 	getTimelineMaximumZoom,
 	getTimelineSurfaceWidth,
@@ -450,6 +451,7 @@ function applyWaveformPlaybackFollowScroll(
 	ctx: ViewRenderer,
 	surfaceMetadata: WaveformSeekSurfaceMetadata,
 	nextScrollLeft: number | null,
+	animate: boolean,
 ): boolean {
 	if (!Number.isFinite(nextScrollLeft)) {
 		return false;
@@ -466,17 +468,15 @@ function applyWaveformPlaybackFollowScroll(
 		maxScrollLeft,
 	);
 
-	if (
-		Math.abs(clampedScrollLeft - surfaceMetadata.scrollContainer.scrollLeft) <
-		0.000001
-	) {
-		return false;
-	}
-
-	surfaceMetadata.scrollContainer.scrollLeft = clampedScrollLeft;
-	updateWaveformMinimapViewport(surfaceMetadata);
-	ctx.scheduleVisibleWaveformTileRefresh();
-	return true;
+	return applyTimelineFollowScrollLeft(
+		surfaceMetadata,
+		clampedScrollLeft,
+		animate,
+		(surface) => {
+			updateWaveformMinimapViewport(surface);
+			ctx.scheduleVisibleWaveformTileRefresh();
+		},
+	);
 }
 
 /**
@@ -1966,6 +1966,7 @@ export function updateWaveformPlaybackFollow(
 	runtimes: TrackRuntime[],
 	waveformTimelineContext: WaveformTimelineContext | undefined,
 	suppressFollow: boolean,
+	animate = false,
 ): void {
 	(function (
 		this: ViewRenderer,
@@ -1973,6 +1974,7 @@ export function updateWaveformPlaybackFollow(
 		runtimes: TrackRuntime[],
 		waveformTimelineContext: WaveformTimelineContext | undefined,
 		suppressFollow: boolean,
+		animate: boolean,
 	) {
 		if (suppressFollow) {
 			return;
@@ -2003,8 +2005,16 @@ export function updateWaveformPlaybackFollow(
 						surface,
 						playbackMetrics.position / playbackMetrics.duration,
 					),
+					animate,
 				);
 			},
 		);
-	}).call(ctx, state, runtimes, waveformTimelineContext, suppressFollow);
+	}).call(
+		ctx,
+		state,
+		runtimes,
+		waveformTimelineContext,
+		suppressFollow,
+		animate,
+	);
 }

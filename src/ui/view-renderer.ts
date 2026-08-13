@@ -1432,6 +1432,7 @@ export class ViewRenderer {
 		suppressPlaybackFollow: boolean,
 		usePianoRollLocalTimeline = false,
 		timelineContextResolver?: PianoRollTimelineContextResolver,
+		animate = false,
 	): void {
 		viewRendererPianoRoll.updatePianoRollPlaybackState(
 			this,
@@ -1439,6 +1440,7 @@ export class ViewRenderer {
 			suppressPlaybackFollow,
 			usePianoRollLocalTimeline,
 			timelineContextResolver,
+			animate,
 		);
 	}
 
@@ -1566,6 +1568,7 @@ export class ViewRenderer {
 		runtimes: TrackRuntime[],
 		waveformTimelineContext?: WaveformTimelineContext,
 		suppressFollow = false,
+		animate = false,
 	): void {
 		viewRendererWaveform.updateWaveformPlaybackFollow(
 			this,
@@ -1573,6 +1576,7 @@ export class ViewRenderer {
 			runtimes,
 			waveformTimelineContext,
 			suppressFollow,
+			animate,
 		);
 	}
 
