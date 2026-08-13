@@ -10,7 +10,7 @@ import { resizeCanvasForCssSize } from "./timeline-surface";
  */
 
 /** Share of the column the black keys reach, measured from the note edge. */
-const BLACK_KEY_LENGTH_RATIO = 0.58;
+const BLACK_KEY_LENGTH_RATIO = 0.7;
 /** A label needs at least this much white key to sit in. */
 const LABEL_MIN_KEY_HEIGHT = 9;
 const LABEL_FONT_SIZE = 9;
@@ -51,25 +51,43 @@ export function resolvePianoRollKeyboardColors(
 }
 
 const SEMITONES_PER_OCTAVE = 12;
-const WHITE_KEYS_PER_OCTAVE = 7;
 /** Position of each semitone in the white-key sequence; -1 for a black key. */
 const WHITE_INDEX_IN_OCTAVE = [0, -1, 1, -1, 2, 3, -1, 4, -1, 5, -1, 6];
 
 /**
- * A white key's place in the endless white-key sequence, so its far-side band
- * is anchored to its pitch. Spreading the bands evenly over whatever keys
- * happen to be visible instead would drift against the semitone rows on any
- * range that is not a whole number of octaves, and a key would end up stepping
- * clear of its own row.
+ * Two white keys meet with no black key between them — B/C and E/F — so those
+ * two boundaries are the only ones drawn out in the open, and they have to land
+ * exactly on the semitone row they share or the key visibly kinks there. Every
+ * other boundary hides under a black key, which swallows the step between the
+ * band and the row. So the octave is cut at E/F and each half shares its
+ * semitones evenly: C D E over five, F G A B over seven. The two resulting key
+ * heights are 5/3 and 7/4 of a row — a 5% difference, invisible beside the
+ * crinkle that forcing all seven to 12/7 would leave at every E/F.
  */
-function whiteKeyIndex(midi: number): number {
-	const semitone =
-		((midi % SEMITONES_PER_OCTAVE) + SEMITONES_PER_OCTAVE) %
-		SEMITONES_PER_OCTAVE;
-	return (
-		Math.floor(midi / SEMITONES_PER_OCTAVE) * WHITE_KEYS_PER_OCTAVE +
-		WHITE_INDEX_IN_OCTAVE[semitone]
-	);
+const LOWER_WHITE_KEYS = 3;
+const UPPER_WHITE_KEYS = 4;
+const LOWER_SEMITONES = 5;
+const UPPER_SEMITONES = SEMITONES_PER_OCTAVE - LOWER_SEMITONES;
+
+/**
+ * A white key's far-side band, in semitones, anchored to its own pitch rather
+ * than to whatever keys happen to be visible — spreading bands over the visible
+ * range instead would drift against the semitone rows on any range that is not
+ * a whole number of octaves, and a key would end up stepping clear of its row.
+ */
+function whiteKeyBand(midi: number): { bottom: number; top: number } {
+	const octave = Math.floor(midi / SEMITONES_PER_OCTAVE);
+	const index = WHITE_INDEX_IN_OCTAVE[midi - octave * SEMITONES_PER_OCTAVE];
+	const inLowerHalf = index < LOWER_WHITE_KEYS;
+	const height = inLowerHalf
+		? LOWER_SEMITONES / LOWER_WHITE_KEYS
+		: UPPER_SEMITONES / UPPER_WHITE_KEYS;
+	const bottom =
+		octave * SEMITONES_PER_OCTAVE +
+		(inLowerHalf
+			? index * height
+			: LOWER_SEMITONES + (index - LOWER_WHITE_KEYS) * height);
+	return { bottom, top: bottom + height };
 }
 
 /**
@@ -95,6 +113,16 @@ interface KeyBands {
 	nearBottom: number;
 }
 
+/**
+ * The far band (7 keys/octave) and the near row (12 keys/octave) rarely line
+ * up, so every white key is a step rather than a rectangle: a tall slab out to
+ * `blackStart` at the far band's height, then a one-row tongue reaching the
+ * near edge, flush with the black keys beside it. The two heights meet on a
+ * vertical segment at `blackStart`, so the key is drawn from horizontals and
+ * verticals only — no diagonal, which is what a real keyboard looks like.
+ * How far the step juts either way differs per key, exactly as the notches
+ * between the black keys of a piano do.
+ */
 function traceWhiteKey(
 	context: CanvasRenderingContext2D,
 	bands: KeyBands,
@@ -150,8 +178,6 @@ export function drawPianoRollKeyboard(
 	// the far-side bands — 12 rows to every 7 keys — can be placed on it.
 	const semitoneY = (semitone: number): number =>
 		(maxMidi + 1 - semitone) * rowHeight;
-	const bandSpan = SEMITONES_PER_OCTAVE / WHITE_KEYS_PER_OCTAVE;
-	const whiteHeight = bandSpan * rowHeight;
 	const nearTop = (midi: number): number => semitoneY(midi + 1);
 
 	context.lineWidth = 1;
@@ -160,10 +186,10 @@ export function drawPianoRollKeyboard(
 	context.font = colors.labelFont;
 
 	whiteKeys.forEach((midi) => {
-		const whiteIndex = whiteKeyIndex(midi);
+		const band = whiteKeyBand(midi);
 		const bands: KeyBands = {
-			farTop: semitoneY((whiteIndex + 1) * bandSpan),
-			farBottom: semitoneY(whiteIndex * bandSpan),
+			farTop: semitoneY(band.top),
+			farBottom: semitoneY(band.bottom),
 			nearTop: nearTop(midi),
 			nearBottom: nearTop(midi) + rowHeight,
 		};
@@ -189,7 +215,10 @@ export function drawPianoRollKeyboard(
 
 		context.stroke();
 
-		if (midi % 12 === 0 && whiteHeight >= LABEL_MIN_KEY_HEIGHT) {
+		if (
+			midi % SEMITONES_PER_OCTAVE === 0 &&
+			bands.farBottom - bands.farTop >= LABEL_MIN_KEY_HEIGHT
+		) {
 			context.fillStyle = colors.label;
 			context.fillText(
 				formatMidiNoteName(midi),
