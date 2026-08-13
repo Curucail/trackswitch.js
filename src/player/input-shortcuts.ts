@@ -24,6 +24,8 @@ const SHORTCUT_HELP_BLOCKED_KEYS = new Set([
 	"L",
 	"c",
 	"C",
+	"f",
+	"F",
 ]);
 
 const SHORTCUT_HELP_BLOCKED_CODES = new Set([
@@ -34,6 +36,7 @@ const SHORTCUT_HELP_BLOCKED_CODES = new Set([
 	"KeyB",
 	"KeyL",
 	"KeyC",
+	"KeyF",
 ]);
 
 const KEYBOARD_SHORTCUT_HANDLERS: Record<
@@ -200,6 +203,27 @@ const KEYBOARD_SHORTCUT_HANDLERS: Record<
 			return false;
 		}
 		controller.clearLoop();
+		return true;
+	},
+	f: (controller) => {
+		if (!controller.navigationBar?.controls.includes("fullscreen-control")) {
+			return false;
+		}
+		controller.toggleFullscreen();
+		return true;
+	},
+	F: (controller) => {
+		if (!controller.navigationBar?.controls.includes("fullscreen-control")) {
+			return false;
+		}
+		controller.toggleFullscreen();
+		return true;
+	},
+	KeyF: (controller) => {
+		if (!controller.navigationBar?.controls.includes("fullscreen-control")) {
+			return false;
+		}
+		controller.toggleFullscreen();
 		return true;
 	},
 };

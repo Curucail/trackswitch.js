@@ -89,6 +89,8 @@ export interface SheetMusicHostConfig {
 	followPlayback: boolean;
 	cursorColor: string;
 	cursorAlpha: number;
+	/** The configured `maxHeight`, or null when unset — the base a fullscreen grow starts from. */
+	configuredMaxHeight: number | null;
 }
 
 /** A seekable image bound to a media entry, so it carries its own timeline. */
@@ -149,6 +151,8 @@ interface WaveformSeekSurfaceMetadata {
 	playbackFollowMode: WaveformPlaybackFollowMode;
 	timeAxis: WaveformTimeAxis;
 	originalHeight: number;
+	/** The configured `height`, immutable — the base a fullscreen grow restores to. */
+	configuredHeight: number;
 	barWidth: number;
 	maxZoomSeconds: number;
 	baseWidth: number;
@@ -304,6 +308,10 @@ export interface WarpingMatrixHostMetadata {
 	trackSeries: WarpingMatrixTrackSeries[];
 	matrixTrackDuration: number;
 	configuredHeight: number | null;
+	/** The author-declared height, immutable — null means it auto-sizes, which is what makes it eligible to grow in fullscreen. */
+	authoredHeight: number | null;
+	/** The effective height captured just before a fullscreen grow, so exiting can restore it exactly. */
+	preFullscreenHeight: number | null;
 	tempoWindowSeconds: number;
 	tempoSmoothingSeconds: number;
 	colorByColumn: Map<string, string>;
@@ -316,6 +324,12 @@ export interface WarpingMatrixHostMetadata {
 	lastSizeKey: string | null;
 	layoutDirty: boolean;
 	staticPlotDirty: boolean;
+}
+
+/** A panel with a configured height, eligible to share in a fullscreen grow. */
+interface FullscreenGrowTarget {
+	baseHeight: number;
+	setHeight(height: number): void;
 }
 
 interface PanelDragState {
@@ -1593,6 +1607,128 @@ export class ViewRenderer {
 
 	setShortcutHelpVisible(isVisible: boolean): void {
 		viewRendererCore.setShortcutHelpVisible(this, isVisible);
+	}
+
+	setFullscreen(active: boolean): void {
+		if (this.root.classList.contains("ts-fullscreen") === active) {
+			return;
+		}
+
+		viewRendererCore.setFullscreen(this, active);
+		this.reflowWaveforms();
+		this.reflowMidiDisplays();
+		this.applyFullscreenPanelHeights(active);
+	}
+
+	/** Re-measures and redistributes panel heights against the current viewport, for a resize while fullscreen is already active. */
+	refreshFullscreenPanelHeights(): void {
+		if (!this.root.classList.contains("ts-fullscreen")) {
+			return;
+		}
+
+		this.applyFullscreenPanelHeights(false);
+		this.applyFullscreenPanelHeights(true);
+	}
+
+	/**
+	 * Redistributes the extra vertical space fullscreen mode opens up among the
+	 * panels that have a configured height — waveform/midi surfaces, a bounded
+	 * sheet music panel, and an unconfigured (auto-sized) warping matrix. Panels
+	 * with no notion of a configured height (text, images, separators) are left
+	 * alone; an explicit `warpingMatrix.height` is also left alone, since that is
+	 * the author's own choice.
+	 */
+	private applyFullscreenPanelHeights(active: boolean): void {
+		const targets: FullscreenGrowTarget[] = [];
+
+		this.waveformSeekSurfaces.forEach((surface) => {
+			targets.push({
+				baseHeight: surface.configuredHeight,
+				setHeight: (height) =>
+					viewRendererWaveform.setWaveformSurfaceHeight(this, surface, height),
+			});
+		});
+
+		this.midiSeekSurfaces.forEach((surface) => {
+			targets.push({
+				baseHeight: surface.configuredHeight,
+				setHeight: (height) =>
+					viewRendererMidi.setMidiSurfaceHeight(this, surface, height),
+			});
+		});
+
+		this.sheetMusicHosts.forEach((host) => {
+			if (host.configuredMaxHeight === null) {
+				return;
+			}
+			const scrollContainer = host.scrollContainer;
+			targets.push({
+				baseHeight: host.configuredMaxHeight,
+				setHeight: (height) => {
+					scrollContainer.style.maxHeight = `${height}px`;
+					scrollContainer.style.height = `${height}px`;
+					scrollContainer.style.minHeight = `${height}px`;
+				},
+			});
+		});
+
+		this.warpingMatrixHosts.forEach((host) => {
+			if (host.authoredHeight !== null) {
+				return;
+			}
+			const base =
+				host.preFullscreenHeight ??
+				host.configuredHeight ??
+				Math.max(180, host.matrixPanel.clientHeight || 220);
+			targets.push({
+				baseHeight: base,
+				setHeight: (height) => {
+					host.preFullscreenHeight = base;
+					host.configuredHeight = height;
+					this.ensureWarpingLayout(host);
+				},
+			});
+		});
+
+		if (!active) {
+			targets.forEach((target) => {
+				target.setHeight(target.baseHeight);
+			});
+			this.warpingMatrixHosts.forEach((host) => {
+				host.preFullscreenHeight = null;
+			});
+			return;
+		}
+
+		if (targets.length === 0) {
+			return;
+		}
+
+		const totalBase = targets.reduce(
+			(sum, target) => sum + target.baseHeight,
+			0,
+		);
+		const available = this.root.clientHeight;
+		// The root's own scrollHeight is useless here: fullscreen positioning
+		// (`inset`) forces the root to a definite viewport-derived height, so
+		// `scrollHeight` reports that forced height back rather than the shorter
+		// natural stack. Summing the direct children's own (still base-sized, since
+		// no target has been grown yet) rendered heights gives the real figure.
+		const used = Array.from(this.root.children).reduce(
+			(sum, child) =>
+				sum + (child as HTMLElement).getBoundingClientRect().height,
+			0,
+		);
+		const extra = available - used;
+
+		if (extra <= 0 || totalBase <= 0) {
+			return;
+		}
+
+		targets.forEach((target) => {
+			const share = (extra * target.baseHeight) / totalBase;
+			target.setHeight(Math.round(target.baseHeight + share));
+		});
 	}
 
 	updateOverlayDownloadInfo(info: AudioDownloadSizeInfo): void {

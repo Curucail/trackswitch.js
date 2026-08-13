@@ -1379,7 +1379,8 @@
 				"sync",
 				"presets",
 				"timer",
-				"seekBar"
+				"seekBar",
+				"fullscreen-control"
 			]
 		}
 	},

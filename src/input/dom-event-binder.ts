@@ -18,6 +18,7 @@ export interface InputController {
 	onPlayPause(event: ControllerPointerEvent): void;
 	onStop(event: ControllerPointerEvent): void;
 	onRepeat(event: ControllerPointerEvent): void;
+	onFullscreenToggle(event: ControllerPointerEvent): void;
 	onSeekStart(event: ControllerPointerEvent): void;
 	onSeekMove(event: ControllerPointerEvent): void;
 	onSeekEnd(event: ControllerPointerEvent): void;
@@ -269,6 +270,9 @@ export class InputBinder {
 		});
 		this.addPointerDelegatedListener(".repeat", (event) => {
 			this.controller.onRepeat(event);
+		});
+		this.addPointerDelegatedListener(".fullscreen-toggle", (event) => {
+			this.controller.onFullscreenToggle(event);
 		});
 		this.addDelegatedListener("click", ".timeline-marker", (event) => {
 			this.controller.onTimelineMarkerActivate(event);

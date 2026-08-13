@@ -78,6 +78,29 @@ export function closeShortcutHelp(ctx: TrackSwitchControllerImpl): void {
 	}).call(ctx);
 }
 
+export function toggleFullscreen(ctx: TrackSwitchControllerImpl): void {
+	(function (this: TrackSwitchControllerImpl) {
+		this.fullscreen = !this.fullscreen;
+		this.renderer.setFullscreen(this.fullscreen);
+		this.updateMainControls();
+	}).call(ctx);
+}
+
+export function onFullscreenToggle(
+	ctx: TrackSwitchControllerImpl,
+	event: ControllerPointerEvent,
+): void {
+	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
+		if (!isPrimaryInput(event)) {
+			return;
+		}
+
+		event.preventDefault();
+		this.toggleFullscreen();
+		event.stopPropagation();
+	}).call(ctx, event);
+}
+
 export function onOverlayActivate(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
@@ -907,6 +930,9 @@ export function onResize(ctx: TrackSwitchControllerImpl): void {
 				this.isAlignmentMode(),
 			);
 			this.sheetMusicEngine.resize();
+			if (this.fullscreen) {
+				this.renderer.refreshFullscreenPanelHeights();
+			}
 			this.updateMainControls();
 		}, 300);
 	}).call(ctx);

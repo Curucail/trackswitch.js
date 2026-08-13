@@ -310,7 +310,8 @@ export type TrackSwitchNavigationBarControl =
 	| "sync"
 	| "presets"
 	| "timer"
-	| "seekBar";
+	| "seekBar"
+	| "fullscreen-control";
 
 export interface TrackSwitchNavigationBarViewConfig {
 	type: "navigationBar";

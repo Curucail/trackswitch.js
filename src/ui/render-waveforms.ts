@@ -48,6 +48,8 @@ interface WaveformSeekSurfaceMetadata {
 	playbackFollowMode: WaveformPlaybackFollowMode;
 	timeAxis: WaveformTimeAxis;
 	originalHeight: number;
+	/** The configured `height`, immutable — the base a fullscreen grow restores to. */
+	configuredHeight: number;
 	barWidth: number;
 	maxZoomSeconds: number;
 	baseWidth: number;
@@ -585,6 +587,7 @@ export function wrapWaveformCanvases(ctx: ViewRenderer): void {
 					playbackFollowMode: playbackFollowMode,
 					timeAxis: timeAxis,
 					originalHeight: originalHeight,
+					configuredHeight: originalHeight,
 					barWidth: barWidth,
 					maxZoomSeconds: maxZoomSeconds,
 					baseWidth: this.resolveWaveformBaseWidth(
@@ -693,6 +696,32 @@ export function setWaveformSurfaceWidth(
 		surfaceMetadata.tileLayer.style.height = `${surfaceMetadata.originalHeight}px`;
 		updateWaveformMinimapViewport(surfaceMetadata);
 	}).call(ctx, surfaceMetadata);
+}
+
+/** Resizes a surface's rendered height (fullscreen growth/restore) and redraws it. */
+export function setWaveformSurfaceHeight(
+	ctx: ViewRenderer,
+	surfaceMetadata: WaveformSeekSurfaceMetadata,
+	height: number,
+): void {
+	(function (
+		this: ViewRenderer,
+		surfaceMetadata: WaveformSeekSurfaceMetadata,
+		height: number,
+	) {
+		if (surfaceMetadata.originalHeight === height) {
+			return;
+		}
+
+		surfaceMetadata.originalHeight = height;
+		surfaceMetadata.surface.style.height = `${height}px`;
+		surfaceMetadata.scrollContainer.style.height = `${height}px`;
+		surfaceMetadata.tileLayer.style.height = `${height}px`;
+		surfaceMetadata.zoomCanvasLastDrawKey = null;
+		surfaceMetadata.alignmentPointsLastW = -1;
+		surfaceMetadata.alignmentPointsLastH = -1;
+		this.refreshVisibleWaveformTilesFromLatestInput();
+	}).call(ctx, surfaceMetadata, height);
 }
 
 export interface WaveformVisibleTile {

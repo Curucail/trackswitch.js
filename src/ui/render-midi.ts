@@ -65,6 +65,8 @@ export interface MidiSeekSurfaceMetadata {
 	mediaId: string;
 	playbackFollowMode: WaveformPlaybackFollowMode;
 	originalHeight: number;
+	/** The configured `height`, immutable — the base a fullscreen grow restores to. */
+	configuredHeight: number;
 	maxZoomSeconds: number;
 	baseWidth: number;
 	zoom: number;
@@ -161,6 +163,30 @@ function setMidiSurfaceWidth(
 	surface.surface.style.height = `${surface.originalHeight}px`;
 	surface.noteCanvas.style.height = `${surface.originalHeight}px`;
 	updateMidiMinimapViewport(surface);
+}
+
+/** Resizes a surface's rendered height (fullscreen growth/restore) and redraws it. */
+export function setMidiSurfaceHeight(
+	ctx: ViewRenderer,
+	surface: MidiSeekSurfaceMetadata,
+	height: number,
+): void {
+	(function (
+		this: ViewRenderer,
+		surface: MidiSeekSurfaceMetadata,
+		height: number,
+	) {
+		if (surface.originalHeight === height) {
+			return;
+		}
+
+		surface.originalHeight = height;
+		surface.surface.style.height = `${height}px`;
+		surface.noteCanvas.style.height = `${height}px`;
+		surface.lastRenderKey = null;
+		surface.lastMinimapKey = null;
+		this.refreshMidiNoteTiles();
+	}).call(ctx, surface, height);
 }
 
 function setMidiZoomForSurface(
@@ -667,6 +693,7 @@ export function wrapMidiCanvases(ctx: ViewRenderer): void {
 				mediaId: config.mediaID,
 				playbackFollowMode: config.playbackFollowMode ?? "center",
 				originalHeight,
+				configuredHeight: originalHeight,
 				maxZoomSeconds: config.maxZoom ?? 5,
 				baseWidth: this.resolveMidiBaseWidth(
 					scrollContainer,

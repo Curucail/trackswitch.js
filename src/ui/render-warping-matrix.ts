@@ -435,6 +435,8 @@ export function wrapWarpingMatrixContainers(ctx: ViewRenderer): void {
 				trackSeries: [],
 				matrixTrackDuration: 1,
 				configuredHeight: configuredHeight,
+				authoredHeight: configuredHeight,
+				preFullscreenHeight: null,
 				tempoWindowSeconds: initialTempoWindowSeconds,
 				tempoSmoothingSeconds: initialTempoSmoothingSeconds,
 				colorByColumn: new Map<string, string>(),

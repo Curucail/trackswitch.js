@@ -112,6 +112,7 @@ function resetTransientInteractionState(
 	controller.waveformMinimapDragState = null;
 	controller.shortcutHelpOpen = false;
 	controller.markerNavigationDialogOpen = false;
+	controller.fullscreen = false;
 }
 
 function applyFirstPresetOrTrackProperties(

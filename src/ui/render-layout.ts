@@ -65,6 +65,8 @@ interface SheetMusicHostConfig {
 	followPlayback: boolean;
 	cursorColor: string;
 	cursorAlpha: number;
+	/** The configured `maxHeight`, or null when unset — the base a fullscreen grow starts from. */
+	configuredMaxHeight: number | null;
 }
 
 interface ShortcutHelpEntry {
@@ -360,6 +362,13 @@ function getShortcutHelpEntries(
 		entries.push({
 			keys: ", / .",
 			action: "Jump to the previous or next marker.",
+		});
+	}
+
+	if (navigationBarHasControl(navigationBar, "fullscreen-control")) {
+		entries.push({
+			keys: "F",
+			action: "Toggle fullscreen mode.",
 		});
 	}
 
@@ -695,6 +704,12 @@ export function buildMainControlHtml(
 						'<div class="loop-marker marker-b"></div>' +
 						'<div class="seekhead"></div>' +
 						"</div>" +
+						"</li>"
+					);
+				case "fullscreen-control":
+					return (
+						'<li class="fullscreen-toggle button" title="Enter Fullscreen (F)" aria-label="Enter Fullscreen">' +
+						renderIconSlotHtml("expand") +
 						"</li>"
 					);
 			}
@@ -1381,6 +1396,7 @@ export function wrapSheetMusicContainers(ctx: ViewRenderer): void {
 				followPlayback: config.followPlayback ?? true,
 				cursorColor: config.cursorColor ?? "#999999",
 				cursorAlpha: config.cursorAlpha ?? 0.4,
+				configuredMaxHeight: maxHeight,
 			});
 		});
 	}).call(ctx);
@@ -1448,6 +1464,7 @@ export function getPreparedSheetMusicHosts(
 				followPlayback: entry.followPlayback,
 				cursorColor: entry.cursorColor,
 				cursorAlpha: entry.cursorAlpha,
+				configuredMaxHeight: entry.configuredMaxHeight,
 			};
 		});
 	}.call(ctx);
@@ -1932,6 +1949,24 @@ export function setShortcutHelpVisible(
 			shortcutOverlayPositionCleanupByOverlay.get(overlay)?.();
 		});
 	}).call(ctx, isVisible);
+}
+
+export function setFullscreen(ctx: ViewRenderer, active: boolean): void {
+	(function (this: ViewRenderer, active: boolean) {
+		this.root.classList.toggle("ts-fullscreen", active);
+		this.queryAll(".fullscreen-toggle").forEach((element: HTMLElement) => {
+			element.classList.toggle("checked", active);
+			element.setAttribute(
+				"title",
+				active ? "Exit Fullscreen (F)" : "Enter Fullscreen (F)",
+			);
+			element.setAttribute(
+				"aria-label",
+				active ? "Exit Fullscreen" : "Enter Fullscreen",
+			);
+			setHostIcon(element, active ? "minimize" : "expand");
+		});
+	}).call(ctx, active);
 }
 
 export function updateOverlayDownloadInfo(

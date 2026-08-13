@@ -814,6 +814,7 @@ function normalizeNavigationBarConfig(
 		"presets",
 		"timer",
 		"seekBar",
+		"fullscreen-control",
 	]);
 	const seenControls = new Set<TrackSwitchNavigationBarControl>();
 	const controls = navigationBar.controls.map((control) => {

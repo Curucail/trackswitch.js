@@ -185,6 +185,7 @@ export class TrackSwitchControllerImpl
 	public readonly instanceId: number;
 	public shortcutHelpOpen = false;
 	public markerNavigationDialogOpen = false;
+	public fullscreen = false;
 	public audioDownloadSizeInfo: AudioDownloadSizeInfo = {
 		status: "calculating",
 		totalBytes: null,
@@ -497,6 +498,14 @@ export class TrackSwitchControllerImpl
 
 	closeShortcutHelp(): void {
 		controllerInput.closeShortcutHelp(this);
+	}
+
+	toggleFullscreen(): void {
+		controllerInput.toggleFullscreen(this);
+	}
+
+	onFullscreenToggle(event: ControllerPointerEvent): void {
+		controllerInput.onFullscreenToggle(this, event);
 	}
 
 	onOverlayActivate(event: ControllerPointerEvent): void {
