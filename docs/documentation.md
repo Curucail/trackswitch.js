@@ -532,6 +532,8 @@ Audio media properties:
 | `solo?` | `boolean` | `false` | Specifies the initial active state of the track. |
 | `volume?` | `number` | `1` | Specifies the initial track volume. |
 | `pan?` | `number` | `0` | Specifies the initial stereo pan. |
+| `volumeControl?` | `boolean` | trackList's `trackVolumeControls` | Overrides the owning trackList's volume control visibility for this track only. |
+| `panControl?` | `"balance" \| "pan" \| false` | trackList's `trackPanControls` | Overrides the owning trackList's pan control visibility (and algorithm) for this track only. |
 | `startOffsetMs?` | `number` | `0` | Trims or pads the start. A positive value trims audio. A negative value adds silence. |
 | `endOffsetMs?` | `number` | `0` | Trims or pads the end. A positive value trims audio. A negative value adds silence. |
 | `srcSynchronized?` | `object` | none | Specifies optional audio pre-warped onto the reference timeline, played by the `sync` control. |
@@ -1235,6 +1237,10 @@ Each view controls the visibility of its volume and pan controls. `trackPanContr
 For a stereo source, `"pan"` blends the channels as the value moves from the center. At hard left, both channels enter the left output.
 
 This behavior is standard for mono content in a stereo field. A true stereo recording usually requires `"balance"`.
+
+A track's own `volumeControl` and `panControl` (on its `media` entry) override these per track,
+so a single trackList can show mix controls on some tracks and not others without splitting into
+multiple lists.
 
 ### `navigationBar`
 

@@ -14,6 +14,7 @@ import type {
 	SynchronizedAudioSourceConfig,
 	TrackDefinition,
 	TrackId,
+	TrackPanAlgorithm,
 	TrackSourceDefinition,
 	TrackSwitchInit,
 	TrackSwitchViewConfig,
@@ -25,6 +26,7 @@ import {
 	assertAllowedKeys,
 	keysOf,
 	normalizeCssOverrides,
+	normalizeOptionalBoolean,
 	toConfigRecord,
 } from "./validation";
 
@@ -64,6 +66,8 @@ const audioMediaAllowedKeys = keysOf<AudioMediaEntryConfig>()([
 	"solo",
 	"volume",
 	"pan",
+	"volumeControl",
+	"panControl",
 	"startOffsetMs",
 	"endOffsetMs",
 	"srcSynchronized",
@@ -472,6 +476,23 @@ function normalizeSynchronizedSource(
 	];
 }
 
+function normalizeTrackPanControl(
+	mediaId: string,
+	value: TrackPanAlgorithm | false | undefined,
+): TrackPanAlgorithm | false | undefined {
+	if (value === undefined || value === false) {
+		return value;
+	}
+
+	if (value !== "balance" && value !== "pan") {
+		throw new Error(
+			`Invalid media.${mediaId}.panControl configuration: must be 'balance', 'pan', or false.`,
+		);
+	}
+
+	return value;
+}
+
 function normalizeMediaConfig(media: MediaConfig | undefined): {
 	media: MediaConfig;
 	tracks: TrackDefinition[];
@@ -511,6 +532,11 @@ function normalizeMediaConfig(media: MediaConfig | undefined): {
 				solo: entry.solo,
 				volume: entry.volume,
 				pan: entry.pan,
+				volumeControl: normalizeOptionalBoolean(
+					entry.volumeControl,
+					`media.${mediaId}.volumeControl`,
+				),
+				panControl: normalizeTrackPanControl(mediaId, entry.panControl),
 				sources: [
 					{
 						src: entry.src,

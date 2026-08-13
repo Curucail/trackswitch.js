@@ -111,6 +111,22 @@
 				"pan": {
 					"type": "number"
 				},
+				"volumeControl": {
+					"type": "boolean",
+					"description": "Overrides the owning trackList's `trackVolumeControls` for this track only."
+				},
+				"panControl": {
+					"anyOf": [
+						{
+							"$ref": "#/definitions/TrackPanAlgorithm"
+						},
+						{
+							"type": "boolean",
+							"const": false
+						}
+					],
+					"description": "Overrides the owning trackList's `trackPanControls` for this track only."
+				},
 				"startOffsetMs": {
 					"type": "number"
 				},
@@ -717,6 +733,13 @@
 			},
 			"additionalProperties": false,
 			"description": "Overrides for the player's public `--ts-*` theming custom properties, set on the element the block belongs to. Custom properties inherit, so a block on a view reaches everything that view renders — an accent colour set on one waveform recolours that waveform alone — while the top-level block on `TrackSwitchInit` reaches the whole player."
+		},
+		"TrackPanAlgorithm": {
+			"type": "string",
+			"enum": [
+				"balance",
+				"pan"
+			]
 		},
 		"SynchronizedAudioSourceConfig": {
 			"type": "object",
@@ -1390,13 +1413,6 @@
 				"tracks"
 			],
 			"additionalProperties": false
-		},
-		"TrackPanAlgorithm": {
-			"type": "string",
-			"enum": [
-				"balance",
-				"pan"
-			]
 		},
 		"TrackSwitchNavigationBarViewConfig": {
 			"type": "object",

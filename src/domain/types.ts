@@ -106,6 +106,10 @@ export interface AudioMediaEntryConfig {
 	solo?: boolean;
 	volume?: number;
 	pan?: number;
+	/** Overrides the owning trackList's `trackVolumeControls` for this track only. */
+	volumeControl?: boolean;
+	/** Overrides the owning trackList's `trackPanControls` for this track only. */
+	panControl?: TrackPanAlgorithm | false;
 	startOffsetMs?: number;
 	endOffsetMs?: number;
 	srcSynchronized?: SynchronizedAudioSourceConfig;
@@ -416,6 +420,8 @@ export interface TrackDefinition {
 	solo?: boolean;
 	volume?: number;
 	pan?: number;
+	volumeControl?: boolean;
+	panControl?: TrackPanAlgorithm | false;
 	sources: TrackSourceDefinition[];
 	syncedSources?: TrackSourceDefinition[];
 }

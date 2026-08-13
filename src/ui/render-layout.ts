@@ -789,14 +789,16 @@ export function buildTrackRow(
 
 		track.appendChild(controls);
 
-		if (
-			trackListOptions.trackVolumeControls ||
-			trackListOptions.trackPanControls
-		) {
+		const showVolumeControl =
+			runtime.definition.volumeControl ?? trackListOptions.trackVolumeControls;
+		const panControl =
+			runtime.definition.panControl ?? trackListOptions.trackPanControls;
+
+		if (showVolumeControl || panControl) {
 			const mixControls = document.createElement("div");
 			mixControls.className = "track-mix-controls";
 
-			if (trackListOptions.trackVolumeControls) {
+			if (showVolumeControl) {
 				const volumeControl = document.createElement("div");
 				volumeControl.className = "track-volume-control";
 
@@ -818,9 +820,9 @@ export function buildTrackRow(
 				mixControls.appendChild(volumeControl);
 			}
 
-			if (trackListOptions.trackPanControls) {
-				const panControl = document.createElement("div");
-				panControl.className = "track-pan-control";
+			if (panControl) {
+				const panControlEl = document.createElement("div");
+				panControlEl.className = "track-pan-control";
 
 				const panLabel = document.createElement("span");
 				panLabel.className = "track-pan-label";
@@ -835,9 +837,9 @@ export function buildTrackRow(
 					Math.round(sanitizePan(runtime.state.pan) * 100),
 				);
 
-				panControl.appendChild(panLabel);
-				panControl.appendChild(panSlider);
-				mixControls.appendChild(panControl);
+				panControlEl.appendChild(panLabel);
+				panControlEl.appendChild(panSlider);
+				mixControls.appendChild(panControlEl);
 			}
 
 			track.appendChild(mixControls);
