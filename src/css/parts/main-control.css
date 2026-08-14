@@ -161,6 +161,26 @@
 	--ts-slider-track-color: var(--ts-color-surface-control);
 }
 
+/* Pan control */
+.trackswitch .main-control .pan-control {
+	display: flex;
+	align-items: center;
+}
+
+.trackswitch .main-control .pan-label {
+	color: var(--ts-color-text-muted);
+	font-family: var(--ts-font-ui);
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: 0.03em;
+	margin-right: 8px;
+	min-width: 24px;
+}
+
+.trackswitch .main-control .pan-slider {
+	--ts-slider-track-color: var(--ts-color-surface-control);
+}
+
 /* Marker navigation */
 .trackswitch .main-control .marker-navigation-controls {
 	display: flex;

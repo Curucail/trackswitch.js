@@ -1264,6 +1264,8 @@ Sync mode is what makes different timelines audible together: it runs the time-s
 sources on a shared clock, and while it is on, all lists play simultaneously regardless of
 `soloGroup`.
 
+A track's pan control snaps to dead center (50/50) and only moves freely once dragged past a 35/65 split, so a near-center release always lands exactly on 50/50.
+
 Each view controls the visibility of its volume and pan controls. `trackPanControls` also selects the pan algorithm:
 
 - `"balance"` (default) — Controls the gain of each stereo channel separately. At hard left, only the original left channel remains audible.
@@ -1287,6 +1289,7 @@ A `navigationBar` view shows playback and navigation controls for the player.
   "controls": [
     "playback",
     "globalVolume",
+    "globalPan",
     "markerNavigation",
     "looping",
     "sync",
@@ -1294,7 +1297,8 @@ A `navigationBar` view shows playback and navigation controls for the player.
     "timer",
     "seekBar"
   ],
-  "repeatEnabled": false
+  "repeatEnabled": false,
+  "globalPanControl": "balance"
 }
 ```
 
@@ -1306,8 +1310,11 @@ If at least two presets exist, it shows `presets`.
 | --- | --- | --- | --- |
 | `controls` | `TrackSwitchNavigationBarControl[]` | - | Specifies the required control list in order. See the supported values after this table. |
 | `repeatEnabled?` | `boolean` | `false` | Enables repeat at player startup. |
+| `globalPanControl?` | `"balance" \| "pan"` | `"balance"` | Selects the pan algorithm for the global pan control shown by `"globalPan"`. See [`trackPanControls`](#tracklist) for the algorithm behaviors. |
 
-`controls` supports `"playback"`, `"globalVolume"`, `"markerNavigation"`, `"looping"`, `"sync"`, `"presets"`, `"timer"`, and `"seekBar"`.
+`controls` supports `"playback"`, `"globalVolume"`, `"globalPan"`, `"markerNavigation"`, `"looping"`, `"sync"`, `"presets"`, `"timer"`, and `"seekBar"`.
+
+`"globalPan"` shows a left-right pan control that adjusts every track together, styled like a track's own pan control. It snaps to dead center the same way per-track pan controls do.
 
 ## Features
 

@@ -96,6 +96,14 @@ description: Web-Based Multitrack Audio Player for Presenting Scientific Results
           <input type="checkbox" name="trackVolumeControls" checked />
         </label>
         <label class="ts-control-row">
+		  <span>Global Panning</span>
+          <select name="globalPanControl">
+            <option value="off" selected>Off</option>
+            <option value="balance">Balance</option>
+			<option value="pan">Pan</option>
+          </select>
+        </label>
+        <label class="ts-control-row">
 		  <span>Per-Track Panning</span>
           <select name="trackPanControls">
             <option value="off">Off</option>

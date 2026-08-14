@@ -2091,6 +2091,10 @@
 				},
 				"repeatEnabled": {
 					"type": "boolean"
+				},
+				"globalPanControl": {
+					"$ref": "#/definitions/TrackPanAlgorithm",
+					"description": "Pan algorithm for the global pan control shown when `controls` includes `\"globalPan\"`."
 				}
 			},
 			"required": [
@@ -2104,6 +2108,7 @@
 			"enum": [
 				"playback",
 				"globalVolume",
+				"globalPan",
 				"markerNavigation",
 				"looping",
 				"sync",

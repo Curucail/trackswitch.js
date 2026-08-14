@@ -1,5 +1,6 @@
 import type {
 	AudioDownloadSizeInfo,
+	TrackPanAlgorithm,
 	TrackRuntime,
 	TrackSourceDefinition,
 	TrackSwitchFeatures,
@@ -106,18 +107,31 @@ export class AudioEngine {
 	private context: AudioContext | null;
 	private readonly alignmentEnabled: boolean;
 	private globalVolumeEnabled: boolean;
+	private globalPanEnabled: boolean;
+	private globalPanAlgorithm: TrackPanAlgorithm;
 	private gainNodeMaster: GainNode | null;
 	private gainNodeVolume: GainNode | null;
 	private masterVolume: number;
+	private masterPan: number;
+	private masterPannerNode: StereoPannerNode | null;
+	private masterPanUpmixNode: GainNode | null;
+	private masterPanSplitterNode: ChannelSplitterNode | null;
+	private masterPanGainLeftNode: GainNode | null;
+	private masterPanGainRightNode: GainNode | null;
+	private masterPanMergerNode: ChannelMergerNode | null;
 
 	constructor(
 		_features: TrackSwitchFeatures,
 		initialVolume: number,
 		alignmentEnabled = false,
 		globalVolumeEnabled = false,
+		globalPanEnabled = false,
+		globalPanAlgorithm: TrackPanAlgorithm = "balance",
 	) {
 		this.alignmentEnabled = alignmentEnabled;
 		this.globalVolumeEnabled = globalVolumeEnabled;
+		this.globalPanEnabled = globalPanEnabled;
+		this.globalPanAlgorithm = globalPanAlgorithm;
 		this.context = null;
 		this.gainNodeMaster = null;
 		this.gainNodeVolume = null;
@@ -125,6 +139,13 @@ export class AudioEngine {
 			0,
 			Math.min(1, Number.isFinite(initialVolume) ? initialVolume : 0),
 		);
+		this.masterPan = 0;
+		this.masterPannerNode = null;
+		this.masterPanUpmixNode = null;
+		this.masterPanSplitterNode = null;
+		this.masterPanGainLeftNode = null;
+		this.masterPanGainRightNode = null;
+		this.masterPanMergerNode = null;
 	}
 
 	private initializeAudioGraph(): void {
@@ -154,11 +175,101 @@ export class AudioEngine {
 		if (!this.gainNodeMaster && this.gainNodeVolume) {
 			const masterNode = this.context.createGain();
 			masterNode.gain.value = 0.0;
-			masterNode.connect(this.gainNodeVolume);
 			this.gainNodeMaster = masterNode;
+			this.configureMasterPanningGraph();
 		}
 
 		this.setMasterVolume(this.masterVolume);
+	}
+
+	/**
+	 * (Re)builds the gainNodeMaster -> [master panning nodes] -> gainNodeVolume
+	 * chain, mirroring configurePanningGraph but for the single master bus. Only
+	 * builds the extra nodes when a global pan control is actually enabled — a
+	 * disabled/absent one connects the master bus straight through, same as an
+	 * unconfigured track.
+	 */
+	private configureMasterPanningGraph(): void {
+		if (!this.context || !this.gainNodeMaster || !this.gainNodeVolume) {
+			return;
+		}
+
+		const previousNodes = [
+			this.masterPannerNode,
+			this.masterPanUpmixNode,
+			this.masterPanSplitterNode,
+			this.masterPanGainLeftNode,
+			this.masterPanGainRightNode,
+			this.masterPanMergerNode,
+		];
+
+		try {
+			this.gainNodeMaster.disconnect();
+		} catch (_error) {
+			// ignore
+		}
+		previousNodes.forEach((node) => {
+			try {
+				node?.disconnect();
+			} catch (_error) {
+				// ignore
+			}
+		});
+
+		this.masterPannerNode = null;
+		this.masterPanUpmixNode = null;
+		this.masterPanSplitterNode = null;
+		this.masterPanGainLeftNode = null;
+		this.masterPanGainRightNode = null;
+		this.masterPanMergerNode = null;
+
+		if (!this.globalPanEnabled) {
+			this.gainNodeMaster.connect(this.gainNodeVolume);
+			return;
+		}
+
+		const useBalanceAlgorithm = this.globalPanAlgorithm === "balance";
+		const stereoPanningSupported = this.supportsStereoPanning();
+
+		if (
+			!useBalanceAlgorithm &&
+			stereoPanningSupported &&
+			typeof this.context.createStereoPanner === "function"
+		) {
+			this.masterPannerNode = this.context.createStereoPanner();
+			this.gainNodeMaster.connect(this.masterPannerNode);
+			this.masterPannerNode.connect(this.gainNodeVolume);
+			return;
+		}
+
+		if (useBalanceAlgorithm) {
+			this.masterPanUpmixNode = this.context.createGain();
+			this.masterPanUpmixNode.channelCount = 2;
+			this.masterPanUpmixNode.channelCountMode = "explicit";
+			this.masterPanUpmixNode.channelInterpretation = "speakers";
+			this.masterPanSplitterNode = this.context.createChannelSplitter(2);
+			this.masterPanGainLeftNode = this.context.createGain();
+			this.masterPanGainRightNode = this.context.createGain();
+			this.masterPanMergerNode = this.context.createChannelMerger(2);
+
+			this.gainNodeMaster.connect(this.masterPanUpmixNode);
+			this.masterPanUpmixNode.connect(this.masterPanSplitterNode);
+			this.masterPanSplitterNode.connect(this.masterPanGainLeftNode, 0);
+			this.masterPanSplitterNode.connect(this.masterPanGainRightNode, 1);
+			this.masterPanGainLeftNode.connect(this.masterPanMergerNode, 0, 0);
+			this.masterPanGainRightNode.connect(this.masterPanMergerNode, 0, 1);
+			this.masterPanMergerNode.connect(this.gainNodeVolume);
+
+			const { gainL, gainR } = computeBalanceGains(
+				this.globalPanEnabled ? this.masterPan : 0,
+			);
+			this.masterPanGainLeftNode.gain.value = gainL;
+			this.masterPanGainRightNode.gain.value = gainR;
+			return;
+		}
+
+		// "pan" algorithm requested but unsupported by this browser: pass through.
+		this.gainNodeMaster.connect(this.gainNodeVolume);
 	}
 
 	get currentTime(): number {
@@ -759,6 +870,33 @@ export class AudioEngine {
 		if (this.gainNodeVolume) {
 			this.gainNodeVolume.gain.value = enabled ? this.masterVolume : 1;
 		}
+	}
+
+	setMasterPan(pan: number): void {
+		this.masterPan = clampPan(pan);
+		const effectivePan = this.globalPanEnabled ? this.masterPan : 0;
+
+		if (this.masterPannerNode) {
+			this.masterPannerNode.pan.value = effectivePan;
+		} else if (this.masterPanGainLeftNode && this.masterPanGainRightNode) {
+			const { gainL, gainR } = computeBalanceGains(effectivePan);
+			this.masterPanGainLeftNode.gain.value = gainL;
+			this.masterPanGainRightNode.gain.value = gainR;
+		}
+	}
+
+	setGlobalPanEnabled(enabled: boolean, algorithm: TrackPanAlgorithm): void {
+		if (
+			this.globalPanEnabled === enabled &&
+			this.globalPanAlgorithm === algorithm
+		) {
+			return;
+		}
+
+		this.globalPanEnabled = enabled;
+		this.globalPanAlgorithm = algorithm;
+		this.configureMasterPanningGraph();
+		this.setMasterPan(this.masterPan);
 	}
 
 	/** `noSoloFallbackGates` says, per track, how loud it is while nothing is soloed. */

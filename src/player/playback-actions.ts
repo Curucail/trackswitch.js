@@ -417,6 +417,24 @@ export function setVolume(
 	}).call(ctx, volumeZeroToOne);
 }
 
+export function setPan(
+	ctx: TrackSwitchControllerImpl,
+	panMinusOneToOne: number,
+): void {
+	(function (this: TrackSwitchControllerImpl, panMinusOneToOne: number) {
+		if (!this.navigationBar?.controls.includes("globalPan")) {
+			this.dispatch({ type: "set-pan", pan: 0 });
+			this.audioEngine.setMasterPan(0);
+			this.renderer.setPanSlider(0);
+			return;
+		}
+
+		this.dispatch({ type: "set-pan", pan: panMinusOneToOne });
+		this.audioEngine.setMasterPan(this.state.pan);
+		this.renderer.setPanSlider(this.state.pan);
+	}).call(ctx, panMinusOneToOne);
+}
+
 export function setTrackVolume(
 	ctx: TrackSwitchControllerImpl,
 	trackIndex: number,
@@ -468,9 +486,10 @@ export function setTrackPan(
 		}
 
 		const runtime = this.runtimes[trackIndex];
-		runtime.state.pan = this.audioEngine.supportsStereoPanning()
-			? clamp(panMinusOneToOne, -1, 1)
-			: 0;
+		const panSupported =
+			runtime.panAlgorithm === "balance" ||
+			this.audioEngine.supportsStereoPanning();
+		runtime.state.pan = panSupported ? clamp(panMinusOneToOne, -1, 1) : 0;
 		this.applyTrackProperties();
 	}).call(ctx, trackIndex, panMinusOneToOne);
 }

@@ -1621,14 +1621,14 @@ export class ViewRenderer {
 	updateTrackControls(
 		runtimes: TrackRuntime[],
 		syncLockedTrackIndexes?: ReadonlySet<number>,
-		panSupported = true,
+		stereoPanningSupported = true,
 		syncEnabled = false,
 	): void {
 		viewRendererCore.updateTrackControls(
 			this,
 			runtimes,
 			syncLockedTrackIndexes,
-			panSupported,
+			stereoPanningSupported,
 			syncEnabled,
 		);
 	}
@@ -1639,6 +1639,10 @@ export class ViewRenderer {
 
 	setVolumeSlider(volumeZeroToOne: number): void {
 		viewRendererCore.setVolumeSlider(this, volumeZeroToOne);
+	}
+
+	setPanSlider(panMinusOneToOne: number): void {
+		viewRendererCore.setPanSlider(this, panMinusOneToOne);
 	}
 
 	setTrackVolumeSlider(trackIndex: number, volumeZeroToOne: number): void {

@@ -390,13 +390,15 @@
  * other by a fraction of a pixel. Rather than chase that rounding, the
  * keyboard overlaps a couple of pixels onto the scroller and paints over
  * the seekhead there (which is only 2px wide, so the overlap hides it
- * completely) instead of trying to butt up against it exactly.
+ * completely) instead of trying to butt up against it exactly. z-index
+ * has to clear the seekhead's own z-index: 4 (set in timeline.css) for
+ * the overlap to actually paint on top rather than underneath it.
  */
 .trackswitch .piano-roll-wrap .piano-roll-keyboard {
 	flex: 0 0 auto;
 	display: block;
 	position: relative;
-	z-index: 1;
+	z-index: 5;
 	width: calc(var(--ts-piano-roll-keyboard-width) + 2px);
 	margin-right: -2px;
 	background: var(--piano-roll-surface-background);

@@ -354,6 +354,7 @@ export interface TrackSwitchTrackListViewConfig {
 export type TrackSwitchNavigationBarControl =
 	| "playback"
 	| "globalVolume"
+	| "globalPan"
 	| "markerNavigation"
 	| "looping"
 	| "sync"
@@ -366,6 +367,8 @@ export interface TrackSwitchNavigationBarViewConfig {
 	type: "navigationBar";
 	controls: TrackSwitchNavigationBarControl[];
 	repeatEnabled?: boolean;
+	/** Pan algorithm for the global pan control shown when `controls` includes `"globalPan"`. */
+	globalPanControl?: TrackPanAlgorithm;
 }
 
 export type TrackSwitchViewConfig =
@@ -576,6 +579,7 @@ export interface PlayerState {
 	currentlySeeking: boolean;
 	loop: LoopState;
 	volume: number;
+	pan: number;
 }
 
 export type TrackSwitchEventName =
@@ -617,6 +621,7 @@ export interface TrackSwitchController {
 	seekRelative(seconds: number): void;
 	setRepeat(enabled: boolean): void;
 	setVolume(volumeZeroToOne: number): void;
+	setPan(panMinusOneToOne: number): void;
 	setTrackVolume(trackIndex: number, volumeZeroToOne: number): void;
 	setTrackPan(trackIndex: number, panMinusOneToOne: number): void;
 	setLoopPoint(marker: LoopMarker): boolean;

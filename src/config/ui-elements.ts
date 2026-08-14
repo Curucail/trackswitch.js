@@ -101,7 +101,7 @@ const uiTrackListAllowedKeys = keysOf<TrackSwitchTrackListViewConfig>()([
 	"trackPanControls",
 ] as const);
 const uiNavigationBarAllowedKeys = keysOf<TrackSwitchNavigationBarViewConfig>()(
-	["type", "controls", "repeatEnabled"] as const,
+	["type", "controls", "repeatEnabled", "globalPanControl"] as const,
 );
 const uiSheetMusicAllowedKeys = keysOf<TrackSwitchSheetMusicViewConfig>()([
 	"type",
@@ -855,6 +855,22 @@ function normalizeTrackPanControls(
 	return value;
 }
 
+function normalizeGlobalPanControl(
+	value: TrackPanAlgorithm | undefined,
+): TrackPanAlgorithm {
+	if (value === undefined) {
+		return "balance";
+	}
+
+	if (value !== "balance" && value !== "pan") {
+		throw new Error(
+			"Invalid navigationBar configuration: globalPanControl must be 'balance' or 'pan'.",
+		);
+	}
+
+	return value;
+}
+
 /** A selection is named by a number, so `0` has to survive normalization. */
 function normalizeSoloGroup(value: number | undefined): number | undefined {
 	if (value === undefined) {
@@ -920,6 +936,7 @@ function normalizeNavigationBarConfig(
 	const allowedControls = new Set<TrackSwitchNavigationBarControl>([
 		"playback",
 		"globalVolume",
+		"globalPan",
 		"markerNavigation",
 		"looping",
 		"sync",
@@ -957,6 +974,7 @@ function normalizeNavigationBarConfig(
 				navigationBar.repeatEnabled,
 				"navigationBar.repeatEnabled",
 			) ?? false,
+		globalPanControl: normalizeGlobalPanControl(navigationBar.globalPanControl),
 	};
 }
 

@@ -40,7 +40,7 @@
 		// default to "error", so the values the showcase sets are load-bearing.
 		markerLayer: { line: "dashed", foldToReference: false },
 		view: {
-			navigationBar: { repeatEnabled: false },
+			navigationBar: { repeatEnabled: false, globalPanControl: "balance" },
 			trackList: {
 				trackVolumeControls: false,
 				trackPanControls: false,
@@ -378,6 +378,7 @@
 			controls: [
 				"playback",
 				controls.globalVolume && "globalVolume",
+				controls.globalPan && "globalPan",
 				controls.markers && "markerNavigation",
 				controls.looping && "looping",
 				"sync",
@@ -386,6 +387,7 @@
 				controls.seekBar && "seekBar",
 			].filter(Boolean),
 			repeatEnabled: controls.repeatEnabled,
+			globalPanControl: controls.globalPanControl,
 		};
 	}
 
@@ -491,6 +493,14 @@
 			);
 			result.trackPanControls =
 				trackPanControls === "off" ? false : trackPanControls;
+			var globalPanControl = readControl(
+				controlsRoot,
+				"globalPanControl",
+				"off",
+			);
+			result.globalPan = globalPanControl !== "off";
+			result.globalPanControl =
+				globalPanControl === "off" ? "balance" : globalPanControl;
 			return result;
 		}
 

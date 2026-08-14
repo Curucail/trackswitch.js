@@ -19,6 +19,7 @@ import {
 } from "./input-shortcuts";
 import {
 	getTrackInputTarget,
+	parsePanSliderValue,
 	parseSliderValue,
 	toggleSoloFromPointerEvent,
 } from "./input-track-controls";
@@ -646,6 +647,31 @@ export function onVolumeReset(
 	}).call(ctx, event);
 }
 
+export function onGlobalPan(
+	ctx: TrackSwitchControllerImpl,
+	event: ControllerPointerEvent,
+): void {
+	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
+		const target = eventTargetAsElement(event.target ?? null);
+		if (!(target instanceof HTMLInputElement)) {
+			return;
+		}
+
+		this.setPan(parsePanSliderValue(target));
+	}).call(ctx, event);
+}
+
+export function onGlobalPanReset(
+	ctx: TrackSwitchControllerImpl,
+	event: ControllerPointerEvent,
+): void {
+	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
+		event.preventDefault();
+		this.setPan(0);
+		event.stopPropagation();
+	}).call(ctx, event);
+}
+
 export function onTrackVolume(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
@@ -691,7 +717,7 @@ export function onTrackPan(
 
 		this.setTrackPan(
 			trackInput.trackIndex,
-			parseSliderValue(trackInput.target),
+			parsePanSliderValue(trackInput.target),
 		);
 	}).call(ctx, event);
 }

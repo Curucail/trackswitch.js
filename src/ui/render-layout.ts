@@ -656,6 +656,11 @@ export function buildMainControlHtml(
 						"</i>" +
 						'<input type="range" class="volume-slider" min="0" max="100" value="100"></div></li>'
 					);
+				case "globalPan":
+					return (
+						'<li class="pan"><div class="pan-control"><span class="pan-label">L/R</span>' +
+						'<input type="range" class="pan-slider mix-slider" min="-100" max="100" value="0"></div></li>'
+					);
 				case "markerNavigation":
 					return (
 						'<li class="marker-navigation-group"><div class="marker-navigation-controls" role="group" aria-label="Marker navigation">' +
@@ -1597,14 +1602,14 @@ export function updateTrackControls(
 	ctx: ViewRenderer,
 	runtimes: TrackRuntime[],
 	syncLockedTrackIndexes: ReadonlySet<number> | undefined,
-	panSupported: boolean,
+	stereoPanningSupported: boolean,
 	syncEnabled: boolean,
 ): void {
 	(function (
 		this: ViewRenderer,
 		runtimes: TrackRuntime[],
 		syncLockedTrackIndexes: ReadonlySet<number> | undefined,
-		panSupported: boolean,
+		stereoPanningSupported: boolean,
 		syncEnabled: boolean,
 	) {
 		runtimes.forEach((runtime: TrackRuntime, index: number) => {
@@ -1615,6 +1620,10 @@ export function updateTrackControls(
 
 			const isLocked =
 				!!syncLockedTrackIndexes && syncLockedTrackIndexes.has(index);
+			// A "balance" track mixes with plain gain nodes, so it stays usable even
+			// where StereoPannerNode ("pan" tracks only) is unavailable.
+			const panSupported =
+				runtime.panAlgorithm === "balance" || stereoPanningSupported;
 			// A row repeats the colour(s) its track carries in a piano roll, so the
 			// list and the notes read as one code.
 			const channelColors = this.resolvePianoRollTrackChannelColors(
@@ -1691,7 +1700,13 @@ export function updateTrackControls(
 			solo.classList.toggle("disabled", !!syncEnabled);
 			applySoloIconState(solo, isActive, true, !!syncEnabled);
 		});
-	}).call(ctx, runtimes, syncLockedTrackIndexes, panSupported, syncEnabled);
+	}).call(
+		ctx,
+		runtimes,
+		syncLockedTrackIndexes,
+		stereoPanningSupported,
+		syncEnabled,
+	);
 }
 
 export function switchPosterImage(
@@ -1784,6 +1799,20 @@ export function setTrackVolumeSlider(
 
 		slider.value = String(Math.round(sanitizeVolume(volumeZeroToOne) * 100));
 	}).call(ctx, trackIndex, volumeZeroToOne);
+}
+
+export function setPanSlider(
+	ctx: ViewRenderer,
+	panMinusOneToOne: number,
+): void {
+	(function (this: ViewRenderer, panMinusOneToOne: number) {
+		const slider = this.query(".main-control .pan-slider");
+		if (!slider || !(slider instanceof HTMLInputElement)) {
+			return;
+		}
+
+		slider.value = String(Math.round(sanitizePan(panMinusOneToOne) * 100));
+	}).call(ctx, panMinusOneToOne);
 }
 
 export function setTrackPanSlider(

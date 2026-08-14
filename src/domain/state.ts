@@ -13,6 +13,7 @@ export type PlayerAction =
 	| { type: "set-start-time"; startTime: number }
 	| { type: "set-seeking"; seeking: boolean }
 	| { type: "set-volume"; volume: number }
+	| { type: "set-pan"; pan: number }
 	| {
 			type: "set-loop-point";
 			marker: LoopMarker;
@@ -29,6 +30,13 @@ function clamp01(value: number): number {
 	return Math.max(0, Math.min(1, value));
 }
 
+function clampPan(value: number): number {
+	if (!Number.isFinite(value)) {
+		return 0;
+	}
+	return Math.max(-1, Math.min(1, value));
+}
+
 export function createInitialPlayerState(repeat: boolean): PlayerState {
 	return {
 		playing: false,
@@ -43,6 +51,7 @@ export function createInitialPlayerState(repeat: boolean): PlayerState {
 			enabled: false,
 		},
 		volume: 1,
+		pan: 0,
 	};
 }
 
@@ -168,6 +177,12 @@ export function playerStateReducer(
 			return {
 				...state,
 				volume: clamp01(action.volume),
+			};
+
+		case "set-pan":
+			return {
+				...state,
+				pan: clampPan(action.pan),
 			};
 
 		case "set-loop-point":

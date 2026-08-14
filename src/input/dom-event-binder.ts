@@ -27,6 +27,8 @@ export interface InputController {
 	onAlignmentSync(event: ControllerPointerEvent): void;
 	onVolume(event: ControllerPointerEvent): void;
 	onVolumeReset(event: ControllerPointerEvent): void;
+	onGlobalPan(event: ControllerPointerEvent): void;
+	onGlobalPanReset(event: ControllerPointerEvent): void;
 	onTrackVolume(event: ControllerPointerEvent): void;
 	onTrackVolumeReset(event: ControllerPointerEvent): void;
 	onTrackPan(event: ControllerPointerEvent): void;
@@ -464,6 +466,30 @@ export class InputBinder {
 		]);
 	}
 
+	private bindGlobalPanControls(): void {
+		this.addDelegatedListener("input", ".pan-slider", (event) => {
+			this.controller.onGlobalPan(event);
+		});
+		this.addDelegatedListener("change", ".pan-slider", () => {
+			this.blurFocusedManagedControl();
+		});
+		this.addDelegatedListener("dblclick", ".pan-slider", (event) => {
+			this.controller.onGlobalPanReset(event);
+			this.blurFocusedManagedControl();
+		});
+
+		this.addRootStopPropagationListener(
+			".pan-control",
+			["touchstart", "touchmove", "touchend"],
+			{ passive: false },
+		);
+		this.addRootStopPropagationListener(".pan-control", [
+			"mousedown",
+			"mousemove",
+			"mouseup",
+		]);
+	}
+
 	private bindTrackVolumeControls(): void {
 		this.addDelegatedListener("input", ".track-volume-slider", (event) => {
 			this.controller.onTrackVolume(event);
@@ -596,6 +622,7 @@ export class InputBinder {
 		this.bindTrackControls();
 		this.bindMarkerNavigationControls();
 		this.bindGlobalVolumeControls();
+		this.bindGlobalPanControls();
 		this.bindTrackVolumeControls();
 		this.bindTrackPanControls();
 		this.bindTrackMixControlPropagation();

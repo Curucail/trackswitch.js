@@ -231,6 +231,8 @@ export class TrackSwitchControllerImpl
 			this.state.volume,
 			!!this.alignmentConfig,
 			!!this.navigationBar?.controls.includes("globalVolume"),
+			!!this.navigationBar?.controls.includes("globalPan"),
+			this.navigationBar?.globalPanControl ?? "balance",
 		);
 		this.waveformEngine = new WaveformEngine();
 		this.sheetMusicEngine = new SheetMusicEngine((referenceTime) => {
@@ -438,6 +440,10 @@ export class TrackSwitchControllerImpl
 		controllerPlayback.setVolume(this, volumeZeroToOne);
 	}
 
+	setPan(panMinusOneToOne: number): void {
+		controllerPlayback.setPan(this, panMinusOneToOne);
+	}
+
 	setTrackVolume(trackIndex: number, volumeZeroToOne: number): void {
 		controllerPlayback.setTrackVolume(this, trackIndex, volumeZeroToOne);
 	}
@@ -593,6 +599,14 @@ export class TrackSwitchControllerImpl
 
 	onVolumeReset(event: ControllerPointerEvent): void {
 		controllerInput.onVolumeReset(this, event);
+	}
+
+	onGlobalPan(event: ControllerPointerEvent): void {
+		controllerInput.onGlobalPan(this, event);
+	}
+
+	onGlobalPanReset(event: ControllerPointerEvent): void {
+		controllerInput.onGlobalPanReset(this, event);
 	}
 
 	onTrackVolume(event: ControllerPointerEvent): void {

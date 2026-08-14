@@ -202,6 +202,8 @@ function restoreAudioPreservingState(
 	);
 	controller.audioEngine.setMasterVolume(controller.state.volume);
 	controller.renderer.setVolumeSlider(controller.state.volume);
+	controller.audioEngine.setMasterPan(controller.state.pan);
+	controller.renderer.setPanSlider(controller.state.pan);
 
 	applyFirstPresetOrTrackProperties(controller);
 
@@ -255,6 +257,10 @@ async function applyAudioPreservingConfig(
 			| undefined) ?? null;
 	controller.audioEngine.setGlobalVolumeEnabled(
 		!!controller.navigationBar?.controls.includes("globalVolume"),
+	);
+	controller.audioEngine.setGlobalPanEnabled(
+		!!controller.navigationBar?.controls.includes("globalPan"),
+		controller.navigationBar?.globalPanControl ?? "balance",
 	);
 	controller.media = config.media;
 	controller.markersConfig = config.markers;
@@ -425,6 +431,7 @@ async function updateConfigNow(
 		const previousLoop = { ...controller.state.loop };
 		const previousRepeat = controller.state.repeat;
 		const previousVolume = controller.state.volume;
+		const previousPan = controller.state.pan;
 		const oldRuntimes = controller.runtimes;
 
 		if (wasPlaying) {
@@ -463,6 +470,10 @@ async function updateConfigNow(
 				| undefined) ?? null;
 		controller.audioEngine.setGlobalVolumeEnabled(
 			!!controller.navigationBar?.controls.includes("globalVolume"),
+		);
+		controller.audioEngine.setGlobalPanEnabled(
+			!!controller.navigationBar?.controls.includes("globalPan"),
+			controller.navigationBar?.globalPanControl ?? "balance",
 		);
 		controller.markersConfig = nextConfig.markers;
 		controller.markerSets = stagedMarkerSets;
@@ -517,6 +528,7 @@ async function updateConfigNow(
 		controller.state = {
 			...createInitialPlayerState(previousRepeat),
 			volume: previousVolume,
+			pan: previousPan,
 			position: nextPosition,
 			loop: {
 				enabled: previousLoop.enabled,
@@ -543,6 +555,8 @@ async function updateConfigNow(
 		applyFirstPresetOrTrackProperties(controller);
 		controller.audioEngine.setMasterVolume(controller.state.volume);
 		controller.renderer.setVolumeSlider(controller.state.volume);
+		controller.audioEngine.setMasterPan(controller.state.pan);
+		controller.renderer.setPanSlider(controller.state.pan);
 		controller.prefetchAudioDownloadSize();
 
 		if (wasPlaying) {

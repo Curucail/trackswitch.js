@@ -33,23 +33,25 @@ function shouldSuppressPianoRollPlaybackFollow(
 }
 
 export function applyTrackProperties(ctx: TrackSwitchControllerImpl): void {
-	const panSupported = ctx.audioEngine.supportsStereoPanning();
+	const stereoPanningSupported = ctx.audioEngine.supportsStereoPanning();
 	// With nothing soloed at all, a track of an exclusive list still sounds — that
 	// list always means one of its tracks. Global sync silences the fallback.
 	const silentFallback = ctx.isAlignmentMode() && ctx.globalSyncEnabled;
 	const noSoloFallbackGates = ctx.runtimes.map((_runtime, index) =>
 		!silentFallback && ctx.isTrackExclusive(index) ? 1 : 0,
 	);
-	if (!panSupported) {
-		ctx.runtimes.forEach((runtime) => {
+	// Only "pan" tracks need StereoPannerNode — "balance" tracks mix with plain
+	// gain nodes and keep working wherever an AudioContext exists at all.
+	ctx.runtimes.forEach((runtime) => {
+		if (runtime.panAlgorithm === "pan" && !stereoPanningSupported) {
 			runtime.state.pan = 0;
-		});
-	}
+		}
+	});
 
 	ctx.renderer.updateTrackControls(
 		ctx.runtimes,
 		ctx.syncLockedTrackIndexes,
-		panSupported,
+		stereoPanningSupported,
 		ctx.globalSyncEnabled,
 	);
 	ctx.audioEngine.applyTrackStateGains(ctx.runtimes, noSoloFallbackGates);

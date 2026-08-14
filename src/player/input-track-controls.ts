@@ -59,6 +59,17 @@ export function parseSliderValue(target: HTMLInputElement): number {
 	return parseFloat(target.value || "0") / 100;
 }
 
+/**
+ * Pan controls hold at dead center until dragged past a 35/65 split, so a
+ * near-center release always lands exactly on 50/50 instead of a stray offset.
+ */
+const PAN_DEAD_ZONE = 0.3;
+
+export function parsePanSliderValue(target: HTMLInputElement): number {
+	const value = parseSliderValue(target);
+	return Math.abs(value) <= PAN_DEAD_ZONE ? 0 : value;
+}
+
 export function getTrackInputTarget(
 	controller: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
