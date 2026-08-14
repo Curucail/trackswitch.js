@@ -382,10 +382,23 @@
 	min-width: 0;
 }
 
+/*
+ * The keyboard's near edge and the pinnedLeft seekhead are meant to sit
+ * flush, but the seekhead's position comes from `scrollLeft`, which the
+ * browser rounds to a device pixel every frame while the underlying
+ * playhead value is continuous — so the two edges wobble against each
+ * other by a fraction of a pixel. Rather than chase that rounding, the
+ * keyboard overlaps a couple of pixels onto the scroller and paints over
+ * the seekhead there (which is only 2px wide, so the overlap hides it
+ * completely) instead of trying to butt up against it exactly.
+ */
 .trackswitch .piano-roll-wrap .piano-roll-keyboard {
 	flex: 0 0 auto;
 	display: block;
-	width: var(--ts-piano-roll-keyboard-width);
+	position: relative;
+	z-index: 1;
+	width: calc(var(--ts-piano-roll-keyboard-width) + 2px);
+	margin-right: -2px;
 	background: var(--piano-roll-surface-background);
 }
 
