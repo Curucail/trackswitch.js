@@ -222,8 +222,13 @@
 /*
  * A track paired with more than one MIDI channel repeats every channel's
  * colour instead of picking one: the plain SVG hides behind a masked,
- * hard-stopped gradient shaped like the icon itself, so the split survives
- * the icon swapping between circle/circle-check/circle-dot.
+ * hard-stopped gradient shaped like the icon's own ring — always the plain
+ * `circle` outline, whichever of circle/circle-check/circle-dot is actually
+ * showing. A checkmark or dot only ever covers a slice of the ring's height,
+ * so masking the same gradient to the *whole* icon cut those glyphs into
+ * arbitrary, misleading bands instead of the even split the ring shows; the
+ * glyph is layered back on top by `::after`, in the plain foreground colour,
+ * same as it would be unsplit.
  */
 .trackswitch .control li.solo .ts-icon-slot.split-channel-color {
 	position: relative;
@@ -233,19 +238,35 @@
 	visibility: hidden;
 }
 
-.trackswitch .control li.solo .ts-icon-slot.split-channel-color::before {
+.trackswitch .control li.solo .ts-icon-slot.split-channel-color::before,
+.trackswitch .control li.solo .ts-icon-slot.split-channel-color::after {
 	content: "";
 	position: absolute;
 	inset: 0;
-	background: var(--ts-track-split-gradient);
-	-webkit-mask-image: var(--ts-track-split-mask);
-	mask-image: var(--ts-track-split-mask);
 	-webkit-mask-repeat: no-repeat;
 	mask-repeat: no-repeat;
 	-webkit-mask-position: center;
 	mask-position: center;
 	-webkit-mask-size: contain;
 	mask-size: contain;
+}
+
+.trackswitch .control li.solo .ts-icon-slot.split-channel-color::before {
+	background: var(--ts-track-split-gradient);
+	-webkit-mask-image: var(--ts-track-split-mask);
+	mask-image: var(--ts-track-split-mask);
+}
+
+.trackswitch .control li.solo .ts-icon-slot.split-channel-color::after {
+	background: currentColor;
+	-webkit-mask-image: var(
+		--ts-track-split-glyph-mask,
+		linear-gradient(transparent, transparent)
+	);
+	mask-image: var(
+		--ts-track-split-glyph-mask,
+		linear-gradient(transparent, transparent)
+	);
 }
 
 .trackswitch .control li.solo.radio {

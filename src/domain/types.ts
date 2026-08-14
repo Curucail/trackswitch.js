@@ -349,6 +349,12 @@ export interface TrackSwitchTrackListViewConfig {
 	rowHeight?: number;
 	trackVolumeControls?: boolean;
 	trackPanControls?: TrackPanAlgorithm | false;
+	/**
+	 * Repeats a track's piano-roll channel colour(s) on its `solo` icon.
+	 * Defaults to `true`. Set to `false` to keep every row's icon in the plain
+	 * foreground colour regardless of channel pairing.
+	 */
+	channelColorIcons?: boolean;
 }
 
 export type TrackSwitchNavigationBarControl =
@@ -422,6 +428,7 @@ export interface TrackListGroup {
 	rowHeight?: number;
 	trackVolumeControls: boolean;
 	trackPanControls: TrackPanAlgorithm | false;
+	channelColorIcons: boolean;
 }
 
 export interface TrackDefinition {

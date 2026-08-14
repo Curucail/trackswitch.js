@@ -19,6 +19,7 @@ import type { TrackSwitchIconName } from "./icons";
 import {
 	getHostIconSlot,
 	getIconMaskDataUri,
+	getIconSplitGlyphMaskDataUri,
 	renderIconSlotHtml,
 	setHostIcon,
 } from "./icons";
@@ -234,9 +235,15 @@ function buildHardStopGradient(colors: string[]): string {
 
 /**
  * Colours a track row's `solo` icon: a plain `currentColor` swap for one
- * channel, a hard-edged vertical split — masked to the icon's own outline, so
- * it survives the icon swapping between circle/circle-check/circle-dot — when
- * more than one channel shares the track.
+ * channel, a hard-edged split across the ring alone when more than one
+ * channel shares the track. The split stays on the ring — reusing the plain
+ * `circle` icon's outline regardless of which of circle/circle-check/
+ * circle-dot is showing — rather than the whole icon: a checkmark or dot
+ * only ever covers a slice of the ring's height, so masking the same
+ * gradient to the whole icon cut those glyphs into arbitrary, misleading
+ * bands instead of the even split the ring shows. The glyph itself is
+ * layered on top in the plain foreground colour, same as it would be
+ * unsplit.
  */
 function applyTrackChannelColors(
 	row: HTMLElement,
@@ -255,6 +262,7 @@ function applyTrackChannelColors(
 			iconSlot.classList.remove("split-channel-color");
 			iconSlot.style.removeProperty("--ts-track-split-mask");
 			iconSlot.style.removeProperty("--ts-track-split-gradient");
+			iconSlot.style.removeProperty("--ts-track-split-glyph-mask");
 		}
 		return;
 	}
@@ -268,12 +276,18 @@ function applyTrackChannelColors(
 	iconSlot.classList.add("split-channel-color");
 	iconSlot.style.setProperty(
 		"--ts-track-split-mask",
-		getIconMaskDataUri(iconName),
+		getIconMaskDataUri("circle"),
 	);
 	iconSlot.style.setProperty(
 		"--ts-track-split-gradient",
 		buildHardStopGradient(colors),
 	);
+	const glyphMask = getIconSplitGlyphMaskDataUri(iconName);
+	if (glyphMask) {
+		iconSlot.style.setProperty("--ts-track-split-glyph-mask", glyphMask);
+	} else {
+		iconSlot.style.removeProperty("--ts-track-split-glyph-mask");
+	}
 }
 
 function applySoloIconState(
@@ -1648,7 +1662,13 @@ export function updateTrackControls(
 					);
 				}
 
-				applyTrackChannelColors(row, solo, channelColors);
+				const group = this.trackGroups[trackGroupIndexOfRow(row)];
+				const iconColorsEnabled = group?.channelColorIcons ?? true;
+				applyTrackChannelColors(
+					row,
+					solo,
+					iconColorsEnabled ? channelColors : null,
+				);
 
 				const trackVolumeSlider = row.querySelector(".track-volume-slider");
 				if (trackVolumeSlider instanceof HTMLInputElement) {

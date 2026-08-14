@@ -2072,6 +2072,10 @@
 							"const": false
 						}
 					]
+				},
+				"channelColorIcons": {
+					"type": "boolean",
+					"description": "Repeats a track's piano-roll channel colour(s) on its `solo` icon. Defaults to `true`. Set to `false` to keep every row's icon in the plain foreground colour regardless of channel pairing."
 				}
 			},
 			"required": [

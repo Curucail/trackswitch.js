@@ -99,6 +99,7 @@ const uiTrackListAllowedKeys = keysOf<TrackSwitchTrackListViewConfig>()([
 	"rowHeight",
 	"trackVolumeControls",
 	"trackPanControls",
+	"channelColorIcons",
 ] as const);
 const uiNavigationBarAllowedKeys = keysOf<TrackSwitchNavigationBarViewConfig>()(
 	["type", "controls", "repeatEnabled", "globalPanControl"] as const,
@@ -921,6 +922,11 @@ function normalizeTrackListConfig(
 				"trackList.trackVolumeControls",
 			) ?? false,
 		trackPanControls: normalizeTrackPanControls(trackList.trackPanControls),
+		channelColorIcons:
+			normalizeOptionalBoolean(
+				trackList.channelColorIcons,
+				"trackList.channelColorIcons",
+			) ?? true,
 	};
 }
 

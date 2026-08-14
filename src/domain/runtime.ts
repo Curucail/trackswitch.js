@@ -84,6 +84,7 @@ export function buildTrackGroups(
 			rowHeight: view.rowHeight,
 			trackVolumeControls: view.trackVolumeControls ?? false,
 			trackPanControls: view.trackPanControls ?? false,
+			channelColorIcons: view.channelColorIcons ?? true,
 		});
 	});
 
