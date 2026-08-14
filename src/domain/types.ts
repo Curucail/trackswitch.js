@@ -409,6 +409,13 @@ export interface TrackSwitchFeatures {
 	keyboard: boolean;
 	/** Normalizes each track to -14 LUFS integrated loudness at load time. */
 	normalizeLoudness: boolean;
+	/**
+	 * Decodes and renders the waveforms as soon as the player is constructed,
+	 * instead of waiting for the first click or keypress. This does not start
+	 * playback, so it doesn't need a user gesture — browsers only gate actually
+	 * producing sound, not decoding audio buffers.
+	 */
+	autoload: boolean;
 }
 
 export interface TrackSwitchInit {

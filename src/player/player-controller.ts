@@ -308,6 +308,10 @@ export class TrackSwitchControllerImpl
 			this.handleError("No tracks available.");
 		}
 
+		if (this.features.autoload) {
+			void this.load();
+		}
+
 		registerController(this);
 	}
 

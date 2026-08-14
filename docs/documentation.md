@@ -1340,7 +1340,8 @@ An omitted feature uses the default value in the table.
     "customizablePanelOrder": false,
     "tabView": false,
     "keyboard": true,
-    "normalizeLoudness": false
+    "normalizeLoudness": false,
+    "autoload": false
   }
 }
 ```
@@ -1352,6 +1353,7 @@ An omitted feature uses the default value in the table.
 | `tabView?` | `boolean` | `false` | Shows track rows as tabs. |
 | `keyboard?` | `boolean` | `true` | Enables keyboard shortcuts. |
 | `normalizeLoudness?` | `boolean` | `false` | Normalizes each track to -14 LUFS integrated loudness at load time, clamped so it never clips. |
+| `autoload?` | `boolean` | `false` | Decodes the audio and renders the waveforms as soon as the player is created, instead of waiting for the first click or keypress. This doesn't start playback — browsers only gate producing sound behind a user gesture, not decoding — so it needs no interaction, but it does spend bandwidth and CPU on every visitor whether or not they press play. |
 
 The player rejects unknown feature keys.
 
