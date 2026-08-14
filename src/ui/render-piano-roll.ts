@@ -48,6 +48,8 @@ const PIANO_ROLL_VELOCITY_BAR_MIN_WIDTH = 6;
 const MIN_CHECKERBOARD_CELL = 6;
 /** The window a keyboard roll opens on when the view names no `defaultZoom`. */
 const DEFAULT_PIANO_KEYBOARD_ZOOM_SECONDS = 10;
+/** Falls back to the stylesheet's own default if the custom property can't be read. */
+const DEFAULT_PIANO_ROLL_KEYBOARD_WIDTH = 64;
 
 /** How many channel colours the stylesheet declares, cycled past the last one. */
 const PIANO_ROLL_CHANNEL_PALETTE_SIZE = 16;
@@ -103,6 +105,8 @@ export interface PianoRollSeekSurfaceMetadata {
 	zoomViewportNode: HTMLElement;
 	/** The keyboard column, drawn beside the roll when `pianoKeyboard` is on. */
 	keyboardCanvas: HTMLCanvasElement | null;
+	/** The keyboard's configured width, at `configuredHeight` — a fullscreen grow scales from this. */
+	baseKeyboardWidth: number;
 	/** Serialized sounding pitches, so the keyboard only redraws when they change. */
 	lastKeyboardKey: string | null;
 	/** The position the keys were last drawn for, so a reflow can repeat it. */
@@ -239,6 +243,17 @@ export function setPianoRollSurfaceHeight(
 		surface.noteCanvas.style.height = `${height}px`;
 		if (surface.keyboardCanvas) {
 			surface.keyboardCanvas.style.height = `${height}px`;
+			// A fullscreen grow changes row height, so the keys have to widen by the
+			// same factor to keep their proportions — otherwise a taller roll leaves
+			// them looking abnormally thin.
+			if (surface.baseKeyboardWidth > 0 && surface.configuredHeight > 0) {
+				const scaledWidth =
+					(surface.baseKeyboardWidth * height) / surface.configuredHeight;
+				surface.wrapper.style.setProperty(
+					"--ts-piano-roll-keyboard-width",
+					`${scaledWidth}px`,
+				);
+			}
 			surface.lastKeyboardKey = null;
 		}
 		surface.lastRenderKey = null;
@@ -1036,8 +1051,15 @@ export function wrapPianoRollCanvases(ctx: ViewRenderer): void {
 			const originalHeight = Math.max(1, canvasElement.height);
 			surface.style.height = `${originalHeight}px`;
 			noteCanvas.style.height = `${originalHeight}px`;
+			let baseKeyboardWidth = 0;
 			if (keyboardCanvas) {
 				keyboardCanvas.style.height = `${originalHeight}px`;
+				baseKeyboardWidth =
+					parseFloat(
+						getComputedStyle(wrapper).getPropertyValue(
+							"--ts-piano-roll-keyboard-width",
+						),
+					) || DEFAULT_PIANO_ROLL_KEYBOARD_WIDTH;
 			}
 
 			// Same default as a waveform: an aligned player runs every surface on its
@@ -1095,6 +1117,7 @@ export function wrapPianoRollCanvases(ctx: ViewRenderer): void {
 				zoomCanvas,
 				zoomViewportNode,
 				keyboardCanvas,
+				baseKeyboardWidth,
 				lastKeyboardKey: null,
 				lastKeyboardPosition: 0,
 				keyboardColors: null,
