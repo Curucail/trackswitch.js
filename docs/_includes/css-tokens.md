@@ -108,7 +108,7 @@
 | `--ts-color-channel-16` | `#9e2e50` |
 | `--ts-color-channel-16-soft-30` | `rgba(158, 46, 80, 0.25)` |
 | `--ts-color-channel-16-soft-55` | `rgba(158, 46, 80, 0.55)` |
-| `--ts-color-surface-base-dark` | `#1c1c1c` |
+| `--ts-color-surface-base-dark` | `#2e2e2e` |
 | `--ts-color-channel-1-dark` | `#e6a14c` |
 | `--ts-color-channel-1-dark-soft-30` | `rgba(230, 161, 76, 0.25)` |
 | `--ts-color-channel-1-dark-soft-55` | `rgba(230, 161, 76, 0.55)` |

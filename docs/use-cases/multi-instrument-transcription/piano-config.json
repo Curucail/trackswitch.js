@@ -44,7 +44,9 @@
 			"pianoKeyboard": true,
 			"noteRange": ["F2", "F5"],
 			"defaultZoom": 8,
-			"palette": "colorblind-dark",
+			"palette": "dark",
+			"noteTooltip": true,
+			"grid": "pitch",
 			"channelToTrackIDMap": {
 				"0": "soprano",
 				"1": "alto",

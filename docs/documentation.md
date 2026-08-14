@@ -974,6 +974,8 @@ A `pianoRoll` view shows a MIDI file as a piano roll. MIDI files do not create a
 | `timer?` | `boolean` | `false` | Shows a local timer in the piano roll. |
 | `pianoKeyboard?` | `boolean` | `false` | Draws a piano keyboard beside the pitch axis and pins the playhead to its edge. |
 | `noteRange?` | `"automatic" \| [note, note]` | `"automatic"` | Fixes the pitch axis. Each entry is a note name or a MIDI note number. |
+| `grid?` | `"none" \| "time" \| "pitch" \| "both"` | `"none"` | Draws reference lines behind the notes: a time grid, a pitch grid, or both. |
+| `noteTooltip?` | `boolean` | `false` | Shows the pitch, channel, start, end, duration and velocity of the note event under the cursor. |
 | `velocityBars?` | `boolean` | `false` | Draws a bar inside each note event showing its velocity. |
 | `velocityOpacity?` | `boolean` | `false` | Fades note events by their velocity instead of drawing them solid. |
 | `channelToTrackIDMap?` | `object` | none | Pairs MIDI channels with audio tracks, keyed by channel number. |
@@ -985,6 +987,14 @@ A `pianoRoll` view shows a MIDI file as a piano roll. MIDI files do not create a
 `mediaID` must identify a `media` entry with `type: "midi"`.
 
 If `alignment.timelines` contains the same ID, the piano roll uses its local timeline for seeking, playback movement, loops, and markers.
+
+#### Grid and note readout
+
+A time grid draws its lines on round values of the unit the medium declares in `timelineUnit`, so a MIDI entry declaring `"ticks"` gets a grid on beats rather than on seconds — one that stays with the music through a tempo change. The interval steps up and down as the view is zoomed, keeping the lines readably far apart.
+
+A pitch grid bands the rows of the black keys, which is the same reading the `pianoKeyboard` column gives — dark rows for the black keys against light ones for the white keys, in every palette. It needs a few pixels per semitone, so a short roll spanning a wide `noteRange` draws no pitch grid.
+
+`noteTooltip` reads out the note event under the cursor — its pitch, channel, start, end, duration and velocity — with the times in the same unit as the view's `timer` and the velocity as the 0–127 value the file was written with.
 
 #### Channels
 

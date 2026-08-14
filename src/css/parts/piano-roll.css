@@ -70,6 +70,19 @@
 	--piano-roll-note-color: var(--ts-color-accent);
 	--piano-roll-velocity-bar: var(--ts-color-surface-inverse-soft-78);
 
+	/*
+	 * The reference lines behind the notes, and the note readout on hover. Only
+	 * the black-key rows are marked: a white key is the plain surface, which is
+	 * the quietest reading of the two that still names every row.
+	 */
+	--piano-roll-grid-time: var(--ts-color-border-mid-26);
+	--piano-roll-grid-end: var(--ts-color-border-mid-55);
+	--piano-roll-grid-row-white: transparent;
+	--piano-roll-grid-row-black: rgba(56, 56, 56, 0.09);
+	--piano-roll-tooltip-border: var(--ts-color-border-mid-45);
+	--piano-roll-tooltip-text: var(--ts-color-text-primary);
+	--piano-roll-tooltip-label: var(--ts-color-text-secondary);
+
 	/* The keyboard column, when `pianoKeyboard` draws one. */
 	--piano-roll-keyboard-white: var(--ts-color-surface-raised-98);
 	--piano-roll-keyboard-black: var(--ts-color-surface-panel-dark);
@@ -143,6 +156,13 @@
 	--piano-roll-surface-background: var(--ts-color-surface-base-dark);
 	--piano-roll-keyboard-black: #0d0d0d;
 	--piano-roll-keyboard-border: var(--ts-color-border-mid-45);
+
+	/* A black key bands dark whatever the surface is, but gently: against a dark
+	 * surface the band only has to be found, not seen. */
+	--piano-roll-grid-row-white: transparent;
+	--piano-roll-grid-row-black: rgba(0, 0, 0, 0.16);
+	--piano-roll-tooltip-text: var(--ts-color-text-inverse);
+	--piano-roll-tooltip-label: var(--ts-color-text-muted);
 }
 
 .trackswitch .piano-roll-wrap[data-palette="colorblind-light"] {
@@ -323,6 +343,13 @@
 	--piano-roll-surface-background: var(--ts-color-surface-base-dark);
 	--piano-roll-keyboard-black: #0d0d0d;
 	--piano-roll-keyboard-border: var(--ts-color-border-mid-45);
+
+	/* A black key bands dark whatever the surface is, but gently: against a dark
+	 * surface the band only has to be found, not seen. */
+	--piano-roll-grid-row-white: transparent;
+	--piano-roll-grid-row-black: rgba(0, 0, 0, 0.16);
+	--piano-roll-tooltip-text: var(--ts-color-text-inverse);
+	--piano-roll-tooltip-label: var(--ts-color-text-muted);
 }
 
 .trackswitch .piano-roll-wrap .piano-roll-scroll {
@@ -481,6 +508,46 @@
 	padding: 2px 3px;
 	background: var(--ts-color-surface-panel-dark-50);
 	pointer-events: auto;
+}
+
+/*
+ * The note readout follows the cursor inside the overlay. It sits on the roll's
+ * own surface colour rather than on the dark panel the timer uses, because it
+ * prints a channel colour, and those are tuned against the surface.
+ */
+.trackswitch .piano-roll-wrap .piano-roll-note-tooltip {
+	position: absolute;
+	z-index: 6;
+	display: none;
+	padding: 4px 6px;
+	border: 1px solid var(--piano-roll-tooltip-border);
+	border-radius: 4px;
+	font-family: monospace;
+	font-size: 11px;
+	line-height: 1.4;
+	white-space: nowrap;
+	color: var(--piano-roll-tooltip-text);
+	background: var(--piano-roll-surface-background);
+	box-shadow: 0 2px 6px var(--ts-color-shadow-medium);
+	pointer-events: none;
+	user-select: none;
+}
+
+.trackswitch .piano-roll-wrap .piano-roll-note-tooltip-heading {
+	display: flex;
+	gap: 6px;
+	justify-content: space-between;
+	margin-bottom: 2px;
+}
+
+.trackswitch .piano-roll-wrap .piano-roll-note-tooltip-row {
+	display: flex;
+	gap: 8px;
+	justify-content: space-between;
+}
+
+.trackswitch .piano-roll-wrap .piano-roll-note-tooltip-label {
+	color: var(--piano-roll-tooltip-label);
 }
 
 .trackswitch .piano-roll-wrap .piano-roll-zoom .piano-roll-zoom-label {

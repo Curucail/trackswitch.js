@@ -125,7 +125,7 @@
 	 * per view with `palette: "dark"`; a view's `css` block can still override
 	 * any one of these on top.
 	 */
-	--ts-color-surface-base-dark: #1c1c1c;
+	--ts-color-surface-base-dark: #2e2e2e;
 	--ts-color-channel-1-dark: #e6a14c;
 	--ts-color-channel-1-dark-soft-30: rgba(230, 161, 76, 0.25);
 	--ts-color-channel-1-dark-soft-55: rgba(230, 161, 76, 0.55);

@@ -257,6 +257,19 @@ export interface TrackSwitchPianoRollViewConfig {
 	 * the file with two semitones of padding on each side; a pair fixes it.
 	 */
 	noteRange?: MidiNoteRange;
+	/**
+	 * Draws reference lines behind the note events. `"time"` draws vertical lines
+	 * at a round interval of the unit this view's medium declares its timeline in;
+	 * `"pitch"` bands the rows of the black keys; `"both"` draws both. Defaults to
+	 * `"none"`. A pitch grid needs a few pixels per semitone to read, and is left
+	 * out on a roll too short for its note range.
+	 */
+	grid?: "none" | "time" | "pitch" | "both";
+	/**
+	 * Shows a readout of the note event under the cursor: its pitch, channel,
+	 * start, end, duration and velocity. Defaults to `false`.
+	 */
+	noteTooltip?: boolean;
 	/** Draws a bar inside each note event showing its velocity. Defaults to `false`. */
 	velocityBars?: boolean;
 	/** Fades note events by their velocity rather than drawing them solid. Defaults to `false`. */

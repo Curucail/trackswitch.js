@@ -83,6 +83,8 @@ const uiPianoRollAllowedKeys = keysOf<TrackSwitchPianoRollViewConfig>()([
 	"timer",
 	"pianoKeyboard",
 	"noteRange",
+	"grid",
+	"noteTooltip",
 	"velocityBars",
 	"velocityOpacity",
 	"channelToTrackIDMap",
@@ -676,6 +678,17 @@ function normalizePianoRollConfig(
 		timer: normalizeOptionalBoolean(pianoRoll.timer, "pianoRoll.timer"),
 		pianoKeyboard,
 		noteRange: normalizeNoteRange(pianoRoll.noteRange),
+		grid: normalizeEnum(
+			pianoRoll.grid,
+			["none", "time", "pitch", "both"] as const,
+			"pianoRoll.grid",
+			"none",
+		),
+		noteTooltip:
+			normalizeOptionalBoolean(
+				pianoRoll.noteTooltip,
+				"pianoRoll.noteTooltip",
+			) ?? false,
 		velocityBars:
 			normalizeOptionalBoolean(
 				pianoRoll.velocityBars,

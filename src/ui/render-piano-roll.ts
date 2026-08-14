@@ -7,7 +7,12 @@ import type {
 	WaveformPlaybackFollowMode,
 } from "../domain/types";
 import { applyCssOverrides } from "../shared/dom";
-import { parseMidiNoteRef } from "../shared/midi-notes";
+import {
+	formatMidiNoteName,
+	isBlackKey,
+	parseMidiNoteRef,
+} from "../shared/midi-notes";
+import { formatTimelineValue, type TimelineUnit } from "../timeline/timeline";
 import {
 	drawPianoRollKeyboard,
 	type PianoRollKeyboardColors,
@@ -34,7 +39,11 @@ import {
 	type TimelineScrollAnimation,
 	updateTimelineMinimapViewport,
 } from "./timeline-surface";
-import type { ConfiguredViewHost, ViewRenderer } from "./view-renderer";
+import type {
+	ConfiguredViewHost,
+	TimelineReadout,
+	ViewRenderer,
+} from "./view-renderer";
 
 const MIN_PIANO_ROLL_ZOOM = MIN_TIMELINE_ZOOM;
 const PIANO_ROLL_RANGE_PADDING = 2;
@@ -46,6 +55,37 @@ const PIANO_ROLL_VELOCITY_BAR_MIN_HEIGHT = 8;
 const PIANO_ROLL_VELOCITY_BAR_MIN_WIDTH = 6;
 /** Below this a checkerboard cell reads as noise rather than as a pattern. */
 const MIN_CHECKERBOARD_CELL = 6;
+/**
+ * Rounds the corners of a note event just enough that two notes meeting on one
+ * row — a repeated pitch, a legato pair — pinch apart visibly, including at row
+ * heights too small for the outline to be drawn.
+ */
+const PIANO_ROLL_NOTE_CORNER_RADIUS = 2;
+/** Below this row height a tinted black-key row reads as a haze, not as a key. */
+const PIANO_ROLL_PITCH_GRID_MIN_ROW_HEIGHT = 3;
+/** The closest two time grid lines may come before the grid steps up a rung. */
+const MIN_TIME_GRID_SPACING_PX = 80;
+/** Round intervals of seconds, in the order a zooming grid steps through them. */
+const SECOND_GRID_STEPS = [
+	0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600,
+];
+/** A ticks grid is a musical one: fractions and multiples of a quarter note. */
+const TICK_GRID_BEAT_FACTORS = [
+	1 / 16,
+	1 / 8,
+	1 / 4,
+	1 / 2,
+	1,
+	2,
+	4,
+	8,
+	16,
+	32,
+	64,
+	128,
+];
+/** A runaway readout must not be able to spin the grid loop forever. */
+const MAX_TIME_GRID_LINES = 4096;
 /** The window a keyboard roll opens on when the view names no `defaultZoom`. */
 const DEFAULT_PIANO_KEYBOARD_ZOOM_SECONDS = 10;
 /** Falls back to the stylesheet's own default if the custom property can't be read. */
@@ -53,6 +93,9 @@ const DEFAULT_PIANO_ROLL_KEYBOARD_WIDTH = 64;
 
 /** How many channel colours the stylesheet declares, cycled past the last one. */
 const PIANO_ROLL_CHANNEL_PALETTE_SIZE = 16;
+
+/** The reference lines a roll draws behind its notes; see the `grid` option. */
+type PianoRollGridMode = "none" | "time" | "pitch" | "both";
 
 interface MidiNoteEvent {
 	midi: number;
@@ -69,6 +112,16 @@ export interface PianoRollNoteColors {
 	velocity: string;
 	/** Contrast colour for a velocity bar drawn on a solid note body. */
 	velocityBar: string;
+}
+
+export interface PianoRollGridColors {
+	/** A vertical line of the time grid. */
+	time: string;
+	/** The line closing the drawing where the file ends. */
+	end: string;
+	/** The washes over the rows of a white and of a black key. */
+	rowWhite: string;
+	rowBlack: string;
 }
 
 export interface PianoRollSeekSurfaceMetadata {
@@ -120,6 +173,15 @@ export interface PianoRollSeekSurfaceMetadata {
 	/** Whether note events carry a velocity bar, and whether velocity fades them. */
 	velocityBars: boolean;
 	velocityOpacity: boolean;
+	/** The reference lines drawn behind the notes. */
+	grid: PianoRollGridMode;
+	/** The readout of the note event under the cursor, when the view asks for one. */
+	tooltipNode: HTMLElement | null;
+	/**
+	 * The unit this view's medium reads out in, and the conversion to it. Cached
+	 * per render pass because the drawing has no `ViewRenderer` to ask.
+	 */
+	timelineReadout: TimelineReadout | null;
 	minMidi: number;
 	maxMidi: number;
 	pianoRollDurationSeconds: number;
@@ -136,6 +198,15 @@ export interface PianoRollSeekSurfaceMetadata {
 	noteColors: PianoRollNoteColors | null;
 	/** Resolved colours per palette slot, alongside the `noteColors` cache. */
 	channelColors: Map<number, PianoRollNoteColors>;
+	gridColors: PianoRollGridColors | null;
+	/**
+	 * The duration the notes were last drawn against, which is the roll's own file
+	 * in alignment mode and the player's longest track outside it. The hover hit
+	 * test reads it so that it can never disagree with the paint.
+	 */
+	lastRenderedDurationSeconds: number;
+	/** The note geometry of the last draw, likewise for the hit test. */
+	lastNoteGeometry: NoteGeometry | null;
 	lastRenderKey: string | null;
 	lastMinimapKey: string | null;
 	lastPlaybackKey: string | null;
@@ -316,6 +387,208 @@ function createPianoRollZoomNode(overlay: HTMLElement): HTMLElement {
 	return zoom;
 }
 
+function createPianoRollTooltipNode(overlay: HTMLElement): HTMLElement {
+	const tooltip = document.createElement("div");
+	tooltip.className = "piano-roll-note-tooltip";
+	tooltip.style.display = "none";
+	overlay.appendChild(tooltip);
+	return tooltip;
+}
+
+/**
+ * The readout of the note event under the cursor. The note canvas takes no
+ * pointer events and the seek surface does, so the pointer is followed on the
+ * scroller: it is the one box whose left edge is shared with the overlay the
+ * readout is placed in, with or without a keyboard column beside it.
+ */
+function bindPianoRollTooltip(surface: PianoRollSeekSurfaceMetadata): void {
+	surface.scrollContainer.addEventListener("pointermove", (event) => {
+		// A tap synthesizes a move and would leave the readout stuck on screen;
+		// a held button means a seek or loop drag is under way.
+		if (event.pointerType !== "mouse" || event.buttons !== 0) {
+			hidePianoRollTooltip(surface);
+			return;
+		}
+
+		updatePianoRollTooltip(surface, event);
+	});
+	surface.scrollContainer.addEventListener("pointerleave", () => {
+		hidePianoRollTooltip(surface);
+	});
+	surface.scrollContainer.addEventListener("pointerdown", () => {
+		hidePianoRollTooltip(surface);
+	});
+}
+
+function hidePianoRollTooltip(surface: PianoRollSeekSurfaceMetadata): void {
+	if (surface.tooltipNode) {
+		surface.tooltipNode.style.display = "none";
+	}
+}
+
+function updatePianoRollTooltip(
+	surface: PianoRollSeekSurfaceMetadata,
+	event: PointerEvent,
+): void {
+	const tooltip = surface.tooltipNode;
+	const geometry = surface.lastNoteGeometry;
+	if (!tooltip || !geometry) {
+		return;
+	}
+
+	// The scroller's box is the viewport onto the surface, so the surface
+	// coordinate the notes were drawn in is the offset plus the scroll.
+	const viewport = surface.scrollContainer.getBoundingClientRect();
+	const viewportX = event.clientX - viewport.left;
+	const y = event.clientY - viewport.top;
+	const x = viewportX + surface.scrollContainer.scrollLeft;
+	const note = findPianoRollNoteAt(surface, geometry, x, y);
+	if (!note) {
+		hidePianoRollTooltip(surface);
+		return;
+	}
+
+	tooltip.replaceChildren(...buildPianoRollTooltipContent(surface, note));
+	tooltip.style.display = "block";
+	positionPianoRollTooltip(surface, tooltip, viewportX, y);
+}
+
+/**
+ * The note event drawn under a point of the surface, tested against the very
+ * rectangle the drawing put there so that the readout can never point at
+ * something the eye cannot see. Later notes paint over earlier ones, so the last
+ * match is the one on top.
+ */
+function findPianoRollNoteAt(
+	surface: PianoRollSeekSurfaceMetadata,
+	geometry: NoteGeometry,
+	x: number,
+	y: number,
+): MidiNoteEvent | null {
+	const time = x / geometry.pixelsPerSecond;
+	const notes = surface.notes;
+	let found: MidiNoteEvent | null = null;
+	for (
+		let index = findFirstVisibleNoteIndex(
+			notes,
+			time - surface.maxNoteDuration,
+		);
+		index < notes.length;
+		index += 1
+	) {
+		const note = notes[index];
+		if (note.time > time) {
+			break;
+		}
+
+		if (surface.hiddenChannels.has(note.channel)) {
+			continue;
+		}
+
+		const { left, width, top } = resolveNoteRect(surface, note, geometry);
+		// A note clamped to the minimum width is a sliver on screen; give it a
+		// couple of pixels of reach so it can be pointed at at all. Wider notes
+		// take no slop, or neighbours would answer for one another.
+		const slop = width < 3 ? 2 : 0;
+		if (
+			x >= left - slop &&
+			x <= left + width + slop &&
+			y >= top &&
+			y <= top + geometry.noteHeight
+		) {
+			found = note;
+		}
+	}
+
+	return found;
+}
+
+function buildPianoRollTooltipContent(
+	surface: PianoRollSeekSurfaceMetadata,
+	note: MidiNoteEvent,
+): HTMLElement[] {
+	const readout = surface.timelineReadout;
+	const unit = readout?.unit ?? "seconds";
+	const toReadout = readout ? readout.toReadout : (value: number) => value;
+	const end = note.time + note.duration;
+	// A duration is a span, not a position: the readout is anchored at the origin
+	// and only piecewise linear, so it has to be taken as a difference.
+	const duration =
+		unit === "seconds"
+			? `${note.duration.toFixed(3)} s`
+			: formatTimelineValue(unit, toReadout(end) - toReadout(note.time));
+
+	const heading = document.createElement("div");
+	heading.className = "piano-roll-note-tooltip-heading";
+	const pitch = document.createElement("span");
+	pitch.className = "piano-roll-note-tooltip-pitch";
+	pitch.textContent = formatMidiNoteName(note.midi);
+	const channel = document.createElement("span");
+	channel.className = "piano-roll-note-tooltip-channel";
+	channel.textContent = `ch ${note.channel}`;
+	channel.style.color = resolvePianoRollChannelColors(
+		surface,
+		note.channel,
+	).velocity;
+	heading.append(pitch, channel);
+
+	return [
+		heading,
+		buildPianoRollTooltipRow(
+			"start",
+			formatTimelineValue(unit, toReadout(note.time)),
+		),
+		buildPianoRollTooltipRow("end", formatTimelineValue(unit, toReadout(end))),
+		buildPianoRollTooltipRow("duration", duration),
+		// The parser normalizes velocity to 0-1; the file wrote it as 0-127.
+		buildPianoRollTooltipRow(
+			"velocity",
+			String(Math.round(clampTime(note.velocity, 0, 1) * 127)),
+		),
+	];
+}
+
+function buildPianoRollTooltipRow(label: string, value: string): HTMLElement {
+	const row = document.createElement("div");
+	row.className = "piano-roll-note-tooltip-row";
+	const name = document.createElement("span");
+	name.className = "piano-roll-note-tooltip-label";
+	name.textContent = label;
+	const content = document.createElement("span");
+	content.textContent = value;
+	row.append(name, content);
+	return row;
+}
+
+/**
+ * Places the readout beside the cursor, flipping to its other side rather than
+ * spilling over an edge of the roll. The overlay is the offset parent, and its
+ * left edge is the scroller's own, so the viewport offset is already overlay
+ * relative.
+ */
+function positionPianoRollTooltip(
+	surface: PianoRollSeekSurfaceMetadata,
+	tooltip: HTMLElement,
+	viewportX: number,
+	y: number,
+): void {
+	const boxWidth = surface.overlay.clientWidth;
+	const boxHeight = surface.overlay.clientHeight;
+	const width = tooltip.offsetWidth;
+	const height = tooltip.offsetHeight;
+	let left = viewportX + 12;
+	if (left + width > boxWidth) {
+		left = viewportX - 12 - width;
+	}
+	let top = y + 14;
+	if (top + height > boxHeight) {
+		top = y - 14 - height;
+	}
+
+	tooltip.style.left = `${Math.round(clampTime(left, 0, Math.max(0, boxWidth - width)))}px`;
+	tooltip.style.top = `${Math.round(clampTime(top, 0, Math.max(0, boxHeight - height)))}px`;
+}
+
 function flattenMidiNotes(midi: Midi, source: string): MidiNoteEvent[] {
 	const notes: MidiNoteEvent[] = [];
 	for (const track of midi.tracks) {
@@ -441,6 +714,26 @@ function resolvePianoRollNoteColors(
 		velocityBar: read("--piano-roll-velocity-bar", "rgba(255, 255, 255, 0.85)"),
 	};
 	surface.noteColors = colors;
+	return colors;
+}
+
+function resolvePianoRollGridColors(
+	surface: PianoRollSeekSurfaceMetadata,
+): PianoRollGridColors {
+	if (surface.gridColors) {
+		return surface.gridColors;
+	}
+
+	const computed = getComputedStyle(surface.noteCanvas);
+	const read = (property: string, fallback: string): string =>
+		computed.getPropertyValue(property).trim() || fallback;
+	const colors: PianoRollGridColors = {
+		time: read("--piano-roll-grid-time", "rgba(153, 153, 153, 0.26)"),
+		end: read("--piano-roll-grid-end", "rgba(153, 153, 153, 0.55)"),
+		rowWhite: read("--piano-roll-grid-row-white", "rgba(255, 255, 255, 0.62)"),
+		rowBlack: read("--piano-roll-grid-row-black", "rgba(56, 56, 56, 0.06)"),
+	};
+	surface.gridColors = colors;
 	return colors;
 }
 
@@ -607,6 +900,9 @@ function renderPianoRollNotes(
 		hiddenChannelsKey(surface),
 		surface.velocityBars ? "1" : "0",
 		surface.velocityOpacity ? "1" : "0",
+		surface.grid,
+		// The grid lands on different values once the medium's readout arrives.
+		surface.timelineReadout?.unit ?? "seconds",
 		Math.max(1, window.devicePixelRatio || 1),
 	].join("#");
 	if (surface.lastRenderKey === renderKey) {
@@ -623,7 +919,9 @@ function renderPianoRollNotes(
 	}
 
 	surface.lastRenderKey = renderKey;
+	surface.lastRenderedDurationSeconds = safeDuration;
 	if (safeDuration <= 0 || surfaceWidth <= 0) {
+		surface.lastNoteGeometry = null;
 		return;
 	}
 
@@ -648,6 +946,9 @@ function renderPianoRollNotes(
 		visibleEndTime,
 	);
 	const geometry: NoteGeometry = { pixelsPerSecond, rowHeight, noteHeight };
+	surface.lastNoteGeometry = geometry;
+
+	drawPianoRollGrid(context, surface, tileWindow, geometry);
 
 	// Solid bodies first, then the checkerboard over the stretches where two or
 	// more channels sound one pitch, then the per-note decorations on top.
@@ -655,7 +956,15 @@ function renderPianoRollNotes(
 		const { left, width, top } = resolveNoteRect(surface, note, geometry);
 		context.globalAlpha = resolveNoteAlpha(surface, note);
 		context.fillStyle = resolveNoteFill(surface, note.channel);
-		context.fillRect(left, top, width, noteHeight);
+		traceNoteShape(
+			context,
+			left,
+			top,
+			width,
+			noteHeight,
+			PIANO_ROLL_NOTE_CORNER_RADIUS,
+		);
+		context.fill();
 	}
 
 	drawOverlapCheckerboards(context, surface, visible, geometry);
@@ -666,7 +975,15 @@ function renderPianoRollNotes(
 		const colors = resolvePianoRollChannelColors(surface, note.channel);
 		if (drawBorder) {
 			context.strokeStyle = colors.border;
-			context.strokeRect(left + 0.5, top + 0.5, width - 1, noteHeight - 1);
+			traceNoteShape(
+				context,
+				left + 0.5,
+				top + 0.5,
+				width - 1,
+				noteHeight - 1,
+				PIANO_ROLL_NOTE_CORNER_RADIUS - 0.5,
+			);
+			context.stroke();
 		}
 
 		if (drawVelocityBar && width >= PIANO_ROLL_VELOCITY_BAR_MIN_WIDTH) {
@@ -682,6 +999,197 @@ function renderPianoRollNotes(
 			context.fillRect(left + 3, top + noteHeight - 5, barWidth, 3);
 		}
 	}
+}
+
+/**
+ * Traces one note event as a path with rounded corners. The radius is clamped
+ * to half the rectangle, because a note bottoms out at three pixels tall and at
+ * one pixel wide; below a whole pixel of radius the rounding cannot be seen and
+ * a plain rectangle draws it, which matters on a zoomed-out roll where this runs
+ * for every note of the file.
+ */
+function traceNoteShape(
+	context: CanvasRenderingContext2D,
+	left: number,
+	top: number,
+	width: number,
+	height: number,
+	radius: number,
+): void {
+	const corner = Math.min(radius, width / 2, height / 2);
+	context.beginPath();
+	if (corner < 1) {
+		context.rect(left, top, width, height);
+		return;
+	}
+
+	context.roundRect(left, top, width, height, corner);
+}
+
+/**
+ * The reference lines behind the notes: vertical lines on round values of the
+ * unit the medium reads out in, and a wash over the rows of the black keys with
+ * every C marked. Drawn before the note bodies, so the notes stay on top.
+ */
+function drawPianoRollGrid(
+	context: CanvasRenderingContext2D,
+	surface: PianoRollSeekSurfaceMetadata,
+	tileWindow: { tileStartPx: number; tileCssWidth: number; timeWidth: number },
+	geometry: NoteGeometry,
+): void {
+	// Everything the grid draws belongs to the file, so all of it stops where the
+	// file does. That is not the end of the surface: the roll spans the player's
+	// timeline, which a longer audio track can carry well past the last note, and
+	// a `pinnedLeft` roll pads even that so the last notes can reach the playhead.
+	const { tileStartPx, tileCssWidth, timeWidth } = tileWindow;
+	const fileEndPx = Math.min(
+		timeWidth,
+		surface.pianoRollDurationSeconds * geometry.pixelsPerSecond,
+	);
+	const left = Math.max(0, tileStartPx);
+	const right = Math.min(fileEndPx, tileStartPx + tileCssWidth);
+	const colors = resolvePianoRollGridColors(surface);
+	if (surface.grid === "pitch" || surface.grid === "both") {
+		drawPianoRollPitchGrid(
+			context,
+			surface,
+			left,
+			right - left,
+			geometry.rowHeight,
+			colors,
+		);
+	}
+
+	if (surface.grid === "time" || surface.grid === "both") {
+		drawPianoRollTimeGrid(
+			context,
+			surface,
+			left,
+			right,
+			fileEndPx,
+			geometry.pixelsPerSecond,
+			colors,
+		);
+	}
+
+	// The end of the file is worth marking whether or not a grid is drawn: it is
+	// otherwise indistinguishable from a passage that simply has no notes.
+	if (fileEndPx > tileStartPx && fileEndPx <= tileStartPx + tileCssWidth) {
+		context.fillStyle = colors.end;
+		context.fillRect(Math.round(fileEndPx) - 1, 0, 1, surface.originalHeight);
+	}
+}
+
+function drawPianoRollPitchGrid(
+	context: CanvasRenderingContext2D,
+	surface: PianoRollSeekSurfaceMetadata,
+	left: number,
+	width: number,
+	rowHeight: number,
+	colors: PianoRollGridColors,
+): void {
+	if (rowHeight < PIANO_ROLL_PITCH_GRID_MIN_ROW_HEIGHT || width <= 0) {
+		return;
+	}
+
+	for (let midi = surface.minMidi; midi <= surface.maxMidi; midi += 1) {
+		// Round the two edges rather than the height: rounding the height leaves a
+		// seam or an overlap between neighbouring rows. The row itself is the one
+		// the keyboard column draws its keys on, so the wash meets its black keys.
+		const rowTop = Math.round((surface.maxMidi - midi) * rowHeight);
+		const rowBottom = Math.round((surface.maxMidi - midi + 1) * rowHeight);
+		context.fillStyle = isBlackKey(midi) ? colors.rowBlack : colors.rowWhite;
+		context.fillRect(left, rowTop, width, Math.max(1, rowBottom - rowTop));
+	}
+}
+
+function drawPianoRollTimeGrid(
+	context: CanvasRenderingContext2D,
+	surface: PianoRollSeekSurfaceMetadata,
+	left: number,
+	right: number,
+	fileEndPx: number,
+	pixelsPerSecond: number,
+	colors: PianoRollGridColors,
+): void {
+	if (right <= left || pixelsPerSecond <= 0) {
+		return;
+	}
+
+	const readout = surface.timelineReadout;
+	const toReadout = readout ? readout.toReadout : (value: number) => value;
+	const fromReadout = readout ? readout.fromReadout : (value: number) => value;
+	const startValue = toReadout(left / pixelsPerSecond);
+	const endValue = toReadout(right / pixelsPerSecond);
+	if (!(endValue > startValue)) {
+		return;
+	}
+
+	// The rate is taken across the drawn window rather than globally: a unit that
+	// runs at a varying rate against seconds — ticks under a tempo map — has no
+	// single one, and the spacing that matters is the one on screen.
+	const step = resolveTimeGridStep(
+		readout?.unit ?? "seconds",
+		(right - left) / (endValue - startValue),
+		surface.midi?.header.ppq,
+	);
+	context.fillStyle = colors.time;
+	let drawn = 0;
+	for (
+		let index = Math.ceil(startValue / step);
+		index * step <= endValue && drawn < MAX_TIME_GRID_LINES;
+		index += 1
+	) {
+		// Multiplied rather than accumulated, so the step does not drift over a
+		// long file, and placed through the readout one value at a time, so a
+		// tempo change bends the grid with the music.
+		const x = fromReadout(index * step) * pixelsPerSecond;
+		drawn += 1;
+		if (x < 0 || x > fileEndPx) {
+			continue;
+		}
+
+		context.fillRect(Math.round(x), 0, 1, surface.originalHeight);
+	}
+}
+
+/**
+ * The interval between two grid lines: the first round value of the medium's own
+ * unit that keeps the lines at least `MIN_TIME_GRID_SPACING_PX` apart. Ticks step
+ * in fractions and multiples of a beat, which is the reason to read a file in
+ * ticks at all; everything else steps in 1/2/5 of its own decades.
+ */
+function resolveTimeGridStep(
+	unit: TimelineUnit,
+	pixelsPerUnit: number,
+	ticksPerBeat: number | undefined,
+): number {
+	const minimum = MIN_TIME_GRID_SPACING_PX / pixelsPerUnit;
+	const ladder =
+		unit === "seconds"
+			? SECOND_GRID_STEPS
+			: unit === "ticks" && ticksPerBeat
+				? TICK_GRID_BEAT_FACTORS.map((factor) => factor * ticksPerBeat).filter(
+						(step) => step >= 1,
+					)
+				: [];
+	for (const step of ladder) {
+		if (step >= minimum) {
+			return step;
+		}
+	}
+
+	// Past the end of a ladder, or a unit with none, the grid carries on in
+	// decades of 1, 2 and 5.
+	const decade =
+		10 ** Math.floor(Math.log10(Math.max(minimum, Number.EPSILON)));
+	for (const factor of [1, 2, 5]) {
+		if (decade * factor >= minimum) {
+			return decade * factor;
+		}
+	}
+
+	return decade * 10;
 }
 
 interface NoteGeometry {
@@ -1126,6 +1634,12 @@ export function wrapPianoRollCanvases(ctx: ViewRenderer): void {
 				noteRange: resolveConfiguredNoteRange(config.noteRange),
 				velocityBars: config.velocityBars === true,
 				velocityOpacity: config.velocityOpacity === true,
+				grid: config.grid ?? "none",
+				tooltipNode:
+					config.noteTooltip === true
+						? createPianoRollTooltipNode(overlay)
+						: null,
+				timelineReadout: null,
 				minMidi: 0,
 				maxMidi: 0,
 				pianoRollDurationSeconds: 0,
@@ -1136,6 +1650,9 @@ export function wrapPianoRollCanvases(ctx: ViewRenderer): void {
 				hiddenChannels: new Set<number>(),
 				noteColors: null,
 				channelColors: new Map<number, PianoRollNoteColors>(),
+				gridColors: null,
+				lastRenderedDurationSeconds: 0,
+				lastNoteGeometry: null,
 				lastRenderKey: null,
 				lastMinimapKey: null,
 				lastPlaybackKey: null,
@@ -1151,10 +1668,17 @@ export function wrapPianoRollCanvases(ctx: ViewRenderer): void {
 					// here is free and keeps the per-frame paths off the layout path.
 					refreshTimelineViewportWidth(metadata);
 					updatePianoRollMinimapViewport(metadata);
+					// The roll travels under a stationary cursor while playback follows,
+					// so whatever the readout points at has moved on.
+					hidePianoRollTooltip(metadata);
 					this.schedulePianoRollNoteRefresh();
 				},
 				{ passive: true },
 			);
+
+			if (metadata.tooltipNode) {
+				bindPianoRollTooltip(metadata);
+			}
 		});
 	}).call(ctx);
 }
@@ -1177,11 +1701,15 @@ export function reflowPianoRollDisplays(ctx: ViewRenderer): void {
 	(function (this: ViewRenderer) {
 		this.pianoRollSeekSurfaces.forEach(
 			(surface: PianoRollSeekSurfaceMetadata) => {
-				// Theme variables may have changed along with the layout.
+				// Theme variables may have changed along with the layout, and the
+				// colours are only re-read on a draw the render key does not skip.
 				surface.noteColors = null;
+				surface.gridColors = null;
 				surface.keyboardColors = null;
 				surface.lastKeyboardKey = null;
+				surface.lastRenderKey = null;
 				surface.channelColors.clear();
+				hidePianoRollTooltip(surface);
 				reflowTimelineSurface(surface, setPianoRollSurfaceWidth);
 			},
 		);
@@ -1266,6 +1794,10 @@ export function renderPianoRollDisplays(
 					usePianoRollLocalTimeline,
 				);
 				resolvePianoRollZoomUnits(this, surface);
+				// The grid and the note readout speak the unit this view's medium
+				// declares, which the drawing has no `ViewRenderer` to look up.
+				surface.timelineReadout =
+					this.timelineReadouts.get(surface.mediaId) ?? null;
 				const maximumZoom = getPianoRollMaximumZoom(surface, surfaceDuration);
 				// `defaultZoom` only ever opens the surface: once it has, a reflow or a
 				// hot reload leaves whatever zoom the listener is on.
