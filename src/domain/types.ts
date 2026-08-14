@@ -388,6 +388,8 @@ export interface TrackSwitchFeatures {
 	customizablePanelOrder: boolean;
 	tabView: boolean;
 	keyboard: boolean;
+	/** Normalizes each track to -14 LUFS integrated loudness at load time. */
+	normalizeLoudness: boolean;
 }
 
 export interface TrackSwitchInit {
@@ -523,6 +525,8 @@ export interface TrackLoadedSource {
 	 */
 	sourceSampleRate: number | null;
 	waveformSummary: WaveformSummary | null;
+	/** Linear gain applied to reach `features.normalizeLoudness`'s target; 1 when disabled. */
+	loudnessGain: number;
 }
 
 export interface TrackRuntime {
@@ -540,6 +544,8 @@ export interface TrackRuntime {
 	timing: TrackTiming | null;
 	/** Mirrors the active variant's `TrackLoadedSource.sourceSampleRate`. */
 	sourceSampleRate: number | null;
+	/** Mirrors the active variant's `TrackLoadedSource.loudnessGain`. */
+	loudnessGain: number;
 	activeSource: AudioBufferSourceNode | null;
 	sourceIndex: number;
 	activeVariant: TrackSourceVariant;

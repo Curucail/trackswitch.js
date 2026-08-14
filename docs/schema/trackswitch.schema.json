@@ -38,6 +38,10 @@
 				},
 				"keyboard": {
 					"type": "boolean"
+				},
+				"normalizeLoudness": {
+					"type": "boolean",
+					"description": "Normalizes each track to -14 LUFS integrated loudness at load time."
 				}
 			},
 			"additionalProperties": false

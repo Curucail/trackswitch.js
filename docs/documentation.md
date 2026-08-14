@@ -1328,7 +1328,8 @@ An omitted feature uses the default value in the table.
     "muteOtherPlayerInstances": true,
     "customizablePanelOrder": false,
     "tabView": false,
-    "keyboard": true
+    "keyboard": true,
+    "normalizeLoudness": false
   }
 }
 ```
@@ -1339,6 +1340,7 @@ An omitted feature uses the default value in the table.
 | `customizablePanelOrder?` | `boolean` | `false` | Lets users change the order of visible view panels. It does not change track order. |
 | `tabView?` | `boolean` | `false` | Shows track rows as tabs. |
 | `keyboard?` | `boolean` | `true` | Enables keyboard shortcuts. |
+| `normalizeLoudness?` | `boolean` | `false` | Normalizes each track to -14 LUFS integrated loudness at load time, clamped so it never clips. |
 
 The player rejects unknown feature keys.
 

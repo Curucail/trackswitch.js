@@ -74,6 +74,7 @@ export function load(ctx: TrackSwitchControllerImpl): Promise<void> {
 				runtime.panMergerNode = null;
 				runtime.timing = null;
 				runtime.sourceSampleRate = null;
+				runtime.loudnessGain = 1;
 				runtime.activeSource = null;
 				runtime.sourceIndex = -1;
 				runtime.activeVariant = "base";
@@ -83,6 +84,7 @@ export function load(ctx: TrackSwitchControllerImpl): Promise<void> {
 					sourceIndex: -1,
 					sourceSampleRate: null,
 					waveformSummary: null,
+					loudnessGain: 1,
 				};
 				runtime.syncedSource = null;
 				runtime.waveformSummary = null;

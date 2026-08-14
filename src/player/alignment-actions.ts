@@ -174,6 +174,7 @@ export function setRuntimeActiveVariant(
 	runtime.buffer = source.buffer;
 	runtime.timing = source.timing;
 	runtime.sourceSampleRate = source.sourceSampleRate;
+	runtime.loudnessGain = source.loudnessGain;
 	runtime.sourceIndex = source.sourceIndex;
 	runtime.waveformSummary = source.waveformSummary;
 	return true;

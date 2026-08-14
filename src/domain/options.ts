@@ -5,6 +5,7 @@ export const defaultFeatures: Readonly<TrackSwitchFeatures> = {
 	customizablePanelOrder: false,
 	tabView: false,
 	keyboard: true,
+	normalizeLoudness: false,
 };
 
 const featureKeys = new Set<keyof TrackSwitchFeatures>(

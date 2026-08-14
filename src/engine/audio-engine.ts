@@ -7,6 +7,7 @@ import type {
 	TrackTiming,
 } from "../domain/types";
 import { calculateTrackTiming, inferSourceMimeType } from "../shared/audio";
+import { computeLoudnessNormalizationGain } from "../shared/loudness";
 import { getAudioContext } from "./audio-context";
 import { readSourceSampleRate } from "./source-sample-rate";
 
@@ -60,6 +61,7 @@ interface LoadedSourceSelection {
 	timing: TrackTiming;
 	sourceIndex: number;
 	sourceSampleRate: number | null;
+	loudnessGain: number;
 }
 
 interface LoadSourceSelectionResult {
@@ -106,6 +108,7 @@ function computeBalanceGains(pan: number): { gainL: number; gainR: number } {
 export class AudioEngine {
 	private context: AudioContext | null;
 	private readonly alignmentEnabled: boolean;
+	private readonly normalizeLoudnessEnabled: boolean;
 	private globalVolumeEnabled: boolean;
 	private globalPanEnabled: boolean;
 	private globalPanAlgorithm: TrackPanAlgorithm;
@@ -121,7 +124,7 @@ export class AudioEngine {
 	private masterPanMergerNode: ChannelMergerNode | null;
 
 	constructor(
-		_features: TrackSwitchFeatures,
+		features: TrackSwitchFeatures,
 		initialVolume: number,
 		alignmentEnabled = false,
 		globalVolumeEnabled = false,
@@ -129,6 +132,7 @@ export class AudioEngine {
 		globalPanAlgorithm: TrackPanAlgorithm = "balance",
 	) {
 		this.alignmentEnabled = alignmentEnabled;
+		this.normalizeLoudnessEnabled = features.normalizeLoudness;
 		this.globalVolumeEnabled = globalVolumeEnabled;
 		this.globalPanEnabled = globalPanEnabled;
 		this.globalPanAlgorithm = globalPanAlgorithm;
@@ -622,12 +626,14 @@ export class AudioEngine {
 			sourceIndex: baseSelectionResult.selection.sourceIndex,
 			sourceSampleRate: baseSelectionResult.selection.sourceSampleRate,
 			waveformSummary: null,
+			loudnessGain: baseSelectionResult.selection.loudnessGain,
 		};
 
 		runtime.activeVariant = "base";
 		runtime.buffer = runtime.baseSource.buffer;
 		runtime.timing = runtime.baseSource.timing;
 		runtime.sourceSampleRate = runtime.baseSource.sourceSampleRate;
+		runtime.loudnessGain = runtime.baseSource.loudnessGain;
 		runtime.sourceIndex = runtime.baseSource.sourceIndex;
 		runtime.waveformSummary = runtime.baseSource.waveformSummary;
 
@@ -657,6 +663,7 @@ export class AudioEngine {
 				sourceIndex: syncedSelectionResult.selection.sourceIndex,
 				sourceSampleRate: syncedSelectionResult.selection.sourceSampleRate,
 				waveformSummary: null,
+				loudnessGain: syncedSelectionResult.selection.loudnessGain,
 			};
 		} else {
 			runtime.syncedSource = null;
@@ -696,6 +703,9 @@ export class AudioEngine {
 						timing: calculateTrackTiming(source, decodedBuffer.duration),
 						sourceIndex: sourceIndex,
 						sourceSampleRate: readSourceSampleRate(arrayBuffer),
+						loudnessGain: this.normalizeLoudnessEnabled
+							? computeLoudnessNormalizationGain(decodedBuffer)
+							: 1,
 					},
 					error: null,
 				};
@@ -916,7 +926,8 @@ export class AudioEngine {
 					? 1
 					: 0
 				: clamp01(noSoloFallbackGates?.[index] ?? 0);
-			runtime.gainNode.gain.value = soloGate * clamp01(runtime.state.volume);
+			runtime.gainNode.gain.value =
+				soloGate * clamp01(runtime.state.volume) * runtime.loudnessGain;
 
 			if (runtime.pannerNode) {
 				runtime.pannerNode.pan.value = clampPan(runtime.state.pan);
