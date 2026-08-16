@@ -1,5 +1,6 @@
 import type { Projection } from "../model/alignment";
 import type { Marker, MarkerSequence } from "../model/marker";
+import { deriveMarkerSegments } from "../model/segment";
 import type { TimelineId } from "../model/timeline";
 import type {
 	MarkerNavigationDialogValues,
@@ -88,16 +89,74 @@ function createMarkerAriaLabel(marker: Marker, playerTime: string): string {
 	return `Marker ${marker.id}${label}, ${playerTime}`;
 }
 
+function renderSegmentRegions(
+	layerElement: HTMLElement,
+	layer: MarkerLayerConfig,
+	sequence: MarkerSequence,
+	timeline: ReturnType<SeekTimelineContextResolver>,
+	data: MarkerRenderData,
+): void {
+	deriveMarkerSegments(sequence).forEach((segment) => {
+		const start = resolvePlacement(
+			resolveMarkerPlayerTime(segment.start, data),
+			timeline,
+		);
+		const end = resolvePlacement(
+			resolveMarkerPlayerTime(segment.end, data),
+			timeline,
+		);
+		if (!start || !end || end.surfaceTime <= start.surfaceTime) {
+			return;
+		}
+
+		const region = layerElement.ownerDocument.createElement("div");
+		region.className = "timeline-segment";
+		region.setAttribute("role", "img");
+		const label = segment.label?.trim();
+		const timeRange = `${data.formatReferenceValue(start.playerTime)} to ${data.formatReferenceValue(end.playerTime)}`;
+		region.setAttribute(
+			"aria-label",
+			label ? `Segment ${label}, ${timeRange}` : `Segment ${timeRange}`,
+		);
+		region.style.setProperty(
+			"--ts-segment-position",
+			`${(start.surfaceTime / start.duration) * 100}%`,
+		);
+		region.style.setProperty(
+			"--ts-segment-width",
+			`${((end.surfaceTime - start.surfaceTime) / start.duration) * 100}%`,
+		);
+		region.style.setProperty(
+			"--ts-marker-line-width",
+			`${layer.lineWidth ?? 1}px`,
+		);
+		if (layer.color) {
+			region.style.setProperty("--ts-marker-highlight-color", layer.color);
+		}
+		if (segment.color) {
+			region.style.setProperty("--ts-marker-highlight-color", segment.color);
+		}
+
+		if (label) {
+			const labelNode = layerElement.ownerDocument.createElement("span");
+			labelNode.className = "timeline-segment-label";
+			labelNode.textContent = label;
+			region.appendChild(labelNode);
+		}
+		layerElement.appendChild(region);
+	});
+}
+
 function renderMarkerLayer(
 	seekWrap: HTMLElement,
 	layer: MarkerLayerConfig,
-	markers: readonly Marker[],
+	sequence: MarkerSequence,
 	data: MarkerRenderData,
 ): void {
 	const timeline = data.getSeekTimelineContext(seekWrap);
 
 	const entries: Array<{ marker: Marker; placement: MarkerPlacement }> = [];
-	markers
+	sequence.markers
 		.filter((marker) => !marker.hidden)
 		.forEach((marker) => {
 			const playerTime = resolveMarkerPlayerTime(marker, data);
@@ -116,10 +175,17 @@ function renderMarkerLayer(
 	);
 
 	const layerElement = seekWrap.ownerDocument.createElement("div");
-	layerElement.className = "timeline-marker-layer";
+	layerElement.className = `timeline-marker-layer timeline-marker-layer-${sequence.type}`;
 	layerElement.setAttribute("role", "group");
-	layerElement.setAttribute("aria-label", "Timeline markers");
+	layerElement.setAttribute(
+		"aria-label",
+		sequence.type === "segments" ? "Timeline segments" : "Timeline markers",
+	);
 	layerElement.setAttribute("data-marker-set", layer.sequence);
+
+	if (sequence.type === "segments") {
+		renderSegmentRegions(layerElement, layer, sequence, timeline, data);
+	}
 
 	entries.forEach((entry, index) => {
 		const button = seekWrap.ownerDocument.createElement("button");
@@ -204,7 +270,7 @@ function renderConfiguredLayers(
 		}
 
 		visibleSetIds.add(layer.sequence);
-		renderMarkerLayer(seekWrap, layer, resolvedSet.markers, data);
+		renderMarkerLayer(seekWrap, layer, resolvedSet, data);
 	});
 }
 

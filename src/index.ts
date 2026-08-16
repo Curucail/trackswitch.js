@@ -19,6 +19,7 @@ export type {
 	LoopMarker,
 	MarkerLayerConfig,
 	MarkerSequenceSourceConfig,
+	MarkerSequenceType,
 	MarkersConfig,
 	MediaConfig,
 	MediaEntryConfig,

@@ -216,6 +216,8 @@ const alignmentAllowedKeys = keysOf<AlignmentConfig>()([
 	"duplicateAnchors",
 ] as const);
 const markerSequenceAllowedKeys = keysOf<MarkerSequenceSourceConfig>()([
+	"type",
+	"colors",
 	"src",
 	"timeline",
 	"timeCol",
@@ -533,6 +535,41 @@ function normalizeMarkersConfig(
 		const setRecord = toConfigRecord(rawSet, `markers.${setId}`);
 		assertAllowedKeys(setRecord, markerSequenceAllowedKeys, `markers.${setId}`);
 		const set = rawSet as MarkersConfig[string];
+
+		if (set.type !== "points" && set.type !== "segments") {
+			throw new Error(
+				`Invalid markers.${setId} configuration: type must be "points" or "segments".`,
+			);
+		}
+		if (set.colors !== undefined) {
+			if (set.type !== "segments") {
+				throw new Error(
+					`Invalid markers.${setId} configuration: colors are only valid for type "segments".`,
+				);
+			}
+			if (set.labelCol === undefined) {
+				throw new Error(
+					`Invalid markers.${setId} configuration: colors require labelCol.`,
+				);
+			}
+			const colors = toConfigRecord(set.colors, `markers.${setId}.colors`);
+			Object.entries(colors).forEach(([label, color]) => {
+				if (label.trim().length === 0) {
+					throw new Error(
+						`Invalid markers.${setId}.colors configuration: labels must be non-empty strings.`,
+					);
+				}
+				if (
+					typeof color !== "string" ||
+					color.trim().length === 0 ||
+					(typeof CSS !== "undefined" && !CSS.supports("color", color))
+				) {
+					throw new Error(
+						`Invalid markers.${setId}.colors configuration: "${label}" must map to a valid CSS color.`,
+					);
+				}
+			});
+		}
 
 		if (typeof set.src !== "string" || set.src.trim().length === 0) {
 			throw new Error(

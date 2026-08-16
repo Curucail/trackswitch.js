@@ -23,12 +23,14 @@
 	},
 	"markers": {
 		"kruegerSections": {
+			"type": "segments",
 			"src": "krueger-markers.csv",
 			"timeline": "krueger",
 			"timeCol": "time",
 			"labelCol": "label"
 		},
 		"alciatoreSections": {
+			"type": "segments",
 			"src": "alciatore-markers.csv",
 			"timeline": "alciatore",
 			"timeCol": "time",

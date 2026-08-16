@@ -1,6 +1,6 @@
 import { parseCsvRecords } from "../shared/csv";
 import { requestText } from "../shared/request-text";
-import type { MarkersConfig, MediaConfig } from "../types";
+import type { MarkerSequenceType, MarkersConfig, MediaConfig } from "../types";
 import type { Alignment } from "./alignment";
 import {
 	IMPLICIT_REFERENCE_TIMELINE,
@@ -49,6 +49,8 @@ export interface MarkerSequence {
 	readonly id: MarkerSequenceId;
 	readonly timeline: TimelineId;
 	readonly kind: "annotation" | "runtime";
+	readonly type: MarkerSequenceType;
+	readonly colors?: Readonly<Record<string, string>>;
 	readonly hasLabels: boolean;
 	readonly markers: readonly Marker[];
 }
@@ -275,6 +277,8 @@ export async function loadMarkerSequences(
 				id,
 				timeline,
 				kind: "annotation",
+				type: config.type,
+				colors: config.colors,
 				hasLabels: typeof config.labelCol === "string",
 				markers: [
 					...(bounds.first ? [bounds.first] : []),
@@ -325,6 +329,7 @@ function runtimeSequence(
 		id: RUNTIME_SEQUENCE_ID,
 		timeline,
 		kind: "runtime",
+		type: "points",
 		hasLabels: true,
 		markers,
 	};

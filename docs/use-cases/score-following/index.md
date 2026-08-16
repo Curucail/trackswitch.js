@@ -78,6 +78,7 @@ controls as well:
 ```json
 "markers": {
   "measures": {
+    "type": "points",
     "src": "../../assets/alignment/HU33-markers.csv",
     "timeline": "hu33",
     "timeCol": "start",

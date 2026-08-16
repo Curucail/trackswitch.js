@@ -7,6 +7,46 @@
 	pointer-events: none;
 }
 
+.trackswitch .timeline-segment {
+	--ts-segment-position: 0%;
+	--ts-segment-width: 0%;
+	--ts-marker-highlight-color: var(--ts-color-accent);
+	--ts-marker-line-width: 1px;
+	position: absolute;
+	inset-block: 0;
+	left: var(--ts-segment-position);
+	width: var(--ts-segment-width);
+	min-width: var(--ts-marker-line-width);
+	box-sizing: border-box;
+	border-inline-start: var(--ts-marker-line-width) solid
+		var(--ts-marker-highlight-color);
+	background: color-mix(
+		in srgb,
+		var(--ts-marker-highlight-color) 14%,
+		transparent
+	);
+	color: var(--ts-color-text-primary);
+	overflow: hidden;
+	pointer-events: none;
+}
+
+.trackswitch .timeline-segment-label {
+	position: absolute;
+	top: 7px;
+	left: 7px;
+	max-width: calc(100% - 14px);
+	padding: 2px 4px;
+	border-radius: 3px;
+	background: var(--ts-color-surface-raised-72);
+	font-family: var(--ts-font-ui);
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 1.2;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
 .trackswitch
 	.timeline-marker-layer:has(
 		.timeline-marker:is(:hover, :focus-visible, :active, .is-active)

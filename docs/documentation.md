@@ -272,6 +272,7 @@ const config: TrackSwitchInit = {
       },
       "markers": {
         "sections": {
+          "type": "segments",
           "src": "sections.csv",
           "timeline": "score",
           "timeCol": "measure",
@@ -746,12 +747,15 @@ dimmed.
 
 ### `markers`
 
-Markers add sparse positions to the player. Use them for musical sections, analysis events, lyrics, beats, or other meaningful positions.
+Marker sequences represent independent points or consecutive segments.
+Point sequences are for beats, onsets, lyrics, and other positions.
+Segment sequences are for sections, chords, and other annotations that remain valid until the next marker.
 
 ```json
 {
   "markers": {
     "sections": {
+      "type": "segments",
       "src": "sections.csv",
       "timeline": "takeA",
       "timeCol": "start",
@@ -763,12 +767,26 @@ Markers add sparse positions to the player. Use them for musical sections, analy
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
+| `type` | `"points" \| "segments"` | - | Specifies whether each marker is an independent point or begins a segment that ends at the next marker. |
+| `colors?` | `Record<string, string>` | none | Maps segment labels to CSS colors. Requires `type: "segments"` and `labelCol`. |
 | `src` | `string` | - | Specifies the CSV file with marker data. |
 | `timeline?` | `string` | reference timeline | Specifies the timeline for `timeCol`. |
 | `timeCol` | `string` | - | Specifies the CSV column with marker positions, in the unit of that timeline. |
 | `labelCol?` | `string` | none | Specifies the CSV column with marker labels. |
 
-`timeCol` values are read in the [timeline unit](#timeline-units) of the timeline they belong to, the same unit that timeline's alignment column and readout use. A sequence on a timeline whose medium declares `"timelineUnit": "samples"` is authored in sample indices; one on a `musicxml` timeline is authored in measure numbers. Without an `alignment` block the sequence sits on the single implicit timeline, and its values are read in the unit the player reads out.
+The player reads `timeCol` values in the [timeline unit](#timeline-units) of their timeline.
+The alignment column and the timeline display use the same unit.
+A sequence on a timeline with `"timelineUnit": "samples"` uses sample indices.
+A sequence on a `musicxml` timeline uses measure numbers.
+Without an `alignment` block, the sequence belongs to the single implicit timeline.
+
+For `type: "segments"`, each visible marker begins a half-open segment that ends at the next marker.
+The marker label belongs to that segment.
+The final visible marker extends to the hidden marker at the end of the timeline.
+Marker layers display these segments as labeled, translucent regions.
+The boundary markers remain available for seeking, navigation, and loop snapping.
+The optional `colors` map assigns a CSS color to each label.
+Labels without a map entry use the marker layer color.
 
 Previous and next navigation uses the marker sequences a view currently shows. A sequence becomes a navigation target through a `markerLayers` entry, so a sequence that no view draws is not navigable.
 

@@ -1541,6 +1541,17 @@
 		"MarkerSequenceSourceConfig": {
 			"type": "object",
 			"properties": {
+				"type": {
+					"$ref": "#/definitions/MarkerSequenceType",
+					"description": "Whether markers represent independent points or consecutive segment starts."
+				},
+				"colors": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "string"
+					},
+					"description": "Segment label -> CSS color. Requires a segment sequence with labelCol."
+				},
 				"src": {
 					"type": "string"
 				},
@@ -1557,10 +1568,18 @@
 				}
 			},
 			"required": [
+				"type",
 				"src",
 				"timeCol"
 			],
 			"additionalProperties": false
+		},
+		"MarkerSequenceType": {
+			"type": "string",
+			"enum": [
+				"points",
+				"segments"
+			]
 		},
 		"PresetsConfig": {
 			"type": "object",

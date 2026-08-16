@@ -43,6 +43,7 @@ export type TrackSwitchCssOverrides = Partial<
 export type MediaId = string;
 export type TrackId = MediaId;
 type MarkerSequenceId = string;
+export type MarkerSequenceType = "points" | "segments";
 type PresetId = string;
 
 /**
@@ -151,6 +152,10 @@ export interface AlignmentConfig {
 }
 
 export interface MarkerSequenceSourceConfig {
+	/** Whether markers represent independent points or consecutive segment starts. */
+	type: MarkerSequenceType;
+	/** Segment label -> CSS color. Requires a segment sequence with labelCol. */
+	colors?: Record<string, string>;
 	src: string;
 	/** Defaults to the reference timeline; meaningless (and omittable) with no alignment block. */
 	timeline?: string;

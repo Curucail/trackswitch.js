@@ -37,18 +37,10 @@ We show pre-configured players and explain the main concepts behind it.
   </li>
   
   <li class="ts-usecase-card">
-    <h2><a href="{{ '/use-cases/temporal-annotations/' | relative_url }}">Navigating Temporal Annotations</a></h2>
+    <h2><a href="{{ '/use-cases/markers/' | relative_url }}">Markers</a></h2>
     <p>
-      Structural boundaries as a navigable marker sequence: step between sections, loop one of them,
-      and see how beat-tracking output is configured the same way.
-    </p>
-  </li>
-
-  <li class="ts-usecase-card">
-    <h2><a href="{{ '/use-cases/markers-across-timelines/' | relative_url }}">Markers</a></h2>
-    <p>
-      This player shows marker projection. One annotation file contains positions on the timeline of one performance.
-      The other performance shows these markers at the corresponding musical positions.
+      Compare measure points and colored structural segments on two aligned performances
+      of Schubert's <em>Gefrorne Tränen</em>.
     </p>
   </li>
 </ul>
