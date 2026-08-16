@@ -11,7 +11,7 @@ body_class: docs-page docs-page--narrow
 Markers can be used to visualize annotations in audio and music data.
 In trackswitch, markers are displayed as vertical bars inside of views.
 Markers can also be used for navigation: Clicking on a marker seeks to that specific position.
-They are automatically projected between timelines, meaning that a marker set can be defined in one timeline and then be visualized on a view that lives on another timeline.
+They are automatically projected between timelines, meaning that a marker sequence can be defined in one timeline and then be visualized on a view that lives on another timeline.
 In the example below, markers are defined only once for HU33 and are automatically projected onto the SC06 timeline. 
 Thus, both waveforms show the same musical positions at their correct playback times.
 
@@ -42,7 +42,7 @@ Markers belong to **timelines**, not to media items. This relationship makes mar
 
 The player reads the source timeline of each marker. Then it maps the marker position to each aligned timeline.
 
-This marker set contains annotations on the `hu33` timeline:
+This marker sequence contains annotations on the `hu33` timeline:
 
 ```json
 "markers": {
@@ -56,7 +56,7 @@ This marker set contains annotations on the `hu33` timeline:
 ```
 
 The CSV contains a time column and optionally, a label column.
-The unit of values in the time column should match the unit of the timline the marker set lives in.
+The unit of values in the time column should match the unit of the timline the marker sequence lives in.
 
 ```
 start;label
@@ -66,7 +66,7 @@ start;label
 5.988843537;Measure 3
 ```
 
-The waveform views then specify which marker sets should be displayed in their view:
+The waveform views then specify which marker sequences should be displayed in their view:
 
 ```json
 "views": [
@@ -75,7 +75,7 @@ The waveform views then specify which marker sets should be displayed in their v
     "tracks": ["hu33"],
     "height": 90,
     "markerLayers": [
-      { "set": "measures", "color": "#ed8c01", "line": "dashed" }
+      { "sequence": "measures", "color": "#ed8c01", "line": "dashed" }
     ]
   },
   {
@@ -83,7 +83,7 @@ The waveform views then specify which marker sets should be displayed in their v
     "tracks": ["sc06"],
     "height": 90,
     "markerLayers": [
-      { "set": "measures", "color": "#ed8c01", "line": "dashed" }
+      { "sequence": "measures", "color": "#ed8c01", "line": "dashed" }
     ]
   },
 ]

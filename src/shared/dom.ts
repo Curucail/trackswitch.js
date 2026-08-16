@@ -1,4 +1,4 @@
-import type { TrackSwitchCssOverrides } from "../domain/types";
+import type { TrackSwitchCssOverrides } from "../types";
 
 /**
  * Writes a config `css` block onto an element. `setProperty` takes the value as

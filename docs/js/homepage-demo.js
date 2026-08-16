@@ -12,8 +12,8 @@
 		return control.type === "checkbox" ? control.checked : control.value;
 	}
 
-	function markerLayer(set) {
-		return { set: set, color: "#ed8c01", line: "dashed" };
+	function markerLayer(sequence) {
+		return { sequence: sequence, color: "#ed8c01", line: "dashed" };
 	}
 
 	/** Omits `markerLayers` entirely when there are none, rather than sending `[]`. */
@@ -36,7 +36,7 @@
 			tabView: false,
 			keyboard: true,
 		},
-		// Nothing for `alignment`: outsideCoverage and duplicatePlacements both
+		// Nothing for `alignment`: outsideCoverage and duplicateAnchors both
 		// default to "error", so the values the showcase sets are load-bearing.
 		markerLayer: { line: "dashed", foldToReference: false },
 		view: {
@@ -168,9 +168,9 @@
 		views.push({
 			type: "trackList",
 			tracks: ["violins", "synths", "bass", "drums"],
-			// `soloGroup` names the selection the list belongs to, which lets one of
+			// `comparisonGroup` names the selection the list belongs to, which lets one of
 			// its tracks sound at a time. Without one the stems mix freely.
-			soloGroup: controls.exclusiveSolo ? 0 : undefined,
+			comparisonGroup: controls.exclusiveSolo ? 0 : undefined,
 			trackVolumeControls: controls.trackVolumeControls,
 			trackPanControls: controls.trackPanControls,
 		});
@@ -229,7 +229,7 @@
 				src: basePath + "/Schubert_D911-03_HU33.wav",
 				startOffsetMs: 200,
 				endOffsetMs: 5800,
-				srcSynchronized: {
+				srcTimeScaled: {
 					src: basePath + "/Schubert_D911-03_HU33.wav",
 					startOffsetMs: 200,
 					endOffsetMs: 5800,
@@ -241,7 +241,7 @@
 				src: basePath + "/Schubert_D911-03_SC06.wav",
 				startOffsetMs: 600,
 				endOffsetMs: 300,
-				srcSynchronized: {
+				srcTimeScaled: {
 					src: basePath + "/Schubert_D911-03_SC06_syncronized.wav",
 						startOffsetMs: 300,
 						endOffsetMs: 5800,
@@ -288,7 +288,7 @@
 		}
 		if (controls.waveform) {
 			var alignmentLayer = [
-				{ set: "alignment", line: "dashed", foldToReference: true },
+				{ sequence: "alignment", line: "dashed", foldToReference: true },
 			];
 			[
 				{ track: "hu33", layers: markerLayersA },
@@ -319,7 +319,7 @@
 			// of them can sound at a time.
 			type: "trackList",
 			tracks: ["hu33", "sc06"],
-			soloGroup: 0,
+			comparisonGroup: 0,
 			trackVolumeControls: controls.trackVolumeControls,
 			trackPanControls: controls.trackPanControls,
 		});
@@ -339,7 +339,7 @@
 				referenceTimeline: "hu33",
 				timelines: timelines,
 				outsideCoverage: "hold",
-				duplicatePlacements: "average",
+				duplicateAnchors: "average",
 			},
 			views: views,
 			features: buildFeatures(controls),

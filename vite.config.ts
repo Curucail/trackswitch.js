@@ -44,7 +44,7 @@ const buildTargets = {
 			outDir: "dist/interactive",
 			assetsInlineLimit: Number.MAX_SAFE_INTEGER,
 			lib: {
-				entry: resolve(rootDir, "src/interactive-browser.ts"),
+				entry: resolve(rootDir, "extensions/interactive-alignment/browser.ts"),
 				name: "TrackSwitchInteractive",
 				formats: ["iife"],
 				fileName: () => "trackswitch-interactive.js",
@@ -62,7 +62,10 @@ const buildTargets = {
 			target: "es2020",
 			outDir: "dist/interactive",
 			lib: {
-				entry: resolve(rootDir, "src/interactive/worker/alignment-worker.ts"),
+				entry: resolve(
+					rootDir,
+					"extensions/interactive-alignment/worker/alignment-worker.ts",
+				),
 				formats: ["es"],
 				fileName: () => "trackswitch-interactive-worker.js",
 			},

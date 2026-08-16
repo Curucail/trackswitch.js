@@ -1,0 +1,71 @@
+{
+	"$schema": "https://audiolabs.github.io/trackswitch.js/schema/trackswitch.schema.json",
+	"media": {
+		"violins": {
+			"type": "audio",
+			"title": "Violins",
+			"src": "../../assets/multitracks/violins.mp3"
+		},
+		"synth": {
+			"type": "audio",
+			"title": "Synth",
+			"src": "../../assets/multitracks/synth.mp3"
+		},
+		"bass": {
+			"type": "audio",
+			"title": "Bass",
+			"src": "../../assets/multitracks/bass.mp3"
+		},
+		"drums": {
+			"type": "audio",
+			"title": "Drums",
+			"src": "../../assets/multitracks/drums.mp3"
+		}
+	},
+	"markers": {
+		"sections": {
+			"src": "../../assets/multitracks/showcase-markers.csv",
+			"timeCol": "time",
+			"labelCol": "label"
+		}
+	},
+	"presets": {
+		"all": {
+			"label": "All Tracks",
+			"tracks": ["violins", "synth", "bass", "drums"]
+		},
+		"rhythm": {
+			"label": "Drums & Bass",
+			"tracks": ["bass", "drums"]
+		}
+	},
+	"views": [
+		{
+			"type": "navigationBar",
+			"controls": [
+				"playback",
+				"markerNavigation",
+				"looping",
+				"presets",
+				"timer"
+			]
+		},
+		{
+			"type": "waveform",
+			"tracks": "audible",
+			"height": 110,
+			"markerLayers": [
+				{
+					"sequence": "sections",
+					"color": "#ed8c01",
+					"line": "dashed"
+				}
+			]
+		},
+		{
+			"type": "trackList",
+			"tracks": ["violins", "synth", "bass", "drums"],
+			"trackVolumeControls": true
+		}
+	]
+}

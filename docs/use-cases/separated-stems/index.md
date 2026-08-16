@@ -35,26 +35,26 @@ Audio data: [Schubert Winterreise Dataset](https://www.audiolabs-erlangen.de/res
 
 ## Two levels of selection
 
-`soloGroup` decides what a `trackList` contributes to the choice:
+`comparisonGroup` decides what a `trackList` contributes to the choice:
 
-| `soloGroup` | What the list contributes |
+| `comparisonGroup` | What the list contributes |
 | --- | --- |
 | declared | Every row is a selectable timeline of its own. |
 | omitted | The list as a whole is one selectable timeline; its rows mix freely inside it. |
 
 The first level holds every selectable timeline the lists contribute. Whatever is selected there sounds; everything else is silent.
 
-- **Both lists in a `soloGroup`** — the player has one level. Every row of every list is a timeline, and exactly one of them plays. This is what the [Aligned Timelines](../aligned-timelines/) example does.
-- **One list in a `soloGroup`, one not** — the first level holds that list's *N* rows plus one entry for the whole second list. Selecting the second list makes its stems audible together, and its rows become the second level.
-- **Neither list in a `soloGroup`** — the first level holds one entry per list, and each list carries its own stem mix. That is the player above.
+- **Both lists in a `comparisonGroup`** — the player has one level. Every row of every list is a timeline, and exactly one of them plays. This is what the [Aligned Timelines](../aligned-timelines/) example does.
+- **One list in a `comparisonGroup`, one not** — the first level holds that list's *N* rows plus one entry for the whole second list. Selecting the second list makes its stems audible together, and its rows become the second level.
+- **Neither list in a `comparisonGroup`** — the first level holds one entry per list, and each list carries its own stem mix. That is the player above.
 
-Because alignment already selects one timeline at a time across the whole player, the lists that do declare a `soloGroup` all share one number; a second number would name the same selection.
+Because alignment already selects one timeline at a time across the whole player, the lists that do declare a `comparisonGroup` all share one number; a second number would name the same selection.
 
-A list that declares no `soloGroup` gets an extra row above its tracks. That row is the list's own entry on the first level; its tracks are indented underneath it as the second level. Selecting a stem of an unselected list switches the player to that list. Its rows then toggle like an ordinary mixer, except that the last remaining stem stays audible — playback needs a timeline to run on. Switching away and back restores the mix the list was left with.
+A list that declares no `comparisonGroup` gets an extra row above its tracks. That row is the list's own entry on the first level; its tracks are indented underneath it as the second level. Selecting a stem of an unselected list switches the player to that list. Its rows then toggle like an ordinary mixer, except that the last remaining stem stays audible — playback needs a timeline to run on. Switching away and back restores the mix the list was left with.
 
 ## One timeline per list
 
-Stems only mix if they really are one recording taken apart, so a `trackList` without a `soloGroup` requires all of its tracks to name the same alignment column and to carry the same `startOffsetMs` and `endOffsetMs`:
+Stems only mix if they really are one recording taken apart, so a `trackList` without a `comparisonGroup` requires all of its tracks to name the same alignment column and to carry the same `startOffsetMs` and `endOffsetMs`:
 
 ```json
 "alignment": {
@@ -75,7 +75,7 @@ Stems only mix if they really are one recording taken apart, so a `trackList` wi
 
 The three HU33 stems share the HU33 column, and the three SC06 stems share the SC06 column. Both perform the same piece at their own tempo, and the alignment maps between them as it would for the undecomposed recordings — the sheet music above follows either performance.
 
-The lists themselves declare nothing but their tracks and a title for the selection row. Leaving `soloGroup` out is what makes their stems mix:
+The lists themselves declare nothing but their tracks and a title for the selection row. Leaving `comparisonGroup` out is what makes their stems mix:
 
 ```json
 {

@@ -141,7 +141,7 @@
 				"endOffsetMs": {
 					"type": "number"
 				},
-				"srcSynchronized": {
+				"srcTimeScaled": {
 					"$ref": "#/definitions/SynchronizedAudioSourceConfig"
 				}
 			},
@@ -1503,8 +1503,8 @@
 				"outsideCoverage": {
 					"$ref": "#/definitions/OutsideCoverageMode"
 				},
-				"duplicatePlacements": {
-					"$ref": "#/definitions/DuplicatePlacementPolicy"
+				"duplicateAnchors": {
+					"$ref": "#/definitions/DuplicateAnchorPolicy"
 				}
 			},
 			"required": [
@@ -1521,24 +1521,24 @@
 				"extrapolate",
 				"error"
 			],
-			"description": "What a projection does for positions outside a timeline's coverage — the span its alignment placements actually annotate."
+			"description": "What a projection does for positions outside a timeline's coverage — the span its alignment anchors actually annotate."
 		},
-		"DuplicatePlacementPolicy": {
+		"DuplicateAnchorPolicy": {
 			"type": "string",
 			"enum": [
 				"first",
 				"average",
 				"error"
 			],
-			"description": "How a projection resolves several alignment rows that place one timeline at the same position — the shape a repeat produces, where one performance revisits a stretch the other plays only once."
+			"description": "How a projection resolves several anchors that put one timeline at the same position — the shape a repeat produces, where one performance revisits a stretch the other plays only once."
 		},
 		"MarkersConfig": {
 			"type": "object",
 			"additionalProperties": {
-				"$ref": "#/definitions/MarkerSetSourceConfig"
+				"$ref": "#/definitions/MarkerSequenceSourceConfig"
 			}
 		},
-		"MarkerSetSourceConfig": {
+		"MarkerSequenceSourceConfig": {
 			"type": "object",
 			"properties": {
 				"src": {
@@ -1662,8 +1662,9 @@
 		"MarkerLayerConfig": {
 			"type": "object",
 			"properties": {
-				"set": {
-					"type": "string"
+				"sequence": {
+					"type": "string",
+					"description": "The marker sequence this layer draws, or \"alignment\" for the anchors."
 				},
 				"color": {
 					"type": "string"
@@ -1689,7 +1690,7 @@
 				}
 			},
 			"required": [
-				"set"
+				"sequence"
 			],
 			"additionalProperties": false
 		},
@@ -1872,7 +1873,7 @@
 							}
 						]
 					},
-					"description": "Pairs MIDI channels with audio tracks, keyed by channel number. A paired channel is drawn while any of its tracks is audible — naming every track of a `soloGroup` keeps the channel visible as the selection moves between them. Two channels may name the same track; the track's row then splits its colour across both."
+					"description": "Pairs MIDI channels with audio tracks, keyed by channel number. A paired channel is drawn while any of its tracks is audible — naming every track of a `comparisonGroup` keeps the channel visible as the selection moves between them. Two channels may name the same track; the track's row then splits its colour across both."
 				},
 				"colorPerChannel": {
 					"type": "boolean",
@@ -1913,20 +1914,17 @@
 				{
 					"type": "array",
 					"items": {
-						"$ref": "#/definitions/MidiNoteRef"
+						"type": [
+							"string",
+							"number"
+						],
+						"description": "A pitch as configuration writes it: a MIDI note number, or a name in scientific pitch notation such as `\"C4\"`, `\"F#3\"` or `\"Bb-1\"`, where middle C is C4 = 60."
 					},
 					"minItems": 2,
 					"maxItems": 2
 				}
 			],
 			"description": "The pitch axis of a piano roll: derived from the file, or fixed to a range."
-		},
-		"MidiNoteRef": {
-			"type": [
-				"string",
-				"number"
-			],
-			"description": "A pitch as configuration writes it: a MIDI note number, or a name in scientific pitch notation such as `\"C4\"`, `\"F#3\"` or `\"Bb-1\"`, where middle C is C4 = 60."
 		},
 		"TrackSwitchSheetMusicViewConfig": {
 			"type": "object",
@@ -2070,9 +2068,9 @@
 					"type": "string",
 					"description": "Labels the list. Alignment shows it on the row that selects the list as a whole."
 				},
-				"soloGroup": {
+				"comparisonGroup": {
 					"type": "number",
-					"description": "Names the selection this list belongs to, which permits only one audible track at a time — its rows behave as radio buttons. Lists that name the same number share that one selection, so picking a track in one of them deselects whatever the others had. Any non-negative integer works; distinct numbers are independent selections.\n\nOmit it to let the list's tracks sound together, each row an ordinary toggle.\n\nUnder alignment it decides which level of the selection hierarchy the list contributes: with a `soloGroup` every row is a selectable timeline of its own, without one the list is a single selectable timeline whose rows mix freely inside it — which requires all of its tracks to share one alignment timeline. Alignment plays one timeline at a time across the whole player, so an aligned player has at most one `soloGroup` to share."
+					"description": "Names the selection this list belongs to, which permits only one audible track at a time — its rows behave as radio buttons. Lists that name the same number share that one selection, so picking a track in one of them deselects whatever the others had. Any non-negative integer works; distinct numbers are independent selections.\n\nOmit it to let the list's tracks sound together, each row an ordinary toggle.\n\nUnder alignment it decides which level of the selection hierarchy the list contributes: with a `comparisonGroup` every row is a selectable timeline of its own, without one the list is a single selectable timeline whose rows mix freely inside it — which requires all of its tracks to share one alignment timeline. Alignment plays one timeline at a time across the whole player, so an aligned player has at most one `comparisonGroup` to share."
 				},
 				"rowHeight": {
 					"type": "number"

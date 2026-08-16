@@ -5,10 +5,11 @@ trackswitch
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Live Demo](https://img.shields.io/badge/demo-live-black)](https://audiolabs.github.io/trackswitch.js/)
 
-**trackswitch** is a web-based multitrack audio player for presenting scientific results. It supports playing multiple audio files simultaneously, enabling users to mix multiple tracks to their liking. 
+**trackswitch** is a web-based player for exploring related music representations — audio recordings, MIDI, sheet music and analysis results — in one interface.
 
-In Sync mode, users can listen to different performances of the same musical piece, which are synchronized to a reference timeline such that they can be compared side-by-side. Additionally, sheet music can be rendered and used to seek through the performances by clicking on individual measures.
-With optional synchronized playback, performances can be listened to simultaneously (synchronized audio files for each performance have to be configured before, e.g. by using a time-scale modification algorithm). 
+It is built on three concepts. **Timelines** are the coordinate systems of individual media, expressed in seconds, measures or ticks. **Markers** identify discrete positions on a timeline and are grouped into marker sequences, such as beats, measures or structural boundaries. **Alignments** pair markers on different timelines as anchors, and interpolate between them to project any position from one timeline onto another.
+
+Audio can be heard in two ways: *comparative listening*, where one track sounds at a time and listeners switch between alternatives without interrupting playback, and *simultaneous listening*, where tracks sharing a timeline mix together. Performances on distinct timelines are compared rather than mixed, unless time-scale-modified renditions are supplied, which the Sync control then plays together.
 
 Live Demo
 -------------
@@ -56,7 +57,7 @@ Features
 - Play, pause, stop, seek, and repeat controls
 - Global volume control
 - Looping controls
-- Annotation marker navigation by previous/next or searchable set, ID, and label
+- Annotation marker navigation by previous/next or searchable sequence, ID, and label
 - Per-track solo, volume, and pan controls
 - Presets for common track combinations
 - (Seekable) images and per-track images
@@ -64,10 +65,11 @@ Features
 - Interactive Sheet music (musicxml) display with playback-following cursor
 - Keyboard shortcuts
 
-### Sync mode
+### Aligned timelines (Sync mode)
 
-- Compare different performances of the same piece
-- Different timelines for each track synchronized to a shared reference timeline
+- Compare different performances of the same piece across their own timelines
+- Every timeline related to one reference timeline through alignment anchors
+- Marker sequences projected between timelines
 - Optional synchronized playback for mixing performances together
 - Alignment warping path and local tempo deviation visualizations
 

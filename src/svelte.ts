@@ -1,13 +1,13 @@
-import type {
-	TrackSwitchController,
-	TrackSwitchEventMap,
-	TrackSwitchInit,
-} from "./domain/types";
 import type { TrackswitchDomEventName, TrackswitchPlayer } from "./element";
 import {
 	defineTrackswitchDefaultElement,
 	TRACKSWITCH_DOM_EVENTS,
 } from "./element";
+import type {
+	TrackSwitchController,
+	TrackSwitchEventMap,
+	TrackSwitchInit,
+} from "./types";
 
 export type TrackswitchSvelteVariant = "default" | "sync";
 

@@ -249,13 +249,13 @@ const config: TrackSwitchInit = {
         "takeA": {
           "type": "audio",
           "src": "take-a.wav",
-          "srcSynchronized": { "src": "take-a-synced.wav" },
+          "srcTimeScaled": { "src": "take-a-synced.wav" },
           "title": "Take A"
         },
         "takeB": {
           "type": "audio",
           "src": "take-b.wav",
-          "srcSynchronized": { "src": "take-b-synced.wav" },
+          "srcTimeScaled": { "src": "take-b-synced.wav" },
           "title": "Take B"
         }
       },
@@ -291,13 +291,13 @@ const config: TrackSwitchInit = {
           "timer": true,
           "alignedPlayhead": true,
           "markerLayers": [
-            { "set": "sections", "color": "#ed8c01" },
-            { "set": "alignment", "color": "#777", "foldToReference": true }
+            { "sequence": "sections", "color": "#ed8c01" },
+            { "sequence": "alignment", "color": "#777", "foldToReference": true }
           ]
         },
         { "type": "waveform", "tracks": ["takeB"], "timer": true },
         { "type": "warpingMatrix", "x": "takeA", "y": "takeB" },
-        { "type": "trackList", "tracks": ["takeA", "takeB"], "soloGroup": 0 }
+        { "type": "trackList", "tracks": ["takeA", "takeB"], "comparisonGroup": 0 }
       ]
     }
   </script>
@@ -338,7 +338,7 @@ const config: TrackSwitchInit = {
     { type: "waveform", tracks: ["takeA"], alignedPlayhead: true },
     { type: "waveform", tracks: ["takeB"], alignedPlayhead: true },
     { type: "warpingMatrix", x: "takeA", y: "takeB" },
-    { type: "trackList", tracks: ["takeA", "takeB"], soloGroup: 0 },
+    { type: "trackList", tracks: ["takeA", "takeB"], comparisonGroup: 0 },
   ],
 };
 
@@ -381,7 +381,7 @@ export function AlignedPlayer() {
       { type: "sheetMusic", mediaID: "score" },
       { type: "waveform", tracks: ["takeA"], alignedPlayhead: true },
       { type: "waveform", tracks: ["takeB"], alignedPlayhead: true },
-      { type: "trackList", tracks: ["takeA", "takeB"], soloGroup: 0 },
+      { type: "trackList", tracks: ["takeA", "takeB"], comparisonGroup: 0 },
     ],
   }), []);
 
@@ -420,7 +420,7 @@ const config: TrackSwitchInit = {
     { type: "sheetMusic", mediaID: "score" },
     { type: "waveform", tracks: ["takeA"], alignedPlayhead: true },
     { type: "waveform", tracks: ["takeB"], alignedPlayhead: true },
-    { type: "trackList", tracks: ["takeA", "takeB"], soloGroup: 0 },
+    { type: "trackList", tracks: ["takeA", "takeB"], comparisonGroup: 0 },
   ],
 };
 </script>
@@ -461,7 +461,7 @@ const config: TrackSwitchInit = {
       { type: "sheetMusic", mediaID: "score" },
       { type: "waveform", tracks: ["takeA"], alignedPlayhead: true },
       { type: "waveform", tracks: ["takeB"], alignedPlayhead: true },
-      { type: "trackList", tracks: ["takeA", "takeB"], soloGroup: 0 },
+      { type: "trackList", tracks: ["takeA", "takeB"], comparisonGroup: 0 },
     ],
   };
 </script>
@@ -472,6 +472,22 @@ const config: TrackSwitchInit = {
   </div>
 </div>
 
+## Concepts
+
+The configuration is built from four elementary blocks — media, markers, alignments, and views — which realize three concepts.
+
+**Timelines.** A timeline is an ordered coordinate system for the temporal axis of one medium. Every entry in `media` defines its own timeline, identified by its media ID, and expressed in that medium's [unit](#timeline-units): seconds for audio and MIDI, measures for a score, percent of width for an image. Media whose material occurs at exactly the same coordinates effectively share a timeline, so a player whose tracks are stems of one recording needs no alignment at all.
+
+**Markers.** A marker is a discrete position on one timeline, optionally carrying a label. Markers that belong together — downbeats, measure starts, structural boundaries — form a *marker sequence*, configured as one entry in [`markers`](#markers). A sequence is bound to the timeline its positions are read on, and one timeline may carry any number of sequences. Their order is what previous/next navigation steps along.
+
+**Alignments.** An [`alignment`](#alignment) relates timelines by pairing markers that refer to the same musical position. Each row of the alignment CSV is an *anchor*: one position per timeline column, all naming the same musical moment. Between consecutive anchors the player interpolates linearly, which turns the discrete anchors into a continuous projection between any two timelines. One timeline is designated the reference timeline, and mappings between the others are composed through it.
+
+Two forms of navigation follow from this. *Intra-timeline navigation* steps between consecutive markers of a sequence — the next beat, the next section. *Inter-timeline navigation* projects the current position onto another timeline, so switching between performances, or clicking a measure in a score, keeps the musical position rather than the elapsed time.
+
+**Views.** Views decide what is shown and in which order; they are the presentation layer over the data above, and are listed in [Views](#views).
+
+Audio playback comes in two modes. In *comparative listening* one track sounds at a time and listeners switch between alternatives without interrupting playback — configured with `comparisonGroup` on a [`trackList`](#tracklist). In *simultaneous listening* several tracks sound together, which requires them to share a timeline; media on distinct, aligned timelines can only be compared, unless time-scale-modified renditions are supplied through `srcTimeScaled` and the `sync` control is enabled.
+
 ## Configuration shape
 
 The configuration uses these top-level keys:
@@ -480,8 +496,8 @@ The configuration uses these top-level keys:
 | --- | --- | --- |
 | `media` | yes | Contains named audio, MIDI, and MusicXML resources. It must contain at least one audio entry. |
 | `views` | yes | Contains visual surfaces in their shown order. It must contain at least one view. |
-| `alignment` | no | Contains correspondence data for two or more timelines. |
-| `markers` | no | Contains named CSV files with annotation markers. |
+| `alignment` | no | Contains the anchors relating two or more timelines. |
+| `markers` | no | Contains named marker sequences, each read from a CSV file. |
 | `presets` | no | Contains named groups of audio tracks. |
 | `features` | no | Controls player behavior and user interaction. |
 | `css` | no | Overrides [theming tokens](#theming) for the whole player. |
@@ -536,20 +552,20 @@ Audio media properties:
 | `panControl?` | `"balance" \| "pan" \| false` | trackList's `trackPanControls` | Overrides the owning trackList's pan control visibility (and algorithm) for this track only. |
 | `startOffsetMs?` | `number` | `0` | Trims or pads the start. A positive value trims audio. A negative value adds silence. |
 | `endOffsetMs?` | `number` | `0` | Trims or pads the end. A positive value trims audio. A negative value adds silence. |
-| `srcSynchronized?` | `object` | none | Specifies optional audio pre-warped onto the reference timeline, played by the `sync` control. |
+| `srcTimeScaled?` | `object` | none | Specifies optional audio pre-warped onto the reference timeline, played by the `sync` control. |
 | `timelineUnit?` | `string` | native unit | Specifies the unit this medium's positions read out in. See [timeline units](#timeline-units). |
 | `css?` | `object` | none | Overrides [theming tokens](#theming) for this track's row. |
 
-`srcSynchronized` identifies a version of the recording that is already warped
+`srcTimeScaled` identifies a version of the recording that is already warped
 onto the reference timeline, which is what the `sync` control plays:
 
 ```json
 {
-  "srcSynchronized": { "src": "violin-synchronized.wav" }
+  "srcTimeScaled": { "src": "violin-synchronized.wav" }
 }
 ```
 
-`srcSynchronized` accepts its own `startOffsetMs` and `endOffsetMs`. They apply
+`srcTimeScaled` accepts its own `startOffsetMs` and `endOffsetMs`. They apply
 only to the synchronized file and do not inherit from the media entry, because a
 time-warped rendition carries its silence differently from the original:
 
@@ -558,7 +574,7 @@ time-warped rendition carries its silence differently from the original:
   "src": "violin.wav",
   "startOffsetMs": 600,
   "endOffsetMs": 300,
-  "srcSynchronized": {
+  "srcTimeScaled": {
     "src": "violin-synchronized.wav",
     "startOffsetMs": 300,
     "endOffsetMs": 6900
@@ -600,7 +616,7 @@ If media do not share one timeline, use `alignment`. The CSV contains correspond
       "takeB": "take_b_samples"
     },
     "outsideCoverage": "hold",
-    "duplicatePlacements": "average"
+    "duplicateAnchors": "average"
   }
 }
 ```
@@ -611,7 +627,7 @@ If media do not share one timeline, use `alignment`. The CSV contains correspond
 | `referenceTimeline` | `string` | - | Specifies the timeline for the main timer and shared navigation. |
 | `timelines` | `Record<string, string>` | - | Maps each timeline ID to a CSV column name. |
 | `outsideCoverage?` | `"hold" \| "extrapolate" \| "error"` | `"error"` | Controls projection outside the CSV coverage. |
-| `duplicatePlacements?` | `"first" \| "average" \| "error"` | `"first"` | Controls rows that map to the same timeline position. |
+| `duplicateAnchors?` | `"first" \| "average" \| "error"` | `"first"` | Controls rows that map to the same timeline position. |
 
 Timeline IDs usually match media IDs. The value of `referenceTimeline` must be a key in `timelines`.
 
@@ -627,7 +643,7 @@ as a path through the alignment rather than as a sorted list, and it splits that
 path wherever a column steps backwards. Projecting **onto** such a timeline stays
 unambiguous — its playhead simply jumps back when the repeat starts. Projecting
 **from** it is ambiguous, because one of its positions belongs to two moments
-elsewhere, and `duplicatePlacements` decides that case:
+elsewhere, and `duplicateAnchors` decides that case:
 
 - `first` (default) — Uses the earliest matching row, so an ambiguous position
   resolves to the first pass.
@@ -752,15 +768,15 @@ Markers add sparse positions to the player. Use them for musical sections, analy
 | `timeCol` | `string` | - | Specifies the CSV column with marker positions, in the unit of that timeline. |
 | `labelCol?` | `string` | none | Specifies the CSV column with marker labels. |
 
-`timeCol` values are read in the [timeline unit](#timeline-units) of the timeline they belong to, the same unit that timeline's alignment column and readout use. A set on a timeline whose medium declares `"timelineUnit": "samples"` is authored in sample indices; one on a `musicxml` timeline is authored in measure numbers. Without an `alignment` block the set sits on the single implicit timeline, and its values are read in the unit the player reads out.
+`timeCol` values are read in the [timeline unit](#timeline-units) of the timeline they belong to, the same unit that timeline's alignment column and readout use. A sequence on a timeline whose medium declares `"timelineUnit": "samples"` is authored in sample indices; one on a `musicxml` timeline is authored in measure numbers. Without an `alignment` block the sequence sits on the single implicit timeline, and its values are read in the unit the player reads out.
 
-Previous and next navigation uses the marker sets a view currently shows. A set becomes a navigation target through a `markerLayers` entry, so a set that no view draws is not navigable.
+Previous and next navigation uses the marker sequences a view currently shows. A sequence becomes a navigation target through a `markerLayers` entry, so a sequence that no view draws is not navigable.
 
 On a waveform with `tracks: "audible"`, the layers follow the audible tracks. Track selection and track-volume changes therefore update the available navigation targets immediately. Layers on a fixed-track waveform, a `pianoRoll` view, or an image keep their markers regardless of solo state.
 
 The jump and loop-point fields search all annotation sets. Visibility and audible track state do not affect these searches.
 
-Each result identifies the marker set, numerical ID, label, and reference-timeline position.
+Each result identifies the marker sequence, numerical ID, label, and reference-timeline position.
 
 Each set numbers its annotation markers in CSV order, starting at `1`. Each set also contains hidden boundary IDs.
 
@@ -770,20 +786,20 @@ Previous and next navigation can use boundary markers. Marker layers and searcha
 
 If a set does not have `labelCol`, the marker hover text shows the numerical ID.
 
-Views show marker sets through `markerLayers`:
+Views show marker sequences through `markerLayers`:
 
 ```json
 {
   "type": "waveform",
   "tracks": ["takeA"],
   "markerLayers": [
-    { "set": "sections", "color": "#ed8c01", "line": "dashed", "lineWidth": 2 },
-    { "set": "alignment", "color": "#777", "foldToReference": true }
+    { "sequence": "sections", "color": "#ed8c01", "line": "dashed", "lineWidth": 2 },
+    { "sequence": "alignment", "color": "#777", "foldToReference": true }
   ]
 }
 ```
 
-`set` identifies a marker set. The special `alignment` set exists only with an `alignment` block.
+`sequence` identifies a marker sequence. The special `alignment` sequence exists only with an `alignment` block.
 
 `foldToReference` draws connectors between the current view timeline and the reference timeline. These connectors show warping points.
 
@@ -791,7 +807,7 @@ Marker layer properties:
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
-| `set` | `string` | - | Specifies a marker set ID or the implicit `alignment` set. |
+| `sequence` | `string` | - | Specifies a marker sequence ID or the implicit `alignment` anchors. |
 | `color?` | `string` | current color | Specifies the marker color. |
 | `line?` | `"solid" \| "dashed"` | `"dashed"` | Specifies the marker line style. |
 | `lineWidth?` | `number` | `1` | Specifies the marker line width in CSS pixels. |
@@ -816,7 +832,7 @@ Presets define named track groups. They support selection of a full mix, instrum
 | `label?` | `string` | preset ID | Specifies the name in the user interface. |
 | `tracks` | `string[]` | - | Specifies the audio media IDs in the preset. |
 
-A preset that names several tracks of one `soloGroup` narrows it to the first of
+A preset that names several tracks of one `comparisonGroup` narrows it to the first of
 them, because such a selection plays one track at a time. With an `alignment` block that applies to
 the whole player, so a preset resolves to a single selected timeline — one track, or the
 tracks it names within one non-exclusive list.
@@ -842,7 +858,7 @@ Every image is a media entry, so the view names one with `mediaID`:
   "seekable": true,
   "seekMarginLeft": 3,
   "seekMarginRight": 3,
-  "markerLayers": [{ "set": "sections", "line": "solid" }]
+  "markerLayers": [{ "sequence": "sections", "line": "solid" }]
 }
 ```
 
@@ -875,7 +891,7 @@ Because that entry is a medium, it carries its own alignment column. The surface
 {
   "type": "perTrackImage",
   "seekable": true,
-  "markerLayers": [{ "set": "sections" }]
+  "markerLayers": [{ "sequence": "sections" }]
 }
 ```
 
@@ -905,7 +921,7 @@ In an aligned player, a fixed-track waveform uses the local timeline of that tra
   "timeAxis": "individual",
   "timer": true,
   "alignedPlayhead": true,
-  "markerLayers": [{ "set": "sections", "color": "#ed8c01" }]
+  "markerLayers": [{ "sequence": "sections", "color": "#ed8c01" }]
 }
 ```
 
@@ -1012,7 +1028,7 @@ A file that transcribes several instruments carries one channel per instrument. 
 
 Each key is a channel number from 0 to 15, and each value names a `media` entry with `type: "audio"`, or an array of several. Two channels may name the same track — the track's row then splits its colour across both, with a hard edge, instead of picking just one.
 
-A value can also be a list of tracks, which keeps the channel visible while any one of them is audible. This suits a channel that belongs to a `soloGroup` of alternate takes — one mixed recording, say, standing in for four solo tracks that are never audible at the same time:
+A value can also be a list of tracks, which keeps the channel visible while any one of them is audible. This suits a channel that belongs to a `comparisonGroup` of alternate takes — one mixed recording, say, standing in for four solo tracks that are never audible at the same time:
 
 ```json
 {
@@ -1212,7 +1228,7 @@ A `trackList` view shows audio tracks and their controls.
 {
   "type": "trackList",
   "tracks": ["takeA", "takeB"],
-  "soloGroup": 0,
+  "comparisonGroup": 0,
   "rowHeight": 52,
   "trackVolumeControls": true,
   "trackPanControls": "balance"
@@ -1223,7 +1239,7 @@ A `trackList` view shows audio tracks and their controls.
 | --- | --- | --- | --- |
 | `tracks` | `string[]` | - | Specifies the audio media IDs in this list. |
 | `title?` | `string` | - | Labels the list. An aligned player shows it on the row that selects the list as a whole. |
-| `soloGroup?` | `number` | none | Names the selection this list belongs to, which permits only one active track at a time. Lists sharing a number share one selection. Use it to compare performances or stems. |
+| `comparisonGroup?` | `number` | none | Names the selection this list belongs to, which permits only one active track at a time. Lists sharing a number share one selection. Use it to compare performances or stems. |
 | `rowHeight?` | `number` | auto | Fixes the track-row height in pixels. Padding, control size, icon size, font size and slider size scale down with it, so values below the default row height produce compact rows. |
 | `trackVolumeControls?` | `boolean` | `false` | Shows a volume control for each track. |
 | `trackPanControls?` | `"balance" \| "pan" \| false` | `false` | Shows a left-right pan control for each track and selects its algorithm. |
@@ -1232,16 +1248,16 @@ A `trackList` view shows audio tracks and their controls.
 `tracks` contains audio media IDs. Every track in `media` must appear in some `trackList` view.
 Multiple `trackList` views can show separate track groups in different layout positions.
 
-`soloGroup` turns the list's rows into radio buttons: activating one deactivates the
+`comparisonGroup` turns the list's rows into radio buttons: activating one deactivates the
 others, and the list always keeps one track active. Its value is any non-negative integer, and
 it names the selection the list belongs to. A player can therefore combine a comparison group
-with an ordinary mixer group — a list without a `soloGroup` mixes its tracks freely — and give
+with an ordinary mixer group — a list without a `comparisonGroup` mixes its tracks freely — and give
 each comparison group a number of its own:
 
 ```json
 "views": [
-  { "type": "trackList", "tracks": ["sopranoFlute", "sopranoOboe"], "soloGroup": 0 },
-  { "type": "trackList", "tracks": ["altoFlute", "altoOboe"], "soloGroup": 1 }
+  { "type": "trackList", "tracks": ["sopranoFlute", "sopranoOboe"], "comparisonGroup": 0 },
+  { "type": "trackList", "tracks": ["altoFlute", "altoOboe"], "comparisonGroup": 1 }
 ]
 ```
 
@@ -1256,16 +1272,16 @@ audible position, so tracks of two timelines sounding together would sit at diff
 of the piece. The player therefore selects one timeline at a time, across all lists, and each
 list decides what it contributes to that choice:
 
-- With a `soloGroup` — every row of the list is a selectable timeline of its own.
+- With a `comparisonGroup` — every row of the list is a selectable timeline of its own.
 - Without one — the list *is* one timeline, and its rows mix freely inside it. The
   list gets an extra row above its tracks that selects it as a whole, and its rows become a
   second level of the choice, where the last remaining active track stays active.
 
 Because that selection already spans the whole player, an aligned player has at most one
-`soloGroup` number to share; a second one would be the same selection under another name, and
+`comparisonGroup` number to share; a second one would be the same selection under another name, and
 the player rejects it.
 
-Omitting `soloGroup` under alignment therefore claims that the list's tracks are one
+Omitting `comparisonGroup` under alignment therefore claims that the list's tracks are one
 recording taken apart, such as separated stems. The player checks that claim: all of them must
 name the same `alignment.timelines` column, declare the same `timelineUnit`, and carry the same
 `startOffsetMs` and `endOffsetMs`. See the
@@ -1273,7 +1289,7 @@ name the same `alignment.timelines` column, declare the same `timelineUnit`, and
 
 Sync mode is what makes different timelines audible together: it runs the time-stretched
 sources on a shared clock, and while it is on, all lists play simultaneously regardless of
-`soloGroup`.
+`comparisonGroup`.
 
 A track's pan control snaps to dead center (50/50) and only moves freely once dragged past a 35/65 split, so a near-center release always lands exactly on 50/50.
 
@@ -1359,7 +1375,7 @@ The player rejects unknown feature keys.
 
 Solo behavior is not a feature: each `trackList` view decides on its own whether only one of
 its tracks may sound, and an `alignment` block makes the whole player resolve to a single
-audible timeline. See `soloGroup` in the `trackList` section.
+audible timeline. See `comparisonGroup` in the `trackList` section.
 
 ## Theming
 
@@ -1457,17 +1473,17 @@ If `controls` contains `"markerNavigation"`, use these additional shortcuts:
 - Every ID referenced by `trackList`, `waveform.tracks`, presets, or view `mediaID`
   must exist in `media`.
 - `alignment.referenceTimeline` must be one of the keys in `alignment.timelines`.
-- Timeline IDs used by marker sets, piano roll views, and sheet music views must match IDs in `alignment.timelines`.
+- Timeline IDs used by marker sequences, piano roll views, and sheet music views must match IDs in `alignment.timelines`.
 - Timeline IDs used by warping matrices must match IDs in `alignment.timelines`, and `x` and `y` must differ.
 - Seekable `image` and `perTrackImage` views need `seekMarginLeft + seekMarginRight` below `100`.
-- If one track is active at a time (a `trackList` with a `soloGroup`), use `perTrackImage`.
+- If one track is active at a time (a `trackList` with a `comparisonGroup`), use `perTrackImage`.
 - `warpingMatrix` requires an `alignment` block.
 - Every track in `media` must appear in some `trackList` view.
-- `soloGroup` must be a non-negative integer.
-- With an `alignment` block, a `trackList` without a `soloGroup` needs all of its tracks on one
+- `comparisonGroup` must be a non-negative integer.
+- With an `alignment` block, a `trackList` without a `comparisonGroup` needs all of its tracks on one
   timeline: the same `alignment.timelines` column, the same `timelineUnit`, and the same
-  `startOffsetMs` and `endOffsetMs`. Aligned players accept at most one `soloGroup` number.
-- `perTrackImage` requires every `trackList` view to declare the same `soloGroup`.
+  `startOffsetMs` and `endOffsetMs`. Aligned players accept at most one `comparisonGroup` number.
+- `perTrackImage` requires every `trackList` view to declare the same `comparisonGroup`.
 
 The player rejects unknown keys *and* unknown values. A property that takes a fixed set of
 values, such as `playbackFollowMode` or `align`, rejects anything outside that set instead of

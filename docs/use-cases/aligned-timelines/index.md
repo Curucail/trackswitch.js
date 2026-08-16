@@ -74,7 +74,7 @@ Example for how to specify an alignment in trackswitch:
     "sc06": "time_Schubert_D911-03_SC06"
   },
   "outsideCoverage": "hold",
-  "duplicatePlacements": "average"
+  "duplicateAnchors": "average"
 }
 ```
 

@@ -1,17 +1,17 @@
-import { ElementConfigError, loadElementConfig } from "./config/element-config";
+import { ElementConfigError, loadElementConfig } from "./config/config";
+import { createTrackSwitch } from "./player/player";
+import { ensureTrackSwitchStyles } from "./shared/styles";
 import type {
 	TrackSwitchController,
 	TrackSwitchEventMap,
 	TrackSwitchEventName,
 	TrackSwitchInit,
-} from "./domain/types";
-import { createTrackSwitch } from "./player/factory";
-import { ensureTrackSwitchStyles } from "./shared/styles";
+} from "./types";
 import {
 	describeError,
 	renderTrackSwitchErrorPanel,
 	renderTrackSwitchLoadingPanel,
-} from "./ui/render-status-panel";
+} from "./views/layout";
 
 export type TrackswitchDomEventName =
 	| "trackswitch-loaded"

@@ -13,7 +13,7 @@ the applicable license notices.
 - `dist/js/trackswitch.js` is a self-contained browser bundle and includes
   third-party runtime code listed below.
 - `dist/esm/**/*.js` includes bundled third-party runtime code and embedded
-  Font Awesome SVG path data from `src/ui/icons.ts`.
+  Font Awesome SVG path data from `src/views/icons.ts`.
 - The project code itself remains licensed under MIT (see `LICENSE`).
 
 ## Included Third-Party Packages

@@ -94,7 +94,7 @@ what a score plays back in:
     "notes": "notes_ticks"
   },
   "outsideCoverage": "hold",
-  "duplicatePlacements": "average"
+  "duplicateAnchors": "average"
 }
 ```
 
@@ -104,7 +104,7 @@ names a place in the music rather than a place in one recording.
 
 ## Further Notes
 
-- Marker CSV entries for the `timeCol` column must be in the specified unit of the timeline the marker set belongs to.
+- Marker CSV entries for the `timeCol` column must be in the specified unit of the timeline the marker sequence belongs to.
 
 See [Aligned Timelines]({{ '/use-cases/aligned-timelines/' | relative_url }}) for the
 alignment model itself, and the

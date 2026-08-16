@@ -40,7 +40,7 @@
 			"height": 90,
 			"markerLayers": [
 				{
-					"set": "measures",
+					"sequence": "measures",
 					"color": "#ed8c01"
 				}
 			]
@@ -51,7 +51,7 @@
 			"height": 90,
 			"markerLayers": [
 				{
-					"set": "measures",
+					"sequence": "measures",
 					"color": "#ed8c01"
 				}
 			]
@@ -59,7 +59,7 @@
 		{
 			"type": "trackList",
 			"tracks": ["hu33", "sc06"],
-			"soloGroup": 0
+			"comparisonGroup": 0
 		}
 	]
 }

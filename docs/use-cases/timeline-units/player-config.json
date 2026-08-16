@@ -26,7 +26,7 @@
 			"notes": "notes_ticks"
 		},
 		"outsideCoverage": "hold",
-		"duplicatePlacements": "average"
+		"duplicateAnchors": "average"
 	},
 	"views": [
 		{
@@ -52,7 +52,7 @@
 		{
 			"type": "trackList",
 			"tracks": ["hu33"],
-			"soloGroup": 0,
+			"comparisonGroup": 0,
 			"trackVolumeControls": true
 		}
 	]

@@ -48,7 +48,7 @@
 			"timeAxis": "individual",
 			"markerLayers": [
 				{
-					"set": "kruegerSections",
+					"sequence": "kruegerSections",
 					"color": "var(--ts-color-accent)",
 					"line": "solid"
 				}
@@ -62,7 +62,7 @@
 			"timeAxis": "individual",
 			"markerLayers": [
 				{
-					"set": "alciatoreSections",
+					"sequence": "alciatoreSections",
 					"color": "var(--ts-color-accent)",
 					"line": "solid"
 				}
@@ -71,7 +71,7 @@
 		{
 			"type": "trackList",
 			"tracks": ["krueger", "alciatore"],
-			"soloGroup": 0
+			"comparisonGroup": 0
 		}
 	]
 }
