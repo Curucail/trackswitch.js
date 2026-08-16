@@ -101,3 +101,7 @@ export function closestInRoot(
 
 	return matched as HTMLElement;
 }
+
+export function setDisplay(element: Element, displayValue: string): void {
+	(element as HTMLElement).style.display = displayValue;
+}

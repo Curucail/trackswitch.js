@@ -1,4 +1,5 @@
 import type { AlignmentHelpTooltipId } from "./alignment-help-types";
+import { escapeHtml } from "./html";
 
 interface AlignmentHelpTooltipItem {
 	title: string;
@@ -501,12 +502,4 @@ export function bindAlignmentHelpTooltips(container: HTMLElement): void {
 	}
 
 	tooltipContainer.__tsAlignmentHelpCleanup__ = cleanup;
-}
-
-function escapeHtml(text: string): string {
-	return text
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;")
-		.replace(/"/g, "&quot;");
 }

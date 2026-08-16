@@ -12,9 +12,10 @@ import {
 	applyCssOverrides,
 	escapeHtml,
 	getDeepActiveElement,
+	setDisplay,
 } from "../shared/dom";
 import { formatBytesToHumanReadable } from "../shared/format";
-import { clampPercent } from "../shared/math";
+import { clamp, clampPercent } from "../shared/math";
 import type { TrackSwitchIconName } from "./icons";
 import {
 	getHostIconSlot,
@@ -23,6 +24,7 @@ import {
 	renderIconSlotHtml,
 	setHostIcon,
 } from "./icons";
+import { buildSeekWrap } from "./render-seek";
 import type {
 	PerTrackImageSource,
 	ViewRenderer,
@@ -92,25 +94,6 @@ interface PanelReorderMoveEvent {
 interface PanelReorderEndEvent {
 	originalEvent?: Event;
 	preventDefault(): void;
-}
-
-function buildSeekWrap(leftPercent: number, rightPercent: number): string {
-	return (
-		'<div class="seekwrap" style="left: ' +
-		leftPercent +
-		"%; right: " +
-		rightPercent +
-		'%;">' +
-		'<div class="loop-region"></div>' +
-		'<div class="loop-marker marker-a"></div>' +
-		'<div class="loop-marker marker-b"></div>' +
-		'<div class="seekhead"></div>' +
-		"</div>"
-	);
-}
-
-function setDisplay(element: Element, displayValue: string): void {
-	(element as HTMLElement).style.display = displayValue;
 }
 
 function getEventPageY(event: {
@@ -190,28 +173,12 @@ function getReorderablePanels(
 	);
 }
 
-function clampTime(value: number, minimum: number, maximum: number): number {
-	if (!Number.isFinite(value)) {
-		return minimum;
-	}
-
-	if (value < minimum) {
-		return minimum;
-	}
-
-	if (value > maximum) {
-		return maximum;
-	}
-
-	return value;
-}
-
 function sanitizeVolume(value: number): number {
 	if (!Number.isFinite(value)) {
 		return 1;
 	}
 
-	return clampTime(value, 0, 1);
+	return clamp(value, 0, 1);
 }
 
 function sanitizePan(value: number): number {
@@ -219,7 +186,7 @@ function sanitizePan(value: number): number {
 		return 0;
 	}
 
-	return clampTime(value, -1, 1);
+	return clamp(value, -1, 1);
 }
 
 /** A top-to-bottom gradient with hard edges, one even band per colour. */
@@ -522,245 +489,228 @@ function renderOverlayDownloadInfoText(info: AudioDownloadSizeInfo): string {
 }
 
 export function query(ctx: ViewRenderer, selector: string): HTMLElement | null {
-	return function (this: ViewRenderer, selector: string) {
-		return this.root.querySelector(selector) as HTMLElement | null;
-	}.call(ctx, selector);
+	return ctx.root.querySelector(selector) as HTMLElement | null;
 }
 
 export function queryAll(ctx: ViewRenderer, selector: string): HTMLElement[] {
-	return function (this: ViewRenderer, selector: string) {
-		return Array.from(this.root.querySelectorAll(selector)) as HTMLElement[];
-	}.call(ctx, selector);
+	return Array.from(ctx.root.querySelectorAll(selector)) as HTMLElement[];
 }
 
 export function initialize(ctx: ViewRenderer, runtimes: TrackRuntime[]): void {
-	(function (this: ViewRenderer, runtimes: TrackRuntime[]) {
-		this.root.classList.add("trackswitch");
+	ctx.root.classList.add("trackswitch");
 
-		this.appliedRootCssTokens.forEach((token) => {
-			if (!this.css || !(token in this.css)) {
-				this.root.style.removeProperty(token);
-			}
-		});
-		applyCssOverrides(this.root, this.css);
-		this.appliedRootCssTokens = this.css ? Object.keys(this.css) : [];
-
-		this.root.insertAdjacentHTML(
-			"afterbegin",
-			this.buildPlayerOverlayHtml(runtimes),
-		);
-		this.queryAll(".navigation-bar-host").forEach((host: HTMLElement) => {
-			host.insertAdjacentHTML(
-				"beforebegin",
-				this.buildMainControlHtml(runtimes),
-			);
-			host.remove();
-		});
-
-		this.wrapSeekableImages();
-		this.wrapWaveformCanvases();
-		this.wrapPianoRollCanvases();
-		this.prepareTextPanels();
-		this.wrapSheetMusicContainers();
-		this.wrapWarpingMatrixContainers();
-		this.reflowWaveforms();
-		this.reflowPianoRollDisplays();
-		this.renderTrackList(runtimes);
-		this.prepareCustomizablePanels();
-
-		if (this.query(".seekable:not(.seekable-img-wrap > .seekable)")) {
-			this.queryAll(".main-control .seekwrap").forEach(
-				(seekWrap: HTMLElement) => {
-					setDisplay(seekWrap, "none");
-				},
-			);
+	ctx.appliedRootCssTokens.forEach((token) => {
+		if (!ctx.css || !(token in ctx.css)) {
+			ctx.root.style.removeProperty(token);
 		}
+	});
+	applyCssOverrides(ctx.root, ctx.css);
+	ctx.appliedRootCssTokens = ctx.css ? Object.keys(ctx.css) : [];
 
-		this.updateTiming(0, 0);
-		this.updateVolumeIcon(1);
-	}).call(ctx, runtimes);
+	ctx.root.insertAdjacentHTML(
+		"afterbegin",
+		ctx.buildPlayerOverlayHtml(runtimes),
+	);
+	ctx.queryAll(".navigation-bar-host").forEach((host: HTMLElement) => {
+		host.insertAdjacentHTML("beforebegin", ctx.buildMainControlHtml(runtimes));
+		host.remove();
+	});
+
+	ctx.wrapSeekableImages();
+	ctx.wrapWaveformCanvases();
+	ctx.wrapPianoRollCanvases();
+	ctx.prepareTextPanels();
+	ctx.wrapSheetMusicContainers();
+	ctx.wrapWarpingMatrixContainers();
+	ctx.reflowWaveforms();
+	ctx.reflowPianoRollDisplays();
+	ctx.renderTrackList(runtimes);
+	ctx.prepareCustomizablePanels();
+
+	if (ctx.query(".seekable:not(.seekable-img-wrap > .seekable)")) {
+		ctx.queryAll(".main-control .seekwrap").forEach((seekWrap: HTMLElement) => {
+			setDisplay(seekWrap, "none");
+		});
+	}
+
+	ctx.updateTiming(0, 0);
+	ctx.updateVolumeIcon(1);
 }
 
 export function buildPlayerOverlayHtml(
 	ctx: ViewRenderer,
 	runtimes: TrackRuntime[],
 ): string {
-	return function (this: ViewRenderer, runtimes: TrackRuntime[]) {
-		return (
-			'<div class="overlay overlay-activation"><span class="activate">Activate' +
-			renderIconSlotHtml("power-off") +
-			"</span>" +
-			'<p id="overlaytext"></p>' +
-			'<p id="overlayinfo">' +
-			'<span class="info">Info' +
-			renderIconSlotHtml("circle-info") +
-			"</span>" +
-			'<span class="text">' +
-			"<strong>trackswitch</strong> - Open Source Multitrack Audio Player<br />" +
-			'<a href="https://github.com/audiolabs/trackswitch.js">https://github.com/audiolabs/trackswitch.js</a>' +
-			'<br /><br /><span class="overlay-download-info">Expected download size for this player: calculating...</span>' +
-			"</span>" +
-			"</p>" +
-			"</div>" +
-			buildShortcutHelpHtml(
-				// The number keys switch rather than toggle only where every list is
-				// exclusive; a mixed player still gets the plain toggle wording.
-				this.trackGroups.length > 0 &&
-					this.trackGroups.every((group) =>
-						this.isGroupExclusive(group.groupIndex),
-					),
-				this.navigationBar,
-				runtimes.length,
-			) +
-			(navigationBarHasControl(this.navigationBar, "markerNavigation")
-				? buildMarkerNavigationDialogHtml(
-						navigationBarHasControl(this.navigationBar, "looping"),
-					)
-				: "")
-		);
-	}.call(ctx, runtimes);
+	return (
+		'<div class="overlay overlay-activation"><span class="activate">Activate' +
+		renderIconSlotHtml("power-off") +
+		"</span>" +
+		'<p id="overlaytext"></p>' +
+		'<p id="overlayinfo">' +
+		'<span class="info">Info' +
+		renderIconSlotHtml("circle-info") +
+		"</span>" +
+		'<span class="text">' +
+		"<strong>trackswitch</strong> - Open Source Multitrack Audio Player<br />" +
+		'<a href="https://github.com/audiolabs/trackswitch.js">https://github.com/audiolabs/trackswitch.js</a>' +
+		'<br /><br /><span class="overlay-download-info">Expected download size for ctx player: calculating...</span>' +
+		"</span>" +
+		"</p>" +
+		"</div>" +
+		buildShortcutHelpHtml(
+			// The number keys switch rather than toggle only where every list is
+			// exclusive; a mixed player still gets the plain toggle wording.
+			ctx.trackGroups.length > 0 &&
+				ctx.trackGroups.every((group) =>
+					ctx.isGroupExclusive(group.groupIndex),
+				),
+			ctx.navigationBar,
+			runtimes.length,
+		) +
+		(navigationBarHasControl(ctx.navigationBar, "markerNavigation")
+			? buildMarkerNavigationDialogHtml(
+					navigationBarHasControl(ctx.navigationBar, "looping"),
+				)
+			: "")
+	);
 }
 
 export function buildMainControlHtml(
 	ctx: ViewRenderer,
 	runtimes: TrackRuntime[],
 ): string {
-	return function (this: ViewRenderer, runtimes: TrackRuntime[]) {
-		let presetDropdownHtml = "";
-		if (this.presetEntries.length >= 2) {
-			presetDropdownHtml +=
-				'<li class="preset-selector-wrap"><select class="preset-selector" title="Select Preset">';
-			this.presetEntries.forEach(
-				(preset: { id: string; label: string }, i: number) => {
-					presetDropdownHtml +=
-						'<option value="' +
-						escapeHtml(preset.id) +
-						'"' +
-						(i === 0 ? " selected" : "") +
-						">" +
-						escapeHtml(preset.label) +
-						"</option>";
-				},
-			);
-			presetDropdownHtml += "</select></li>";
-		}
-
-		const controlHtml = (control: TrackSwitchNavigationBarControl): string => {
-			switch (control) {
-				case "playback":
-					return (
-						'<li class="playback-group">' +
-						'<ul class="playback-controls">' +
-						'<li class="playpause button" title="Play/Pause (Spacebar)">Play' +
-						renderIconSlotHtml("play") +
-						"</li>" +
-						'<li class="stop button" title="Stop (Esc)">Stop' +
-						renderIconSlotHtml("stop") +
-						"</li>" +
-						'<li class="repeat button" title="Repeat (R)">Repeat' +
-						renderIconSlotHtml("rotate-right") +
-						"</li>" +
-						"</ul>" +
-						"</li>"
-					);
-				case "globalVolume":
-					return (
-						'<li class="volume"><div class="volume-control"><i class="volume-icon">' +
-						renderIconSlotHtml("volume-high") +
-						"</i>" +
-						'<input type="range" class="volume-slider" min="0" max="100" value="100"></div></li>'
-					);
-				case "globalPan":
-					return (
-						'<li class="pan"><div class="pan-control"><span class="pan-label">L/R</span>' +
-						'<input type="range" class="pan-slider mix-slider" min="-100" max="100" value="0"></div></li>'
-					);
-				case "markerNavigation":
-					return (
-						'<li class="marker-navigation-group"><div class="marker-navigation-controls" role="group" aria-label="Marker navigation">' +
-						'<button type="button" class="marker-previous button" title="Previous marker" aria-label="Previous marker" disabled>' +
-						renderIconSlotHtml("marker-previous") +
-						"</button>" +
-						'<button type="button" class="marker-jump button" title="Jump to marker" aria-label="Jump to marker" disabled>' +
-						renderIconSlotHtml("marker-jump") +
-						"</button>" +
-						'<button type="button" class="marker-next button" title="Next marker" aria-label="Next marker" disabled>' +
-						renderIconSlotHtml("marker-next") +
-						"</button>" +
-						"</div></li>"
-					);
-				case "looping":
-					return (
-						'<li class="loop-group"><ul class="loop-controls">' +
-						'<li class="loop-a button" title="Set Loop Point A (A)" aria-label="Set Loop Point A">' +
-						renderIconSlotHtml("loop-a") +
-						"</li>" +
-						'<li class="loop-b button" title="Set Loop Point B (B)" aria-label="Set Loop Point B">' +
-						renderIconSlotHtml("loop-b") +
-						"</li>" +
-						'<li class="loop-toggle button" title="Toggle Loop On/Off (L)">Loop' +
-						renderIconSlotHtml("repeat") +
-						"</li>" +
-						'<li class="loop-clear button" title="Clear Loop Points (C)">Clear' +
-						renderIconSlotHtml("xmark") +
-						"</li>" +
-						"</ul></li>"
-					);
-				case "sync":
-					return this.shouldRenderGlobalSync(runtimes)
-						? '<li class="sync-global button" title="Use synchronized version">SYNC</li>'
-						: "";
-				case "presets":
-					return presetDropdownHtml;
-				case "timer":
-					return '<li class="timing"><span class="time">--:--:--:---</span> / <span class="length">--:--:--:---</span></li>';
-				case "seekBar":
-					return (
-						'<li class="seekwrap">' +
-						'<div class="seekbar">' +
-						'<div class="loop-region"></div>' +
-						'<div class="loop-marker marker-a"></div>' +
-						'<div class="loop-marker marker-b"></div>' +
-						'<div class="seekhead"></div>' +
-						"</div>" +
-						"</li>"
-					);
-				case "fullscreen-control":
-					return (
-						'<li class="fullscreen-toggle button" title="Enter Fullscreen (F)" aria-label="Enter Fullscreen">' +
-						renderIconSlotHtml("expand") +
-						"</li>"
-					);
-			}
-		};
-
-		const controlsHtml =
-			this.navigationBar?.controls.map(controlHtml).join("") ?? "";
-
-		return (
-			'<div class="main-control ts-stack-section">' +
-			'<ul class="control">' +
-			controlsHtml +
-			"</ul>" +
-			"</div>"
+	let presetDropdownHtml = "";
+	if (ctx.presetEntries.length >= 2) {
+		presetDropdownHtml +=
+			'<li class="preset-selector-wrap"><select class="preset-selector" title="Select Preset">';
+		ctx.presetEntries.forEach(
+			(preset: { id: string; label: string }, i: number) => {
+				presetDropdownHtml +=
+					'<option value="' +
+					escapeHtml(preset.id) +
+					'"' +
+					(i === 0 ? " selected" : "") +
+					">" +
+					escapeHtml(preset.label) +
+					"</option>";
+			},
 		);
-	}.call(ctx, runtimes);
+		presetDropdownHtml += "</select></li>";
+	}
+
+	const controlHtml = (control: TrackSwitchNavigationBarControl): string => {
+		switch (control) {
+			case "playback":
+				return (
+					'<li class="playback-group">' +
+					'<ul class="playback-controls">' +
+					'<li class="playpause button" title="Play/Pause (Spacebar)">Play' +
+					renderIconSlotHtml("play") +
+					"</li>" +
+					'<li class="stop button" title="Stop (Esc)">Stop' +
+					renderIconSlotHtml("stop") +
+					"</li>" +
+					'<li class="repeat button" title="Repeat (R)">Repeat' +
+					renderIconSlotHtml("rotate-right") +
+					"</li>" +
+					"</ul>" +
+					"</li>"
+				);
+			case "globalVolume":
+				return (
+					'<li class="volume"><div class="volume-control"><i class="volume-icon">' +
+					renderIconSlotHtml("volume-high") +
+					"</i>" +
+					'<input type="range" class="volume-slider" min="0" max="100" value="100"></div></li>'
+				);
+			case "globalPan":
+				return (
+					'<li class="pan"><div class="pan-control"><span class="pan-label">L/R</span>' +
+					'<input type="range" class="pan-slider mix-slider" min="-100" max="100" value="0"></div></li>'
+				);
+			case "markerNavigation":
+				return (
+					'<li class="marker-navigation-group"><div class="marker-navigation-controls" role="group" aria-label="Marker navigation">' +
+					'<button type="button" class="marker-previous button" title="Previous marker" aria-label="Previous marker" disabled>' +
+					renderIconSlotHtml("marker-previous") +
+					"</button>" +
+					'<button type="button" class="marker-jump button" title="Jump to marker" aria-label="Jump to marker" disabled>' +
+					renderIconSlotHtml("marker-jump") +
+					"</button>" +
+					'<button type="button" class="marker-next button" title="Next marker" aria-label="Next marker" disabled>' +
+					renderIconSlotHtml("marker-next") +
+					"</button>" +
+					"</div></li>"
+				);
+			case "looping":
+				return (
+					'<li class="loop-group"><ul class="loop-controls">' +
+					'<li class="loop-a button" title="Set Loop Point A (A)" aria-label="Set Loop Point A">' +
+					renderIconSlotHtml("loop-a") +
+					"</li>" +
+					'<li class="loop-b button" title="Set Loop Point B (B)" aria-label="Set Loop Point B">' +
+					renderIconSlotHtml("loop-b") +
+					"</li>" +
+					'<li class="loop-toggle button" title="Toggle Loop On/Off (L)">Loop' +
+					renderIconSlotHtml("repeat") +
+					"</li>" +
+					'<li class="loop-clear button" title="Clear Loop Points (C)">Clear' +
+					renderIconSlotHtml("xmark") +
+					"</li>" +
+					"</ul></li>"
+				);
+			case "sync":
+				return ctx.shouldRenderGlobalSync(runtimes)
+					? '<li class="sync-global button" title="Use synchronized version">SYNC</li>'
+					: "";
+			case "presets":
+				return presetDropdownHtml;
+			case "timer":
+				return '<li class="timing"><span class="time">--:--:--:---</span> / <span class="length">--:--:--:---</span></li>';
+			case "seekBar":
+				return (
+					'<li class="seekwrap">' +
+					'<div class="seekbar">' +
+					'<div class="loop-region"></div>' +
+					'<div class="loop-marker marker-a"></div>' +
+					'<div class="loop-marker marker-b"></div>' +
+					'<div class="seekhead"></div>' +
+					"</div>" +
+					"</li>"
+				);
+			case "fullscreen-control":
+				return (
+					'<li class="fullscreen-toggle button" title="Enter Fullscreen (F)" aria-label="Enter Fullscreen">' +
+					renderIconSlotHtml("expand") +
+					"</li>"
+				);
+		}
+	};
+
+	const controlsHtml =
+		ctx.navigationBar?.controls.map(controlHtml).join("") ?? "";
+
+	return (
+		'<div class="main-control ts-stack-section">' +
+		'<ul class="control">' +
+		controlsHtml +
+		"</ul>" +
+		"</div>"
+	);
 }
 
 export function shouldRenderGlobalSync(
 	ctx: ViewRenderer,
 	runtimes: TrackRuntime[],
 ): boolean {
-	return function (this: ViewRenderer, runtimes: TrackRuntime[]) {
-		if (!this.isAlignmentMode()) {
-			return false;
-		}
+	if (!ctx.isAlignmentMode()) {
+		return false;
+	}
 
-		return runtimes.some((runtime: TrackRuntime) => {
-			const sources = runtime.definition.syncedSources;
-			return Array.isArray(sources) && sources.length > 0;
-		});
-	}.call(ctx, runtimes);
+	return runtimes.some((runtime: TrackRuntime) => {
+		const sources = runtime.definition.syncedSources;
+		return Array.isArray(sources) && sources.length > 0;
+	});
 }
 
 export function buildTrackRow(
@@ -769,103 +719,96 @@ export function buildTrackRow(
 	index: number,
 	trackListOptions: TrackListGroup,
 ): HTMLElement {
-	return function (
-		this: ViewRenderer,
-		runtime: TrackRuntime,
-		index: number,
-		trackListOptions: TrackListGroup,
-	) {
-		const tabviewClass = this.features.tabView ? " tabs" : "";
-		const radioSoloClass = trackListOptions.exclusiveSolo ? " radio" : "";
-		const wholeSoloClass = trackListOptions.exclusiveSolo ? " solo" : "";
+	const tabviewClass = ctx.features.tabView ? " tabs" : "";
+	const radioSoloClass = trackListOptions.exclusiveSolo ? " radio" : "";
+	const wholeSoloClass = trackListOptions.exclusiveSolo ? " solo" : "";
 
-		const track = document.createElement("li");
-		track.className = `track${tabviewClass}${wholeSoloClass}`;
-		applyCssOverrides(track, runtime.definition.css);
-		track.setAttribute("data-track-index", String(index));
+	const track = document.createElement("li");
+	track.className = `track${tabviewClass}${wholeSoloClass}`;
+	applyCssOverrides(track, runtime.definition.css);
+	track.setAttribute("data-track-index", String(index));
 
-		const errorIndicator = document.createElement("span");
-		errorIndicator.className = "track-error-indicator";
-		errorIndicator.innerHTML =
-			renderIconSlotHtml("triangle-exclamation") +
-			'<span class="track-error-text">ERROR</span>';
-		track.appendChild(errorIndicator);
+	const errorIndicator = document.createElement("span");
+	errorIndicator.className = "track-error-indicator";
+	errorIndicator.innerHTML =
+		renderIconSlotHtml("triangle-exclamation") +
+		'<span class="track-error-text">ERROR</span>';
+	track.appendChild(errorIndicator);
 
-		const title = document.createElement("span");
-		title.className = "track-title";
-		title.textContent = runtime.definition.title || `Track ${index + 1}`;
-		track.appendChild(title);
+	const title = document.createElement("span");
+	title.className = "track-title";
+	title.textContent = runtime.definition.title || `Track ${index + 1}`;
+	track.appendChild(title);
 
-		const controls = document.createElement("ul");
-		controls.className = "control";
+	const controls = document.createElement("ul");
+	controls.className = "control";
 
-		const solo = document.createElement("li");
-		solo.className = `solo button${radioSoloClass}`;
-		solo.title = "Solo";
-		solo.textContent = "Solo";
-		solo.insertAdjacentHTML("beforeend", renderIconSlotHtml("circle"));
-		controls.appendChild(solo);
+	const solo = document.createElement("li");
+	solo.className = `solo button${radioSoloClass}`;
+	solo.title = "Solo";
+	solo.textContent = "Solo";
+	solo.insertAdjacentHTML("beforeend", renderIconSlotHtml("circle"));
+	controls.appendChild(solo);
 
-		track.appendChild(controls);
+	track.appendChild(controls);
 
-		const showVolumeControl =
-			runtime.definition.volumeControl ?? trackListOptions.trackVolumeControls;
-		const panControl =
-			runtime.definition.panControl ?? trackListOptions.trackPanControls;
+	const showVolumeControl =
+		runtime.definition.volumeControl ?? trackListOptions.trackVolumeControls;
+	const panControl =
+		runtime.definition.panControl ?? trackListOptions.trackPanControls;
 
-		if (showVolumeControl || panControl) {
-			const mixControls = document.createElement("div");
-			mixControls.className = "track-mix-controls";
+	if (showVolumeControl || panControl) {
+		const mixControls = document.createElement("div");
+		mixControls.className = "track-mix-controls";
 
-			if (showVolumeControl) {
-				const volumeControl = document.createElement("div");
-				volumeControl.className = "track-volume-control";
+		if (showVolumeControl) {
+			const volumeControl = document.createElement("div");
+			volumeControl.className = "track-volume-control";
 
-				const volumeIcon = document.createElement("i");
-				volumeIcon.className = "volume-icon track-volume-icon";
-				volumeIcon.innerHTML = renderIconSlotHtml("volume-high");
+			const volumeIcon = document.createElement("i");
+			volumeIcon.className = "volume-icon track-volume-icon";
+			volumeIcon.innerHTML = renderIconSlotHtml("volume-high");
 
-				const volumeSlider = document.createElement("input");
-				volumeSlider.className = "track-volume-slider mix-slider";
-				volumeSlider.type = "range";
-				volumeSlider.min = "0";
-				volumeSlider.max = "100";
-				volumeSlider.value = String(
-					Math.round(sanitizeVolume(runtime.state.volume) * 100),
-				);
+			const volumeSlider = document.createElement("input");
+			volumeSlider.className = "track-volume-slider mix-slider";
+			volumeSlider.type = "range";
+			volumeSlider.min = "0";
+			volumeSlider.max = "100";
+			volumeSlider.value = String(
+				Math.round(sanitizeVolume(runtime.state.volume) * 100),
+			);
 
-				volumeControl.appendChild(volumeIcon);
-				volumeControl.appendChild(volumeSlider);
-				mixControls.appendChild(volumeControl);
-			}
-
-			if (panControl) {
-				const panControlEl = document.createElement("div");
-				panControlEl.className = "track-pan-control";
-
-				const panLabel = document.createElement("span");
-				panLabel.className = "track-pan-label";
-				panLabel.textContent = "L/R";
-
-				const panSlider = document.createElement("input");
-				panSlider.className = "track-pan-slider mix-slider";
-				panSlider.type = "range";
-				panSlider.min = "-100";
-				panSlider.max = "100";
-				panSlider.value = String(
-					Math.round(sanitizePan(runtime.state.pan) * 100),
-				);
-
-				panControlEl.appendChild(panLabel);
-				panControlEl.appendChild(panSlider);
-				mixControls.appendChild(panControlEl);
-			}
-
-			track.appendChild(mixControls);
+			volumeControl.appendChild(volumeIcon);
+			volumeControl.appendChild(volumeSlider);
+			mixControls.appendChild(volumeControl);
 		}
 
-		return track;
-	}.call(ctx, runtime, index, trackListOptions);
+		if (panControl) {
+			const panControlEl = document.createElement("div");
+			panControlEl.className = "track-pan-control";
+
+			const panLabel = document.createElement("span");
+			panLabel.className = "track-pan-label";
+			panLabel.textContent = "L/R";
+
+			const panSlider = document.createElement("input");
+			panSlider.className = "track-pan-slider mix-slider";
+			panSlider.type = "range";
+			panSlider.min = "-100";
+			panSlider.max = "100";
+			panSlider.value = String(
+				Math.round(sanitizePan(runtime.state.pan) * 100),
+			);
+
+			panControlEl.appendChild(panLabel);
+			panControlEl.appendChild(panSlider);
+			mixControls.appendChild(panControlEl);
+		}
+
+		track.appendChild(mixControls);
+	}
+
+	return track;
 }
 
 /**
@@ -913,514 +856,497 @@ export function renderTrackList(
 	ctx: ViewRenderer,
 	runtimes: TrackRuntime[],
 ): void {
-	(function (this: ViewRenderer, runtimes: TrackRuntime[]) {
-		this.queryAll(".track_list").forEach((existing: HTMLElement) => {
-			existing.remove();
-		});
+	ctx.queryAll(".track_list").forEach((existing: HTMLElement) => {
+		existing.remove();
+	});
 
-		this.trackGroups.forEach((group: TrackListGroup) => {
-			const list = document.createElement("ul");
-			list.className = "track_list";
-			list.setAttribute("data-track-group-index", String(group.groupIndex));
+	ctx.trackGroups.forEach((group: TrackListGroup) => {
+		const list = document.createElement("ul");
+		list.className = "track_list";
+		list.setAttribute("data-track-group-index", String(group.groupIndex));
 
-			if (needsTrackListSelectRow(this, group)) {
-				list.appendChild(buildTrackListSelectRow(group));
-			}
+		if (needsTrackListSelectRow(ctx, group)) {
+			list.appendChild(buildTrackListSelectRow(group));
+		}
 
-			for (const trackId of group.trackIds) {
-				const trackIndex = runtimes.findIndex(
-					(runtime: TrackRuntime) => runtime.definition.id === trackId,
-				);
-				const runtime = runtimes[trackIndex];
-				if (!runtime) {
-					continue;
-				}
-
-				const row = this.buildTrackRow(runtime, trackIndex, group);
-				if (
-					typeof group.rowHeight === "number" &&
-					Number.isFinite(group.rowHeight) &&
-					group.rowHeight > 0
-				) {
-					const rowHeight = Math.round(group.rowHeight);
-					row.dataset.rowHeight = String(rowHeight);
-					row.style.setProperty("--ts-track-row-height", `${rowHeight}px`);
-				}
-
-				list.appendChild(row);
-			}
-
-			const container = this.query(
-				`.track-group[data-track-group-index="${group.groupIndex}"]`,
+		for (const trackId of group.trackIds) {
+			const trackIndex = runtimes.findIndex(
+				(runtime: TrackRuntime) => runtime.definition.id === trackId,
 			);
-			if (container) {
-				container.appendChild(list);
-				return;
+			const runtime = runtimes[trackIndex];
+			if (!runtime) {
+				continue;
 			}
 
-			this.root.appendChild(list);
-		});
-	}).call(ctx, runtimes);
-}
-
-export function prepareTextPanels(ctx: ViewRenderer): void {
-	(function (this: ViewRenderer) {
-		const hosts = this.root.querySelectorAll(".ts-text");
-		hosts.forEach((hostElement: Element) => {
-			if (!(hostElement instanceof HTMLElement)) {
-				return;
+			const row = ctx.buildTrackRow(runtime, trackIndex, group);
+			if (
+				typeof group.rowHeight === "number" &&
+				Number.isFinite(group.rowHeight) &&
+				group.rowHeight > 0
+			) {
+				const rowHeight = Math.round(group.rowHeight);
+				row.dataset.rowHeight = String(rowHeight);
+				row.style.setProperty("--ts-track-row-height", `${rowHeight}px`);
 			}
-			const definition = this.getConfiguredViewHost(hostElement);
-			if (definition.view.type !== "text") return;
-			const config = definition.view as TrackSwitchTextViewConfig;
 
-			hostElement.classList.add("ts-stack-section");
-			applyCssOverrides(hostElement, config.css);
-			hostElement.style.textAlign = config.align ?? "center";
-			hostElement.style.cursor = "default";
-			hostElement.style.fontWeight = config.bold ? "700" : "400";
-			hostElement.style.fontStyle = config.italic ? "italic" : "normal";
+			list.appendChild(row);
+		}
 
-			const fontSize = config.fontSize ?? null;
-			if (fontSize !== null) {
-				hostElement.style.fontSize = `${fontSize}px`;
-			} else {
-				hostElement.style.removeProperty("font-size");
-			}
-		});
-	}).call(ctx);
-}
-
-export function prepareCustomizablePanels(ctx: ViewRenderer): void {
-	(function (this: ViewRenderer) {
-		const root = this.root as HTMLElement;
-		// A separator is a rule, not a panel: wrapping it in a drag shell would
-		// give a 2px divider a 24px handle.
-		const panels = Array.from(this.root.children).filter(
-			(child): child is HTMLElement =>
-				child instanceof HTMLElement &&
-				child.classList.contains("ts-stack-section") &&
-				!child.classList.contains("main-control") &&
-				!child.classList.contains("ts-separator"),
+		const container = ctx.query(
+			`.track-group[data-track-group-index="${group.groupIndex}"]`,
 		);
-
-		if (!this.features.customizablePanelOrder) {
-			panels.forEach((panel: HTMLElement) => {
-				if (!panel.classList.contains("ts-customizable-panel-shell")) {
-					panel
-						.querySelectorAll(".ts-panel-handle")
-						.forEach((handle: Element) => {
-							handle.remove();
-						});
-					return;
-				}
-
-				const content = panel.querySelector(
-					':scope > [data-customizable-panel-content="true"]',
-				);
-				if (!(content instanceof HTMLElement)) {
-					panel.remove();
-					return;
-				}
-
-				content.classList.add("ts-stack-section");
-				content.removeAttribute("data-customizable-panel-content");
-				root.insertBefore(content, panel);
-				panel.remove();
-			});
+		if (container) {
+			container.appendChild(list);
 			return;
 		}
 
-		panels.forEach((panel: HTMLElement, index: number) => {
-			let shell = panel;
-			let content = panel;
+		ctx.root.appendChild(list);
+	});
+}
 
+export function prepareTextPanels(ctx: ViewRenderer): void {
+	const hosts = ctx.root.querySelectorAll(".ts-text");
+	hosts.forEach((hostElement: Element) => {
+		if (!(hostElement instanceof HTMLElement)) {
+			return;
+		}
+		const definition = ctx.getConfiguredViewHost(hostElement);
+		if (definition.view.type !== "text") return;
+		const config = definition.view as TrackSwitchTextViewConfig;
+
+		hostElement.classList.add("ts-stack-section");
+		applyCssOverrides(hostElement, config.css);
+		hostElement.style.textAlign = config.align ?? "center";
+		hostElement.style.cursor = "default";
+		hostElement.style.fontWeight = config.bold ? "700" : "400";
+		hostElement.style.fontStyle = config.italic ? "italic" : "normal";
+
+		const fontSize = config.fontSize ?? null;
+		if (fontSize !== null) {
+			hostElement.style.fontSize = `${fontSize}px`;
+		} else {
+			hostElement.style.removeProperty("font-size");
+		}
+	});
+}
+
+export function prepareCustomizablePanels(ctx: ViewRenderer): void {
+	const root = ctx.root as HTMLElement;
+	// A separator is a rule, not a panel: wrapping it in a drag shell would
+	// give a 2px divider a 24px handle.
+	const panels = Array.from(ctx.root.children).filter(
+		(child): child is HTMLElement =>
+			child instanceof HTMLElement &&
+			child.classList.contains("ts-stack-section") &&
+			!child.classList.contains("main-control") &&
+			!child.classList.contains("ts-separator"),
+	);
+
+	if (!ctx.features.customizablePanelOrder) {
+		panels.forEach((panel: HTMLElement) => {
 			if (!panel.classList.contains("ts-customizable-panel-shell")) {
-				shell = document.createElement("div");
-				shell.className =
-					"ts-customizable-panel-shell ts-stack-section ts-customizable-panel";
-				root.insertBefore(shell, panel);
-				shell.appendChild(panel);
-				panel.classList.remove("ts-stack-section");
-				panel.setAttribute("data-customizable-panel-content", "true");
-				content = panel;
-			} else {
-				const shellContent = panel.querySelector(
-					':scope > [data-customizable-panel-content="true"]',
-				);
-				if (!(shellContent instanceof HTMLElement)) {
-					return;
-				}
-
-				content = shellContent;
-				shell.classList.add("ts-customizable-panel");
+				panel
+					.querySelectorAll(".ts-panel-handle")
+					.forEach((handle: Element) => {
+						handle.remove();
+					});
+				return;
 			}
 
-			shell.setAttribute("data-customizable-panel", "true");
-			shell.setAttribute("data-customizable-panel-id", String(index));
-
-			let handle = shell.querySelector(
-				":scope > .ts-panel-handle",
-			) as HTMLButtonElement | null;
-			if (!(handle instanceof HTMLButtonElement)) {
-				handle = document.createElement("button");
-				handle.className = "ts-panel-handle";
-				handle.type = "button";
-				handle.setAttribute("aria-label", resolvePanelHandleLabel(content));
-				handle.setAttribute("title", "Reorder panel");
-				handle.innerHTML =
-					'<span class="ts-panel-handle-dots" aria-hidden="true">' +
-					"<span></span><span></span><span></span>" +
-					"</span>";
+			const content = panel.querySelector(
+				':scope > [data-customizable-panel-content="true"]',
+			);
+			if (!(content instanceof HTMLElement)) {
+				panel.remove();
+				return;
 			}
 
-			if (shell.firstChild !== handle) {
-				shell.insertBefore(handle, shell.firstChild);
-			}
+			content.classList.add("ts-stack-section");
+			content.removeAttribute("data-customizable-panel-content");
+			root.insertBefore(content, panel);
+			panel.remove();
 		});
-	}).call(ctx);
+		return;
+	}
+
+	panels.forEach((panel: HTMLElement, index: number) => {
+		let shell = panel;
+		let content = panel;
+
+		if (!panel.classList.contains("ts-customizable-panel-shell")) {
+			shell = document.createElement("div");
+			shell.className =
+				"ts-customizable-panel-shell ts-stack-section ts-customizable-panel";
+			root.insertBefore(shell, panel);
+			shell.appendChild(panel);
+			panel.classList.remove("ts-stack-section");
+			panel.setAttribute("data-customizable-panel-content", "true");
+			content = panel;
+		} else {
+			const shellContent = panel.querySelector(
+				':scope > [data-customizable-panel-content="true"]',
+			);
+			if (!(shellContent instanceof HTMLElement)) {
+				return;
+			}
+
+			content = shellContent;
+			shell.classList.add("ts-customizable-panel");
+		}
+
+		shell.setAttribute("data-customizable-panel", "true");
+		shell.setAttribute("data-customizable-panel-id", String(index));
+
+		let handle = shell.querySelector(
+			":scope > .ts-panel-handle",
+		) as HTMLButtonElement | null;
+		if (!(handle instanceof HTMLButtonElement)) {
+			handle = document.createElement("button");
+			handle.className = "ts-panel-handle";
+			handle.type = "button";
+			handle.setAttribute("aria-label", resolvePanelHandleLabel(content));
+			handle.setAttribute("title", "Reorder panel");
+			handle.innerHTML =
+				'<span class="ts-panel-handle-dots" aria-hidden="true">' +
+				"<span></span><span></span><span></span>" +
+				"</span>";
+		}
+
+		if (shell.firstChild !== handle) {
+			shell.insertBefore(handle, shell.firstChild);
+		}
+	});
 }
 
 export function startPanelReorder(
 	ctx: ViewRenderer,
 	event: PanelReorderStartEvent,
 ): boolean {
-	return function (this: ViewRenderer, event: PanelReorderStartEvent) {
-		if (!this.features.customizablePanelOrder || this.panelDragState) {
-			return false;
-		}
+	if (!ctx.features.customizablePanelOrder || ctx.panelDragState) {
+		return false;
+	}
 
-		const handle =
-			event.target instanceof Element
-				? event.target.closest(".ts-panel-handle")
-				: null;
-		if (!(handle instanceof HTMLElement) || !this.root.contains(handle)) {
-			return false;
-		}
+	const handle =
+		event.target instanceof Element
+			? event.target.closest(".ts-panel-handle")
+			: null;
+	if (!(handle instanceof HTMLElement) || !ctx.root.contains(handle)) {
+		return false;
+	}
 
-		const panel = handle.closest(
-			'.ts-stack-section[data-customizable-panel="true"]',
-		);
-		if (!(panel instanceof HTMLElement) || !this.root.contains(panel)) {
-			return false;
-		}
+	const panel = handle.closest(
+		'.ts-stack-section[data-customizable-panel="true"]',
+	);
+	if (!(panel instanceof HTMLElement) || !ctx.root.contains(panel)) {
+		return false;
+	}
 
-		const pageY = getEventPageY(event);
-		if (pageY === null || !panel.parentElement) {
-			return false;
-		}
+	const pageY = getEventPageY(event);
+	if (pageY === null || !panel.parentElement) {
+		return false;
+	}
 
-		const rect = panel.getBoundingClientRect();
-		const placeholder = document.createElement("div");
-		placeholder.className = "ts-panel-drop-placeholder";
-		placeholder.style.height = `${Math.max(1, rect.height)}px`;
+	const rect = panel.getBoundingClientRect();
+	const placeholder = document.createElement("div");
+	placeholder.className = "ts-panel-drop-placeholder";
+	placeholder.style.height = `${Math.max(1, rect.height)}px`;
 
-		panel.parentElement.insertBefore(placeholder, panel.nextSibling);
+	panel.parentElement.insertBefore(placeholder, panel.nextSibling);
 
-		const originalEvent = event.originalEvent;
-		if (
-			originalEvent instanceof PointerEvent &&
-			"setPointerCapture" in handle
-		) {
-			handle.setPointerCapture(originalEvent.pointerId);
-		}
+	const originalEvent = event.originalEvent;
+	if (originalEvent instanceof PointerEvent && "setPointerCapture" in handle) {
+		handle.setPointerCapture(originalEvent.pointerId);
+	}
 
-		panel.classList.add("ts-panel-dragging");
-		panel.style.width = `${rect.width}px`;
-		panel.style.height = `${rect.height}px`;
-		panel.style.left = `${rect.left}px`;
-		panel.style.top = `${rect.top}px`;
-		this.root.classList.add("ts-panel-reorder-active");
+	panel.classList.add("ts-panel-dragging");
+	panel.style.width = `${rect.width}px`;
+	panel.style.height = `${rect.height}px`;
+	panel.style.left = `${rect.left}px`;
+	panel.style.top = `${rect.top}px`;
+	ctx.root.classList.add("ts-panel-reorder-active");
 
-		this.panelDragState = {
-			handle: handle,
-			panel: panel,
-			placeholder: placeholder,
-			pointerId:
-				originalEvent instanceof PointerEvent ? originalEvent.pointerId : null,
-			pointerOffsetY: pageY - (rect.top + window.scrollY),
-			panelHeight: rect.height,
-		};
+	ctx.panelDragState = {
+		handle: handle,
+		panel: panel,
+		placeholder: placeholder,
+		pointerId:
+			originalEvent instanceof PointerEvent ? originalEvent.pointerId : null,
+		pointerOffsetY: pageY - (rect.top + window.scrollY),
+		panelHeight: rect.height,
+	};
 
-		event.preventDefault();
-		event.stopPropagation();
-		return true;
-	}.call(ctx, event);
+	event.preventDefault();
+	event.stopPropagation();
+	return true;
 }
 
 export function movePanelReorder(
 	ctx: ViewRenderer,
 	event: PanelReorderMoveEvent,
 ): boolean {
-	return function (this: ViewRenderer, event: PanelReorderMoveEvent) {
-		const dragState = this.panelDragState;
-		if (!dragState) {
-			return false;
+	const dragState = ctx.panelDragState;
+	if (!dragState) {
+		return false;
+	}
+
+	const originalEvent = event.originalEvent;
+	if (
+		dragState.pointerId !== null &&
+		originalEvent instanceof PointerEvent &&
+		originalEvent.pointerId !== dragState.pointerId
+	) {
+		return false;
+	}
+
+	const pageY = getEventPageY(event);
+	if (pageY === null) {
+		return false;
+	}
+
+	dragState.panel.style.top = `${pageY - window.scrollY - dragState.pointerOffsetY}px`;
+
+	const panelCenterY =
+		pageY - dragState.pointerOffsetY + dragState.panelHeight / 2;
+	const candidates = getReorderablePanels(ctx.root, [
+		dragState.panel,
+		dragState.placeholder,
+	]);
+	let inserted = false;
+
+	candidates.forEach((candidate: HTMLElement) => {
+		if (inserted) {
+			return;
 		}
 
-		const originalEvent = event.originalEvent;
-		if (
-			dragState.pointerId !== null &&
-			originalEvent instanceof PointerEvent &&
-			originalEvent.pointerId !== dragState.pointerId
-		) {
-			return false;
+		const rect = candidate.getBoundingClientRect();
+		const midpoint = rect.top + window.scrollY + rect.height / 2;
+		if (panelCenterY < midpoint) {
+			ctx.root.insertBefore(dragState.placeholder, candidate);
+			inserted = true;
 		}
+	});
 
-		const pageY = getEventPageY(event);
-		if (pageY === null) {
-			return false;
-		}
+	if (!inserted) {
+		ctx.root.appendChild(dragState.placeholder);
+	}
 
-		dragState.panel.style.top = `${pageY - window.scrollY - dragState.pointerOffsetY}px`;
-
-		const panelCenterY =
-			pageY - dragState.pointerOffsetY + dragState.panelHeight / 2;
-		const candidates = getReorderablePanels(this.root, [
-			dragState.panel,
-			dragState.placeholder,
-		]);
-		let inserted = false;
-
-		candidates.forEach((candidate: HTMLElement) => {
-			if (inserted) {
-				return;
-			}
-
-			const rect = candidate.getBoundingClientRect();
-			const midpoint = rect.top + window.scrollY + rect.height / 2;
-			if (panelCenterY < midpoint) {
-				this.root.insertBefore(dragState.placeholder, candidate);
-				inserted = true;
-			}
-		});
-
-		if (!inserted) {
-			this.root.appendChild(dragState.placeholder);
-		}
-
-		event.preventDefault();
-		return true;
-	}.call(ctx, event);
+	event.preventDefault();
+	return true;
 }
 
 export function endPanelReorder(
 	ctx: ViewRenderer,
 	event: PanelReorderEndEvent | null = null,
 ): boolean {
-	return function (this: ViewRenderer, event: PanelReorderEndEvent | null) {
-		const dragState = this.panelDragState;
-		if (!dragState) {
-			return false;
-		}
+	const dragState = ctx.panelDragState;
+	if (!dragState) {
+		return false;
+	}
 
-		const originalEvent = event?.originalEvent;
-		if (
-			dragState.pointerId !== null &&
-			originalEvent instanceof PointerEvent &&
-			originalEvent.pointerId !== dragState.pointerId
-		) {
-			return false;
-		}
+	const originalEvent = event?.originalEvent;
+	if (
+		dragState.pointerId !== null &&
+		originalEvent instanceof PointerEvent &&
+		originalEvent.pointerId !== dragState.pointerId
+	) {
+		return false;
+	}
 
-		if (
-			dragState.pointerId !== null &&
-			"hasPointerCapture" in dragState.handle &&
-			dragState.handle.hasPointerCapture(dragState.pointerId)
-		) {
-			dragState.handle.releasePointerCapture(dragState.pointerId);
-		}
+	if (
+		dragState.pointerId !== null &&
+		"hasPointerCapture" in dragState.handle &&
+		dragState.handle.hasPointerCapture(dragState.pointerId)
+	) {
+		dragState.handle.releasePointerCapture(dragState.pointerId);
+	}
 
-		if (dragState.placeholder.parentElement) {
-			dragState.placeholder.parentElement.insertBefore(
-				dragState.panel,
-				dragState.placeholder,
-			);
-		}
+	if (dragState.placeholder.parentElement) {
+		dragState.placeholder.parentElement.insertBefore(
+			dragState.panel,
+			dragState.placeholder,
+		);
+	}
 
-		dragState.panel.classList.remove("ts-panel-dragging");
-		dragState.panel.style.removeProperty("width");
-		dragState.panel.style.removeProperty("height");
-		dragState.panel.style.removeProperty("left");
-		dragState.panel.style.removeProperty("top");
-		dragState.placeholder.remove();
-		this.root.classList.remove("ts-panel-reorder-active");
-		this.panelDragState = null;
+	dragState.panel.classList.remove("ts-panel-dragging");
+	dragState.panel.style.removeProperty("width");
+	dragState.panel.style.removeProperty("height");
+	dragState.panel.style.removeProperty("left");
+	dragState.panel.style.removeProperty("top");
+	dragState.placeholder.remove();
+	ctx.root.classList.remove("ts-panel-reorder-active");
+	ctx.panelDragState = null;
 
-		if (event) {
-			event.preventDefault();
-		}
+	if (event) {
+		event.preventDefault();
+	}
 
-		return true;
-	}.call(ctx, event);
+	return true;
 }
 
 export function wrapSeekableImages(ctx: ViewRenderer): void {
-	(function (this: ViewRenderer) {
-		this.imageSeekSurfaces.length = 0;
-		const candidates = this.queryAll(":scope > img");
+	ctx.imageSeekSurfaces.length = 0;
+	const candidates = ctx.queryAll(":scope > img");
 
-		candidates.forEach((candidate: HTMLElement) => {
-			if (!(candidate instanceof HTMLImageElement)) {
-				return;
+	candidates.forEach((candidate: HTMLElement) => {
+		if (!(candidate instanceof HTMLImageElement)) {
+			return;
+		}
+
+		if (candidate.parentElement?.classList.contains("seekable-img-wrap")) {
+			return;
+		}
+		const definition = ctx.getConfiguredViewHost(candidate);
+		if (
+			definition.view.type !== "image" &&
+			definition.view.type !== "perTrackImage"
+		)
+			return;
+		const config = definition.view;
+
+		const section = document.createElement("div");
+		section.className = "seekable-section ts-stack-section";
+
+		const wrapper = document.createElement("div");
+		wrapper.className = "seekable-img-wrap";
+		applyCssOverrides(wrapper, config.css);
+
+		const parent = candidate.parentElement;
+		if (!parent) {
+			return;
+		}
+
+		parent.insertBefore(section, candidate);
+		section.appendChild(wrapper);
+		wrapper.appendChild(candidate);
+
+		wrapper.insertAdjacentHTML(
+			"beforeend",
+			buildSeekWrap({
+				insetPercent: {
+					left: clampPercent(config.seekMarginLeft),
+					right: clampPercent(config.seekMarginRight),
+				},
+			}),
+		);
+		const seekWrap = wrapper.querySelector(":scope > .seekwrap");
+		if (seekWrap instanceof HTMLElement) {
+			ctx.registerSeekMarkerLayers(seekWrap, config.markerLayers);
+			const perTrack = config.type === "perTrackImage";
+			seekWrap.setAttribute(
+				"data-marker-image-scope",
+				perTrack ? "per-track" : "global",
+			);
+			if (!candidate.classList.contains("seekable")) {
+				seekWrap.classList.add("marker-only-seekwrap");
 			}
-
-			if (candidate.parentElement?.classList.contains("seekable-img-wrap")) {
-				return;
+			const alignmentColumn = perTrack
+				? null
+				: definition.alignmentTimeline || null;
+			ctx.registerSeekTimeline(seekWrap, alignmentColumn);
+			if (alignmentColumn) {
+				seekWrap.setAttribute("data-seek-surface", "image");
 			}
-			const definition = this.getConfiguredViewHost(candidate);
-			if (
-				definition.view.type !== "image" &&
-				definition.view.type !== "perTrackImage"
-			)
-				return;
-			const config = definition.view;
+			ctx.imageSeekSurfaces.push({
+				seekWrap,
+				wrapper,
+				image: candidate,
+				alignmentColumn,
+			});
+		}
+	});
+}
 
-			const section = document.createElement("div");
-			section.className = "seekable-section ts-stack-section";
+export function wrapSheetMusicContainers(ctx: ViewRenderer): void {
+	ctx.sheetMusicHosts.length = 0;
 
-			const wrapper = document.createElement("div");
-			wrapper.className = "seekable-img-wrap";
+	const hosts = ctx.root.querySelectorAll(".sheetmusic");
+	hosts.forEach((hostElement: Element) => {
+		if (!(hostElement instanceof HTMLElement)) {
+			return;
+		}
+		const definition = ctx.getConfiguredViewHost(hostElement);
+		if (definition.view.type !== "sheetMusic") return;
+		const config = definition.view as TrackSwitchSheetMusicViewConfig;
+
+		let wrapper: HTMLElement | null = hostElement.closest(
+			".sheetmusic-wrap",
+		) as HTMLElement | null;
+		let scrollContainer: HTMLElement | null = null;
+
+		if (!wrapper) {
+			wrapper = document.createElement("div");
+			wrapper.className = "sheetmusic-wrap ts-stack-section";
 			applyCssOverrides(wrapper, config.css);
 
-			const parent = candidate.parentElement;
+			scrollContainer = document.createElement("div");
+			scrollContainer.className = "sheetmusic-scroll";
+
+			const parent = hostElement.parentElement;
 			if (!parent) {
 				return;
 			}
 
-			parent.insertBefore(section, candidate);
-			section.appendChild(wrapper);
-			wrapper.appendChild(candidate);
+			parent.insertBefore(wrapper, hostElement);
+			wrapper.appendChild(scrollContainer);
+			scrollContainer.appendChild(hostElement);
+		} else {
+			scrollContainer = wrapper.querySelector(".sheetmusic-scroll");
+		}
 
-			wrapper.insertAdjacentHTML(
-				"beforeend",
-				buildSeekWrap(
-					clampPercent(config.seekMarginLeft),
-					clampPercent(config.seekMarginRight),
-				),
-			);
-			const seekWrap = wrapper.querySelector(":scope > .seekwrap");
-			if (seekWrap instanceof HTMLElement) {
-				this.registerSeekMarkerLayers(seekWrap, config.markerLayers);
-				const perTrack = config.type === "perTrackImage";
-				seekWrap.setAttribute(
-					"data-marker-image-scope",
-					perTrack ? "per-track" : "global",
-				);
-				if (!candidate.classList.contains("seekable")) {
-					seekWrap.classList.add("marker-only-seekwrap");
-				}
-				const alignmentColumn = perTrack
-					? null
-					: definition.alignmentTimeline || null;
-				this.registerSeekTimeline(seekWrap, alignmentColumn);
-				if (alignmentColumn) {
-					seekWrap.setAttribute("data-seek-surface", "image");
-				}
-				this.imageSeekSurfaces.push({
-					seekWrap,
-					wrapper,
-					image: candidate,
-					alignmentColumn,
-				});
-			}
+		if (
+			!(wrapper instanceof HTMLElement) ||
+			!(scrollContainer instanceof HTMLElement)
+		) {
+			return;
+		}
+
+		const maxWidth = config.maxWidth ?? null;
+		if (maxWidth !== null) {
+			wrapper.style.width = "100%";
+			wrapper.style.maxWidth = `${maxWidth}px`;
+			wrapper.style.marginLeft = "auto";
+			wrapper.style.marginRight = "auto";
+			wrapper.setAttribute("data-sheetmusic-max-width-applied", "true");
+		} else if (
+			wrapper.getAttribute("data-sheetmusic-max-width-applied") === "true"
+		) {
+			wrapper.style.removeProperty("width");
+			wrapper.style.removeProperty("max-width");
+			wrapper.style.removeProperty("margin-left");
+			wrapper.style.removeProperty("margin-right");
+			wrapper.removeAttribute("data-sheetmusic-max-width-applied");
+		}
+
+		const maxHeight = config.maxHeight ?? null;
+		if (maxHeight !== null) {
+			scrollContainer.style.maxHeight = `${maxHeight}px`;
+			scrollContainer.style.height = `${maxHeight}px`;
+			scrollContainer.style.minHeight = `${maxHeight}px`;
+			wrapper.classList.add("sheetmusic-scrollable");
+		} else {
+			scrollContainer.style.removeProperty("max-height");
+			scrollContainer.style.removeProperty("height");
+			scrollContainer.style.removeProperty("min-height");
+			wrapper.classList.remove("sheetmusic-scrollable");
+		}
+
+		const source = definition.source ?? null;
+		if (!source) {
+			return;
+		}
+
+		ctx.sheetMusicHosts.push({
+			host: hostElement,
+			scrollContainer: scrollContainer,
+			source: source,
+			measureColumn: definition.alignmentTimeline?.trim() || null,
+			renderScale: config.renderScale ?? null,
+			followPlayback: config.followPlayback ?? true,
+			cursorColor: config.cursorColor ?? "#999999",
+			cursorAlpha: config.cursorAlpha ?? 0.4,
+			configuredMaxHeight: maxHeight,
 		});
-	}).call(ctx);
-}
-
-export function wrapSheetMusicContainers(ctx: ViewRenderer): void {
-	(function (this: ViewRenderer) {
-		this.sheetMusicHosts.length = 0;
-
-		const hosts = this.root.querySelectorAll(".sheetmusic");
-		hosts.forEach((hostElement: Element) => {
-			if (!(hostElement instanceof HTMLElement)) {
-				return;
-			}
-			const definition = this.getConfiguredViewHost(hostElement);
-			if (definition.view.type !== "sheetMusic") return;
-			const config = definition.view as TrackSwitchSheetMusicViewConfig;
-
-			let wrapper: HTMLElement | null = hostElement.closest(
-				".sheetmusic-wrap",
-			) as HTMLElement | null;
-			let scrollContainer: HTMLElement | null = null;
-
-			if (!wrapper) {
-				wrapper = document.createElement("div");
-				wrapper.className = "sheetmusic-wrap ts-stack-section";
-				applyCssOverrides(wrapper, config.css);
-
-				scrollContainer = document.createElement("div");
-				scrollContainer.className = "sheetmusic-scroll";
-
-				const parent = hostElement.parentElement;
-				if (!parent) {
-					return;
-				}
-
-				parent.insertBefore(wrapper, hostElement);
-				wrapper.appendChild(scrollContainer);
-				scrollContainer.appendChild(hostElement);
-			} else {
-				scrollContainer = wrapper.querySelector(".sheetmusic-scroll");
-			}
-
-			if (
-				!(wrapper instanceof HTMLElement) ||
-				!(scrollContainer instanceof HTMLElement)
-			) {
-				return;
-			}
-
-			const maxWidth = config.maxWidth ?? null;
-			if (maxWidth !== null) {
-				wrapper.style.width = "100%";
-				wrapper.style.maxWidth = `${maxWidth}px`;
-				wrapper.style.marginLeft = "auto";
-				wrapper.style.marginRight = "auto";
-				wrapper.setAttribute("data-sheetmusic-max-width-applied", "true");
-			} else if (
-				wrapper.getAttribute("data-sheetmusic-max-width-applied") === "true"
-			) {
-				wrapper.style.removeProperty("width");
-				wrapper.style.removeProperty("max-width");
-				wrapper.style.removeProperty("margin-left");
-				wrapper.style.removeProperty("margin-right");
-				wrapper.removeAttribute("data-sheetmusic-max-width-applied");
-			}
-
-			const maxHeight = config.maxHeight ?? null;
-			if (maxHeight !== null) {
-				scrollContainer.style.maxHeight = `${maxHeight}px`;
-				scrollContainer.style.height = `${maxHeight}px`;
-				scrollContainer.style.minHeight = `${maxHeight}px`;
-				wrapper.classList.add("sheetmusic-scrollable");
-			} else {
-				scrollContainer.style.removeProperty("max-height");
-				scrollContainer.style.removeProperty("height");
-				scrollContainer.style.removeProperty("min-height");
-				wrapper.classList.remove("sheetmusic-scrollable");
-			}
-
-			const source = definition.source ?? null;
-			if (!source) {
-				return;
-			}
-
-			this.sheetMusicHosts.push({
-				host: hostElement,
-				scrollContainer: scrollContainer,
-				source: source,
-				measureColumn: definition.alignmentTimeline?.trim() || null,
-				renderScale: config.renderScale ?? null,
-				followPlayback: config.followPlayback ?? true,
-				cursorColor: config.cursorColor ?? "#999999",
-				cursorAlpha: config.cursorAlpha ?? 0.4,
-				configuredMaxHeight: maxHeight,
-			});
-		});
-	}).call(ctx);
+	});
 }
 
 /** Loop markers live in reference coordinates; a local axis needs them mapped. */
@@ -1450,45 +1376,41 @@ export function applySeekWrapCoverageState(
 	ctx: ViewRenderer,
 	seekWrap: HTMLElement,
 ): void {
-	(function (this: ViewRenderer, seekWrap: HTMLElement) {
-		const timeline = this.getSeekTimeline(seekWrap);
-		const outOfCoverage = Boolean(
-			timeline && this.isTimelineCovered && !this.isTimelineCovered(timeline),
-		);
+	const timeline = ctx.getSeekTimeline(seekWrap);
+	const outOfCoverage = Boolean(
+		timeline && ctx.isTimelineCovered && !ctx.isTimelineCovered(timeline),
+	);
 
-		if (seekWrap.classList.contains(OUT_OF_COVERAGE_CLASS) === outOfCoverage) {
-			return;
-		}
+	if (seekWrap.classList.contains(OUT_OF_COVERAGE_CLASS) === outOfCoverage) {
+		return;
+	}
 
-		seekWrap.classList.toggle(OUT_OF_COVERAGE_CLASS, outOfCoverage);
-		const host = seekWrap.parentElement;
-		host?.classList.toggle(OUT_OF_COVERAGE_CLASS, outOfCoverage);
-		if (outOfCoverage) {
-			seekWrap.title = OUT_OF_COVERAGE_TITLE;
-		} else {
-			seekWrap.removeAttribute("title");
-		}
-	}).call(ctx, seekWrap);
+	seekWrap.classList.toggle(OUT_OF_COVERAGE_CLASS, outOfCoverage);
+	const host = seekWrap.parentElement;
+	host?.classList.toggle(OUT_OF_COVERAGE_CLASS, outOfCoverage);
+	if (outOfCoverage) {
+		seekWrap.title = OUT_OF_COVERAGE_TITLE;
+	} else {
+		seekWrap.removeAttribute("title");
+	}
 }
 
 export function getPreparedSheetMusicHosts(
 	ctx: ViewRenderer,
 ): SheetMusicHostConfig[] {
-	return function (this: ViewRenderer) {
-		return this.sheetMusicHosts.map((entry: SheetMusicHostConfig) => {
-			return {
-				host: entry.host,
-				scrollContainer: entry.scrollContainer,
-				source: entry.source,
-				measureColumn: entry.measureColumn,
-				renderScale: entry.renderScale,
-				followPlayback: entry.followPlayback,
-				cursorColor: entry.cursorColor,
-				cursorAlpha: entry.cursorAlpha,
-				configuredMaxHeight: entry.configuredMaxHeight,
-			};
-		});
-	}.call(ctx);
+	return ctx.sheetMusicHosts.map((entry: SheetMusicHostConfig) => {
+		return {
+			host: entry.host,
+			scrollContainer: entry.scrollContainer,
+			source: entry.source,
+			measureColumn: entry.measureColumn,
+			renderScale: entry.renderScale,
+			followPlayback: entry.followPlayback,
+			cursorColor: entry.cursorColor,
+			cursorAlpha: entry.cursorAlpha,
+			configuredMaxHeight: entry.configuredMaxHeight,
+		};
+	});
 }
 
 export function updateMainControls(
@@ -1498,58 +1420,50 @@ export function updateMainControls(
 	waveformTimelineContext: WaveformTimelineContext | undefined,
 	warpingMatrixContext: WarpingMatrixRenderContext | undefined,
 ): void {
-	(function (
-		this: ViewRenderer,
-		state: TrackSwitchUiState,
-		runtimes: TrackRuntime[],
-		waveformTimelineContext: WaveformTimelineContext | undefined,
-		warpingMatrixContext: WarpingMatrixRenderContext | undefined,
-	) {
-		this.updatePlaybackPosition(
-			state,
-			runtimes,
-			waveformTimelineContext,
-			warpingMatrixContext,
-		);
+	ctx.updatePlaybackPosition(
+		state,
+		runtimes,
+		waveformTimelineContext,
+		warpingMatrixContext,
+	);
 
-		this.root.classList.toggle("sync-enabled", state.syncEnabled);
+	ctx.root.classList.toggle("sync-enabled", state.syncEnabled);
 
-		this.queryAll(".playpause").forEach((element: HTMLElement) => {
-			element.classList.toggle("checked", state.playing);
-			setHostIcon(element, state.playing ? "pause" : "play");
-		});
+	ctx.queryAll(".playpause").forEach((element: HTMLElement) => {
+		element.classList.toggle("checked", state.playing);
+		setHostIcon(element, state.playing ? "pause" : "play");
+	});
 
-		this.queryAll(".repeat").forEach((element: HTMLElement) => {
-			element.classList.toggle("checked", state.repeat);
-		});
+	ctx.queryAll(".repeat").forEach((element: HTMLElement) => {
+		element.classList.toggle("checked", state.repeat);
+	});
 
-		this.queryAll(".sync-global").forEach((element: HTMLElement) => {
-			element.classList.toggle("checked", state.syncEnabled);
-			element.classList.toggle("disabled", !state.syncAvailable);
-		});
+	ctx.queryAll(".sync-global").forEach((element: HTMLElement) => {
+		element.classList.toggle("checked", state.syncEnabled);
+		element.classList.toggle("disabled", !state.syncAvailable);
+	});
 
-		this.warpingMatrixHosts.forEach((host) => {
-			this.updateWarpingMatrix(host, warpingMatrixContext);
-		});
+	ctx.warpingMatrixHosts.forEach((host) => {
+		ctx.updateWarpingMatrix(host, warpingMatrixContext);
+	});
 
-		if (!navigationBarHasControl(this.navigationBar, "looping")) {
-			return;
-		}
+	if (!navigationBarHasControl(ctx.navigationBar, "looping")) {
+		return;
+	}
 
-		this.queryAll(".loop-a").forEach((element: HTMLElement) => {
-			element.classList.toggle("checked", state.loop.pointA !== null);
-			element.classList.toggle("active", state.loop.enabled);
-		});
+	ctx.queryAll(".loop-a").forEach((element: HTMLElement) => {
+		element.classList.toggle("checked", state.loop.pointA !== null);
+		element.classList.toggle("active", state.loop.enabled);
+	});
 
-		this.queryAll(".loop-b").forEach((element: HTMLElement) => {
-			element.classList.toggle("checked", state.loop.pointB !== null);
-			element.classList.toggle("active", state.loop.enabled);
-		});
+	ctx.queryAll(".loop-b").forEach((element: HTMLElement) => {
+		element.classList.toggle("checked", state.loop.pointB !== null);
+		element.classList.toggle("active", state.loop.enabled);
+	});
 
-		this.queryAll(".loop-toggle").forEach((element: HTMLElement) => {
-			element.classList.toggle("checked", state.loop.enabled);
-		});
-	}).call(ctx, state, runtimes, waveformTimelineContext, warpingMatrixContext);
+	ctx.queryAll(".loop-toggle").forEach((element: HTMLElement) => {
+		element.classList.toggle("checked", state.loop.enabled);
+	});
 }
 
 export function updatePlaybackPosition(
@@ -1559,57 +1473,45 @@ export function updatePlaybackPosition(
 	waveformTimelineContext: WaveformTimelineContext | undefined,
 	warpingMatrixContext: WarpingMatrixRenderContext | undefined,
 ): void {
-	(function (
-		this: ViewRenderer,
-		state: TrackSwitchUiState,
-		runtimes: TrackRuntime[],
-		waveformTimelineContext: WaveformTimelineContext | undefined,
-		warpingMatrixContext: WarpingMatrixRenderContext | undefined,
-	) {
-		this.root.classList.toggle("sync-enabled", state.syncEnabled);
+	ctx.root.classList.toggle("sync-enabled", state.syncEnabled);
 
-		const seekWraps = this.queryAll(".seekwrap");
-		seekWraps.forEach((seekWrap: HTMLElement) => {
-			// An aligned image has its own (possibly non-linear) axis, so its
-			// playhead comes from the projection rather than a linear ratio.
-			const imageContext = this.resolveImageTimelineContext(seekWrap);
-			if (imageContext) {
-				this.updateSeekWrapVisuals(
-					seekWrap,
-					imageContext.playbackPosition?.() ??
-						imageContext.fromReferenceTime(state.position),
-					imageContext.duration,
-					mapLoopToTimeline(state.loop, imageContext),
-				);
-			} else {
-				this.updateSeekWrapVisuals(
-					seekWrap,
-					state.position,
-					state.longestDuration,
-					state.loop,
-				);
-			}
-			this.applySeekWrapCoverageState(seekWrap);
-		});
-
-		this.applyWaveformLocalSeekVisuals(
-			state,
-			runtimes,
-			waveformTimelineContext,
-		);
-
-		if (navigationBarHasControl(this.navigationBar, "timer")) {
-			this.updateTiming(state.position, state.longestDuration);
+	const seekWraps = ctx.queryAll(".seekwrap");
+	seekWraps.forEach((seekWrap: HTMLElement) => {
+		// An aligned image has its own (possibly non-linear) axis, so its
+		// playhead comes from the projection rather than a linear ratio.
+		const imageContext = ctx.resolveImageTimelineContext(seekWrap);
+		if (imageContext) {
+			ctx.updateSeekWrapVisuals(
+				seekWrap,
+				imageContext.playbackPosition?.() ??
+					imageContext.fromReferenceTime(state.position),
+				imageContext.duration,
+				mapLoopToTimeline(state.loop, imageContext),
+			);
+		} else {
+			ctx.updateSeekWrapVisuals(
+				seekWrap,
+				state.position,
+				state.longestDuration,
+				state.loop,
+			);
 		}
+		ctx.applySeekWrapCoverageState(seekWrap);
+	});
 
-		this.updateWaveformTiming(state, runtimes, waveformTimelineContext);
-		this.updateWaveformZoomIndicators();
-		this.updatePianoRollPlaybackState(state, true, false);
-		this.updatePianoRollZoomIndicators();
-		this.warpingMatrixHosts.forEach((host) => {
-			this.updateWarpingMatrixPlaybackState(host, warpingMatrixContext);
-		});
-	}).call(ctx, state, runtimes, waveformTimelineContext, warpingMatrixContext);
+	ctx.applyWaveformLocalSeekVisuals(state, runtimes, waveformTimelineContext);
+
+	if (navigationBarHasControl(ctx.navigationBar, "timer")) {
+		ctx.updateTiming(state.position, state.longestDuration);
+	}
+
+	ctx.updateWaveformTiming(state, runtimes, waveformTimelineContext);
+	ctx.updateWaveformZoomIndicators();
+	ctx.updatePianoRollPlaybackState(state, true, false);
+	ctx.updatePianoRollZoomIndicators();
+	ctx.warpingMatrixHosts.forEach((host) => {
+		ctx.updateWarpingMatrixPlaybackState(host, warpingMatrixContext);
+	});
 }
 
 export function updateTrackControls(
@@ -1619,186 +1521,165 @@ export function updateTrackControls(
 	stereoPanningSupported: boolean,
 	syncEnabled: boolean,
 ): void {
-	(function (
-		this: ViewRenderer,
-		runtimes: TrackRuntime[],
-		syncLockedTrackIndexes: ReadonlySet<number> | undefined,
-		stereoPanningSupported: boolean,
-		syncEnabled: boolean,
-	) {
-		runtimes.forEach((runtime: TrackRuntime, index: number) => {
-			const rows = this.queryAll(`.track[data-track-index="${index}"]`);
-			if (rows.length === 0) {
-				return;
-			}
+	runtimes.forEach((runtime: TrackRuntime, index: number) => {
+		const rows = ctx.queryAll(`.track[data-track-index="${index}"]`);
+		if (rows.length === 0) {
+			return;
+		}
 
-			const isLocked =
-				!!syncLockedTrackIndexes && syncLockedTrackIndexes.has(index);
-			// A "balance" track mixes with plain gain nodes, so it stays usable even
-			// where StereoPannerNode ("pan" tracks only) is unavailable.
-			const panSupported =
-				runtime.panAlgorithm === "balance" || stereoPanningSupported;
-			// A row repeats the colour(s) its track carries in a piano roll, so the
-			// list and the notes read as one code.
-			const channelColors = this.resolvePianoRollTrackChannelColors(
-				runtime.definition.id,
-			);
+		const isLocked =
+			!!syncLockedTrackIndexes && syncLockedTrackIndexes.has(index);
+		// A "balance" track mixes with plain gain nodes, so it stays usable even
+		// where StereoPannerNode ("pan" tracks only) is unavailable.
+		const panSupported =
+			runtime.panAlgorithm === "balance" || stereoPanningSupported;
+		// A row repeats the colour(s) its track carries in a piano roll, so the
+		// list and the notes read as one code.
+		const channelColors = ctx.resolvePianoRollTrackChannelColors(
+			runtime.definition.id,
+		);
 
-			rows.forEach((row: HTMLElement) => {
-				const solo = row.querySelector(".solo");
-				// A track may be listed twice, so each row follows the list it sits in.
-				const singleSoloMode = this.isGroupExclusive(trackGroupIndexOfRow(row));
-				row.classList.toggle("solo", singleSoloMode);
+		rows.forEach((row: HTMLElement) => {
+			const solo = row.querySelector(".solo");
+			// A track may be listed twice, so each row follows the list it sits in.
+			const singleSoloMode = ctx.isGroupExclusive(trackGroupIndexOfRow(row));
+			row.classList.toggle("solo", singleSoloMode);
 
-				if (solo instanceof HTMLElement) {
-					solo.classList.toggle("checked", runtime.state.solo);
-					solo.classList.toggle("disabled", isLocked);
-					solo.classList.toggle("radio", singleSoloMode);
-					applySoloIconState(
-						solo,
-						runtime.state.solo,
-						singleSoloMode,
-						!!syncEnabled,
-					);
-				}
-
-				const group = this.trackGroups[trackGroupIndexOfRow(row)];
-				const iconColorsEnabled = group?.channelColorIcons ?? true;
-				applyTrackChannelColors(
-					row,
+			if (solo instanceof HTMLElement) {
+				solo.classList.toggle("checked", runtime.state.solo);
+				solo.classList.toggle("disabled", isLocked);
+				solo.classList.toggle("radio", singleSoloMode);
+				applySoloIconState(
 					solo,
-					iconColorsEnabled ? channelColors : null,
+					runtime.state.solo,
+					singleSoloMode,
+					!!syncEnabled,
 				);
-
-				const trackVolumeSlider = row.querySelector(".track-volume-slider");
-				if (trackVolumeSlider instanceof HTMLInputElement) {
-					trackVolumeSlider.value = String(
-						Math.round(sanitizeVolume(runtime.state.volume) * 100),
-					);
-					trackVolumeSlider.disabled = isLocked;
-				}
-
-				const trackPanSlider = row.querySelector(".track-pan-slider");
-				if (trackPanSlider instanceof HTMLInputElement) {
-					trackPanSlider.value = String(
-						Math.round(sanitizePan(panSupported ? runtime.state.pan : 0) * 100),
-					);
-					trackPanSlider.disabled = isLocked || !panSupported;
-				}
-
-				const trackVolumeIcon = row.querySelector(".track-volume-icon");
-				if (trackVolumeIcon instanceof HTMLElement) {
-					this.applyVolumeIconState(trackVolumeIcon, runtime.state.volume);
-				}
-
-				const trackControlGroup = row.querySelector(".track-mix-controls");
-				if (trackControlGroup) {
-					trackControlGroup.classList.toggle("disabled", isLocked);
-				}
-
-				const trackPanControl = row.querySelector(".track-pan-control");
-				if (trackPanControl) {
-					trackPanControl.classList.toggle(
-						"disabled",
-						isLocked || !panSupported,
-					);
-				}
-			});
-		});
-
-		// Sync mode plays every timeline at once, so there is nothing to select.
-		this.trackGroups.forEach((group: TrackListGroup) => {
-			const solo = this.query(
-				`.track_list[data-track-group-index="${group.groupIndex}"] .track-list-select .solo`,
-			);
-			if (!solo) {
-				return;
 			}
 
-			const isActive = this.isTrackListUnitActive(group.groupIndex);
-			solo.classList.toggle("checked", isActive);
-			solo.classList.toggle("disabled", !!syncEnabled);
-			applySoloIconState(solo, isActive, true, !!syncEnabled);
+			const group = ctx.trackGroups[trackGroupIndexOfRow(row)];
+			const iconColorsEnabled = group?.channelColorIcons ?? true;
+			applyTrackChannelColors(
+				row,
+				solo,
+				iconColorsEnabled ? channelColors : null,
+			);
+
+			const trackVolumeSlider = row.querySelector(".track-volume-slider");
+			if (trackVolumeSlider instanceof HTMLInputElement) {
+				trackVolumeSlider.value = String(
+					Math.round(sanitizeVolume(runtime.state.volume) * 100),
+				);
+				trackVolumeSlider.disabled = isLocked;
+			}
+
+			const trackPanSlider = row.querySelector(".track-pan-slider");
+			if (trackPanSlider instanceof HTMLInputElement) {
+				trackPanSlider.value = String(
+					Math.round(sanitizePan(panSupported ? runtime.state.pan : 0) * 100),
+				);
+				trackPanSlider.disabled = isLocked || !panSupported;
+			}
+
+			const trackVolumeIcon = row.querySelector(".track-volume-icon");
+			if (trackVolumeIcon instanceof HTMLElement) {
+				ctx.applyVolumeIconState(trackVolumeIcon, runtime.state.volume);
+			}
+
+			const trackControlGroup = row.querySelector(".track-mix-controls");
+			if (trackControlGroup) {
+				trackControlGroup.classList.toggle("disabled", isLocked);
+			}
+
+			const trackPanControl = row.querySelector(".track-pan-control");
+			if (trackPanControl) {
+				trackPanControl.classList.toggle("disabled", isLocked || !panSupported);
+			}
 		});
-	}).call(
-		ctx,
-		runtimes,
-		syncLockedTrackIndexes,
-		stereoPanningSupported,
-		syncEnabled,
-	);
+	});
+
+	// Sync mode plays every timeline at once, so there is nothing to select.
+	ctx.trackGroups.forEach((group: TrackListGroup) => {
+		const solo = ctx.query(
+			`.track_list[data-track-group-index="${group.groupIndex}"] .track-list-select .solo`,
+		);
+		if (!solo) {
+			return;
+		}
+
+		const isActive = ctx.isTrackListUnitActive(group.groupIndex);
+		solo.classList.toggle("checked", isActive);
+		solo.classList.toggle("disabled", !!syncEnabled);
+		applySoloIconState(solo, isActive, true, !!syncEnabled);
+	});
 }
 
 export function switchPosterImage(
 	ctx: ViewRenderer,
 	runtimes: TrackRuntime[],
 ): void {
-	(function (this: ViewRenderer, runtimes: TrackRuntime[]) {
-		let soloCount = 0;
-		let source: PerTrackImageSource | null = null;
-		const switchTargets = this.queryAll('img[data-per-track-image="true"]');
+	let soloCount = 0;
+	let source: PerTrackImageSource | null = null;
+	const switchTargets = ctx.queryAll('img[data-per-track-image="true"]');
 
-		for (const runtime of runtimes) {
-			if (runtime.state.solo) {
-				soloCount += 1;
-				const configured: PerTrackImageSource | undefined =
-					this.perTrackImageSources.get(runtime.definition.id);
-				source = configured ?? source;
-			}
+	for (const runtime of runtimes) {
+		if (runtime.state.solo) {
+			soloCount += 1;
+			const configured: PerTrackImageSource | undefined =
+				ctx.perTrackImageSources.get(runtime.definition.id);
+			source = configured ?? source;
 		}
+	}
 
-		if (switchTargets.length === 0) {
+	if (switchTargets.length === 0) {
+		return;
+	}
+
+	const next: PerTrackImageSource | null = soloCount === 1 ? source : null;
+
+	switchTargets.forEach((element: HTMLElement) => {
+		if (!(element instanceof HTMLImageElement)) {
 			return;
 		}
 
-		const next: PerTrackImageSource | null = soloCount === 1 ? source : null;
+		const container = element.parentElement?.classList.contains(
+			"seekable-img-wrap",
+		)
+			? element.parentElement
+			: element;
 
-		switchTargets.forEach((element: HTMLElement) => {
-			if (!(element instanceof HTMLImageElement)) {
-				return;
-			}
+		// The surface adopts the shown medium's timeline, so seeks and markers
+		// follow the soloed track rather than the reference playhead.
+		ctx.retimeImageSurface(element, next ? next.alignmentTimeline : "");
 
-			const container = element.parentElement?.classList.contains(
-				"seekable-img-wrap",
-			)
-				? element.parentElement
-				: element;
+		if (!next) {
+			setDisplay(container, "none");
+			setDisplay(element, "none");
+			return;
+		}
 
-			// The surface adopts the shown medium's timeline, so seeks and markers
-			// follow the soloed track rather than the reference playhead.
-			this.retimeImageSurface(element, next ? next.alignmentTimeline : "");
+		setDisplay(container, "");
+		setDisplay(element, "");
 
-			if (!next) {
-				setDisplay(container, "none");
-				setDisplay(element, "none");
-				return;
-			}
-
-			setDisplay(container, "");
-			setDisplay(element, "");
-
-			const currentSrc = element.getAttribute("data-per-track-current-src");
-			if (currentSrc !== next.src) {
-				element.src = next.src;
-				element.setAttribute("data-per-track-current-src", next.src);
-			}
-		});
-	}).call(ctx, runtimes);
+		const currentSrc = element.getAttribute("data-per-track-current-src");
+		if (currentSrc !== next.src) {
+			element.src = next.src;
+			element.setAttribute("data-per-track-current-src", next.src);
+		}
+	});
 }
 
 export function setVolumeSlider(
 	ctx: ViewRenderer,
 	volumeZeroToOne: number,
 ): void {
-	(function (this: ViewRenderer, volumeZeroToOne: number) {
-		const slider = this.query(".main-control .volume-slider");
-		if (!slider || !(slider instanceof HTMLInputElement)) {
-			return;
-		}
+	const slider = ctx.query(".main-control .volume-slider");
+	if (!slider || !(slider instanceof HTMLInputElement)) {
+		return;
+	}
 
-		slider.value = String(Math.round(volumeZeroToOne * 100));
-		this.updateVolumeIcon(volumeZeroToOne);
-	}).call(ctx, volumeZeroToOne);
+	slider.value = String(Math.round(volumeZeroToOne * 100));
+	ctx.updateVolumeIcon(volumeZeroToOne);
 }
 
 export function setTrackVolumeSlider(
@@ -1806,33 +1687,29 @@ export function setTrackVolumeSlider(
 	trackIndex: number,
 	volumeZeroToOne: number,
 ): void {
-	(function (this: ViewRenderer, trackIndex: number, volumeZeroToOne: number) {
-		const row = this.query(`.track[data-track-index="${trackIndex}"]`);
-		if (!row) {
-			return;
-		}
+	const row = ctx.query(`.track[data-track-index="${trackIndex}"]`);
+	if (!row) {
+		return;
+	}
 
-		const slider = row.querySelector(".track-volume-slider");
-		if (!(slider instanceof HTMLInputElement)) {
-			return;
-		}
+	const slider = row.querySelector(".track-volume-slider");
+	if (!(slider instanceof HTMLInputElement)) {
+		return;
+	}
 
-		slider.value = String(Math.round(sanitizeVolume(volumeZeroToOne) * 100));
-	}).call(ctx, trackIndex, volumeZeroToOne);
+	slider.value = String(Math.round(sanitizeVolume(volumeZeroToOne) * 100));
 }
 
 export function setPanSlider(
 	ctx: ViewRenderer,
 	panMinusOneToOne: number,
 ): void {
-	(function (this: ViewRenderer, panMinusOneToOne: number) {
-		const slider = this.query(".main-control .pan-slider");
-		if (!slider || !(slider instanceof HTMLInputElement)) {
-			return;
-		}
+	const slider = ctx.query(".main-control .pan-slider");
+	if (!slider || !(slider instanceof HTMLInputElement)) {
+		return;
+	}
 
-		slider.value = String(Math.round(sanitizePan(panMinusOneToOne) * 100));
-	}).call(ctx, panMinusOneToOne);
+	slider.value = String(Math.round(sanitizePan(panMinusOneToOne) * 100));
 }
 
 export function setTrackPanSlider(
@@ -1840,72 +1717,63 @@ export function setTrackPanSlider(
 	trackIndex: number,
 	panMinusOneToOne: number,
 ): void {
-	(function (this: ViewRenderer, trackIndex: number, panMinusOneToOne: number) {
-		const row = this.query(`.track[data-track-index="${trackIndex}"]`);
-		if (!row) {
-			return;
-		}
+	const row = ctx.query(`.track[data-track-index="${trackIndex}"]`);
+	if (!row) {
+		return;
+	}
 
-		const slider = row.querySelector(".track-pan-slider");
-		if (!(slider instanceof HTMLInputElement)) {
-			return;
-		}
+	const slider = row.querySelector(".track-pan-slider");
+	if (!(slider instanceof HTMLInputElement)) {
+		return;
+	}
 
-		slider.value = String(Math.round(sanitizePan(panMinusOneToOne) * 100));
-	}).call(ctx, trackIndex, panMinusOneToOne);
+	slider.value = String(Math.round(sanitizePan(panMinusOneToOne) * 100));
 }
 
 export function updateVolumeIcon(
 	ctx: ViewRenderer,
 	volumeZeroToOne: number,
 ): void {
-	(function (this: ViewRenderer, volumeZeroToOne: number) {
-		this.queryAll(".main-control .volume-control .volume-icon").forEach(
-			(icon: HTMLElement) => {
-				this.applyVolumeIconState(icon, volumeZeroToOne);
-			},
-		);
-	}).call(ctx, volumeZeroToOne);
+	ctx
+		.queryAll(".main-control .volume-control .volume-icon")
+		.forEach((icon: HTMLElement) => {
+			ctx.applyVolumeIconState(icon, volumeZeroToOne);
+		});
 }
 
 export function applyVolumeIconState(
-	ctx: ViewRenderer,
 	icon: HTMLElement,
 	volumeZeroToOne: number,
 ): void {
-	(function (this: ViewRenderer, icon: HTMLElement, volumeZeroToOne: number) {
-		const volume = sanitizeVolume(volumeZeroToOne);
-		if (volume === 0) {
-			setHostIcon(icon, "volume-xmark");
-		} else if (volume <= 1 / 3) {
-			setHostIcon(icon, "volume-low");
-		} else if (volume <= 2 / 3) {
-			setHostIcon(icon, "volume");
-		} else {
-			setHostIcon(icon, "volume-high");
-		}
-	}).call(ctx, icon, volumeZeroToOne);
+	const volume = sanitizeVolume(volumeZeroToOne);
+	if (volume === 0) {
+		setHostIcon(icon, "volume-xmark");
+	} else if (volume <= 1 / 3) {
+		setHostIcon(icon, "volume-low");
+	} else if (volume <= 2 / 3) {
+		setHostIcon(icon, "volume");
+	} else {
+		setHostIcon(icon, "volume-high");
+	}
 }
 
 export function setOverlayLoading(ctx: ViewRenderer, isLoading: boolean): void {
-	(function (this: ViewRenderer, isLoading: boolean) {
-		this.queryAll(".overlay-activation .activate").forEach(
-			(activate: HTMLElement) => {
-				activate.classList.toggle("loading", isLoading);
-				activate.classList.remove("error");
-				setHostIcon(activate, isLoading ? "spinner" : "power-off");
+	ctx
+		.queryAll(".overlay-activation .activate")
+		.forEach((activate: HTMLElement) => {
+			activate.classList.toggle("loading", isLoading);
+			activate.classList.remove("error");
+			setHostIcon(activate, isLoading ? "spinner" : "power-off");
 
-				const iconSlot = getHostIconSlot(activate);
-				if (iconSlot) {
-					iconSlot.classList.toggle("is-spinning", isLoading);
-				}
-			},
-		);
-
-		this.queryAll(".overlay-activation").forEach((overlay: HTMLElement) => {
-			overlay.classList.toggle("loading", isLoading);
+			const iconSlot = getHostIconSlot(activate);
+			if (iconSlot) {
+				iconSlot.classList.toggle("is-spinning", isLoading);
+			}
 		});
-	}).call(ctx, isLoading);
+
+	ctx.queryAll(".overlay-activation").forEach((overlay: HTMLElement) => {
+		overlay.classList.toggle("loading", isLoading);
+	});
 }
 
 const shortcutOverlayPositionCleanupByOverlay = new WeakMap<
@@ -1967,79 +1835,71 @@ export function setShortcutHelpVisible(
 	ctx: ViewRenderer,
 	isVisible: boolean,
 ): void {
-	(function (this: ViewRenderer, isVisible: boolean) {
-		const root = this.root;
-		this.queryAll(".overlay-shortcuts").forEach((overlay: HTMLElement) => {
-			overlay.classList.toggle("is-hidden", !isVisible);
-			overlay.setAttribute("aria-hidden", isVisible ? "false" : "true");
+	const root = ctx.root;
+	ctx.queryAll(".overlay-shortcuts").forEach((overlay: HTMLElement) => {
+		overlay.classList.toggle("is-hidden", !isVisible);
+		overlay.setAttribute("aria-hidden", isVisible ? "false" : "true");
 
-			if (isVisible) {
-				positionShortcutOverlay(root, overlay);
-				if (!overlay.matches(":popover-open")) {
-					overlay.showPopover();
-				}
-				trackShortcutOverlayPosition(root, overlay);
-				const panel = overlay.querySelector(".shortcut-help-panel");
-				if (panel instanceof HTMLElement) {
-					panel.focus();
-				}
-				return;
+		if (isVisible) {
+			positionShortcutOverlay(root, overlay);
+			if (!overlay.matches(":popover-open")) {
+				overlay.showPopover();
 			}
+			trackShortcutOverlayPosition(root, overlay);
+			const panel = overlay.querySelector(".shortcut-help-panel");
+			if (panel instanceof HTMLElement) {
+				panel.focus();
+			}
+			return;
+		}
 
-			const activeElement = getDeepActiveElement(overlay);
-			if (
-				activeElement instanceof HTMLElement &&
-				overlay.contains(activeElement)
-			) {
-				activeElement.blur();
-			}
+		const activeElement = getDeepActiveElement(overlay);
+		if (
+			activeElement instanceof HTMLElement &&
+			overlay.contains(activeElement)
+		) {
+			activeElement.blur();
+		}
 
-			if (overlay.matches(":popover-open")) {
-				overlay.hidePopover();
-			}
-			shortcutOverlayPositionCleanupByOverlay.get(overlay)?.();
-		});
-	}).call(ctx, isVisible);
+		if (overlay.matches(":popover-open")) {
+			overlay.hidePopover();
+		}
+		shortcutOverlayPositionCleanupByOverlay.get(overlay)?.();
+	});
 }
 
 export function setFullscreen(ctx: ViewRenderer, active: boolean): void {
-	(function (this: ViewRenderer, active: boolean) {
-		this.root.classList.toggle("ts-fullscreen", active);
-		this.queryAll(".fullscreen-toggle").forEach((element: HTMLElement) => {
-			element.classList.toggle("checked", active);
-			element.setAttribute(
-				"title",
-				active ? "Exit Fullscreen (F)" : "Enter Fullscreen (F)",
-			);
-			element.setAttribute(
-				"aria-label",
-				active ? "Exit Fullscreen" : "Enter Fullscreen",
-			);
-			setHostIcon(element, active ? "minimize" : "expand");
-		});
-	}).call(ctx, active);
+	ctx.root.classList.toggle("ts-fullscreen", active);
+	ctx.queryAll(".fullscreen-toggle").forEach((element: HTMLElement) => {
+		element.classList.toggle("checked", active);
+		element.setAttribute(
+			"title",
+			active ? "Exit Fullscreen (F)" : "Enter Fullscreen (F)",
+		);
+		element.setAttribute(
+			"aria-label",
+			active ? "Exit Fullscreen" : "Enter Fullscreen",
+		);
+		setHostIcon(element, active ? "minimize" : "expand");
+	});
 }
 
 export function updateOverlayDownloadInfo(
 	ctx: ViewRenderer,
 	info: AudioDownloadSizeInfo,
 ): void {
-	(function (this: ViewRenderer, info: AudioDownloadSizeInfo) {
-		const downloadInfo = this.query(".overlay-download-info");
-		if (!downloadInfo) {
-			return;
-		}
+	const downloadInfo = ctx.query(".overlay-download-info");
+	if (!downloadInfo) {
+		return;
+	}
 
-		downloadInfo.textContent = renderOverlayDownloadInfoText(info);
-	}).call(ctx, info);
+	downloadInfo.textContent = renderOverlayDownloadInfoText(info);
 }
 
 export function hideOverlayOnLoaded(ctx: ViewRenderer): void {
-	(function (this: ViewRenderer) {
-		this.queryAll(".overlay-activation").forEach((overlay: HTMLElement) => {
-			overlay.classList.add("is-hidden");
-		});
-	}).call(ctx);
+	ctx.queryAll(".overlay-activation").forEach((overlay: HTMLElement) => {
+		overlay.classList.add("is-hidden");
+	});
 }
 
 export function showError(
@@ -2047,70 +1907,64 @@ export function showError(
 	message: string,
 	runtimes: TrackRuntime[],
 ): void {
-	(function (this: ViewRenderer, message: string, runtimes: TrackRuntime[]) {
-		this.root.classList.add("error");
+	ctx.root.classList.add("error");
 
-		this.queryAll(".overlay-activation").forEach((overlay: HTMLElement) => {
-			overlay.classList.remove("is-hidden");
+	ctx.queryAll(".overlay-activation").forEach((overlay: HTMLElement) => {
+		overlay.classList.remove("is-hidden");
+	});
+
+	ctx
+		.queryAll(".overlay-activation .activate")
+		.forEach((activate: HTMLElement) => {
+			activate.classList.remove("loading");
+			activate.classList.add("error");
+			setHostIcon(activate, "exclamation");
+
+			const iconSlot = getHostIconSlot(activate);
+			if (iconSlot) {
+				iconSlot.classList.remove("is-spinning");
+			}
 		});
 
-		this.queryAll(".overlay-activation .activate").forEach(
-			(activate: HTMLElement) => {
-				activate.classList.remove("loading");
-				activate.classList.add("error");
-				setHostIcon(activate, "exclamation");
+	const overlayText = ctx.query("#overlaytext");
+	if (overlayText) {
+		overlayText.textContent = message;
+	}
 
-				const iconSlot = getHostIconSlot(activate);
-				if (iconSlot) {
-					iconSlot.classList.remove("is-spinning");
-				}
-			},
-		);
-
-		const overlayText = this.query("#overlaytext");
-		if (overlayText) {
-			overlayText.textContent = message;
+	runtimes.forEach((runtime: TrackRuntime, index: number) => {
+		if (!runtime.errored) {
+			return;
 		}
 
-		runtimes.forEach((runtime: TrackRuntime, index: number) => {
-			if (!runtime.errored) {
-				return;
-			}
-
-			const row = this.query(`.track[data-track-index="${index}"]`);
-			if (row) {
-				row.classList.add("error");
-			}
-		});
-	}).call(ctx, message, runtimes);
+		const row = ctx.query(`.track[data-track-index="${index}"]`);
+		if (row) {
+			row.classList.add("error");
+		}
+	});
 }
 
 export function destroy(ctx: ViewRenderer): void {
-	(function (this: ViewRenderer) {
-		if (this.panelDragState) {
-			this.endPanelReorder();
-		}
+	if (ctx.panelDragState) {
+		ctx.endPanelReorder();
+	}
 
-		if (this.waveformTileRefreshFrameId !== null) {
-			cancelAnimationFrame(this.waveformTileRefreshFrameId);
-			this.waveformTileRefreshFrameId = null;
-		}
+	if (ctx.waveformTileRefreshFrameId !== null) {
+		cancelAnimationFrame(ctx.waveformTileRefreshFrameId);
+		ctx.waveformTileRefreshFrameId = null;
+	}
 
-		this.latestWaveformRenderInput = null;
-		this.waveformSeekSurfaces.length = 0;
-		this.pianoRollSeekSurfaces.length = 0;
-		this.imageSeekSurfaces.length = 0;
-		this.sheetMusicHosts.length = 0;
-		this.warpingMatrixHosts.length = 0;
-		this.panelDragState = null;
-		resetManagedRoot(this.root);
-	}).call(ctx);
+	ctx.latestWaveformRenderInput = null;
+	ctx.waveformSeekSurfaces.length = 0;
+	ctx.pianoRollSeekSurfaces.length = 0;
+	ctx.imageSeekSurfaces.length = 0;
+	ctx.sheetMusicHosts.length = 0;
+	ctx.warpingMatrixHosts.length = 0;
+	ctx.panelDragState = null;
+	resetManagedRoot(ctx.root);
 }
 
 export function getPresetCount(ctx: ViewRenderer): number {
-	return function (this: ViewRenderer) {
-		return this.presetEntries.length;
-	}.call(ctx);
+	return ctx.presetEntries.length;
 }
 
 export function updateTiming(
@@ -2118,27 +1972,25 @@ export function updateTiming(
 	position: number,
 	longestDuration: number,
 ): void {
-	(function (this: ViewRenderer, position: number, longestDuration: number) {
-		// One pair, so the unit is named once across both halves.
-		const readout = this.formatReferenceTimelinePair(position, longestDuration);
-		this.queryAll(".timing .time").forEach((node: HTMLElement) => {
-			node.textContent = readout.position;
-		});
+	// One pair, so the unit is named once across both halves.
+	const readout = ctx.formatReferenceTimelinePair(position, longestDuration);
+	ctx.queryAll(".timing .time").forEach((node: HTMLElement) => {
+		node.textContent = readout.position;
+	});
 
-		this.queryAll(".timing .length").forEach((node: HTMLElement) => {
-			node.textContent = readout.duration;
-		});
+	ctx.queryAll(".timing .length").forEach((node: HTMLElement) => {
+		node.textContent = readout.duration;
+	});
 
-		// The readout is on the reference timeline, which may have no data out
-		// where the reference playhead currently is.
-		const referenceTimeline = this.referenceTimelineId;
-		const outOfCoverage = Boolean(
-			referenceTimeline &&
-				this.isTimelineCovered &&
-				!this.isTimelineCovered(referenceTimeline),
-		);
-		this.queryAll(".timing").forEach((node: HTMLElement) => {
-			node.classList.toggle(OUT_OF_COVERAGE_CLASS, outOfCoverage);
-		});
-	}).call(ctx, position, longestDuration);
+	// The readout is on the reference timeline, which may have no data out
+	// where the reference playhead currently is.
+	const referenceTimeline = ctx.referenceTimelineId;
+	const outOfCoverage = Boolean(
+		referenceTimeline &&
+			ctx.isTimelineCovered &&
+			!ctx.isTimelineCovered(referenceTimeline),
+	);
+	ctx.queryAll(".timing").forEach((node: HTMLElement) => {
+		node.classList.toggle(OUT_OF_COVERAGE_CLASS, outOfCoverage);
+	});
 }

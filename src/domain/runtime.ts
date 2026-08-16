@@ -1,3 +1,4 @@
+import { clamp01, clampPan } from "../shared/math";
 import type {
 	TrackDefinition,
 	TrackId,
@@ -7,22 +8,6 @@ import type {
 	TrackSwitchViewConfig,
 } from "./types";
 
-function clamp01(value: number): number {
-	if (!Number.isFinite(value)) {
-		return 1;
-	}
-
-	return Math.max(0, Math.min(1, value));
-}
-
-function clampPan(value: number): number {
-	if (!Number.isFinite(value)) {
-		return 0;
-	}
-
-	return Math.max(-1, Math.min(1, value));
-}
-
 export function createTrackRuntime(
 	definition: TrackDefinition,
 	_index: number,
@@ -31,7 +16,10 @@ export function createTrackRuntime(
 		definition: definition,
 		state: {
 			solo: !!definition.solo,
-			volume: clamp01(definition.volume ?? 1),
+			// A malformed (non-finite) configured volume reads as unset, i.e. full.
+			volume: clamp01(
+				Number.isFinite(definition.volume) ? (definition.volume as number) : 1,
+			),
 			pan: clampPan(definition.pan ?? 0),
 		},
 		panAlgorithm: "balance",

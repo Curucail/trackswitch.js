@@ -15,6 +15,7 @@ import {
 	buildAlignmentHelpLabelHtml,
 	buildAlignmentHelpTriggerHtml,
 } from "./alignment-help";
+import { escapeHtml } from "./html";
 
 function buildDropZoneInputHtml(): string {
 	return (
@@ -243,14 +244,6 @@ export function buildFullDropZonePanel(
 
 	html += "</div>";
 	return html;
-}
-
-function escapeHtml(text: string): string {
-	return text
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;")
-		.replace(/"/g, "&quot;");
 }
 
 // ── Event binding ──

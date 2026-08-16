@@ -1,3 +1,4 @@
+import { clampNonNegative } from "../shared/math";
 import {
 	moveCursorToMeasure,
 	resolveAvailableMeasure,
@@ -35,7 +36,6 @@ import type {
 import {
 	DEFAULT_CURSOR_COLOR,
 	sanitizeCursorAlpha,
-	sanitizePlaybackPosition,
 	sanitizeRenderScale,
 } from "./sheet-music/types";
 
@@ -142,7 +142,7 @@ export class SheetMusicEngine {
 		isTimelineCovered?: (mediaId: string) => boolean,
 	): void {
 		this.applyReferenceTimeline(syncReferenceTimeEnabled);
-		updateCursorPosition(this, sanitizePlaybackPosition(referencePosition));
+		updateCursorPosition(this, clampNonNegative(referencePosition));
 
 		if (!isTimelineCovered) {
 			return;
@@ -293,7 +293,7 @@ export class SheetMusicEngine {
 		referenceTime: number,
 		syncReferenceTimeEnabled = this.syncReferenceTimeEnabled,
 	): number | null {
-		const sanitizedReferenceTime = sanitizePlaybackPosition(referenceTime);
+		const sanitizedReferenceTime = clampNonNegative(referenceTime);
 
 		for (let index = 0; index < this.entries.length; index += 1) {
 			const entry = this.entries[index];

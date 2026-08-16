@@ -685,25 +685,19 @@ export class ViewRenderer {
 	}
 
 	public getWarpingMatrixPathStrokeWidth(): number {
-		return viewRendererWarping.getWarpingMatrixPathStrokeWidth(this);
+		return viewRendererWarping.getWarpingMatrixPathStrokeWidth();
 	}
 
 	public getWarpingMatrixLocalTempoWindowSeconds(
 		host: WarpingMatrixHostMetadata,
 	): number {
-		return viewRendererWarping.getWarpingMatrixLocalTempoWindowSeconds(
-			this,
-			host,
-		);
+		return viewRendererWarping.getWarpingMatrixLocalTempoWindowSeconds(host);
 	}
 
 	public getWarpingMatrixLocalTempoSmoothingSeconds(
 		host: WarpingMatrixHostMetadata,
 	): number {
-		return viewRendererWarping.getWarpingMatrixLocalTempoSmoothingSeconds(
-			this,
-			host,
-		);
+		return viewRendererWarping.getWarpingMatrixLocalTempoSmoothingSeconds(host);
 	}
 
 	public updateWarpingMatrixTempoControlLabels(
@@ -719,7 +713,7 @@ export class ViewRenderer {
 	}
 
 	public getWarpingMatrixSquarePlotSize(plot: WarpingMatrixPlotState): number {
-		return viewRendererWarping.getWarpingMatrixSquarePlotSize(this, plot);
+		return viewRendererWarping.getWarpingMatrixSquarePlotSize(plot);
 	}
 
 	public resolveWarpingMatrixColumnColor(
@@ -727,7 +721,6 @@ export class ViewRenderer {
 		columnOrder: string[],
 	): string {
 		return viewRendererWarping.resolveWarpingMatrixColumnColor(
-			this,
 			columnKey,
 			columnOrder,
 		);
@@ -927,12 +920,7 @@ export class ViewRenderer {
 		width: number,
 		height: number,
 	): void {
-		viewRendererWarping.applyWarpingMatrixPlotDimensions(
-			this,
-			plot,
-			width,
-			height,
-		);
+		viewRendererWarping.applyWarpingMatrixPlotDimensions(plot, width, height);
 	}
 
 	public applyWarpingTempoPlotDimensions(
@@ -940,12 +928,7 @@ export class ViewRenderer {
 		width: number,
 		height: number,
 	): void {
-		viewRendererWarping.applyWarpingTempoPlotDimensions(
-			this,
-			plot,
-			width,
-			height,
-		);
+		viewRendererWarping.applyWarpingTempoPlotDimensions(plot, width, height);
 	}
 
 	public isPointerInsidePlotArea(
@@ -957,7 +940,6 @@ export class ViewRenderer {
 		clientY: number,
 	): boolean {
 		return viewRendererWarping.isPointerInsidePlotArea(
-			this,
 			plotHost,
 			margins,
 			innerWidth,
@@ -1019,19 +1001,19 @@ export class ViewRenderer {
 	public getPrimaryWarpingSeriesData(
 		host: WarpingMatrixHostMetadata,
 	): WarpingMatrixPathSeriesData | null {
-		return viewRendererWarping.getPrimaryWarpingSeriesData(this, host);
+		return viewRendererWarping.getPrimaryWarpingSeriesData(host);
 	}
 
 	public getPrimaryTempoSeries(
 		host: WarpingMatrixHostMetadata,
 	): WarpingMatrixTempoPoint[] {
-		return viewRendererWarping.getPrimaryTempoSeries(this, host);
+		return viewRendererWarping.getPrimaryTempoSeries(host);
 	}
 
 	public getPrimaryTempoSeriesData(
 		host: WarpingMatrixHostMetadata,
 	): WarpingMatrixTempoSeriesData | null {
-		return viewRendererWarping.getPrimaryTempoSeriesData(this, host);
+		return viewRendererWarping.getPrimaryTempoSeriesData(host);
 	}
 
 	public ensureWarpingLayout(host: WarpingMatrixHostMetadata): void {
@@ -1125,7 +1107,6 @@ export class ViewRenderer {
 		referenceTime: number,
 	): number {
 		return viewRendererWarping.interpolateWarpingTrackTime(
-			this,
 			points,
 			referenceTime,
 		);
@@ -1136,18 +1117,17 @@ export class ViewRenderer {
 		trackTime: number,
 	): number {
 		return viewRendererWarping.interpolateWarpingReferenceTime(
-			this,
 			pointsByTrackTime,
 			trackTime,
 		);
 	}
 
 	public createWaveformTimingNode(overlay: HTMLElement): HTMLElement {
-		return viewRendererWaveform.createWaveformTimingNode(this, overlay);
+		return viewRendererWaveform.createWaveformTimingNode(overlay);
 	}
 
 	public createWaveformZoomNode(overlay: HTMLElement): HTMLElement {
-		return viewRendererWaveform.createWaveformZoomNode(this, overlay);
+		return viewRendererWaveform.createWaveformZoomNode(overlay);
 	}
 
 	public resolveWaveformBaseWidth(
@@ -1155,7 +1135,6 @@ export class ViewRenderer {
 		fallback: number,
 	): number {
 		return viewRendererWaveform.resolveWaveformBaseWidth(
-			this,
 			scrollContainer,
 			fallback,
 		);
@@ -1166,7 +1145,6 @@ export class ViewRenderer {
 		fallback: number,
 	): number {
 		return viewRendererPianoRoll.resolvePianoRollBaseWidth(
-			this,
 			scrollContainer,
 			fallback,
 		);
@@ -1175,7 +1153,7 @@ export class ViewRenderer {
 	public setWaveformSurfaceWidth(
 		surfaceMetadata: WaveformSeekSurfaceMetadata,
 	): void {
-		viewRendererWaveform.setWaveformSurfaceWidth(this, surfaceMetadata);
+		viewRendererWaveform.setWaveformSurfaceWidth(surfaceMetadata);
 	}
 
 	public forEachVisibleWaveformTile(
@@ -1196,11 +1174,7 @@ export class ViewRenderer {
 			};
 		}) => void,
 	): void {
-		viewRendererWaveform.forEachVisibleWaveformTile(
-			this,
-			surfaceMetadata,
-			callback,
-		);
+		viewRendererWaveform.forEachVisibleWaveformTile(surfaceMetadata, callback);
 	}
 
 	public scheduleVisibleWaveformTileRefresh(): void {
@@ -1220,7 +1194,6 @@ export class ViewRenderer {
 		baseWidth: number,
 	): number {
 		return viewRendererWaveform.computeNormalizationPeak(
-			this,
 			waveformEngine,
 			sourceRuntimes,
 			renderBarWidth,
@@ -1240,7 +1213,6 @@ export class ViewRenderer {
 		hasTimelineProjector: boolean,
 	): string {
 		return viewRendererWaveform.buildWaveformNormalizationCacheKey(
-			this,
 			surfaceMetadata,
 			runtimes,
 			sourceRuntimes,
@@ -1661,7 +1633,7 @@ export class ViewRenderer {
 		icon: HTMLElement,
 		volumeZeroToOne: number,
 	): void {
-		viewRendererCore.applyVolumeIconState(this, icon, volumeZeroToOne);
+		viewRendererCore.applyVolumeIconState(icon, volumeZeroToOne);
 	}
 
 	setOverlayLoading(isLoading: boolean): void {

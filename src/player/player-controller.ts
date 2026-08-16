@@ -293,7 +293,9 @@ export class TrackSwitchControllerImpl
 
 		this.inputBinder = new InputBinder(this.root, this.features, this);
 		this.inputBinder.bind();
-		this.prefetchAudioDownloadSize();
+		if (!this.features.autoload) {
+			this.prefetchAudioDownloadSize();
+		}
 
 		const firstPresetId = Object.keys(this.presets)[0];
 		if (firstPresetId) {
@@ -634,7 +636,7 @@ export class TrackSwitchControllerImpl
 	}
 
 	onPresetScroll(event: ControllerPointerEvent): void {
-		controllerInput.onPresetScroll(this, event);
+		controllerInput.onPresetScroll(event);
 	}
 
 	onWaveformZoomWheel(event: ControllerPointerEvent): void {
@@ -702,7 +704,7 @@ export class TrackSwitchControllerImpl
 	}
 
 	public getKeyboardTrackIndex(event: ControllerPointerEvent): number | null {
-		return controllerInput.getKeyboardTrackIndex(this, event);
+		return controllerInput.getKeyboardTrackIndex(event);
 	}
 
 	onResize(): void {
@@ -746,11 +748,11 @@ export class TrackSwitchControllerImpl
 	}
 
 	public isWaveformSeekSurface(seekWrap: HTMLElement | null): boolean {
-		return controllerSeek.isWaveformSeekSurface(this, seekWrap);
+		return controllerSeek.isWaveformSeekSurface(seekWrap);
 	}
 
 	public isPianoRollSeekSurface(seekWrap: HTMLElement | null): boolean {
-		return controllerSeek.isPianoRollSeekSurface(this, seekWrap);
+		return controllerSeek.isPianoRollSeekSurface(seekWrap);
 	}
 
 	public startInteractiveSeek(
@@ -786,7 +788,7 @@ export class TrackSwitchControllerImpl
 	}
 
 	public getTouchPair(event: ControllerPointerEvent): [Touch, Touch] | null {
-		return controllerSeek.getTouchPair(this, event);
+		return controllerSeek.getTouchPair(event);
 	}
 
 	public getTouchDistance(event: ControllerPointerEvent): number | null {
@@ -798,7 +800,7 @@ export class TrackSwitchControllerImpl
 	}
 
 	public getActiveTouchCount(event: ControllerPointerEvent): number {
-		return controllerSeek.getActiveTouchCount(this, event);
+		return controllerSeek.getActiveTouchCount(event);
 	}
 
 	public tryStartPinchZoom(

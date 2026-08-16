@@ -8,6 +8,7 @@ import type {
 } from "../domain/types";
 import { calculateTrackTiming, inferSourceMimeType } from "../shared/audio";
 import { computeLoudnessNormalizationGain } from "../shared/loudness";
+import { clamp01, clampPan } from "../shared/math";
 import { getAudioContext } from "./audio-context";
 import { readSourceSampleRate } from "./source-sample-rate";
 
@@ -75,22 +76,6 @@ interface AudioSourceSizeProbeResult {
 }
 
 const RESUME_WAIT_TIMEOUT_MS = 250;
-
-function clamp01(value: number): number {
-	if (!Number.isFinite(value)) {
-		return 0;
-	}
-
-	return Math.max(0, Math.min(1, value));
-}
-
-function clampPan(value: number): number {
-	if (!Number.isFinite(value)) {
-		return 0;
-	}
-
-	return Math.max(-1, Math.min(1, value));
-}
 
 /**
  * True balance control: each channel's gain is scaled independently, so a

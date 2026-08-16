@@ -1,3 +1,4 @@
+import { clamp01, clampNonNegative, clampPan } from "../shared/math";
 import type { LoopMarker, PlaybackAnchor, PlayerState } from "./types";
 
 export type PlayerAction =
@@ -23,20 +24,6 @@ export type PlayerAction =
 	| { type: "toggle-loop" }
 	| { type: "clear-loop" };
 
-function clamp01(value: number): number {
-	if (!Number.isFinite(value)) {
-		return 0;
-	}
-	return Math.max(0, Math.min(1, value));
-}
-
-function clampPan(value: number): number {
-	if (!Number.isFinite(value)) {
-		return 0;
-	}
-	return Math.max(-1, Math.min(1, value));
-}
-
 export function createInitialPlayerState(repeat: boolean): PlayerState {
 	return {
 		playing: false,
@@ -53,13 +40,6 @@ export function createInitialPlayerState(repeat: boolean): PlayerState {
 		volume: 1,
 		pan: 0,
 	};
-}
-
-function clampNonNegative(value: number): number {
-	if (!Number.isFinite(value)) {
-		return 0;
-	}
-	return Math.max(0, value);
 }
 
 function withLoopState(

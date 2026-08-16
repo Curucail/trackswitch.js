@@ -1,6 +1,6 @@
+import { clampNonNegative } from "../../shared/math";
 import type { MeasureMapPoint } from "../../shared/measure-map";
 import type { SheetMusicEntryModel } from "./types";
-import { sanitizePlaybackPosition } from "./types";
 
 interface CursorSyncContext {
 	lastPosition: number;
@@ -15,7 +15,7 @@ export function updatePosition(
 	ctx: CursorSyncContext,
 	referencePosition: number,
 ): void {
-	ctx.lastPosition = sanitizePlaybackPosition(referencePosition);
+	ctx.lastPosition = clampNonNegative(referencePosition);
 
 	ctx.entries.forEach((entry: SheetMusicEntryModel) => {
 		if (

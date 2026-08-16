@@ -222,187 +222,165 @@ export function onSeekMove(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		if (!this.isLoaded) {
-			return;
-		}
+	if (!ctx.isLoaded) {
+		return;
+	}
 
-		if (handleWaveformAuxiliarySeekState(this, event)) {
-			return;
-		}
+	if (handleWaveformAuxiliarySeekState(ctx, event)) {
+		return;
+	}
 
-		if (updateDraggedLoopMarker(this, event)) {
-			return;
-		}
+	if (updateDraggedLoopMarker(ctx, event)) {
+		return;
+	}
 
-		if (updateRightClickLoopSelection(this, event)) {
-			return;
-		}
+	if (updateRightClickLoopSelection(ctx, event)) {
+		return;
+	}
 
-		if (this.state.currentlySeeking) {
-			event.preventDefault();
-			this.seekFromEvent(event);
-		}
-	}).call(ctx, event);
+	if (ctx.state.currentlySeeking) {
+		event.preventDefault();
+		ctx.seekFromEvent(event);
+	}
 }
 
 export function onWaveformZoomWheel(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		const wheelEvent = event.originalEvent as WheelEvent | undefined;
-		const deltaY = wheelEvent ? normalizeWaveformWheelDelta(wheelEvent) : 0;
-		if (
-			typeof deltaY !== "number" ||
-			!Number.isFinite(deltaY) ||
-			deltaY === 0
-		) {
-			return;
-		}
+	const wheelEvent = event.originalEvent as WheelEvent | undefined;
+	const deltaY = wheelEvent ? normalizeWaveformWheelDelta(wheelEvent) : 0;
+	if (typeof deltaY !== "number" || !Number.isFinite(deltaY) || deltaY === 0) {
+		return;
+	}
 
-		const wrapper = closestInRoot(this.root, event.target, ".waveform-wrap");
-		if (!wrapper) {
-			return;
-		}
+	const wrapper = closestInRoot(ctx.root, event.target, ".waveform-wrap");
+	if (!wrapper) {
+		return;
+	}
 
-		const seekWrap = wrapper.querySelector(
-			'.seekwrap[data-seek-surface="waveform"]',
-		);
-		if (!(seekWrap instanceof HTMLElement)) {
-			return;
-		}
+	const seekWrap = wrapper.querySelector(
+		'.seekwrap[data-seek-surface="waveform"]',
+	);
+	if (!(seekWrap instanceof HTMLElement)) {
+		return;
+	}
 
-		const zoomDuration = this.getSeekTimelineContext(seekWrap).duration;
-		if (!this.renderer.isWaveformZoomEnabled(seekWrap, zoomDuration)) {
-			return;
-		}
+	const zoomDuration = ctx.getSeekTimelineContext(seekWrap).duration;
+	if (!ctx.renderer.isWaveformZoomEnabled(seekWrap, zoomDuration)) {
+		return;
+	}
 
-		const currentZoom = this.renderer.getWaveformZoom(seekWrap);
-		if (currentZoom === null) {
-			return;
-		}
+	const currentZoom = ctx.renderer.getWaveformZoom(seekWrap);
+	if (currentZoom === null) {
+		return;
+	}
 
-		event.preventDefault();
-		event.stopPropagation();
+	event.preventDefault();
+	event.stopPropagation();
 
-		const zoomFactor = Math.exp(-1 * deltaY * WAVEFORM_WHEEL_ZOOM_SPEED);
-		const nextZoom = currentZoom * zoomFactor;
-		const changed = this.renderer.setWaveformZoom(
-			seekWrap,
-			nextZoom,
-			zoomDuration,
-			Number.isFinite(event.pageX) ? event.pageX : undefined,
-		);
+	const zoomFactor = Math.exp(-1 * deltaY * WAVEFORM_WHEEL_ZOOM_SPEED);
+	const nextZoom = currentZoom * zoomFactor;
+	const changed = ctx.renderer.setWaveformZoom(
+		seekWrap,
+		nextZoom,
+		zoomDuration,
+		Number.isFinite(event.pageX) ? event.pageX : undefined,
+	);
 
-		if (changed) {
-			this.requestWaveformRender();
-			this.updateMainControls();
-		}
-	}).call(ctx, event);
+	if (changed) {
+		ctx.requestWaveformRender();
+		ctx.updateMainControls();
+	}
 }
 
 export function onPianoRollZoomWheel(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		const wheelEvent = event.originalEvent as WheelEvent | undefined;
-		const deltaY = wheelEvent ? normalizeWaveformWheelDelta(wheelEvent) : 0;
-		if (
-			typeof deltaY !== "number" ||
-			!Number.isFinite(deltaY) ||
-			deltaY === 0
-		) {
-			return;
-		}
+	const wheelEvent = event.originalEvent as WheelEvent | undefined;
+	const deltaY = wheelEvent ? normalizeWaveformWheelDelta(wheelEvent) : 0;
+	if (typeof deltaY !== "number" || !Number.isFinite(deltaY) || deltaY === 0) {
+		return;
+	}
 
-		const wrapper = closestInRoot(this.root, event.target, ".piano-roll-wrap");
-		if (!wrapper) {
-			return;
-		}
+	const wrapper = closestInRoot(ctx.root, event.target, ".piano-roll-wrap");
+	if (!wrapper) {
+		return;
+	}
 
-		const seekWrap = wrapper.querySelector(
-			'.seekwrap[data-seek-surface="piano-roll"]',
-		);
-		if (!(seekWrap instanceof HTMLElement)) {
-			return;
-		}
+	const seekWrap = wrapper.querySelector(
+		'.seekwrap[data-seek-surface="piano-roll"]',
+	);
+	if (!(seekWrap instanceof HTMLElement)) {
+		return;
+	}
 
-		const zoomDuration = this.getSeekTimelineContext(seekWrap).duration;
-		if (!this.renderer.isPianoRollZoomEnabled(seekWrap, zoomDuration)) {
-			return;
-		}
+	const zoomDuration = ctx.getSeekTimelineContext(seekWrap).duration;
+	if (!ctx.renderer.isPianoRollZoomEnabled(seekWrap, zoomDuration)) {
+		return;
+	}
 
-		const currentZoom = this.renderer.getPianoRollZoom(seekWrap);
-		if (currentZoom === null) {
-			return;
-		}
+	const currentZoom = ctx.renderer.getPianoRollZoom(seekWrap);
+	if (currentZoom === null) {
+		return;
+	}
 
-		event.preventDefault();
-		event.stopPropagation();
+	event.preventDefault();
+	event.stopPropagation();
 
-		const zoomFactor = Math.exp(-1 * deltaY * WAVEFORM_WHEEL_ZOOM_SPEED);
-		const nextZoom = currentZoom * zoomFactor;
-		const changed = this.renderer.setPianoRollZoom(
-			seekWrap,
-			nextZoom,
-			zoomDuration,
-			Number.isFinite(event.pageX) ? event.pageX : undefined,
-		);
+	const zoomFactor = Math.exp(-1 * deltaY * WAVEFORM_WHEEL_ZOOM_SPEED);
+	const nextZoom = currentZoom * zoomFactor;
+	const changed = ctx.renderer.setPianoRollZoom(
+		seekWrap,
+		nextZoom,
+		zoomDuration,
+		Number.isFinite(event.pageX) ? event.pageX : undefined,
+	);
 
-		if (changed) {
-			this.updateMainControls();
-		}
-	}).call(ctx, event);
+	if (changed) {
+		ctx.updateMainControls();
+	}
 }
 
 function updateTimelineMinimapDrag(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): boolean {
-	return function (
-		this: TrackSwitchControllerImpl,
-		event: ControllerPointerEvent,
-	) {
-		if (!this.waveformMinimapDragState) {
-			return false;
-		}
+	if (!ctx.waveformMinimapDragState) {
+		return false;
+	}
 
-		if (event.type === "touchmove" && this.getActiveTouchCount(event) >= 2) {
-			this.endWaveformMinimapDrag();
-			return false;
-		}
+	if (event.type === "touchmove" && ctx.getActiveTouchCount(event) >= 2) {
+		ctx.endWaveformMinimapDrag();
+		return false;
+	}
 
-		if (!Number.isFinite(event.pageX)) {
-			return true;
-		}
-
-		const rect =
-			this.waveformMinimapDragState.minimapNode.getBoundingClientRect();
-		const minimapWidth = Math.max(
-			1,
-			rect.width || this.waveformMinimapDragState.minimapNode.clientWidth,
-		);
-		const ownerWindow = getOwnerWindow(
-			this.waveformMinimapDragState.minimapNode,
-		);
-		const pointerRatio = clamp(
-			((event.pageX as number) - (rect.left + ownerWindow.scrollX)) /
-				minimapWidth,
-			0,
-			1,
-		);
-		const seekWrap = this.waveformMinimapDragState.seekWrap;
-		const startRatio =
-			pointerRatio - this.waveformMinimapDragState.pointerOffsetRatio;
-		if (this.isPianoRollSeekSurface(seekWrap)) {
-			this.renderer.setPianoRollMinimapViewportStart(seekWrap, startRatio);
-		} else {
-			this.renderer.setWaveformMinimapViewportStart(seekWrap, startRatio);
-		}
+	if (!Number.isFinite(event.pageX)) {
 		return true;
-	}.call(ctx, event);
+	}
+
+	const rect = ctx.waveformMinimapDragState.minimapNode.getBoundingClientRect();
+	const minimapWidth = Math.max(
+		1,
+		rect.width || ctx.waveformMinimapDragState.minimapNode.clientWidth,
+	);
+	const ownerWindow = getOwnerWindow(ctx.waveformMinimapDragState.minimapNode);
+	const pointerRatio = clamp(
+		((event.pageX as number) - (rect.left + ownerWindow.scrollX)) /
+			minimapWidth,
+		0,
+		1,
+	);
+	const seekWrap = ctx.waveformMinimapDragState.seekWrap;
+	const startRatio =
+		pointerRatio - ctx.waveformMinimapDragState.pointerOffsetRatio;
+	if (ctx.isPianoRollSeekSurface(seekWrap)) {
+		ctx.renderer.setPianoRollMinimapViewportStart(seekWrap, startRatio);
+	} else {
+		ctx.renderer.setWaveformMinimapViewportStart(seekWrap, startRatio);
+	}
+	return true;
 }
 
 export function updateWaveformMinimapDrag(
@@ -413,56 +391,36 @@ export function updateWaveformMinimapDrag(
 }
 
 export function endWaveformMinimapDrag(ctx: TrackSwitchControllerImpl): void {
-	(function (this: TrackSwitchControllerImpl) {
-		this.waveformMinimapDragState = null;
-	}).call(ctx);
+	ctx.waveformMinimapDragState = null;
 }
 
 export function requestWaveformRender(ctx: TrackSwitchControllerImpl): void {
-	(function (this: TrackSwitchControllerImpl) {
-		if (this.waveformRenderFrameId !== null) {
-			return;
-		}
+	if (ctx.waveformRenderFrameId !== null) {
+		return;
+	}
 
-		this.waveformRenderFrameId = requestAnimationFrame(() => {
-			this.waveformRenderFrameId = null;
-			this.renderer.renderWaveforms(
-				this.waveformEngine,
-				this.runtimes,
-				this.longestDuration,
-				this.getWaveformTimelineProjector(),
-				this.getWaveformTimelineContext(),
-			);
-		});
-	}).call(ctx);
+	ctx.waveformRenderFrameId = requestAnimationFrame(() => {
+		ctx.waveformRenderFrameId = null;
+		ctx.renderer.renderWaveforms(
+			ctx.waveformEngine,
+			ctx.runtimes,
+			ctx.longestDuration,
+			ctx.getWaveformTimelineProjector(),
+			ctx.getWaveformTimelineContext(),
+		);
+	});
 }
 
-export function isWaveformSeekSurface(
-	ctx: TrackSwitchControllerImpl,
-	seekWrap: HTMLElement | null,
-): boolean {
-	return function (
-		this: TrackSwitchControllerImpl,
-		seekWrap: HTMLElement | null,
-	) {
-		return (
-			!!seekWrap && seekWrap.getAttribute("data-seek-surface") === "waveform"
-		);
-	}.call(ctx, seekWrap);
+export function isWaveformSeekSurface(seekWrap: HTMLElement | null): boolean {
+	return (
+		!!seekWrap && seekWrap.getAttribute("data-seek-surface") === "waveform"
+	);
 }
 
-export function isPianoRollSeekSurface(
-	ctx: TrackSwitchControllerImpl,
-	seekWrap: HTMLElement | null,
-): boolean {
-	return function (
-		this: TrackSwitchControllerImpl,
-		seekWrap: HTMLElement | null,
-	) {
-		return (
-			!!seekWrap && seekWrap.getAttribute("data-seek-surface") === "piano-roll"
-		);
-	}.call(ctx, seekWrap);
+export function isPianoRollSeekSurface(seekWrap: HTMLElement | null): boolean {
+	return (
+		!!seekWrap && seekWrap.getAttribute("data-seek-surface") === "piano-roll"
+	);
 }
 
 export function startInteractiveSeek(
@@ -470,41 +428,33 @@ export function startInteractiveSeek(
 	event: ControllerPointerEvent,
 	seekWrap: HTMLElement,
 ): void {
-	(function (
-		this: TrackSwitchControllerImpl,
-		event: ControllerPointerEvent,
-		seekWrap: HTMLElement,
-	) {
-		this.seekingElement = seekWrap;
-		// The initial click/tap of a seek gesture is a discrete jump, worth
-		// animating; a drag's own per-pixel `onSeekMove` calls track the pointer
-		// live and should not queue an animation behind it.
-		this.seekFromEvent(event, true, true);
-		this.dispatch({ type: "set-seeking", seeking: true });
-		this.disableLoopWhenSeekOutsideRegion();
-	}).call(ctx, event, seekWrap);
+	ctx.seekingElement = seekWrap;
+	// The initial click/tap of a seek gesture is a discrete jump, worth
+	// animating; a drag's own per-pixel `onSeekMove` calls track the pointer
+	// live and should not queue an animation behind it.
+	ctx.seekFromEvent(event, true, true);
+	ctx.dispatch({ type: "set-seeking", seeking: true });
+	ctx.disableLoopWhenSeekOutsideRegion();
 }
 
 export function disableLoopWhenSeekOutsideRegion(
 	ctx: TrackSwitchControllerImpl,
 ): void {
-	(function (this: TrackSwitchControllerImpl) {
-		if (
-			this.state.loop.enabled &&
-			this.state.loop.pointA !== null &&
-			this.state.loop.pointB !== null &&
-			(this.state.position < this.state.loop.pointA ||
-				this.state.position > this.state.loop.pointB)
-		) {
-			this.state = {
-				...this.state,
-				loop: {
-					...this.state.loop,
-					enabled: false,
-				},
-			};
-		}
-	}).call(ctx);
+	if (
+		ctx.state.loop.enabled &&
+		ctx.state.loop.pointA !== null &&
+		ctx.state.loop.pointB !== null &&
+		(ctx.state.position < ctx.state.loop.pointA ||
+			ctx.state.position > ctx.state.loop.pointB)
+	) {
+		ctx.state = {
+			...ctx.state,
+			loop: {
+				...ctx.state.loop,
+				enabled: false,
+			},
+		};
+	}
 }
 
 export function tryStartPendingWaveformTouchSeek(
@@ -512,202 +462,165 @@ export function tryStartPendingWaveformTouchSeek(
 	event: ControllerPointerEvent,
 	seekWrap: HTMLElement | null,
 ): boolean {
-	return function (
-		this: TrackSwitchControllerImpl,
-		event: ControllerPointerEvent,
-		seekWrap: HTMLElement | null,
+	if (
+		event.type !== "touchstart" ||
+		(!ctx.isWaveformSeekSurface(seekWrap) &&
+			!ctx.isPianoRollSeekSurface(seekWrap)) ||
+		ctx.getActiveTouchCount(event) !== 1 ||
+		!seekWrap
 	) {
-		if (
-			event.type !== "touchstart" ||
-			(!this.isWaveformSeekSurface(seekWrap) &&
-				!this.isPianoRollSeekSurface(seekWrap)) ||
-			this.getActiveTouchCount(event) !== 1 ||
-			!seekWrap
-		) {
-			return false;
-		}
+		return false;
+	}
 
-		if (!Number.isFinite(event.pageX)) {
-			return false;
-		}
+	if (!Number.isFinite(event.pageX)) {
+		return false;
+	}
 
-		if (!Number.isFinite(event.pageY)) {
-			return false;
-		}
+	if (!Number.isFinite(event.pageY)) {
+		return false;
+	}
 
-		this.pendingWaveformTouchSeek = {
-			seekWrap: seekWrap,
-			startPageX: event.pageX as number,
-			startPageY: event.pageY as number,
-		};
-		this.seekingElement = seekWrap;
-		return true;
-	}.call(ctx, event, seekWrap);
+	ctx.pendingWaveformTouchSeek = {
+		seekWrap: seekWrap,
+		startPageX: event.pageX as number,
+		startPageY: event.pageY as number,
+	};
+	ctx.seekingElement = seekWrap;
+	return true;
 }
 
 export function tryActivatePendingWaveformTouchSeek(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): boolean {
-	return function (
-		this: TrackSwitchControllerImpl,
-		event: ControllerPointerEvent,
-	) {
-		if (!this.pendingWaveformTouchSeek) {
-			return false;
-		}
+	if (!ctx.pendingWaveformTouchSeek) {
+		return false;
+	}
 
-		if (this.getActiveTouchCount(event) >= 2) {
-			return false;
-		}
+	if (ctx.getActiveTouchCount(event) >= 2) {
+		return false;
+	}
 
-		if (!Number.isFinite(event.pageX)) {
-			return false;
-		}
+	if (!Number.isFinite(event.pageX)) {
+		return false;
+	}
 
-		if (!Number.isFinite(event.pageY)) {
-			return false;
-		}
+	if (!Number.isFinite(event.pageY)) {
+		return false;
+	}
 
-		const deltaX = Math.abs(
-			(event.pageX as number) - this.pendingWaveformTouchSeek.startPageX,
-		);
-		const deltaY = Math.abs(
-			(event.pageY as number) - this.pendingWaveformTouchSeek.startPageY,
-		);
+	const deltaX = Math.abs(
+		(event.pageX as number) - ctx.pendingWaveformTouchSeek.startPageX,
+	);
+	const deltaY = Math.abs(
+		(event.pageY as number) - ctx.pendingWaveformTouchSeek.startPageY,
+	);
 
-		if (deltaY >= this.touchSeekMoveThresholdPx && deltaY > deltaX) {
-			this.pendingWaveformTouchSeek = null;
-			this.seekingElement = null;
-			return false;
-		}
+	if (deltaY >= ctx.touchSeekMoveThresholdPx && deltaY > deltaX) {
+		ctx.pendingWaveformTouchSeek = null;
+		ctx.seekingElement = null;
+		return false;
+	}
 
-		if (deltaX < this.touchSeekMoveThresholdPx || deltaX < deltaY) {
-			return false;
-		}
+	if (deltaX < ctx.touchSeekMoveThresholdPx || deltaX < deltaY) {
+		return false;
+	}
 
-		const seekWrap = this.pendingWaveformTouchSeek.seekWrap;
-		this.pendingWaveformTouchSeek = null;
-		this.startInteractiveSeek(event, seekWrap);
-		return true;
-	}.call(ctx, event);
+	const seekWrap = ctx.pendingWaveformTouchSeek.seekWrap;
+	ctx.pendingWaveformTouchSeek = null;
+	ctx.startInteractiveSeek(event, seekWrap);
+	return true;
 }
 
 export function applyPendingWaveformTouchSeekTap(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		if (!this.pendingWaveformTouchSeek) {
+	if (!ctx.pendingWaveformTouchSeek) {
+		return;
+	}
+
+	if (Number.isFinite(event.pageX) && Number.isFinite(event.pageY)) {
+		const deltaX = Math.abs(
+			(event.pageX as number) - ctx.pendingWaveformTouchSeek.startPageX,
+		);
+		const deltaY = Math.abs(
+			(event.pageY as number) - ctx.pendingWaveformTouchSeek.startPageY,
+		);
+		if (
+			deltaX >= ctx.touchSeekMoveThresholdPx ||
+			deltaY >= ctx.touchSeekMoveThresholdPx
+		) {
+			ctx.pendingWaveformTouchSeek = null;
+			ctx.seekingElement = null;
 			return;
 		}
+	}
 
-		if (Number.isFinite(event.pageX) && Number.isFinite(event.pageY)) {
-			const deltaX = Math.abs(
-				(event.pageX as number) - this.pendingWaveformTouchSeek.startPageX,
-			);
-			const deltaY = Math.abs(
-				(event.pageY as number) - this.pendingWaveformTouchSeek.startPageY,
-			);
-			if (
-				deltaX >= this.touchSeekMoveThresholdPx ||
-				deltaY >= this.touchSeekMoveThresholdPx
-			) {
-				this.pendingWaveformTouchSeek = null;
-				this.seekingElement = null;
-				return;
-			}
-		}
-
-		this.seekingElement = this.pendingWaveformTouchSeek.seekWrap;
-		this.pendingWaveformTouchSeek = null;
-		this.seekFromEvent(event, false, true);
-	}).call(ctx, event);
+	ctx.seekingElement = ctx.pendingWaveformTouchSeek.seekWrap;
+	ctx.pendingWaveformTouchSeek = null;
+	ctx.seekFromEvent(event, false, true);
 }
 
 export function getTouchPair(
-	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): [Touch, Touch] | null {
-	return function (
-		this: TrackSwitchControllerImpl,
-		event: ControllerPointerEvent,
-	) {
-		const touchEvent = event.originalEvent as TouchEvent | undefined;
-		const touches = touchEvent?.touches;
-		if (!touches || touches.length < 2) {
-			return null;
-		}
+	const touchEvent = event.originalEvent as TouchEvent | undefined;
+	const touches = touchEvent?.touches;
+	if (!touches || touches.length < 2) {
+		return null;
+	}
 
-		const first = touches[0];
-		const second = touches[1];
-		if (!first || !second) {
-			return null;
-		}
+	const first = touches[0];
+	const second = touches[1];
+	if (!first || !second) {
+		return null;
+	}
 
-		return [first, second] as [Touch, Touch];
-	}.call(ctx, event);
+	return [first, second] as [Touch, Touch];
 }
 
 export function getTouchDistance(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): number | null {
-	return function (
-		this: TrackSwitchControllerImpl,
-		event: ControllerPointerEvent,
-	) {
-		const touchPair = this.getTouchPair(event);
-		if (!touchPair) {
-			return null;
-		}
+	const touchPair = ctx.getTouchPair(event);
+	if (!touchPair) {
+		return null;
+	}
 
-		const [first, second] = touchPair;
-		const distance = Math.hypot(
-			first.pageX - second.pageX,
-			first.pageY - second.pageY,
-		);
-		if (!Number.isFinite(distance) || distance <= 0) {
-			return null;
-		}
+	const [first, second] = touchPair;
+	const distance = Math.hypot(
+		first.pageX - second.pageX,
+		first.pageY - second.pageY,
+	);
+	if (!Number.isFinite(distance) || distance <= 0) {
+		return null;
+	}
 
-		return distance;
-	}.call(ctx, event);
+	return distance;
 }
 
 export function getTouchCenterPageX(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): number | null {
-	return function (
-		this: TrackSwitchControllerImpl,
-		event: ControllerPointerEvent,
-	) {
-		const touchPair = this.getTouchPair(event);
-		if (!touchPair) {
-			return null;
-		}
+	const touchPair = ctx.getTouchPair(event);
+	if (!touchPair) {
+		return null;
+	}
 
-		const [first, second] = touchPair;
-		return (first.pageX + second.pageX) / 2;
-	}.call(ctx, event);
+	const [first, second] = touchPair;
+	return (first.pageX + second.pageX) / 2;
 }
 
-export function getActiveTouchCount(
-	ctx: TrackSwitchControllerImpl,
-	event: ControllerPointerEvent,
-): number {
-	return function (
-		this: TrackSwitchControllerImpl,
-		event: ControllerPointerEvent,
-	) {
-		const touchEvent = event.originalEvent as TouchEvent | undefined;
-		if (!touchEvent?.touches) {
-			return 0;
-		}
+export function getActiveTouchCount(event: ControllerPointerEvent): number {
+	const touchEvent = event.originalEvent as TouchEvent | undefined;
+	if (!touchEvent?.touches) {
+		return 0;
+	}
 
-		return touchEvent.touches.length;
-	}.call(ctx, event);
+	return touchEvent.touches.length;
 }
 
 export function tryStartPinchZoom(
@@ -715,146 +628,128 @@ export function tryStartPinchZoom(
 	event: ControllerPointerEvent,
 	seekWrap: HTMLElement | null,
 ): boolean {
-	return function (
-		this: TrackSwitchControllerImpl,
-		event: ControllerPointerEvent,
-		seekWrap: HTMLElement | null,
-	) {
-		if (event.type !== "touchstart") {
-			return false;
-		}
+	if (event.type !== "touchstart") {
+		return false;
+	}
 
-		if (this.pinchZoomState) {
-			return true;
-		}
-
-		if (
-			!seekWrap ||
-			(seekWrap.getAttribute("data-seek-surface") !== "waveform" &&
-				seekWrap.getAttribute("data-seek-surface") !== "piano-roll")
-		) {
-			return false;
-		}
-
-		const zoomDuration = this.getSeekTimelineContext(seekWrap).duration;
-		const zoomEnabled = this.isPianoRollSeekSurface(seekWrap)
-			? this.renderer.isPianoRollZoomEnabled(seekWrap, zoomDuration)
-			: this.renderer.isWaveformZoomEnabled(seekWrap, zoomDuration);
-		if (!zoomEnabled) {
-			return false;
-		}
-
-		const initialDistance = this.getTouchDistance(event);
-		if (initialDistance === null) {
-			return false;
-		}
-
-		const initialZoom = this.isPianoRollSeekSurface(seekWrap)
-			? this.renderer.getPianoRollZoom(seekWrap)
-			: this.renderer.getWaveformZoom(seekWrap);
-		if (initialZoom === null) {
-			return false;
-		}
-
-		this.pinchZoomState = {
-			seekWrap: seekWrap,
-			initialDistance: initialDistance,
-			initialZoom: initialZoom,
-		};
-		this.pendingWaveformTouchSeek = null;
-		this.waveformMinimapDragState = null;
-
-		if (this.state.currentlySeeking) {
-			this.dispatch({ type: "set-seeking", seeking: false });
-		}
-		this.seekingElement = seekWrap;
-		this.rightClickDragging = false;
-		this.loopDragStart = null;
-		this.draggingMarker = null;
+	if (ctx.pinchZoomState) {
 		return true;
-	}.call(ctx, event, seekWrap);
+	}
+
+	if (
+		!seekWrap ||
+		(seekWrap.getAttribute("data-seek-surface") !== "waveform" &&
+			seekWrap.getAttribute("data-seek-surface") !== "piano-roll")
+	) {
+		return false;
+	}
+
+	const zoomDuration = ctx.getSeekTimelineContext(seekWrap).duration;
+	const zoomEnabled = ctx.isPianoRollSeekSurface(seekWrap)
+		? ctx.renderer.isPianoRollZoomEnabled(seekWrap, zoomDuration)
+		: ctx.renderer.isWaveformZoomEnabled(seekWrap, zoomDuration);
+	if (!zoomEnabled) {
+		return false;
+	}
+
+	const initialDistance = ctx.getTouchDistance(event);
+	if (initialDistance === null) {
+		return false;
+	}
+
+	const initialZoom = ctx.isPianoRollSeekSurface(seekWrap)
+		? ctx.renderer.getPianoRollZoom(seekWrap)
+		: ctx.renderer.getWaveformZoom(seekWrap);
+	if (initialZoom === null) {
+		return false;
+	}
+
+	ctx.pinchZoomState = {
+		seekWrap: seekWrap,
+		initialDistance: initialDistance,
+		initialZoom: initialZoom,
+	};
+	ctx.pendingWaveformTouchSeek = null;
+	ctx.waveformMinimapDragState = null;
+
+	if (ctx.state.currentlySeeking) {
+		ctx.dispatch({ type: "set-seeking", seeking: false });
+	}
+	ctx.seekingElement = seekWrap;
+	ctx.rightClickDragging = false;
+	ctx.loopDragStart = null;
+	ctx.draggingMarker = null;
+	return true;
 }
 
 export function updatePinchZoom(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): boolean {
-	return function (
-		this: TrackSwitchControllerImpl,
-		event: ControllerPointerEvent,
-	) {
-		if (!this.pinchZoomState) {
-			return false;
+	if (!ctx.pinchZoomState) {
+		return false;
+	}
+
+	const distance = ctx.getTouchDistance(event);
+	if (distance === null) {
+		ctx.endPinchZoom();
+		return false;
+	}
+
+	const anchorPageX = ctx.getTouchCenterPageX(event);
+	const scale = distance / ctx.pinchZoomState.initialDistance;
+	const zoomDuration = ctx.getSeekTimelineContext(
+		ctx.pinchZoomState.seekWrap,
+	).duration;
+	const changed = ctx.isPianoRollSeekSurface(ctx.pinchZoomState.seekWrap)
+		? ctx.renderer.setPianoRollZoom(
+				ctx.pinchZoomState.seekWrap,
+				ctx.pinchZoomState.initialZoom * scale,
+				zoomDuration,
+				anchorPageX === null ? undefined : anchorPageX,
+			)
+		: ctx.renderer.setWaveformZoom(
+				ctx.pinchZoomState.seekWrap,
+				ctx.pinchZoomState.initialZoom * scale,
+				zoomDuration,
+				anchorPageX === null ? undefined : anchorPageX,
+			);
+
+	if (changed) {
+		if (ctx.isWaveformSeekSurface(ctx.pinchZoomState.seekWrap)) {
+			ctx.requestWaveformRender();
 		}
+		ctx.updateMainControls();
+	}
 
-		const distance = this.getTouchDistance(event);
-		if (distance === null) {
-			this.endPinchZoom();
-			return false;
-		}
-
-		const anchorPageX = this.getTouchCenterPageX(event);
-		const scale = distance / this.pinchZoomState.initialDistance;
-		const zoomDuration = this.getSeekTimelineContext(
-			this.pinchZoomState.seekWrap,
-		).duration;
-		const changed = this.isPianoRollSeekSurface(this.pinchZoomState.seekWrap)
-			? this.renderer.setPianoRollZoom(
-					this.pinchZoomState.seekWrap,
-					this.pinchZoomState.initialZoom * scale,
-					zoomDuration,
-					anchorPageX === null ? undefined : anchorPageX,
-				)
-			: this.renderer.setWaveformZoom(
-					this.pinchZoomState.seekWrap,
-					this.pinchZoomState.initialZoom * scale,
-					zoomDuration,
-					anchorPageX === null ? undefined : anchorPageX,
-				);
-
-		if (changed) {
-			if (this.isWaveformSeekSurface(this.pinchZoomState.seekWrap)) {
-				this.requestWaveformRender();
-			}
-			this.updateMainControls();
-		}
-
-		return true;
-	}.call(ctx, event);
+	return true;
 }
 
 export function endPinchZoom(ctx: TrackSwitchControllerImpl): void {
-	(function (this: TrackSwitchControllerImpl) {
-		this.pinchZoomState = null;
-		if (this.state.currentlySeeking) {
-			this.dispatch({ type: "set-seeking", seeking: false });
-		}
-		this.pendingWaveformTouchSeek = null;
-		this.seekingElement = null;
-	}).call(ctx);
+	ctx.pinchZoomState = null;
+	if (ctx.state.currentlySeeking) {
+		ctx.dispatch({ type: "set-seeking", seeking: false });
+	}
+	ctx.pendingWaveformTouchSeek = null;
+	ctx.seekingElement = null;
 }
 
 export function trackIndexFromTarget(
 	ctx: TrackSwitchControllerImpl,
 	target: EventTarget | null,
 ): number {
-	return function (
-		this: TrackSwitchControllerImpl,
-		target: EventTarget | null,
-	) {
-		const track = closestInRoot(this.root, target, ".track[data-track-index]");
-		if (!track) {
-			return -1;
-		}
+	const track = closestInRoot(ctx.root, target, ".track[data-track-index]");
+	if (!track) {
+		return -1;
+	}
 
-		const rawIndex = track.getAttribute("data-track-index");
-		const parsed = Number(rawIndex);
-		if (!Number.isFinite(parsed) || parsed < 0) {
-			return -1;
-		}
+	const rawIndex = track.getAttribute("data-track-index");
+	const parsed = Number(rawIndex);
+	if (!Number.isFinite(parsed) || parsed < 0) {
+		return -1;
+	}
 
-		return Math.floor(parsed);
-	}.call(ctx, target);
+	return Math.floor(parsed);
 }
 
 /**
@@ -865,225 +760,189 @@ export function trackGroupIndexFromTarget(
 	ctx: TrackSwitchControllerImpl,
 	target: EventTarget | null,
 ): number {
-	return function (
-		this: TrackSwitchControllerImpl,
-		target: EventTarget | null,
-	) {
-		const list = closestInRoot(
-			this.root,
-			target,
-			".track_list[data-track-group-index]",
-		);
-		if (!list) {
-			return -1;
-		}
+	const list = closestInRoot(
+		ctx.root,
+		target,
+		".track_list[data-track-group-index]",
+	);
+	if (!list) {
+		return -1;
+	}
 
-		const parsed = Number(list.getAttribute("data-track-group-index"));
-		if (!Number.isFinite(parsed) || parsed < 0) {
-			return -1;
-		}
+	const parsed = Number(list.getAttribute("data-track-group-index"));
+	if (!Number.isFinite(parsed) || parsed < 0) {
+		return -1;
+	}
 
-		return Math.floor(parsed);
-	}.call(ctx, target);
+	return Math.floor(parsed);
 }
 
 export function isFixedWaveformLocalAxisEnabled(
 	ctx: TrackSwitchControllerImpl,
 ): boolean {
-	return function (this: TrackSwitchControllerImpl) {
-		return (
-			this.isAlignmentMode() && !!this.alignment && !this.globalSyncEnabled
-		);
-	}.call(ctx);
+	return ctx.isAlignmentMode() && !!ctx.alignment && !ctx.globalSyncEnabled;
 }
 
 export function getSeekTimelineContext(
 	ctx: TrackSwitchControllerImpl,
 	seekingElement: HTMLElement | null,
 ): SeekTimelineContext {
-	return function (
-		this: TrackSwitchControllerImpl,
-		seekingElement: HTMLElement | null,
-	) {
-		const referenceContext: SeekTimelineContext = {
-			duration: this.longestDuration,
-			toReferenceTime: (timelineTime: number): number =>
-				clamp(timelineTime, 0, this.longestDuration),
-			fromReferenceTime: (referenceTime: number): number =>
-				clamp(referenceTime, 0, this.longestDuration),
-		};
+	const referenceContext: SeekTimelineContext = {
+		duration: ctx.longestDuration,
+		toReferenceTime: (timelineTime: number): number =>
+			clamp(timelineTime, 0, ctx.longestDuration),
+		fromReferenceTime: (referenceTime: number): number =>
+			clamp(referenceTime, 0, ctx.longestDuration),
+	};
 
-		if (!seekingElement) {
-			return referenceContext;
-		}
+	if (!seekingElement) {
+		return referenceContext;
+	}
 
-		if (this.isPianoRollSeekSurface(seekingElement) && this.isAlignmentMode()) {
-			const pianoRollSurface =
-				this.renderer.findPianoRollSurface(seekingElement);
-			return (
-				this.getPianoRollTimelineContext(pianoRollSurface) || referenceContext
-			);
-		}
-
-		if (this.isAlignmentMode()) {
-			const imageSurface = this.renderer.findImageSurface(seekingElement);
-			if (imageSurface) {
-				return this.getImageTimelineContext(imageSurface) || referenceContext;
-			}
-		}
-
-		if (!this.isFixedWaveformLocalAxisEnabled()) {
-			return referenceContext;
-		}
-
-		const waveformSurface = this.renderer.findWaveformSurface(seekingElement);
-		if (!waveformSurface) {
-			return referenceContext;
-		}
-
-		const trackIndex = resolveAudibleWaveformTrackIndex(
-			this.runtimes,
-			waveformSurface.waveformSource,
-			this.isAlignmentMode(),
-			(trackIndex: number) => this.isTrackExclusive(trackIndex),
+	if (ctx.isPianoRollSeekSurface(seekingElement) && ctx.isAlignmentMode()) {
+		const pianoRollSurface = ctx.renderer.findPianoRollSurface(seekingElement);
+		return (
+			ctx.getPianoRollTimelineContext(pianoRollSurface) || referenceContext
 		);
-		if (trackIndex === null) {
-			return referenceContext;
-		}
-		const runtime = this.runtimes[trackIndex];
-		if (!runtime) {
-			return referenceContext;
-		}
+	}
 
-		const trackDuration = (
-			ctx.constructor as typeof TrackSwitchControllerImpl
-		).getRuntimeDuration(runtime);
-		if (!Number.isFinite(trackDuration) || trackDuration <= 0) {
-			return referenceContext;
+	if (ctx.isAlignmentMode()) {
+		const imageSurface = ctx.renderer.findImageSurface(seekingElement);
+		if (imageSurface) {
+			return ctx.getImageTimelineContext(imageSurface) || referenceContext;
 		}
+	}
 
-		let longestTrackDuration = trackDuration;
-		for (let i = 0; i < this.runtimes.length; i++) {
-			const rt = this.runtimes[i];
-			if (rt) {
-				const d = (
-					ctx.constructor as typeof TrackSwitchControllerImpl
-				).getRuntimeDuration(rt);
-				if (Number.isFinite(d) && d > longestTrackDuration)
-					longestTrackDuration = d;
-			}
+	if (!ctx.isFixedWaveformLocalAxisEnabled()) {
+		return referenceContext;
+	}
+
+	const waveformSurface = ctx.renderer.findWaveformSurface(seekingElement);
+	if (!waveformSurface) {
+		return referenceContext;
+	}
+
+	const trackIndex = resolveAudibleWaveformTrackIndex(
+		ctx.runtimes,
+		waveformSurface.waveformSource,
+		ctx.isAlignmentMode(),
+		(trackIndex: number) => ctx.isTrackExclusive(trackIndex),
+	);
+	if (trackIndex === null) {
+		return referenceContext;
+	}
+	const runtime = ctx.runtimes[trackIndex];
+	if (!runtime) {
+		return referenceContext;
+	}
+
+	const trackDuration = (
+		ctx.constructor as typeof TrackSwitchControllerImpl
+	).getRuntimeDuration(runtime);
+	if (!Number.isFinite(trackDuration) || trackDuration <= 0) {
+		return referenceContext;
+	}
+
+	let longestTrackDuration = trackDuration;
+	for (let i = 0; i < ctx.runtimes.length; i++) {
+		const rt = ctx.runtimes[i];
+		if (rt) {
+			const d = (
+				ctx.constructor as typeof TrackSwitchControllerImpl
+			).getRuntimeDuration(rt);
+			if (Number.isFinite(d) && d > longestTrackDuration)
+				longestTrackDuration = d;
 		}
-		const axisDuration =
-			waveformSurface.timeAxis === "individual"
-				? trackDuration
-				: longestTrackDuration;
+	}
+	const axisDuration =
+		waveformSurface.timeAxis === "individual"
+			? trackDuration
+			: longestTrackDuration;
 
-		return {
-			duration: axisDuration,
-			toAnchor: (sharedTime: number) =>
-				this.trackPlaybackAnchor(
+	return {
+		duration: axisDuration,
+		toAnchor: (sharedTime: number) =>
+			ctx.trackPlaybackAnchor(trackIndex, clamp(sharedTime, 0, trackDuration)),
+		playbackPosition: () => ctx.trackPlaybackPosition(trackIndex),
+		toReferenceTime: (sharedTime: number): number => {
+			const clampedTrackTime = clamp(sharedTime, 0, trackDuration);
+			return clamp(
+				ctx.trackToReferenceTime(
 					trackIndex,
-					clamp(sharedTime, 0, trackDuration),
+					clampedTrackTime,
+					ctx.state.position,
 				),
-			playbackPosition: () => this.trackPlaybackPosition(trackIndex),
-			toReferenceTime: (sharedTime: number): number => {
-				const clampedTrackTime = clamp(sharedTime, 0, trackDuration);
-				return clamp(
-					this.trackToReferenceTime(
-						trackIndex,
-						clampedTrackTime,
-						this.state.position,
-					),
-					0,
-					this.longestDuration,
-				);
-			},
-			fromReferenceTime: (referenceTime: number): number => {
-				const clampedReferenceTime = clamp(
-					referenceTime,
-					0,
-					this.longestDuration,
-				);
-				return clamp(
-					this.referenceToTrackTime(trackIndex, clampedReferenceTime),
-					0,
-					trackDuration,
-				);
-			},
-		};
-	}.call(ctx, seekingElement);
+				0,
+				ctx.longestDuration,
+			);
+		},
+		fromReferenceTime: (referenceTime: number): number => {
+			const clampedReferenceTime = clamp(referenceTime, 0, ctx.longestDuration);
+			return clamp(
+				ctx.referenceToTrackTime(trackIndex, clampedReferenceTime),
+				0,
+				trackDuration,
+			);
+		},
+	};
 }
 
 export function getPianoRollTimelineContext(
 	ctx: TrackSwitchControllerImpl,
 	pianoRollSurface: PianoRollSeekSurfaceMetadata | null,
 ): SeekTimelineContext | null {
-	return function (
-		this: TrackSwitchControllerImpl,
-		pianoRollSurface: PianoRollSeekSurfaceMetadata | null,
-	) {
-		if (!pianoRollSurface || !this.isAlignmentMode()) {
-			return null;
-		}
+	if (!pianoRollSurface || !ctx.isAlignmentMode()) {
+		return null;
+	}
 
-		const pianoRollDuration = Number(pianoRollSurface.pianoRollDurationSeconds);
-		if (!Number.isFinite(pianoRollDuration) || pianoRollDuration <= 0) {
-			return null;
-		}
+	const pianoRollDuration = Number(pianoRollSurface.pianoRollDurationSeconds);
+	if (!Number.isFinite(pianoRollDuration) || pianoRollDuration <= 0) {
+		return null;
+	}
 
-		const alignmentColumn =
-			typeof pianoRollSurface.alignmentColumn === "string"
-				? pianoRollSurface.alignmentColumn.trim()
-				: "";
-		const pianoRollTimeline = alignmentColumn
-			? timelineId(alignmentColumn)
-			: null;
-		return (
-			buildProjectedTimelineContext(
-				this,
-				pianoRollTimeline,
-				pianoRollDuration,
-			) ?? {
-				// No timeline declared for this MIDI: it shares the reference
-				// timeline, so local and reference coordinates coincide.
-				duration: pianoRollDuration,
-				toReferenceTime: (pianoRollTime: number): number =>
-					clamp(pianoRollTime, 0, this.longestDuration),
-				fromReferenceTime: (referenceTime: number): number =>
-					clamp(referenceTime, 0, pianoRollDuration),
-			}
-		);
-	}.call(ctx, pianoRollSurface);
+	const alignmentColumn =
+		typeof pianoRollSurface.alignmentColumn === "string"
+			? pianoRollSurface.alignmentColumn.trim()
+			: "";
+	const pianoRollTimeline = alignmentColumn
+		? timelineId(alignmentColumn)
+		: null;
+	return (
+		buildProjectedTimelineContext(
+			ctx,
+			pianoRollTimeline,
+			pianoRollDuration,
+		) ?? {
+			// No timeline declared for ctx MIDI: it shares the reference
+			// timeline, so local and reference coordinates coincide.
+			duration: pianoRollDuration,
+			toReferenceTime: (pianoRollTime: number): number =>
+				clamp(pianoRollTime, 0, ctx.longestDuration),
+			fromReferenceTime: (referenceTime: number): number =>
+				clamp(referenceTime, 0, pianoRollDuration),
+		}
+	);
 }
 
 export function getImageTimelineContext(
 	ctx: TrackSwitchControllerImpl,
 	imageSurface: ImageSeekSurfaceMetadata | null,
 ): SeekTimelineContext | null {
-	return function (
-		this: TrackSwitchControllerImpl,
-		imageSurface: ImageSeekSurfaceMetadata | null,
-	) {
-		if (!imageSurface || !this.isAlignmentMode()) {
-			return null;
-		}
+	if (!imageSurface || !ctx.isAlignmentMode()) {
+		return null;
+	}
 
-		const alignmentColumn =
-			typeof imageSurface.alignmentColumn === "string"
-				? imageSurface.alignmentColumn.trim()
-				: "";
-		if (!alignmentColumn) {
-			return null;
-		}
+	const alignmentColumn =
+		typeof imageSurface.alignmentColumn === "string"
+			? imageSurface.alignmentColumn.trim()
+			: "";
+	if (!alignmentColumn) {
+		return null;
+	}
 
-		// An image's native coordinate is percent of its width, which is also what
-		// the seek geometry works in.
-		return buildProjectedTimelineContext(
-			this,
-			timelineId(alignmentColumn),
-			100,
-		);
-	}.call(ctx, imageSurface);
+	// An image's native coordinate is percent of its width, which is also what
+	// the seek geometry works in.
+	return buildProjectedTimelineContext(ctx, timelineId(alignmentColumn), 100);
 }
 
 /**
@@ -1147,109 +1006,101 @@ function buildProjectedTimelineContext(
 export function getWaveformTimelineContext(
 	ctx: TrackSwitchControllerImpl,
 ): WaveformTimelineContext {
-	return function (this: TrackSwitchControllerImpl) {
-		return {
-			enabled: this.isFixedWaveformLocalAxisEnabled(),
-			referenceToTrackTime: (
-				trackIndex: number,
-				referenceTime: number,
-			): number => {
-				const runtime = this.runtimes[trackIndex];
-				if (!runtime) {
-					return 0;
-				}
+	return {
+		enabled: ctx.isFixedWaveformLocalAxisEnabled(),
+		referenceToTrackTime: (
+			trackIndex: number,
+			referenceTime: number,
+		): number => {
+			const runtime = ctx.runtimes[trackIndex];
+			if (!runtime) {
+				return 0;
+			}
 
-				const trackDuration = (
-					ctx.constructor as typeof TrackSwitchControllerImpl
-				).getRuntimeDuration(runtime);
-				if (!Number.isFinite(trackDuration) || trackDuration <= 0) {
-					return 0;
-				}
+			const trackDuration = (
+				ctx.constructor as typeof TrackSwitchControllerImpl
+			).getRuntimeDuration(runtime);
+			if (!Number.isFinite(trackDuration) || trackDuration <= 0) {
+				return 0;
+			}
 
-				const clampedReferenceTime = clamp(
-					referenceTime,
-					0,
-					this.longestDuration,
-				);
-				return clamp(
-					this.referenceToTrackTime(trackIndex, clampedReferenceTime),
-					0,
-					trackDuration,
-				);
-			},
-			getPlaybackPosition: (trackIndex: number): number | null => {
-				const position = this.trackPlaybackPosition(trackIndex);
-				if (position === null) {
-					return null;
-				}
+			const clampedReferenceTime = clamp(referenceTime, 0, ctx.longestDuration);
+			return clamp(
+				ctx.referenceToTrackTime(trackIndex, clampedReferenceTime),
+				0,
+				trackDuration,
+			);
+		},
+		getPlaybackPosition: (trackIndex: number): number | null => {
+			const position = ctx.trackPlaybackPosition(trackIndex);
+			if (position === null) {
+				return null;
+			}
 
-				const runtime = this.runtimes[trackIndex];
-				if (!runtime) {
-					return null;
-				}
+			const runtime = ctx.runtimes[trackIndex];
+			if (!runtime) {
+				return null;
+			}
 
-				const trackDuration = (
-					ctx.constructor as typeof TrackSwitchControllerImpl
-				).getRuntimeDuration(runtime);
-				if (!Number.isFinite(trackDuration) || trackDuration <= 0) {
-					return null;
-				}
+			const trackDuration = (
+				ctx.constructor as typeof TrackSwitchControllerImpl
+			).getRuntimeDuration(runtime);
+			if (!Number.isFinite(trackDuration) || trackDuration <= 0) {
+				return null;
+			}
 
-				return clamp(position, 0, trackDuration);
-			},
-			getTrackDuration: (trackIndex: number): number => {
-				const runtime = this.runtimes[trackIndex];
-				if (!runtime) {
-					return 0;
-				}
+			return clamp(position, 0, trackDuration);
+		},
+		getTrackDuration: (trackIndex: number): number => {
+			const runtime = ctx.runtimes[trackIndex];
+			if (!runtime) {
+				return 0;
+			}
 
-				const duration = (
-					ctx.constructor as typeof TrackSwitchControllerImpl
-				).getRuntimeDuration(runtime);
-				if (!Number.isFinite(duration) || duration <= 0) {
-					return 0;
-				}
+			const duration = (
+				ctx.constructor as typeof TrackSwitchControllerImpl
+			).getRuntimeDuration(runtime);
+			if (!Number.isFinite(duration) || duration <= 0) {
+				return 0;
+			}
 
-				return duration;
-			},
-			getTrackCount: (): number => this.runtimes.length,
-			getTrackAlignmentPoints: (
-				trackIndex: number,
-			): Array<{ referenceTime: number; trackTime: number }> => {
-				return this.getTrackAlignmentPoints(trackIndex);
-			},
-		};
-	}.call(ctx);
+			return duration;
+		},
+		getTrackCount: (): number => ctx.runtimes.length,
+		getTrackAlignmentPoints: (
+			trackIndex: number,
+		): Array<{ referenceTime: number; trackTime: number }> => {
+			return ctx.getTrackAlignmentPoints(trackIndex);
+		},
+	};
 }
 
 export function getWaveformTimelineProjector(
 	ctx: TrackSwitchControllerImpl,
 ): TrackTimelineProjector | undefined {
-	return function (this: TrackSwitchControllerImpl) {
-		if (!this.isAlignmentMode() || !this.alignment) {
-			return undefined;
+	if (!ctx.isAlignmentMode() || !ctx.alignment) {
+		return undefined;
+	}
+
+	const trackIndexByRuntime = new Map<TrackRuntime, number>();
+	const trackIndexByDefinition = new Map<object, number>();
+
+	ctx.runtimes.forEach((runtime: TrackRuntime, index: number) => {
+		trackIndexByRuntime.set(runtime, index);
+		trackIndexByDefinition.set(runtime.definition, index);
+	});
+
+	return (runtime: TrackRuntime, trackTimelineTime: number): number => {
+		const directIndex = trackIndexByRuntime.get(runtime);
+		if (directIndex !== undefined) {
+			return ctx.trackToReferenceTime(directIndex, trackTimelineTime);
 		}
 
-		const trackIndexByRuntime = new Map<TrackRuntime, number>();
-		const trackIndexByDefinition = new Map<object, number>();
+		const definitionIndex = trackIndexByDefinition.get(runtime.definition);
+		if (definitionIndex !== undefined) {
+			return ctx.trackToReferenceTime(definitionIndex, trackTimelineTime);
+		}
 
-		this.runtimes.forEach((runtime: TrackRuntime, index: number) => {
-			trackIndexByRuntime.set(runtime, index);
-			trackIndexByDefinition.set(runtime.definition, index);
-		});
-
-		return (runtime: TrackRuntime, trackTimelineTime: number): number => {
-			const directIndex = trackIndexByRuntime.get(runtime);
-			if (directIndex !== undefined) {
-				return this.trackToReferenceTime(directIndex, trackTimelineTime);
-			}
-
-			const definitionIndex = trackIndexByDefinition.get(runtime.definition);
-			if (definitionIndex !== undefined) {
-				return this.trackToReferenceTime(definitionIndex, trackTimelineTime);
-			}
-
-			return trackTimelineTime;
-		};
-	}.call(ctx);
+		return trackTimelineTime;
+	};
 }

@@ -1,5 +1,5 @@
+import { clamp } from "../../shared/math";
 import type { SheetMusicEntryModel } from "./types";
-import { clampNumber } from "./types";
 
 interface SheetMusicScrollContext {
 	rebindMeasureCursor(
@@ -68,7 +68,7 @@ function scrollCurrentMeasure(
 	const viewportBottom = viewportTop + clientHeight;
 	const cursorTop = viewportTop + (cursorRect.top - viewportRect.top);
 	const cursorBottom = viewportTop + (cursorRect.bottom - viewportRect.top);
-	const padding = clampNumber(Math.round(clientHeight * 0.12), 8, 24);
+	const padding = clamp(Math.round(clientHeight * 0.12), 8, 24);
 	const visibleTop = viewportTop + padding;
 	const visibleBottom = viewportBottom - padding;
 
@@ -84,7 +84,7 @@ function scrollCurrentMeasure(
 		return;
 	}
 
-	const clampedScrollTop = clampNumber(nextScrollTop, 0, maxScrollTop);
+	const clampedScrollTop = clamp(nextScrollTop, 0, maxScrollTop);
 	if (Math.abs(clampedScrollTop - viewportTop) < 0.5) {
 		return;
 	}

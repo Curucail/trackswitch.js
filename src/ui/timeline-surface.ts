@@ -1,4 +1,5 @@
 import type { WaveformPlaybackFollowMode } from "../domain/types";
+import { clamp, sanitizeDuration } from "../shared/math";
 
 export const MIN_TIMELINE_ZOOM = 1;
 
@@ -53,34 +54,6 @@ export interface TimelineTileWindow {
 	/** The part of `surfaceWidth` the medium occupies; see `getTimelineTimeWidth`. */
 	timeWidth: number;
 	viewportWidth: number;
-}
-
-export function clampTimelineValue(
-	value: number,
-	minimum: number,
-	maximum: number,
-): number {
-	if (!Number.isFinite(value)) {
-		return minimum;
-	}
-
-	if (value < minimum) {
-		return minimum;
-	}
-
-	if (value > maximum) {
-		return maximum;
-	}
-
-	return value;
-}
-
-export function sanitizeTimelineDuration(value: number): number {
-	if (!Number.isFinite(value) || value <= 0) {
-		return 0;
-	}
-
-	return value;
 }
 
 /**
@@ -138,9 +111,9 @@ export function getTimelineViewportState(
 ): TimelineViewportState {
 	const timeWidth = getTimelineTimeWidth(surface);
 	const viewportWidth = getTimelineViewportWidth(surface);
-	const widthRatio = clampTimelineValue(viewportWidth / timeWidth, 0, 1);
+	const widthRatio = clamp(viewportWidth / timeWidth, 0, 1);
 	const maxStartRatio = Math.max(0, 1 - widthRatio);
-	const startRatio = clampTimelineValue(
+	const startRatio = clamp(
 		surface.scrollContainer.scrollLeft / timeWidth,
 		0,
 		maxStartRatio,
@@ -183,7 +156,7 @@ export function getTimelineMaximumZoom(
 	durationSeconds: number,
 	maxZoomSeconds: number,
 ): number {
-	const safeDuration = sanitizeTimelineDuration(durationSeconds);
+	const safeDuration = sanitizeDuration(durationSeconds);
 	if (safeDuration <= 0 || maxZoomSeconds <= 0) {
 		return MIN_TIMELINE_ZOOM;
 	}
@@ -201,7 +174,7 @@ export function resolveTimelineDefaultZoom(
 	defaultZoomSeconds: number | null,
 	maximumZoom: number,
 ): number {
-	const safeDuration = sanitizeTimelineDuration(durationSeconds);
+	const safeDuration = sanitizeDuration(durationSeconds);
 	if (
 		defaultZoomSeconds === null ||
 		!Number.isFinite(defaultZoomSeconds) ||
@@ -211,7 +184,7 @@ export function resolveTimelineDefaultZoom(
 		return MIN_TIMELINE_ZOOM;
 	}
 
-	return clampTimelineValue(
+	return clamp(
 		safeDuration / defaultZoomSeconds,
 		MIN_TIMELINE_ZOOM,
 		maximumZoom,
@@ -225,7 +198,7 @@ export function setTimelineZoomForSurface<T extends TimelineSurfaceGeometry>(
 	anchorPageX: number | undefined,
 	applySurfaceWidth: (surface: T, width: number) => void,
 ): boolean {
-	const nextZoom = clampTimelineValue(
+	const nextZoom = clamp(
 		Number.isFinite(zoom) ? zoom : MIN_TIMELINE_ZOOM,
 		MIN_TIMELINE_ZOOM,
 		maximum,
@@ -239,7 +212,7 @@ export function setTimelineZoomForSurface<T extends TimelineSurfaceGeometry>(
 	const wrapperRect = surface.scrollContainer.getBoundingClientRect();
 	const wrapperWidth = refreshTimelineViewportWidth(surface);
 	const anchorWithinWrapper = Number.isFinite(anchorPageX)
-		? clampTimelineValue(
+		? clamp(
 				(anchorPageX as number) - (wrapperRect.left + window.scrollX),
 				0,
 				wrapperWidth,
@@ -257,11 +230,7 @@ export function setTimelineZoomForSurface<T extends TimelineSurfaceGeometry>(
 
 	const maxScrollLeft = Math.max(0, nextSurfaceWidth - wrapperWidth);
 	const nextScrollLeft = anchorRatio * nextSurfaceWidth - anchorWithinWrapper;
-	surface.scrollContainer.scrollLeft = clampTimelineValue(
-		nextScrollLeft,
-		0,
-		maxScrollLeft,
-	);
+	surface.scrollContainer.scrollLeft = clamp(nextScrollLeft, 0, maxScrollLeft);
 	updateTimelineMinimapViewport(surface);
 	return true;
 }
@@ -288,11 +257,7 @@ export function reflowTimelineSurface<T extends TimelineSurfaceGeometry>(
 
 	const maxScrollLeft = Math.max(0, nextSurfaceWidth - viewportWidth);
 	const nextScrollLeft = centerRatio * nextSurfaceWidth - viewportCenter;
-	surface.scrollContainer.scrollLeft = clampTimelineValue(
-		nextScrollLeft,
-		0,
-		maxScrollLeft,
-	);
+	surface.scrollContainer.scrollLeft = clamp(nextScrollLeft, 0, maxScrollLeft);
 	updateTimelineMinimapViewport(surface);
 }
 
@@ -313,13 +278,12 @@ export function resolveTimelinePlaybackFollowScrollLeft(
 		return null;
 	}
 
-	const playheadPx =
-		clampTimelineValue(playheadRatio, 0, 1) * getTimelineTimeWidth(surface);
+	const playheadPx = clamp(playheadRatio, 0, 1) * getTimelineTimeWidth(surface);
 	if (surface.playbackFollowMode === "pinnedLeft") {
-		return clampTimelineValue(playheadPx, 0, maxScrollLeft);
+		return clamp(playheadPx, 0, maxScrollLeft);
 	}
 
-	const currentScrollLeft = clampTimelineValue(
+	const currentScrollLeft = clamp(
 		surface.scrollContainer.scrollLeft,
 		0,
 		maxScrollLeft,
@@ -328,11 +292,11 @@ export function resolveTimelinePlaybackFollowScrollLeft(
 	const visibleEnd = currentScrollLeft + viewportWidth;
 
 	if (surface.playbackFollowMode === "center") {
-		return clampTimelineValue(playheadPx - viewportWidth / 2, 0, maxScrollLeft);
+		return clamp(playheadPx - viewportWidth / 2, 0, maxScrollLeft);
 	}
 
 	if (playheadPx < visibleStart || playheadPx > visibleEnd) {
-		return clampTimelineValue(playheadPx, 0, maxScrollLeft);
+		return clamp(playheadPx, 0, maxScrollLeft);
 	}
 
 	return null;
@@ -459,7 +423,7 @@ export function resolveVisibleTileWindow(
 ): TimelineTileWindow {
 	const surfaceWidth = getTimelineSurfaceWidth(surface);
 	const viewportWidth = getTimelineViewportWidth(surface);
-	const scrollLeft = clampTimelineValue(
+	const scrollLeft = clamp(
 		surface.scrollContainer.scrollLeft,
 		0,
 		Math.max(0, surfaceWidth - viewportWidth),

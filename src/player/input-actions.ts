@@ -38,303 +38,273 @@ import {
 } from "./player-registry";
 
 export function setKeyboardActive(ctx: TrackSwitchControllerImpl): void {
-	(function (this: TrackSwitchControllerImpl) {
-		setActiveKeyboardController(this.instanceId);
-	}).call(ctx);
+	setActiveKeyboardController(ctx.instanceId);
 }
 
 export function openShortcutHelp(ctx: TrackSwitchControllerImpl): void {
-	(function (this: TrackSwitchControllerImpl) {
-		if (this.shortcutHelpOpen) {
-			return;
-		}
-		if (this.markerNavigationDialogOpen) {
-			closeMarkerNavigationDialog(this);
-		}
+	if (ctx.shortcutHelpOpen) {
+		return;
+	}
+	if (ctx.markerNavigationDialogOpen) {
+		closeMarkerNavigationDialog(ctx);
+	}
 
-		this.shortcutHelpOpen = true;
-		this.renderer.setShortcutHelpVisible(true);
-	}).call(ctx);
+	ctx.shortcutHelpOpen = true;
+	ctx.renderer.setShortcutHelpVisible(true);
 }
 
 export function toggleShortcutHelp(ctx: TrackSwitchControllerImpl): void {
-	(function (this: TrackSwitchControllerImpl) {
-		if (this.shortcutHelpOpen) {
-			this.closeShortcutHelp();
-			return;
-		}
+	if (ctx.shortcutHelpOpen) {
+		ctx.closeShortcutHelp();
+		return;
+	}
 
-		this.openShortcutHelp();
-	}).call(ctx);
+	ctx.openShortcutHelp();
 }
 
 export function closeShortcutHelp(ctx: TrackSwitchControllerImpl): void {
-	(function (this: TrackSwitchControllerImpl) {
-		if (!this.shortcutHelpOpen) {
-			return;
-		}
+	if (!ctx.shortcutHelpOpen) {
+		return;
+	}
 
-		this.shortcutHelpOpen = false;
-		this.renderer.setShortcutHelpVisible(false);
-	}).call(ctx);
+	ctx.shortcutHelpOpen = false;
+	ctx.renderer.setShortcutHelpVisible(false);
 }
 
 export function toggleFullscreen(ctx: TrackSwitchControllerImpl): void {
-	(function (this: TrackSwitchControllerImpl) {
-		this.fullscreen = !this.fullscreen;
-		this.renderer.setFullscreen(this.fullscreen);
-		this.updateMainControls();
-	}).call(ctx);
+	ctx.fullscreen = !ctx.fullscreen;
+	ctx.renderer.setFullscreen(ctx.fullscreen);
+	ctx.updateMainControls();
 }
 
 export function onFullscreenToggle(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		if (!isPrimaryInput(event)) {
-			return;
-		}
+	if (!isPrimaryInput(event)) {
+		return;
+	}
 
-		event.preventDefault();
-		this.toggleFullscreen();
-		event.stopPropagation();
-	}).call(ctx, event);
+	event.preventDefault();
+	ctx.toggleFullscreen();
+	event.stopPropagation();
 }
 
 export function onOverlayActivate(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		if (this.root.classList.contains("error")) {
-			event.preventDefault();
-			event.stopPropagation();
-			return;
-		}
-
-		if (!isPrimaryInput(event) && event.type !== "click") {
-			return;
-		}
-
+	if (ctx.root.classList.contains("error")) {
 		event.preventDefault();
-		this.setKeyboardActive();
-		this.audioEngine.primeFromUserGesture();
-		void this.load();
 		event.stopPropagation();
-	}).call(ctx, event);
+		return;
+	}
+
+	if (!isPrimaryInput(event) && event.type !== "click") {
+		return;
+	}
+
+	event.preventDefault();
+	ctx.setKeyboardActive();
+	ctx.audioEngine.primeFromUserGesture();
+	void ctx.load();
+	event.stopPropagation();
 }
 
 export function onShortcutHelpOverlay(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		const target = eventTargetAsElement(event.target ?? null);
-		if (target?.closest(".shortcut-help-panel")) {
-			return;
-		}
+	const target = eventTargetAsElement(event.target ?? null);
+	if (target?.closest(".shortcut-help-panel")) {
+		return;
+	}
 
-		event.preventDefault();
-		this.setKeyboardActive();
-		this.closeShortcutHelp();
-		event.stopPropagation();
-	}).call(ctx, event);
+	event.preventDefault();
+	ctx.setKeyboardActive();
+	ctx.closeShortcutHelp();
+	event.stopPropagation();
 }
 
 export function onPlayPause(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		if (!isPrimaryInput(event)) {
-			return;
-		}
+	if (!isPrimaryInput(event)) {
+		return;
+	}
 
-		event.preventDefault();
-		this.audioEngine.primeFromUserGesture();
-		this.togglePlay();
-		event.stopPropagation();
-	}).call(ctx, event);
+	event.preventDefault();
+	ctx.audioEngine.primeFromUserGesture();
+	ctx.togglePlay();
+	event.stopPropagation();
 }
 
 export function onStop(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		if (!isPrimaryInput(event)) {
-			return;
-		}
+	if (!isPrimaryInput(event)) {
+		return;
+	}
 
-		event.preventDefault();
-		this.stop();
-		event.stopPropagation();
-	}).call(ctx, event);
+	event.preventDefault();
+	ctx.stop();
+	event.stopPropagation();
 }
 
 export function onRepeat(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		if (!isPrimaryInput(event)) {
-			return;
-		}
+	if (!isPrimaryInput(event)) {
+		return;
+	}
 
-		event.preventDefault();
-		this.dispatch({ type: "toggle-repeat" });
-		this.updateMainControls();
-		event.stopPropagation();
-	}).call(ctx, event);
+	event.preventDefault();
+	ctx.dispatch({ type: "toggle-repeat" });
+	ctx.updateMainControls();
+	event.stopPropagation();
 }
 
 export function onSeekStart(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		if (!this.isLoaded) {
-			return;
-		}
+	if (!ctx.isLoaded) {
+		return;
+	}
 
-		if (
-			isPrimaryInput(event) &&
-			closestInRoot(this.root, event.target, ".loop-marker, .timeline-marker")
-		) {
-			return;
-		}
+	if (
+		isPrimaryInput(event) &&
+		closestInRoot(ctx.root, event.target, ".loop-marker, .timeline-marker")
+	) {
+		return;
+	}
 
-		const targetSeekWrap = closestInRoot(this.root, event.target, ".seekwrap");
+	const targetSeekWrap = closestInRoot(ctx.root, event.target, ".seekwrap");
 
-		if (this.tryStartPinchZoom(event, targetSeekWrap)) {
-			event.preventDefault();
-			event.stopPropagation();
-			return;
-		}
-
-		if (this.tryStartPendingWaveformTouchSeek(event, targetSeekWrap)) {
-			return;
-		}
-
-		if (
-			this.navigationBar?.controls.includes("looping") &&
-			event.type === "mousedown" &&
-			event.which === 3
-		) {
-			event.preventDefault();
-
-			this.rightClickDragging = true;
-			this.seekingElement = targetSeekWrap;
-			const seekTimelineContext = this.getSeekTimelineContext(
-				this.seekingElement,
-			);
-
-			const seekMetrics = getSeekMetrics(
-				this.seekingElement,
-				event,
-				seekTimelineContext.duration,
-			);
-			if (!seekMetrics) {
-				this.rightClickDragging = false;
-				return;
-			}
-
-			this.loopDragStart = snapLoopStartToMarker(
-				this,
-				this.seekingElement,
-				event,
-				seekMetrics.time,
-			);
-			const loopStartReference = seekTimelineContext.toReferenceTime(
-				this.loopDragStart,
-			);
-			this.state = {
-				...this.state,
-				loop: {
-					...this.state.loop,
-					pointA: loopStartReference,
-					pointB: loopStartReference,
-					enabled: false,
-				},
-			};
-
-			this.updateMainControls();
-			event.stopPropagation();
-			return;
-		}
-
-		if (!isPrimaryInput(event)) {
-			return;
-		}
-
+	if (ctx.tryStartPinchZoom(event, targetSeekWrap)) {
 		event.preventDefault();
-		if (!targetSeekWrap) {
+		event.stopPropagation();
+		return;
+	}
+
+	if (ctx.tryStartPendingWaveformTouchSeek(event, targetSeekWrap)) {
+		return;
+	}
+
+	if (
+		ctx.navigationBar?.controls.includes("looping") &&
+		event.type === "mousedown" &&
+		event.which === 3
+	) {
+		event.preventDefault();
+
+		ctx.rightClickDragging = true;
+		ctx.seekingElement = targetSeekWrap;
+		const seekTimelineContext = ctx.getSeekTimelineContext(ctx.seekingElement);
+
+		const seekMetrics = getSeekMetrics(
+			ctx.seekingElement,
+			event,
+			seekTimelineContext.duration,
+		);
+		if (!seekMetrics) {
+			ctx.rightClickDragging = false;
 			return;
 		}
 
-		this.startInteractiveSeek(event, targetSeekWrap);
+		ctx.loopDragStart = snapLoopStartToMarker(
+			ctx,
+			ctx.seekingElement,
+			event,
+			seekMetrics.time,
+		);
+		const loopStartReference = seekTimelineContext.toReferenceTime(
+			ctx.loopDragStart,
+		);
+		ctx.state = {
+			...ctx.state,
+			loop: {
+				...ctx.state.loop,
+				pointA: loopStartReference,
+				pointB: loopStartReference,
+				enabled: false,
+			},
+		};
 
+		ctx.updateMainControls();
 		event.stopPropagation();
-	}).call(ctx, event);
+		return;
+	}
+
+	if (!isPrimaryInput(event)) {
+		return;
+	}
+
+	event.preventDefault();
+	if (!targetSeekWrap) {
+		return;
+	}
+
+	ctx.startInteractiveSeek(event, targetSeekWrap);
+
+	event.stopPropagation();
 }
 
 export function onTimelineMarkerActivate(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		if (event.which !== undefined && event.which !== 1) {
-			return;
-		}
+	if (event.which !== undefined && event.which !== 1) {
+		return;
+	}
 
-		const target = eventTargetAsElement(event.target ?? null);
-		const marker = target?.closest(".timeline-marker");
-		if (!(marker instanceof HTMLElement) || !this.root.contains(marker)) {
-			return;
-		}
+	const target = eventTargetAsElement(event.target ?? null);
+	const marker = target?.closest(".timeline-marker");
+	if (!(marker instanceof HTMLElement) || !ctx.root.contains(marker)) {
+		return;
+	}
 
-		event.preventDefault();
-		event.stopPropagation();
-		this.setKeyboardActive();
-		marker
-			.closest(".timeline-marker-layer")
-			?.querySelectorAll<HTMLElement>(".timeline-marker")
-			.forEach((candidate: HTMLElement) => {
-				candidate.tabIndex = candidate === marker ? 0 : -1;
-			});
-		activateTimelineMarker(this, marker);
-	}).call(ctx, event);
+	event.preventDefault();
+	event.stopPropagation();
+	ctx.setKeyboardActive();
+	marker
+		.closest(".timeline-marker-layer")
+		?.querySelectorAll<HTMLElement>(".timeline-marker")
+		.forEach((candidate: HTMLElement) => {
+			candidate.tabIndex = candidate === marker ? 0 : -1;
+		});
+	activateTimelineMarker(ctx, marker);
 }
 
 export function onTimelineMarkerKeydown(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		const target = eventTargetAsElement(event.target ?? null);
-		const marker = target?.closest(".timeline-marker");
-		if (!(marker instanceof HTMLElement) || !this.root.contains(marker)) {
-			return;
-		}
+	const target = eventTargetAsElement(event.target ?? null);
+	const marker = target?.closest(".timeline-marker");
+	if (!(marker instanceof HTMLElement) || !ctx.root.contains(marker)) {
+		return;
+	}
 
-		if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
-			event.preventDefault();
-			event.stopPropagation();
-			moveTimelineMarkerFocus(
-				marker,
-				event.key === "ArrowLeft" ? "previous" : "next",
-			);
-			return;
-		}
+	if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+		event.preventDefault();
+		event.stopPropagation();
+		moveTimelineMarkerFocus(
+			marker,
+			event.key === "ArrowLeft" ? "previous" : "next",
+		);
+		return;
+	}
 
-		// Space remains the global play/pause shortcut while a marker has focus.
-		if (event.key === "Enter") {
-			event.preventDefault();
-			event.stopPropagation();
-			activateTimelineMarker(this, marker);
-		}
-	}).call(ctx, event);
+	// Space remains the global play/pause shortcut while a marker has focus.
+	if (event.key === "Enter") {
+		event.preventDefault();
+		event.stopPropagation();
+		activateTimelineMarker(ctx, marker);
+	}
 }
 
 export function onAdjacentMarker(
@@ -342,624 +312,549 @@ export function onAdjacentMarker(
 	event: ControllerPointerEvent,
 	direction: "previous" | "next",
 ): void {
-	(function (
-		this: TrackSwitchControllerImpl,
-		event: ControllerPointerEvent,
-		direction: "previous" | "next",
-	) {
-		event.preventDefault();
-		event.stopPropagation();
-		this.setKeyboardActive();
-		this.seekToAdjacentMarker(direction);
-	}).call(ctx, event, direction);
+	event.preventDefault();
+	event.stopPropagation();
+	ctx.setKeyboardActive();
+	ctx.seekToAdjacentMarker(direction);
 }
 
 export function onMarkerNavigationOpen(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		event.preventDefault();
-		event.stopPropagation();
-		this.setKeyboardActive();
-		openMarkerNavigationDialog(this);
-	}).call(ctx, event);
+	event.preventDefault();
+	event.stopPropagation();
+	ctx.setKeyboardActive();
+	openMarkerNavigationDialog(ctx);
 }
 
 export function onMarkerNavigationOverlay(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		const target = eventTargetAsElement(event.target ?? null);
-		if (target?.closest(".marker-navigation-dialog")) {
-			return;
-		}
-		event.preventDefault();
-		event.stopPropagation();
-		closeMarkerNavigationDialog(this);
-	}).call(ctx, event);
+	const target = eventTargetAsElement(event.target ?? null);
+	if (target?.closest(".marker-navigation-dialog")) {
+		return;
+	}
+	event.preventDefault();
+	event.stopPropagation();
+	closeMarkerNavigationDialog(ctx);
 }
 
 export function onMarkerNavigationInput(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		const target = eventTargetAsElement(event.target ?? null);
-		this.renderer.handleMarkerNavigationInteraction(event.type, target);
-	}).call(ctx, event);
+	const target = eventTargetAsElement(event.target ?? null);
+	ctx.renderer.handleMarkerNavigationInteraction(event.type, target);
 }
 
 export function onMarkerNavigationSubmit(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		event.preventDefault();
-		event.stopPropagation();
-		if (!this.renderer.validateMarkerNavigationDialogSelections()) {
-			return;
-		}
-		submitMarkerNavigationDialog(
-			this,
-			this.renderer.readMarkerNavigationDialogValues(),
-		);
-	}).call(ctx, event);
+	event.preventDefault();
+	event.stopPropagation();
+	if (!ctx.renderer.validateMarkerNavigationDialogSelections()) {
+		return;
+	}
+	submitMarkerNavigationDialog(
+		ctx,
+		ctx.renderer.readMarkerNavigationDialogValues(),
+	);
 }
 
 export function onMarkerNavigationKeydown(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		const target = eventTargetAsElement(event.target ?? null);
-		if (
-			this.renderer.handleMarkerNavigationComboboxKeydown(
-				event.key ?? "",
-				target,
-			)
-		) {
-			event.preventDefault();
-			event.stopPropagation();
-			return;
-		}
-		if (event.key === "Escape") {
-			event.preventDefault();
-			event.stopPropagation();
-			closeMarkerNavigationDialog(this);
-			return;
-		}
-		if (event.key === "Tab") {
-			event.preventDefault();
-			event.stopPropagation();
-			this.renderer.trapMarkerNavigationDialogFocus(!!event.shiftKey);
-		}
-	}).call(ctx, event);
+	const target = eventTargetAsElement(event.target ?? null);
+	if (
+		ctx.renderer.handleMarkerNavigationComboboxKeydown(event.key ?? "", target)
+	) {
+		event.preventDefault();
+		event.stopPropagation();
+		return;
+	}
+	if (event.key === "Escape") {
+		event.preventDefault();
+		event.stopPropagation();
+		closeMarkerNavigationDialog(ctx);
+		return;
+	}
+	if (event.key === "Tab") {
+		event.preventDefault();
+		event.stopPropagation();
+		ctx.renderer.trapMarkerNavigationDialogFocus(!!event.shiftKey);
+	}
 }
 
 export function onWaveformMinimapStart(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		if (!this.isLoaded || !isPrimaryInput(event) || this.pinchZoomState) {
-			return;
-		}
+	if (!ctx.isLoaded || !isPrimaryInput(event) || ctx.pinchZoomState) {
+		return;
+	}
 
-		if (event.type === "touchstart" && this.getActiveTouchCount(event) !== 1) {
-			return;
-		}
+	if (event.type === "touchstart" && ctx.getActiveTouchCount(event) !== 1) {
+		return;
+	}
 
-		const minimapStart = resolveWaveformMinimapStart(this, event);
-		if (!minimapStart) {
-			return;
-		}
+	const minimapStart = resolveWaveformMinimapStart(ctx, event);
+	if (!minimapStart) {
+		return;
+	}
 
-		this.waveformMinimapDragState = {
-			seekWrap: minimapStart.seekWrap,
-			minimapNode: minimapStart.minimapNode,
-			pointerOffsetRatio: minimapStart.pointerOffsetRatio,
-		};
-		this.pendingWaveformTouchSeek = null;
-		this.seekingElement = null;
-		this.rightClickDragging = false;
-		this.loopDragStart = null;
-		this.draggingMarker = null;
-		if (this.state.currentlySeeking) {
-			this.dispatch({ type: "set-seeking", seeking: false });
-		}
+	ctx.waveformMinimapDragState = {
+		seekWrap: minimapStart.seekWrap,
+		minimapNode: minimapStart.minimapNode,
+		pointerOffsetRatio: minimapStart.pointerOffsetRatio,
+	};
+	ctx.pendingWaveformTouchSeek = null;
+	ctx.seekingElement = null;
+	ctx.rightClickDragging = false;
+	ctx.loopDragStart = null;
+	ctx.draggingMarker = null;
+	if (ctx.state.currentlySeeking) {
+		ctx.dispatch({ type: "set-seeking", seeking: false });
+	}
 
-		this.renderer.setWaveformMinimapViewportStart(
-			minimapStart.seekWrap,
-			minimapStart.pointerRatio - minimapStart.pointerOffsetRatio,
-		);
-		event.preventDefault();
-		event.stopPropagation();
-	}).call(ctx, event);
+	ctx.renderer.setWaveformMinimapViewportStart(
+		minimapStart.seekWrap,
+		minimapStart.pointerRatio - minimapStart.pointerOffsetRatio,
+	);
+	event.preventDefault();
+	event.stopPropagation();
 }
 
 export function onPianoRollMinimapStart(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		if (!this.isLoaded || !isPrimaryInput(event) || this.pinchZoomState) {
-			return;
-		}
+	if (!ctx.isLoaded || !isPrimaryInput(event) || ctx.pinchZoomState) {
+		return;
+	}
 
-		if (event.type === "touchstart" && this.getActiveTouchCount(event) !== 1) {
-			return;
-		}
+	if (event.type === "touchstart" && ctx.getActiveTouchCount(event) !== 1) {
+		return;
+	}
 
-		const minimapStart = resolvePianoRollMinimapStart(this, event);
-		if (!minimapStart) {
-			return;
-		}
+	const minimapStart = resolvePianoRollMinimapStart(ctx, event);
+	if (!minimapStart) {
+		return;
+	}
 
-		this.waveformMinimapDragState = {
-			seekWrap: minimapStart.seekWrap,
-			minimapNode: minimapStart.minimapNode,
-			pointerOffsetRatio: minimapStart.pointerOffsetRatio,
-		};
-		this.pendingWaveformTouchSeek = null;
-		this.seekingElement = null;
-		this.rightClickDragging = false;
-		this.loopDragStart = null;
-		this.draggingMarker = null;
-		if (this.state.currentlySeeking) {
-			this.dispatch({ type: "set-seeking", seeking: false });
-		}
+	ctx.waveformMinimapDragState = {
+		seekWrap: minimapStart.seekWrap,
+		minimapNode: minimapStart.minimapNode,
+		pointerOffsetRatio: minimapStart.pointerOffsetRatio,
+	};
+	ctx.pendingWaveformTouchSeek = null;
+	ctx.seekingElement = null;
+	ctx.rightClickDragging = false;
+	ctx.loopDragStart = null;
+	ctx.draggingMarker = null;
+	if (ctx.state.currentlySeeking) {
+		ctx.dispatch({ type: "set-seeking", seeking: false });
+	}
 
-		this.renderer.setPianoRollMinimapViewportStart(
-			minimapStart.seekWrap,
-			minimapStart.pointerRatio - minimapStart.pointerOffsetRatio,
-		);
-		event.preventDefault();
-		event.stopPropagation();
-	}).call(ctx, event);
+	ctx.renderer.setPianoRollMinimapViewportStart(
+		minimapStart.seekWrap,
+		minimapStart.pointerRatio - minimapStart.pointerOffsetRatio,
+	);
+	event.preventDefault();
+	event.stopPropagation();
 }
 
 export function onSeekEnd(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		if (!this.isLoaded) {
-			return;
-		}
+	if (!ctx.isLoaded) {
+		return;
+	}
 
-		if (finishSeekEndInteraction(this, event)) {
-			return;
-		}
+	if (finishSeekEndInteraction(ctx, event)) {
+		return;
+	}
 
-		const hasActiveSeekInteraction =
-			this.draggingMarker !== null ||
-			this.rightClickDragging ||
-			this.state.currentlySeeking ||
-			this.seekingElement !== null;
+	const hasActiveSeekInteraction =
+		ctx.draggingMarker !== null ||
+		ctx.rightClickDragging ||
+		ctx.state.currentlySeeking ||
+		ctx.seekingElement !== null;
 
-		if (!hasActiveSeekInteraction) {
-			return;
-		}
+	if (!hasActiveSeekInteraction) {
+		return;
+	}
 
-		event.preventDefault();
+	event.preventDefault();
 
-		if (this.draggingMarker !== null) {
-			this.draggingMarker = null;
-			this.updateMainControls();
-			event.stopPropagation();
-			return;
-		}
-
-		if (this.rightClickDragging) {
-			finalizeRightClickLoopSelection(this);
-			this.updateMainControls();
-			event.stopPropagation();
-			return;
-		}
-
-		if (this.state.currentlySeeking && this.state.playing) {
-			this.stopAudio();
-			this.startAudio();
-		}
-
-		this.dispatch({ type: "set-seeking", seeking: false });
+	if (ctx.draggingMarker !== null) {
+		ctx.draggingMarker = null;
+		ctx.updateMainControls();
 		event.stopPropagation();
-	}).call(ctx, event);
+		return;
+	}
+
+	if (ctx.rightClickDragging) {
+		finalizeRightClickLoopSelection(ctx);
+		ctx.updateMainControls();
+		event.stopPropagation();
+		return;
+	}
+
+	if (ctx.state.currentlySeeking && ctx.state.playing) {
+		ctx.stopAudio();
+		ctx.startAudio();
+	}
+
+	ctx.dispatch({ type: "set-seeking", seeking: false });
+	event.stopPropagation();
 }
 
 export function onSolo(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		if (!isPrimaryInput(event)) {
-			return;
-		}
+	if (!isPrimaryInput(event)) {
+		return;
+	}
 
-		event.preventDefault();
-		toggleSoloFromPointerEvent(this, event);
-	}).call(ctx, event);
+	event.preventDefault();
+	toggleSoloFromPointerEvent(ctx, event);
 }
 
 export function onTrackRowToggle(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		if (!isPrimaryInput(event)) {
-			return;
-		}
+	if (!isPrimaryInput(event)) {
+		return;
+	}
 
-		const target = eventTargetAsElement(event.target ?? null);
-		if (
-			target &&
-			(target.closest(".track-mix-controls") ||
-				target.closest(".control .solo"))
-		) {
-			return;
-		}
+	const target = eventTargetAsElement(event.target ?? null);
+	if (
+		target &&
+		(target.closest(".track-mix-controls") || target.closest(".control .solo"))
+	) {
+		return;
+	}
 
-		event.preventDefault();
-		toggleSoloFromPointerEvent(this, event);
-	}).call(ctx, event);
+	event.preventDefault();
+	toggleSoloFromPointerEvent(ctx, event);
 }
 
 export function onAlignmentSync(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		if (!isPrimaryInput(event)) {
-			return;
-		}
+	if (!isPrimaryInput(event)) {
+		return;
+	}
 
-		event.preventDefault();
-		this.toggleGlobalSync();
-		event.stopPropagation();
-	}).call(ctx, event);
+	event.preventDefault();
+	ctx.toggleGlobalSync();
+	event.stopPropagation();
 }
 
 export function onVolume(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		const target = eventTargetAsElement(event.target ?? null);
-		if (!(target instanceof HTMLInputElement)) {
-			return;
-		}
+	const target = eventTargetAsElement(event.target ?? null);
+	if (!(target instanceof HTMLInputElement)) {
+		return;
+	}
 
-		const volume = parseFloat(target.value || "0") / 100;
-		this.setVolume(volume);
-	}).call(ctx, event);
+	const volume = parseFloat(target.value || "0") / 100;
+	ctx.setVolume(volume);
 }
 
 export function onVolumeReset(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		event.preventDefault();
-		this.setVolume(1);
-		event.stopPropagation();
-	}).call(ctx, event);
+	event.preventDefault();
+	ctx.setVolume(1);
+	event.stopPropagation();
 }
 
 export function onGlobalPan(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		const target = eventTargetAsElement(event.target ?? null);
-		if (!(target instanceof HTMLInputElement)) {
-			return;
-		}
+	const target = eventTargetAsElement(event.target ?? null);
+	if (!(target instanceof HTMLInputElement)) {
+		return;
+	}
 
-		this.setPan(parsePanSliderValue(target));
-	}).call(ctx, event);
+	ctx.setPan(parsePanSliderValue(target));
 }
 
 export function onGlobalPanReset(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		event.preventDefault();
-		this.setPan(0);
-		event.stopPropagation();
-	}).call(ctx, event);
+	event.preventDefault();
+	ctx.setPan(0);
+	event.stopPropagation();
 }
 
 export function onTrackVolume(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		const trackInput = getTrackInputTarget(this, event);
-		if (!trackInput) {
-			return;
-		}
+	const trackInput = getTrackInputTarget(ctx, event);
+	if (!trackInput) {
+		return;
+	}
 
-		this.setTrackVolume(
-			trackInput.trackIndex,
-			parseSliderValue(trackInput.target),
-		);
-	}).call(ctx, event);
+	ctx.setTrackVolume(
+		trackInput.trackIndex,
+		parseSliderValue(trackInput.target),
+	);
 }
 
 export function onTrackVolumeReset(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		const trackInput = getTrackInputTarget(this, event);
-		if (!trackInput) {
-			return;
-		}
+	const trackInput = getTrackInputTarget(ctx, event);
+	if (!trackInput) {
+		return;
+	}
 
-		event.preventDefault();
-		this.setTrackVolume(trackInput.trackIndex, 1);
-		event.stopPropagation();
-	}).call(ctx, event);
+	event.preventDefault();
+	ctx.setTrackVolume(trackInput.trackIndex, 1);
+	event.stopPropagation();
 }
 
 export function onTrackPan(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		const trackInput = getTrackInputTarget(this, event);
-		if (!trackInput) {
-			return;
-		}
+	const trackInput = getTrackInputTarget(ctx, event);
+	if (!trackInput) {
+		return;
+	}
 
-		this.setTrackPan(
-			trackInput.trackIndex,
-			parsePanSliderValue(trackInput.target),
-		);
-	}).call(ctx, event);
+	ctx.setTrackPan(
+		trackInput.trackIndex,
+		parsePanSliderValue(trackInput.target),
+	);
 }
 
 export function onTrackPanReset(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		const trackInput = getTrackInputTarget(this, event);
-		if (!trackInput) {
-			return;
-		}
+	const trackInput = getTrackInputTarget(ctx, event);
+	if (!trackInput) {
+		return;
+	}
 
-		event.preventDefault();
-		this.setTrackPan(trackInput.trackIndex, 0);
-		event.stopPropagation();
-	}).call(ctx, event);
+	event.preventDefault();
+	ctx.setTrackPan(trackInput.trackIndex, 0);
+	event.stopPropagation();
 }
 
 export function onPreset(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		const target = eventTargetAsElement(event.target ?? null);
-		const selector = target?.closest(".preset-selector");
-		if (!(selector instanceof HTMLSelectElement)) {
-			return;
-		}
+	const target = eventTargetAsElement(event.target ?? null);
+	const selector = target?.closest(".preset-selector");
+	if (!(selector instanceof HTMLSelectElement)) {
+		return;
+	}
 
-		this.applyPreset(selector.value);
-	}).call(ctx, event);
+	ctx.applyPreset(selector.value);
 }
 
-export function onPresetScroll(
-	ctx: TrackSwitchControllerImpl,
-	event: ControllerPointerEvent,
-): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		event.preventDefault();
+export function onPresetScroll(event: ControllerPointerEvent): void {
+	event.preventDefault();
 
-		const target = eventTargetAsElement(event.target ?? null);
-		const selector = target?.closest(".preset-selector");
-		if (!(selector instanceof HTMLSelectElement)) {
-			return;
-		}
+	const target = eventTargetAsElement(event.target ?? null);
+	const selector = target?.closest(".preset-selector");
+	if (!(selector instanceof HTMLSelectElement)) {
+		return;
+	}
 
-		const maxIndex = selector.options.length - 1;
-		let currentIndex = selector.selectedIndex;
-		const deltaY =
-			(event as unknown as { deltaY?: number }).deltaY ??
-			event.originalEvent?.deltaY ??
-			0;
+	const maxIndex = selector.options.length - 1;
+	let currentIndex = selector.selectedIndex;
+	const deltaY =
+		(event as unknown as { deltaY?: number }).deltaY ??
+		event.originalEvent?.deltaY ??
+		0;
 
-		if (deltaY > 0) {
-			currentIndex = Math.min(currentIndex + 1, maxIndex);
-		} else if (deltaY < 0) {
-			currentIndex = Math.max(currentIndex - 1, 0);
-		}
+	if (deltaY > 0) {
+		currentIndex = Math.min(currentIndex + 1, maxIndex);
+	} else if (deltaY < 0) {
+		currentIndex = Math.max(currentIndex - 1, 0);
+	}
 
-		selector.selectedIndex = currentIndex;
-		selector.dispatchEvent(new Event("change", { bubbles: true }));
-	}).call(ctx, event);
+	selector.selectedIndex = currentIndex;
+	selector.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
 export function onSetLoopA(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		if (!isPrimaryInput(event)) {
-			return;
-		}
-		event.preventDefault();
-		if (this.state.currentlySeeking) {
-			this.dispatch({ type: "set-seeking", seeking: false });
-		}
-		this.setLoopPoint("A");
-		event.stopPropagation();
-	}).call(ctx, event);
+	if (!isPrimaryInput(event)) {
+		return;
+	}
+	event.preventDefault();
+	if (ctx.state.currentlySeeking) {
+		ctx.dispatch({ type: "set-seeking", seeking: false });
+	}
+	ctx.setLoopPoint("A");
+	event.stopPropagation();
 }
 
 export function onSetLoopB(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		if (!isPrimaryInput(event)) {
-			return;
-		}
-		event.preventDefault();
-		if (this.state.currentlySeeking) {
-			this.dispatch({ type: "set-seeking", seeking: false });
-		}
-		this.setLoopPoint("B");
-		event.stopPropagation();
-	}).call(ctx, event);
+	if (!isPrimaryInput(event)) {
+		return;
+	}
+	event.preventDefault();
+	if (ctx.state.currentlySeeking) {
+		ctx.dispatch({ type: "set-seeking", seeking: false });
+	}
+	ctx.setLoopPoint("B");
+	event.stopPropagation();
 }
 
 export function onToggleLoop(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		if (!isPrimaryInput(event)) {
-			return;
-		}
-		event.preventDefault();
-		this.toggleLoop();
-		event.stopPropagation();
-	}).call(ctx, event);
+	if (!isPrimaryInput(event)) {
+		return;
+	}
+	event.preventDefault();
+	ctx.toggleLoop();
+	event.stopPropagation();
 }
 
 export function onClearLoop(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		if (!isPrimaryInput(event)) {
-			return;
-		}
-		event.preventDefault();
-		this.clearLoop();
-		event.stopPropagation();
-	}).call(ctx, event);
+	if (!isPrimaryInput(event)) {
+		return;
+	}
+	event.preventDefault();
+	ctx.clearLoop();
+	event.stopPropagation();
 }
 
 export function onMarkerDragStart(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		if (
-			!this.navigationBar?.controls.includes("looping") ||
-			!isPrimaryInput(event) ||
-			this.pinchZoomState
-		) {
-			return;
-		}
+	if (
+		!ctx.navigationBar?.controls.includes("looping") ||
+		!isPrimaryInput(event) ||
+		ctx.pinchZoomState
+	) {
+		return;
+	}
 
-		const target = eventTargetAsElement(event.target ?? null);
-		if (!target) {
-			return;
-		}
+	const target = eventTargetAsElement(event.target ?? null);
+	if (!target) {
+		return;
+	}
 
-		event.preventDefault();
-		event.stopPropagation();
+	event.preventDefault();
+	event.stopPropagation();
 
-		if (target.classList.contains("marker-a")) {
-			this.draggingMarker = "A";
-		} else if (target.classList.contains("marker-b")) {
-			this.draggingMarker = "B";
-		}
+	if (target.classList.contains("marker-a")) {
+		ctx.draggingMarker = "A";
+	} else if (target.classList.contains("marker-b")) {
+		ctx.draggingMarker = "B";
+	}
 
-		this.seekingElement = closestInRoot(this.root, event.target, ".seekwrap");
-	}).call(ctx, event);
+	ctx.seekingElement = closestInRoot(ctx.root, event.target, ".seekwrap");
 }
 
 export function onKeyboard(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): void {
-	(function (this: TrackSwitchControllerImpl, event: ControllerPointerEvent) {
-		if (
-			!this.features.keyboard ||
-			!isKeyboardControllerActive(this.instanceId) ||
-			this.markerNavigationDialogOpen
-		) {
-			return;
-		}
+	if (
+		!ctx.features.keyboard ||
+		!isKeyboardControllerActive(ctx.instanceId) ||
+		ctx.markerNavigationDialogOpen
+	) {
+		return;
+	}
 
-		const target = eventTargetAsElement(event.target ?? null);
-		if (
-			target?.closest(
-				'input, textarea, select, [contenteditable="true"], [contenteditable=""], [role="textbox"]',
-			)
-		) {
-			return;
-		}
+	const target = eventTargetAsElement(event.target ?? null);
+	if (
+		target?.closest(
+			'input, textarea, select, [contenteditable="true"], [contenteditable=""], [role="textbox"]',
+		)
+	) {
+		return;
+	}
 
-		const key = event.key || event.code || "";
-		const code = event.code || "";
-		const trackIndex = this.getKeyboardTrackIndex(event);
+	const key = event.key || event.code || "";
+	const code = event.code || "";
+	const trackIndex = ctx.getKeyboardTrackIndex(event);
 
-		if (isShortcutHelpToggleKey(event)) {
-			event.preventDefault();
-			this.toggleShortcutHelp();
-			event.stopPropagation();
-			return;
-		}
+	if (isShortcutHelpToggleKey(event)) {
+		event.preventDefault();
+		ctx.toggleShortcutHelp();
+		event.stopPropagation();
+		return;
+	}
 
-		if (handleShortcutHelpKeyboard(this, event, key, code, trackIndex)) {
-			return;
-		}
+	if (handleShortcutHelpKeyboard(ctx, event, key, code, trackIndex)) {
+		return;
+	}
 
-		if (handleTrackKeyboardSelection(this, event, trackIndex)) {
-			return;
-		}
+	if (handleTrackKeyboardSelection(ctx, event, trackIndex)) {
+		return;
+	}
 
-		if (handleGlobalKeyboardShortcut(this, event, key)) {
-			event.stopPropagation();
-		}
-	}).call(ctx, event);
+	if (handleGlobalKeyboardShortcut(ctx, event, key)) {
+		event.stopPropagation();
+	}
 }
 
 export function getKeyboardTrackIndex(
-	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): number | null {
-	return function (
-		this: TrackSwitchControllerImpl,
-		event: ControllerPointerEvent,
-	) {
-		return getKeyboardTrackIndexFromEvent(event);
-	}.call(ctx, event);
+	return getKeyboardTrackIndexFromEvent(event);
 }
 
 export function onResize(ctx: TrackSwitchControllerImpl): void {
-	(function (this: TrackSwitchControllerImpl) {
-		if (this.resizeDebounceTimer) {
-			clearTimeout(this.resizeDebounceTimer);
-		}
+	if (ctx.resizeDebounceTimer) {
+		clearTimeout(ctx.resizeDebounceTimer);
+	}
 
-		this.resizeDebounceTimer = setTimeout(() => {
-			this.renderer.reflowWaveforms();
-			this.renderer.renderWaveforms(
-				this.waveformEngine,
-				this.runtimes,
-				this.longestDuration,
-				this.getWaveformTimelineProjector(),
-				this.getWaveformTimelineContext(),
-			);
-			this.renderer.renderPianoRollDisplays(
-				this.longestDuration,
-				this.isAlignmentMode(),
-			);
-			this.sheetMusicEngine.resize();
-			if (this.fullscreen) {
-				this.renderer.refreshFullscreenPanelHeights();
-			}
-			this.updateMainControls();
-		}, 300);
-	}).call(ctx);
+	ctx.resizeDebounceTimer = setTimeout(() => {
+		ctx.renderer.reflowWaveforms();
+		ctx.renderer.renderWaveforms(
+			ctx.waveformEngine,
+			ctx.runtimes,
+			ctx.longestDuration,
+			ctx.getWaveformTimelineProjector(),
+			ctx.getWaveformTimelineContext(),
+		);
+		ctx.renderer.renderPianoRollDisplays(
+			ctx.longestDuration,
+			ctx.isAlignmentMode(),
+		);
+		ctx.sheetMusicEngine.resize();
+		if (ctx.fullscreen) {
+			ctx.renderer.refreshFullscreenPanelHeights();
+		}
+		ctx.updateMainControls();
+	}, 300);
 }

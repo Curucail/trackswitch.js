@@ -7,6 +7,7 @@ import type {
 	WaveformPlaybackFollowMode,
 } from "../domain/types";
 import { applyCssOverrides } from "../shared/dom";
+import { clamp, sanitizeDuration } from "../shared/math";
 import {
 	formatMidiNoteName,
 	isBlackKey,
@@ -18,9 +19,9 @@ import {
 	type PianoRollKeyboardColors,
 	resolvePianoRollKeyboardColors,
 } from "./render-piano-roll-keyboard";
+import { buildSeekWrap } from "./render-seek";
 import {
 	applyTimelineFollowScrollLeft,
-	clampTimelineValue,
 	getTimelineMaximumZoom,
 	getTimelineSurfaceWidth,
 	getTimelineTimeWidth,
@@ -34,7 +35,6 @@ import {
 	resolveTimelineDefaultZoom,
 	resolveTimelinePlaybackFollowScrollLeft,
 	resolveVisibleTileWindow,
-	sanitizeTimelineDuration,
 	setTimelineZoomForSurface,
 	type TimelineScrollAnimation,
 	updateTimelineMinimapViewport,
@@ -229,36 +229,7 @@ export type PianoRollTimelineContextResolver = (
 	surface: PianoRollSeekSurfaceMetadata,
 ) => PianoRollTimelineContext | null;
 
-function clampTime(value: number, minimum: number, maximum: number): number {
-	return clampTimelineValue(value, minimum, maximum);
-}
-
-function sanitizeDuration(value: number): number {
-	return sanitizeTimelineDuration(value);
-}
-
-/** The player draws the piano roll itself, so the seek surface spans it exactly. */
-function buildSeekWrap(): string {
-	return (
-		'<div class="seekwrap">' +
-		'<div class="loop-region"></div>' +
-		'<div class="loop-marker marker-a"></div>' +
-		'<div class="loop-marker marker-b"></div>' +
-		'<div class="seekhead"></div>' +
-		"</div>"
-	);
-}
-
-function getPianoRollSurfaceWidth(
-	surface: PianoRollSeekSurfaceMetadata,
-): number {
-	return getTimelineSurfaceWidth(surface);
-}
-
 /** The stretch of surface the MIDI file itself occupies, without the trailing pad. */
-function getPianoRollTimeWidth(surface: PianoRollSeekSurfaceMetadata): number {
-	return getTimelineTimeWidth(surface);
-}
 
 function getPianoRollMaximumZoom(
 	surface: PianoRollSeekSurfaceMetadata,
@@ -284,13 +255,13 @@ function setPianoRollSurfaceWidth(
 	surface: PianoRollSeekSurfaceMetadata,
 	width?: number,
 ): void {
-	const surfaceWidth = width ?? getPianoRollSurfaceWidth(surface);
+	const surfaceWidth = width ?? getTimelineSurfaceWidth(surface);
 	surface.surface.style.width = `${surfaceWidth}px`;
 	surface.surface.style.height = `${surface.originalHeight}px`;
 	surface.noteCanvas.style.height = `${surface.originalHeight}px`;
 	// The seek surface covers the file, not the pad past its end, so a seek
 	// ratio, a loop marker and a marker layer all still land on the right time.
-	surface.seekWrap.style.width = `${getPianoRollTimeWidth(surface)}px`;
+	surface.seekWrap.style.width = `${getTimelineTimeWidth(surface)}px`;
 	updatePianoRollMinimapViewport(surface);
 }
 
@@ -300,37 +271,31 @@ export function setPianoRollSurfaceHeight(
 	surface: PianoRollSeekSurfaceMetadata,
 	height: number,
 ): void {
-	(function (
-		this: ViewRenderer,
-		surface: PianoRollSeekSurfaceMetadata,
-		height: number,
-	) {
-		if (surface.originalHeight === height) {
-			return;
-		}
+	if (surface.originalHeight === height) {
+		return;
+	}
 
-		surface.originalHeight = height;
-		surface.surface.style.height = `${height}px`;
-		surface.noteCanvas.style.height = `${height}px`;
-		if (surface.keyboardCanvas) {
-			surface.keyboardCanvas.style.height = `${height}px`;
-			// A fullscreen grow changes row height, so the keys have to widen by the
-			// same factor to keep their proportions — otherwise a taller roll leaves
-			// them looking abnormally thin.
-			if (surface.baseKeyboardWidth > 0 && surface.configuredHeight > 0) {
-				const scaledWidth =
-					(surface.baseKeyboardWidth * height) / surface.configuredHeight;
-				surface.wrapper.style.setProperty(
-					"--ts-piano-roll-keyboard-width",
-					`${scaledWidth}px`,
-				);
-			}
-			surface.lastKeyboardKey = null;
+	surface.originalHeight = height;
+	surface.surface.style.height = `${height}px`;
+	surface.noteCanvas.style.height = `${height}px`;
+	if (surface.keyboardCanvas) {
+		surface.keyboardCanvas.style.height = `${height}px`;
+		// A fullscreen grow changes row height, so the keys have to widen by the
+		// same factor to keep their proportions — otherwise a taller roll leaves
+		// them looking abnormally thin.
+		if (surface.baseKeyboardWidth > 0 && surface.configuredHeight > 0) {
+			const scaledWidth =
+				(surface.baseKeyboardWidth * height) / surface.configuredHeight;
+			surface.wrapper.style.setProperty(
+				"--ts-piano-roll-keyboard-width",
+				`${scaledWidth}px`,
+			);
 		}
-		surface.lastRenderKey = null;
-		surface.lastMinimapKey = null;
-		this.refreshPianoRollNoteTiles();
-	}).call(ctx, surface, height);
+		surface.lastKeyboardKey = null;
+	}
+	surface.lastRenderKey = null;
+	surface.lastMinimapKey = null;
+	ctx.refreshPianoRollNoteTiles();
 }
 
 /**
@@ -353,7 +318,7 @@ function setPianoRollZoomForSurface(
 		setPianoRollSurfaceWidth,
 	);
 	if (changed && surface.playbackFollowMode === "pinnedLeft") {
-		const scrollLeft = resolvePlaybackFollowScrollLeft(
+		const scrollLeft = resolveTimelinePlaybackFollowScrollLeft(
 			surface,
 			surface.lastPlayheadRatio,
 		);
@@ -543,7 +508,7 @@ function buildPianoRollTooltipContent(
 		// The parser normalizes velocity to 0-1; the file wrote it as 0-127.
 		buildPianoRollTooltipRow(
 			"velocity",
-			String(Math.round(clampTime(note.velocity, 0, 1) * 127)),
+			String(Math.round(clamp(note.velocity, 0, 1) * 127)),
 		),
 	];
 }
@@ -585,8 +550,8 @@ function positionPianoRollTooltip(
 		top = y - 14 - height;
 	}
 
-	tooltip.style.left = `${Math.round(clampTime(left, 0, Math.max(0, boxWidth - width)))}px`;
-	tooltip.style.top = `${Math.round(clampTime(top, 0, Math.max(0, boxHeight - height)))}px`;
+	tooltip.style.left = `${Math.round(clamp(left, 0, Math.max(0, boxWidth - width)))}px`;
+	tooltip.style.top = `${Math.round(clamp(top, 0, Math.max(0, boxHeight - height)))}px`;
 }
 
 function flattenMidiNotes(midi: Midi, source: string): MidiNoteEvent[] {
@@ -781,9 +746,7 @@ function resolveNoteAlpha(
 	surface: PianoRollSeekSurfaceMetadata,
 	note: MidiNoteEvent,
 ): number {
-	return surface.velocityOpacity
-		? 0.35 + clampTime(note.velocity, 0, 1) * 0.55
-		: 1;
+	return surface.velocityOpacity ? 0.35 + clamp(note.velocity, 0, 1) * 0.55 : 1;
 }
 
 /**
@@ -887,7 +850,7 @@ function renderPianoRollNotes(
 	positionTileCanvas(surface.noteCanvas, tileWindow);
 
 	const { tileStartPx, tileCssWidth, tileCssHeight, surfaceWidth } = tileWindow;
-	const timeWidth = getPianoRollTimeWidth(surface);
+	const timeWidth = getTimelineTimeWidth(surface);
 	const renderKey = [
 		tileStartPx,
 		tileCssWidth,
@@ -987,10 +950,7 @@ function renderPianoRollNotes(
 		}
 
 		if (drawVelocityBar && width >= PIANO_ROLL_VELOCITY_BAR_MIN_WIDTH) {
-			const barWidth = Math.max(
-				1,
-				(width - 6) * clampTime(note.velocity, 0, 1),
-			);
+			const barWidth = Math.max(1, (width - 6) * clamp(note.velocity, 0, 1));
 			// On a faded body the full channel colour reads as the bar; on a solid
 			// one only the contrast colour does.
 			context.fillStyle = surface.velocityOpacity
@@ -1373,13 +1333,6 @@ function sameNotes(left: MidiNoteEvent[], right: MidiNoteEvent[]): boolean {
 	);
 }
 
-function resolvePlaybackFollowScrollLeft(
-	surface: PianoRollSeekSurfaceMetadata,
-	playheadRatio: number,
-): number | null {
-	return resolveTimelinePlaybackFollowScrollLeft(surface, playheadRatio);
-}
-
 function resolvePianoRollTimelineDuration(
 	surface: PianoRollSeekSurfaceMetadata,
 	playerDuration: number,
@@ -1405,7 +1358,7 @@ function resolvePianoRollTimelinePosition(
 		return 0;
 	}
 
-	return clampTime(playerPosition, 0, duration);
+	return clamp(playerPosition, 0, duration);
 }
 
 /**
@@ -1476,244 +1429,224 @@ function resolveChannelTrackIds(
 }
 
 export function wrapPianoRollCanvases(ctx: ViewRenderer): void {
-	(function (this: ViewRenderer) {
-		this.pianoRollSeekSurfaces.length = 0;
+	ctx.pianoRollSeekSurfaces.length = 0;
 
-		const canvases = this.root.querySelectorAll("canvas.piano-roll");
-		canvases.forEach((canvasElement: Element) => {
-			if (!(canvasElement instanceof HTMLCanvasElement)) {
-				return;
-			}
+	const canvases = ctx.root.querySelectorAll("canvas.piano-roll");
+	canvases.forEach((canvasElement: Element) => {
+		if (!(canvasElement instanceof HTMLCanvasElement)) {
+			return;
+		}
 
-			if (canvasElement.closest(".piano-roll-wrap")) {
-				return;
-			}
+		if (canvasElement.closest(".piano-roll-wrap")) {
+			return;
+		}
 
-			const definition: ConfiguredViewHost =
-				this.getConfiguredViewHost(canvasElement);
-			if (definition.view.type !== "pianoRoll") return;
-			const config = definition.view as TrackSwitchPianoRollViewConfig;
-			const source = definition.source;
-			if (!source) return;
+		const definition: ConfiguredViewHost =
+			ctx.getConfiguredViewHost(canvasElement);
+		if (definition.view.type !== "pianoRoll") return;
+		const config = definition.view as TrackSwitchPianoRollViewConfig;
+		const source = definition.source;
+		if (!source) return;
 
-			const wrapper = document.createElement("div");
-			wrapper.className = "piano-roll-wrap ts-stack-section";
-			wrapper.dataset.palette = config.palette ?? "light";
-			applyCssOverrides(wrapper, config.css);
+		const wrapper = document.createElement("div");
+		wrapper.className = "piano-roll-wrap ts-stack-section";
+		wrapper.dataset.palette = config.palette ?? "light";
+		applyCssOverrides(wrapper, config.css);
 
-			const scrollContainer = document.createElement("div");
-			scrollContainer.className = "piano-roll-scroll";
+		const scrollContainer = document.createElement("div");
+		scrollContainer.className = "piano-roll-scroll";
 
-			const surface = document.createElement("div");
-			surface.className = "piano-roll-surface";
+		const surface = document.createElement("div");
+		surface.className = "piano-roll-surface";
 
-			// One viewport-sized canvas slides over the virtual piano-roll surface, so the
-			// note count no longer drives the DOM node count.
-			const noteCanvas = document.createElement("canvas");
-			noteCanvas.className = "piano-roll-note-layer";
+		// One viewport-sized canvas slides over the virtual piano-roll surface, so the
+		// note count no longer drives the DOM node count.
+		const noteCanvas = document.createElement("canvas");
+		noteCanvas.className = "piano-roll-note-layer";
 
-			const overlay = document.createElement("div");
-			overlay.className = "piano-roll-overlay";
+		const overlay = document.createElement("div");
+		overlay.className = "piano-roll-overlay";
 
-			const parent = canvasElement.parentElement;
-			if (!parent) {
-				return;
-			}
+		const parent = canvasElement.parentElement;
+		if (!parent) {
+			return;
+		}
 
-			// The keyboard is a column beside the scroller rather than part of the
-			// scrolled surface, so the notes travel into keys that stay put.
-			const pianoKeyboard = config.pianoKeyboard === true;
-			let keyboardCanvas: HTMLCanvasElement | null = null;
-			if (pianoKeyboard) {
-				wrapper.classList.add("piano-roll-has-keyboard");
-				keyboardCanvas = document.createElement("canvas");
-				keyboardCanvas.className = "piano-roll-keyboard";
-			}
+		// The keyboard is a column beside the scroller rather than part of the
+		// scrolled surface, so the notes travel into keys that stay put.
+		const pianoKeyboard = config.pianoKeyboard === true;
+		let keyboardCanvas: HTMLCanvasElement | null = null;
+		if (pianoKeyboard) {
+			wrapper.classList.add("piano-roll-has-keyboard");
+			keyboardCanvas = document.createElement("canvas");
+			keyboardCanvas.className = "piano-roll-keyboard";
+		}
 
-			parent.insertBefore(wrapper, canvasElement);
-			if (keyboardCanvas) {
-				wrapper.appendChild(keyboardCanvas);
-			}
-			wrapper.appendChild(scrollContainer);
-			scrollContainer.appendChild(surface);
-			surface.appendChild(noteCanvas);
-			surface.insertAdjacentHTML("beforeend", buildSeekWrap());
-			wrapper.appendChild(overlay);
-			canvasElement.remove();
+		parent.insertBefore(wrapper, canvasElement);
+		if (keyboardCanvas) {
+			wrapper.appendChild(keyboardCanvas);
+		}
+		wrapper.appendChild(scrollContainer);
+		scrollContainer.appendChild(surface);
+		surface.appendChild(noteCanvas);
+		surface.insertAdjacentHTML("beforeend", buildSeekWrap());
+		wrapper.appendChild(overlay);
+		canvasElement.remove();
 
-			const seekWrap = surface.querySelector(".seekwrap");
-			if (!(seekWrap instanceof HTMLElement)) {
-				return;
-			}
-			this.registerSeekMarkerLayers(seekWrap, config.markerLayers);
-			this.registerSeekTimeline(
-				seekWrap,
-				definition.alignmentTimeline?.trim() || null,
-			);
-			seekWrap.setAttribute("data-seek-surface", "piano-roll");
+		const seekWrap = surface.querySelector(".seekwrap");
+		if (!(seekWrap instanceof HTMLElement)) {
+			return;
+		}
+		ctx.registerSeekMarkerLayers(seekWrap, config.markerLayers);
+		ctx.registerSeekTimeline(
+			seekWrap,
+			definition.alignmentTimeline?.trim() || null,
+		);
+		seekWrap.setAttribute("data-seek-surface", "piano-roll");
 
-			const channelTrackIds = resolveChannelTrackIds(
-				config.channelToTrackIDMap,
-			);
+		const channelTrackIds = resolveChannelTrackIds(config.channelToTrackIDMap);
 
-			const originalHeight = Math.max(1, canvasElement.height);
-			surface.style.height = `${originalHeight}px`;
-			noteCanvas.style.height = `${originalHeight}px`;
-			let baseKeyboardWidth = 0;
-			if (keyboardCanvas) {
-				keyboardCanvas.style.height = `${originalHeight}px`;
-				baseKeyboardWidth =
-					parseFloat(
-						getComputedStyle(wrapper).getPropertyValue(
-							"--ts-piano-roll-keyboard-width",
-						),
-					) || DEFAULT_PIANO_ROLL_KEYBOARD_WIDTH;
-			}
+		const originalHeight = Math.max(1, canvasElement.height);
+		surface.style.height = `${originalHeight}px`;
+		noteCanvas.style.height = `${originalHeight}px`;
+		let baseKeyboardWidth = 0;
+		if (keyboardCanvas) {
+			keyboardCanvas.style.height = `${originalHeight}px`;
+			baseKeyboardWidth =
+				parseFloat(
+					getComputedStyle(wrapper).getPropertyValue(
+						"--ts-piano-roll-keyboard-width",
+					),
+				) || DEFAULT_PIANO_ROLL_KEYBOARD_WIDTH;
+		}
 
-			// Same default as a waveform: an aligned player runs every surface on its
-			// own local clock, which is only readable with the timer on.
-			const timerEnabled = config.timer ?? this.isAlignmentMode();
-			const timingNode = timerEnabled
-				? createPianoRollTimingNode(overlay)
-				: null;
-			const zoomNode = createPianoRollZoomNode(overlay);
-			const zoomMinimapNode = zoomNode.querySelector(
-				".piano-roll-zoom-minimap",
-			);
-			const zoomCanvas = zoomNode.querySelector(".piano-roll-zoom-canvas");
-			const zoomViewportNode = zoomNode.querySelector(
-				".piano-roll-zoom-viewport",
-			);
-			if (
-				!(zoomMinimapNode instanceof HTMLElement) ||
-				!(zoomCanvas instanceof HTMLCanvasElement) ||
-				!(zoomViewportNode instanceof HTMLElement)
-			) {
-				return;
-			}
+		// Same default as a waveform: an aligned player runs every surface on its
+		// own local clock, which is only readable with the timer on.
+		const timerEnabled = config.timer ?? ctx.isAlignmentMode();
+		const timingNode = timerEnabled ? createPianoRollTimingNode(overlay) : null;
+		const zoomNode = createPianoRollZoomNode(overlay);
+		const zoomMinimapNode = zoomNode.querySelector(".piano-roll-zoom-minimap");
+		const zoomCanvas = zoomNode.querySelector(".piano-roll-zoom-canvas");
+		const zoomViewportNode = zoomNode.querySelector(
+			".piano-roll-zoom-viewport",
+		);
+		if (
+			!(zoomMinimapNode instanceof HTMLElement) ||
+			!(zoomCanvas instanceof HTMLCanvasElement) ||
+			!(zoomViewportNode instanceof HTMLElement)
+		) {
+			return;
+		}
 
-			const metadata: PianoRollSeekSurfaceMetadata = {
-				wrapper,
+		const metadata: PianoRollSeekSurfaceMetadata = {
+			wrapper,
+			scrollContainer,
+			surface,
+			noteCanvas,
+			overlay,
+			seekWrap,
+			source,
+			alignmentColumn: definition.alignmentTimeline?.trim() || null,
+			mediaId: config.mediaID,
+			playbackFollowMode:
+				config.playbackFollowMode ?? (pianoKeyboard ? "pinnedLeft" : "center"),
+			trailingPadPx: 0,
+			originalHeight,
+			configuredHeight: originalHeight,
+			maxZoomValue: config.maxZoom ?? 5,
+			defaultZoomValue: config.defaultZoom ?? null,
+			maxZoomSeconds: config.maxZoom ?? 5,
+			defaultZoomSeconds: null,
+			zoomUnitsResolved: false,
+			defaultZoomApplied: false,
+			baseWidth: ctx.resolvePianoRollBaseWidth(
 				scrollContainer,
-				surface,
-				noteCanvas,
-				overlay,
-				seekWrap,
-				source,
-				alignmentColumn: definition.alignmentTimeline?.trim() || null,
-				mediaId: config.mediaID,
-				playbackFollowMode:
-					config.playbackFollowMode ??
-					(pianoKeyboard ? "pinnedLeft" : "center"),
-				trailingPadPx: 0,
-				originalHeight,
-				configuredHeight: originalHeight,
-				maxZoomValue: config.maxZoom ?? 5,
-				defaultZoomValue: config.defaultZoom ?? null,
-				maxZoomSeconds: config.maxZoom ?? 5,
-				defaultZoomSeconds: null,
-				zoomUnitsResolved: false,
-				defaultZoomApplied: false,
-				baseWidth: this.resolvePianoRollBaseWidth(
-					scrollContainer,
-					canvasElement.width,
-				),
-				zoom: MIN_PIANO_ROLL_ZOOM,
-				timingNode,
-				zoomNode,
-				zoomMinimapNode,
-				zoomCanvas,
-				zoomViewportNode,
-				keyboardCanvas,
-				baseKeyboardWidth,
-				lastKeyboardKey: null,
-				lastKeyboardPosition: 0,
-				keyboardColors: null,
-				midi: null,
-				notes: [],
-				noteRange: resolveConfiguredNoteRange(config.noteRange),
-				velocityBars: config.velocityBars === true,
-				velocityOpacity: config.velocityOpacity === true,
-				grid: config.grid ?? "none",
-				tooltipNode:
-					config.noteTooltip === true
-						? createPianoRollTooltipNode(overlay)
-						: null,
-				timelineReadout: null,
-				minMidi: 0,
-				maxMidi: 0,
-				pianoRollDurationSeconds: 0,
-				maxNoteDuration: 0,
-				channelTrackIds,
-				colorPerChannel: config.colorPerChannel ?? true,
-				channelPaletteIndex: new Map<number, number>(),
-				hiddenChannels: new Set<number>(),
-				noteColors: null,
-				channelColors: new Map<number, PianoRollNoteColors>(),
-				gridColors: null,
-				lastRenderedDurationSeconds: 0,
-				lastNoteGeometry: null,
-				lastRenderKey: null,
-				lastMinimapKey: null,
-				lastPlaybackKey: null,
-				lastFollowScrollLeft: null,
-				lastPlayheadRatio: 0,
-			};
-			this.pianoRollSeekSurfaces.push(metadata);
+				canvasElement.width,
+			),
+			zoom: MIN_PIANO_ROLL_ZOOM,
+			timingNode,
+			zoomNode,
+			zoomMinimapNode,
+			zoomCanvas,
+			zoomViewportNode,
+			keyboardCanvas,
+			baseKeyboardWidth,
+			lastKeyboardKey: null,
+			lastKeyboardPosition: 0,
+			keyboardColors: null,
+			midi: null,
+			notes: [],
+			noteRange: resolveConfiguredNoteRange(config.noteRange),
+			velocityBars: config.velocityBars === true,
+			velocityOpacity: config.velocityOpacity === true,
+			grid: config.grid ?? "none",
+			tooltipNode:
+				config.noteTooltip === true
+					? createPianoRollTooltipNode(overlay)
+					: null,
+			timelineReadout: null,
+			minMidi: 0,
+			maxMidi: 0,
+			pianoRollDurationSeconds: 0,
+			maxNoteDuration: 0,
+			channelTrackIds,
+			colorPerChannel: config.colorPerChannel ?? true,
+			channelPaletteIndex: new Map<number, number>(),
+			hiddenChannels: new Set<number>(),
+			noteColors: null,
+			channelColors: new Map<number, PianoRollNoteColors>(),
+			gridColors: null,
+			lastRenderedDurationSeconds: 0,
+			lastNoteGeometry: null,
+			lastRenderKey: null,
+			lastMinimapKey: null,
+			lastPlaybackKey: null,
+			lastFollowScrollLeft: null,
+			lastPlayheadRatio: 0,
+		};
+		ctx.pianoRollSeekSurfaces.push(metadata);
 
-			scrollContainer.addEventListener(
-				"scroll",
-				() => {
-					// Scroll handlers run after layout, so refreshing the cached width
-					// here is free and keeps the per-frame paths off the layout path.
-					refreshTimelineViewportWidth(metadata);
-					updatePianoRollMinimapViewport(metadata);
-					// The roll travels under a stationary cursor while playback follows,
-					// so whatever the readout points at has moved on.
-					hidePianoRollTooltip(metadata);
-					this.schedulePianoRollNoteRefresh();
-				},
-				{ passive: true },
-			);
+		scrollContainer.addEventListener(
+			"scroll",
+			() => {
+				// Scroll handlers run after layout, so refreshing the cached width
+				// here is free and keeps the per-frame paths off the layout path.
+				refreshTimelineViewportWidth(metadata);
+				updatePianoRollMinimapViewport(metadata);
+				// The roll travels under a stationary cursor while playback follows,
+				// so whatever the readout points at has moved on.
+				hidePianoRollTooltip(metadata);
+				ctx.schedulePianoRollNoteRefresh();
+			},
+			{ passive: true },
+		);
 
-			if (metadata.tooltipNode) {
-				bindPianoRollTooltip(metadata);
-			}
-		});
-	}).call(ctx);
+		if (metadata.tooltipNode) {
+			bindPianoRollTooltip(metadata);
+		}
+	});
 }
 
 export function resolvePianoRollBaseWidth(
-	ctx: ViewRenderer,
 	scrollContainer: HTMLElement,
 	fallback: number,
 ): number {
-	return function (
-		this: ViewRenderer,
-		scrollContainer: HTMLElement,
-		fallback: number,
-	) {
-		return resolveTimelineBaseWidth(scrollContainer, fallback);
-	}.call(ctx, scrollContainer, fallback);
+	return resolveTimelineBaseWidth(scrollContainer, fallback);
 }
 
 export function reflowPianoRollDisplays(ctx: ViewRenderer): void {
-	(function (this: ViewRenderer) {
-		this.pianoRollSeekSurfaces.forEach(
-			(surface: PianoRollSeekSurfaceMetadata) => {
-				// Theme variables may have changed along with the layout, and the
-				// colours are only re-read on a draw the render key does not skip.
-				surface.noteColors = null;
-				surface.gridColors = null;
-				surface.keyboardColors = null;
-				surface.lastKeyboardKey = null;
-				surface.lastRenderKey = null;
-				surface.channelColors.clear();
-				hidePianoRollTooltip(surface);
-				reflowTimelineSurface(surface, setPianoRollSurfaceWidth);
-			},
-		);
-	}).call(ctx);
+	ctx.pianoRollSeekSurfaces.forEach((surface: PianoRollSeekSurfaceMetadata) => {
+		// Theme variables may have changed along with the layout, and the
+		// colours are only re-read on a draw the render key does not skip.
+		surface.noteColors = null;
+		surface.gridColors = null;
+		surface.keyboardColors = null;
+		surface.lastKeyboardKey = null;
+		surface.lastRenderKey = null;
+		surface.channelColors.clear();
+		hidePianoRollTooltip(surface);
+		reflowTimelineSurface(surface, setPianoRollSurfaceWidth);
+	});
 }
 
 /**
@@ -1772,52 +1705,43 @@ export function renderPianoRollDisplays(
 	timelineDuration: number,
 	usePianoRollLocalTimeline = false,
 ): void {
-	(function (
-		this: ViewRenderer,
-		timelineDuration: number,
-		usePianoRollLocalTimeline: boolean,
-	) {
-		if (this.pianoRollSeekSurfaces.length === 0) {
-			return;
-		}
+	if (ctx.pianoRollSeekSurfaces.length === 0) {
+		return;
+	}
 
-		this.latestPianoRollRenderInput = {
+	ctx.latestPianoRollRenderInput = {
+		timelineDuration,
+		usePianoRollLocalTimeline,
+	};
+	ctx.reflowPianoRollDisplays();
+	ctx.pianoRollSeekSurfaces.forEach((surface: PianoRollSeekSurfaceMetadata) => {
+		const surfaceDuration = resolvePianoRollTimelineDuration(
+			surface,
 			timelineDuration,
 			usePianoRollLocalTimeline,
-		};
-		this.reflowPianoRollDisplays();
-		this.pianoRollSeekSurfaces.forEach(
-			(surface: PianoRollSeekSurfaceMetadata) => {
-				const surfaceDuration = resolvePianoRollTimelineDuration(
-					surface,
-					timelineDuration,
-					usePianoRollLocalTimeline,
-				);
-				resolvePianoRollZoomUnits(this, surface);
-				// The grid and the note readout speak the unit this view's medium
-				// declares, which the drawing has no `ViewRenderer` to look up.
-				surface.timelineReadout =
-					this.timelineReadouts.get(surface.mediaId) ?? null;
-				const maximumZoom = getPianoRollMaximumZoom(surface, surfaceDuration);
-				// `defaultZoom` only ever opens the surface: once it has, a reflow or a
-				// hot reload leaves whatever zoom the listener is on.
-				let targetZoom = surface.zoom;
-				if (!surface.defaultZoomApplied && surfaceDuration > 0) {
-					surface.defaultZoomApplied = true;
-					targetZoom = resolveTimelineDefaultZoom(
-						surfaceDuration,
-						surface.defaultZoomSeconds,
-						maximumZoom,
-					);
-				}
-				setPianoRollZoomForSurface(surface, targetZoom, maximumZoom);
-				renderPianoRollNotes(surface, surfaceDuration);
-				renderPianoRollMinimap(surface, surfaceDuration);
-				refreshPianoRollKeyboard(surface, surface.lastKeyboardPosition);
-			},
 		);
-		this.updatePianoRollZoomIndicators();
-	}).call(ctx, timelineDuration, usePianoRollLocalTimeline);
+		resolvePianoRollZoomUnits(ctx, surface);
+		// The grid and the note readout speak the unit ctx view's medium
+		// declares, which the drawing has no `ViewRenderer` to look up.
+		surface.timelineReadout = ctx.timelineReadouts.get(surface.mediaId) ?? null;
+		const maximumZoom = getPianoRollMaximumZoom(surface, surfaceDuration);
+		// `defaultZoom` only ever opens the surface: once it has, a reflow or a
+		// hot reload leaves whatever zoom the listener is on.
+		let targetZoom = surface.zoom;
+		if (!surface.defaultZoomApplied && surfaceDuration > 0) {
+			surface.defaultZoomApplied = true;
+			targetZoom = resolveTimelineDefaultZoom(
+				surfaceDuration,
+				surface.defaultZoomSeconds,
+				maximumZoom,
+			);
+		}
+		setPianoRollZoomForSurface(surface, targetZoom, maximumZoom);
+		renderPianoRollNotes(surface, surfaceDuration);
+		renderPianoRollMinimap(surface, surfaceDuration);
+		refreshPianoRollKeyboard(surface, surface.lastKeyboardPosition);
+	});
+	ctx.updatePianoRollZoomIndicators();
 }
 
 /**
@@ -1826,24 +1750,20 @@ export function renderPianoRollDisplays(
  * `scrollLeft`, so it is safe to run from scroll and zoom handlers.
  */
 export function refreshPianoRollNoteTiles(ctx: ViewRenderer): void {
-	(function (this: ViewRenderer) {
-		const latestInput = this.latestPianoRollRenderInput;
-		if (!latestInput || this.pianoRollSeekSurfaces.length === 0) {
-			return;
-		}
+	const latestInput = ctx.latestPianoRollRenderInput;
+	if (!latestInput || ctx.pianoRollSeekSurfaces.length === 0) {
+		return;
+	}
 
-		this.pianoRollSeekSurfaces.forEach(
-			(surface: PianoRollSeekSurfaceMetadata) => {
-				const surfaceDuration = resolvePianoRollTimelineDuration(
-					surface,
-					latestInput.timelineDuration,
-					latestInput.usePianoRollLocalTimeline,
-				);
-				renderPianoRollNotes(surface, surfaceDuration);
-				renderPianoRollMinimap(surface, surfaceDuration);
-			},
+	ctx.pianoRollSeekSurfaces.forEach((surface: PianoRollSeekSurfaceMetadata) => {
+		const surfaceDuration = resolvePianoRollTimelineDuration(
+			surface,
+			latestInput.timelineDuration,
+			latestInput.usePianoRollLocalTimeline,
 		);
-	}).call(ctx);
+		renderPianoRollNotes(surface, surfaceDuration);
+		renderPianoRollMinimap(surface, surfaceDuration);
+	});
 }
 
 /**
@@ -1856,33 +1776,29 @@ export function updatePianoRollChannelVisibility(
 	ctx: ViewRenderer,
 	runtimes: TrackRuntime[],
 ): void {
-	(function (this: ViewRenderer) {
-		if (this.pianoRollSeekSurfaces.length === 0) {
-			return;
-		}
+	if (ctx.pianoRollSeekSurfaces.length === 0) {
+		return;
+	}
 
-		const indexByTrackId = new Map<string, number>();
-		runtimes.forEach((runtime, index) => {
-			indexByTrackId.set(runtime.definition.id, index);
+	const indexByTrackId = new Map<string, number>();
+	runtimes.forEach((runtime, index) => {
+		indexByTrackId.set(runtime.definition.id, index);
+	});
+
+	ctx.pianoRollSeekSurfaces.forEach((surface: PianoRollSeekSurfaceMetadata) => {
+		surface.hiddenChannels.clear();
+		surface.channelTrackIds.forEach((trackIds, channel) => {
+			const audible = trackIds.some((trackId) => {
+				const trackIndex = indexByTrackId.get(trackId);
+				return trackIndex !== undefined && ctx.isTrackAudible(trackIndex);
+			});
+			if (!audible) {
+				surface.hiddenChannels.add(channel);
+			}
 		});
+	});
 
-		this.pianoRollSeekSurfaces.forEach(
-			(surface: PianoRollSeekSurfaceMetadata) => {
-				surface.hiddenChannels.clear();
-				surface.channelTrackIds.forEach((trackIds, channel) => {
-					const audible = trackIds.some((trackId) => {
-						const trackIndex = indexByTrackId.get(trackId);
-						return trackIndex !== undefined && this.isTrackAudible(trackIndex);
-					});
-					if (!audible) {
-						surface.hiddenChannels.add(channel);
-					}
-				});
-			},
-		);
-
-		this.schedulePianoRollNoteRefresh();
-	}).call(ctx);
+	ctx.schedulePianoRollNoteRefresh();
 }
 
 /**
@@ -1913,16 +1829,14 @@ export function resolvePianoRollTrackChannelColors(
 }
 
 export function schedulePianoRollNoteRefresh(ctx: ViewRenderer): void {
-	(function (this: ViewRenderer) {
-		if (this.pianoRollNoteRefreshFrameId !== null) {
-			return;
-		}
+	if (ctx.pianoRollNoteRefreshFrameId !== null) {
+		return;
+	}
 
-		this.pianoRollNoteRefreshFrameId = requestAnimationFrame(() => {
-			this.pianoRollNoteRefreshFrameId = null;
-			this.refreshPianoRollNoteTiles();
-		});
-	}).call(ctx);
+	ctx.pianoRollNoteRefreshFrameId = requestAnimationFrame(() => {
+		ctx.pianoRollNoteRefreshFrameId = null;
+		ctx.refreshPianoRollNoteTiles();
+	});
 }
 
 export function updatePianoRollPlaybackState(
@@ -1933,127 +1847,108 @@ export function updatePianoRollPlaybackState(
 	timelineContextResolver?: PianoRollTimelineContextResolver,
 	animate = false,
 ): void {
-	(function (
-		this: ViewRenderer,
-		state: TrackSwitchUiState,
-		suppressPlaybackFollow: boolean,
-		usePianoRollLocalTimeline: boolean,
-		timelineContextResolver: PianoRollTimelineContextResolver | undefined,
-		animate: boolean,
-	) {
-		this.pianoRollSeekSurfaces.forEach(
-			(surface: PianoRollSeekSurfaceMetadata) => {
-				const timelineContext = timelineContextResolver
-					? timelineContextResolver(surface)
-					: null;
-				const safeDuration = timelineContext
-					? sanitizeDuration(timelineContext.duration)
-					: resolvePianoRollTimelineDuration(
-							surface,
-							state.longestDuration,
-							usePianoRollLocalTimeline,
-						);
-				const position = timelineContext
-					? clampTime(
-							timelineContext.playbackPosition?.() ??
-								timelineContext.fromReferenceTime(state.position),
+	ctx.pianoRollSeekSurfaces.forEach((surface: PianoRollSeekSurfaceMetadata) => {
+		const timelineContext = timelineContextResolver
+			? timelineContextResolver(surface)
+			: null;
+		const safeDuration = timelineContext
+			? sanitizeDuration(timelineContext.duration)
+			: resolvePianoRollTimelineDuration(
+					surface,
+					state.longestDuration,
+					usePianoRollLocalTimeline,
+				);
+		const position = timelineContext
+			? clamp(
+					timelineContext.playbackPosition?.() ??
+						timelineContext.fromReferenceTime(state.position),
+					0,
+					safeDuration,
+				)
+			: resolvePianoRollTimelinePosition(
+					surface,
+					state.position,
+					state.longestDuration,
+					usePianoRollLocalTimeline,
+				);
+		const loopPointA =
+			state.loop?.pointA === null || state.loop?.pointA === undefined
+				? null
+				: timelineContext
+					? clamp(
+							timelineContext.fromReferenceTime(state.loop.pointA),
 							0,
 							safeDuration,
 						)
-					: resolvePianoRollTimelinePosition(
-							surface,
-							state.position,
-							state.longestDuration,
-							usePianoRollLocalTimeline,
-						);
-				const loopPointA =
-					state.loop?.pointA === null || state.loop?.pointA === undefined
-						? null
-						: timelineContext
-							? clampTime(
-									timelineContext.fromReferenceTime(state.loop.pointA),
-									0,
-									safeDuration,
-								)
-							: clampTime(state.loop.pointA, 0, safeDuration);
-				const loopPointB =
-					state.loop?.pointB === null || state.loop?.pointB === undefined
-						? null
-						: timelineContext
-							? clampTime(
-									timelineContext.fromReferenceTime(state.loop.pointB),
-									0,
-									safeDuration,
-								)
-							: clampTime(state.loop.pointB, 0, safeDuration);
-				surface.lastPlayheadRatio =
-					safeDuration > 0 ? position / safeDuration : 0;
-				// This runs on every 16 ms playback tick, so bail out early when nothing
-				// observable changed since the previous one.
-				const playbackKey = [
-					Math.round(position * 1000),
-					Math.round(safeDuration * 1000),
-					loopPointA === null ? "-" : Math.round(loopPointA * 1000),
-					loopPointB === null ? "-" : Math.round(loopPointB * 1000),
-					state.loop?.enabled === true ? "1" : "0",
-					suppressPlaybackFollow ? "1" : "0",
-				].join("#");
-				if (surface.lastPlaybackKey === playbackKey) {
-					return;
-				}
-				surface.lastPlaybackKey = playbackKey;
+					: clamp(state.loop.pointA, 0, safeDuration);
+		const loopPointB =
+			state.loop?.pointB === null || state.loop?.pointB === undefined
+				? null
+				: timelineContext
+					? clamp(
+							timelineContext.fromReferenceTime(state.loop.pointB),
+							0,
+							safeDuration,
+						)
+					: clamp(state.loop.pointB, 0, safeDuration);
+		surface.lastPlayheadRatio = safeDuration > 0 ? position / safeDuration : 0;
+		// This runs on every 16 ms playback tick, so bail out early when nothing
+		// observable changed since the previous one.
+		const playbackKey = [
+			Math.round(position * 1000),
+			Math.round(safeDuration * 1000),
+			loopPointA === null ? "-" : Math.round(loopPointA * 1000),
+			loopPointB === null ? "-" : Math.round(loopPointB * 1000),
+			state.loop?.enabled === true ? "1" : "0",
+			suppressPlaybackFollow ? "1" : "0",
+		].join("#");
+		if (surface.lastPlaybackKey === playbackKey) {
+			return;
+		}
+		surface.lastPlaybackKey = playbackKey;
 
-				refreshPianoRollKeyboard(surface, position);
+		refreshPianoRollKeyboard(surface, position);
 
-				this.updateSeekWrapVisuals(surface.seekWrap, position, safeDuration, {
-					pointA: loopPointA,
-					pointB: loopPointB,
-					enabled: state.loop?.enabled === true,
-				});
+		ctx.updateSeekWrapVisuals(surface.seekWrap, position, safeDuration, {
+			pointA: loopPointA,
+			pointB: loopPointB,
+			enabled: state.loop?.enabled === true,
+		});
 
-				if (surface.timingNode) {
-					// A piano-roll surface always shows its own file's clock, so it reads out
-					// in the unit its own alignment column was declared in.
-					const timeline = surface.mediaId;
-					surface.timingNode.textContent = this.formatLocalTimelinePair(
-						timeline,
-						position,
-						safeDuration,
-					);
-				}
+		if (surface.timingNode) {
+			// A piano-roll surface always shows its own file's clock, so it reads out
+			// in the unit its own alignment column was declared in.
+			const timeline = surface.mediaId;
+			surface.timingNode.textContent = ctx.formatLocalTimelinePair(
+				timeline,
+				position,
+				safeDuration,
+			);
+		}
 
-				if (!suppressPlaybackFollow && safeDuration > 0) {
-					const scrollLeft = resolvePlaybackFollowScrollLeft(
-						surface,
-						position / safeDuration,
-					);
-					// Writing scrollLeft and then reading layout back would force a
-					// synchronous reflow every tick. The native scroll event already
-					// refreshes the minimap viewport and the note tiles, including on
-					// each frame of an animated seek.
-					if (
-						Number.isFinite(scrollLeft) &&
-						scrollLeft !== surface.lastFollowScrollLeft
-					) {
-						surface.lastFollowScrollLeft = scrollLeft as number;
-						applyTimelineFollowScrollLeft(
-							surface,
-							scrollLeft as number,
-							animate,
-							() => {},
-						);
-					}
-				}
-			},
-		);
-	}).call(
-		ctx,
-		state,
-		suppressPlaybackFollow,
-		usePianoRollLocalTimeline,
-		timelineContextResolver,
-		animate,
-	);
+		if (!suppressPlaybackFollow && safeDuration > 0) {
+			const scrollLeft = resolveTimelinePlaybackFollowScrollLeft(
+				surface,
+				position / safeDuration,
+			);
+			// Writing scrollLeft and then reading layout back would force a
+			// synchronous reflow every tick. The native scroll event already
+			// refreshes the minimap viewport and the note tiles, including on
+			// each frame of an animated seek.
+			if (
+				Number.isFinite(scrollLeft) &&
+				scrollLeft !== surface.lastFollowScrollLeft
+			) {
+				surface.lastFollowScrollLeft = scrollLeft as number;
+				applyTimelineFollowScrollLeft(
+					surface,
+					scrollLeft as number,
+					animate,
+					() => {},
+				);
+			}
+		}
+	});
 }
 
 /**
@@ -2150,48 +2045,40 @@ function refreshPianoRollKeyboard(
 }
 
 export function updatePianoRollZoomIndicators(ctx: ViewRenderer): void {
-	(function (this: ViewRenderer) {
-		this.pianoRollSeekSurfaces.forEach(
-			(surface: PianoRollSeekSurfaceMetadata) => {
-				if (surface.zoom <= MIN_PIANO_ROLL_ZOOM + 0.000001) {
-					surface.zoomNode.style.display = "none";
-					return;
-				}
+	ctx.pianoRollSeekSurfaces.forEach((surface: PianoRollSeekSurfaceMetadata) => {
+		if (surface.zoom <= MIN_PIANO_ROLL_ZOOM + 0.000001) {
+			surface.zoomNode.style.display = "none";
+			return;
+		}
 
-				updatePianoRollMinimapViewport(surface);
-				surface.zoomNode.style.display = "flex";
-			},
-		);
-	}).call(ctx);
+		updatePianoRollMinimapViewport(surface);
+		surface.zoomNode.style.display = "flex";
+	});
 }
 
 export function findPianoRollSurface(
 	ctx: ViewRenderer,
 	seekWrap: HTMLElement | null,
 ): PianoRollSeekSurfaceMetadata | null {
-	return function (this: ViewRenderer, seekWrap: HTMLElement | null) {
-		if (!seekWrap) {
-			return null;
-		}
-
-		for (const surface of this.pianoRollSeekSurfaces) {
-			if (surface.seekWrap === seekWrap) {
-				return surface;
-			}
-		}
-
+	if (!seekWrap) {
 		return null;
-	}.call(ctx, seekWrap);
+	}
+
+	for (const surface of ctx.pianoRollSeekSurfaces) {
+		if (surface.seekWrap === seekWrap) {
+			return surface;
+		}
+	}
+
+	return null;
 }
 
 export function getPianoRollZoom(
 	ctx: ViewRenderer,
 	seekWrap: HTMLElement,
 ): number | null {
-	return function (this: ViewRenderer, seekWrap: HTMLElement) {
-		const surface = this.findPianoRollSurface(seekWrap);
-		return surface ? surface.zoom : null;
-	}.call(ctx, seekWrap);
+	const surface = ctx.findPianoRollSurface(seekWrap);
+	return surface ? surface.zoom : null;
 }
 
 export function isPianoRollZoomEnabled(
@@ -2199,16 +2086,10 @@ export function isPianoRollZoomEnabled(
 	seekWrap: HTMLElement,
 	durationSeconds: number,
 ): boolean {
-	return function (
-		this: ViewRenderer,
-		seekWrap: HTMLElement,
-		durationSeconds: number,
-	) {
-		const surface = this.findPianoRollSurface(seekWrap);
-		return surface
-			? getPianoRollMaximumZoom(surface, durationSeconds) > MIN_PIANO_ROLL_ZOOM
-			: false;
-	}.call(ctx, seekWrap, durationSeconds);
+	const surface = ctx.findPianoRollSurface(seekWrap);
+	return surface
+		? getPianoRollMaximumZoom(surface, durationSeconds) > MIN_PIANO_ROLL_ZOOM
+		: false;
 }
 
 export function setPianoRollZoom(
@@ -2218,46 +2099,36 @@ export function setPianoRollZoom(
 	durationSeconds: number,
 	anchorPageX?: number,
 ): boolean {
-	return function (
-		this: ViewRenderer,
-		seekWrap: HTMLElement,
-		zoom: number,
-		durationSeconds: number,
-		anchorPageX?: number,
-	) {
-		const surface = this.findPianoRollSurface(seekWrap);
-		if (!surface) {
-			return false;
-		}
+	const surface = ctx.findPianoRollSurface(seekWrap);
+	if (!surface) {
+		return false;
+	}
 
-		const changed = setPianoRollZoomForSurface(
-			surface,
-			zoom,
-			getPianoRollMaximumZoom(surface, durationSeconds),
-			anchorPageX,
-		);
-		if (changed) {
-			// Geometry is applied synchronously above so the anchor stays under the
-			// cursor; the redraw is coalesced to one per frame.
-			this.latestPianoRollRenderInput = {
-				timelineDuration: durationSeconds,
-				usePianoRollLocalTimeline: false,
-			};
-			this.updatePianoRollZoomIndicators();
-			this.schedulePianoRollNoteRefresh();
-		}
-		return changed;
-	}.call(ctx, seekWrap, zoom, durationSeconds, anchorPageX);
+	const changed = setPianoRollZoomForSurface(
+		surface,
+		zoom,
+		getPianoRollMaximumZoom(surface, durationSeconds),
+		anchorPageX,
+	);
+	if (changed) {
+		// Geometry is applied synchronously above so the anchor stays under the
+		// cursor; the redraw is coalesced to one per frame.
+		ctx.latestPianoRollRenderInput = {
+			timelineDuration: durationSeconds,
+			usePianoRollLocalTimeline: false,
+		};
+		ctx.updatePianoRollZoomIndicators();
+		ctx.schedulePianoRollNoteRefresh();
+	}
+	return changed;
 }
 
 export function getPianoRollMinimapViewport(
 	ctx: ViewRenderer,
 	seekWrap: HTMLElement,
 ): { startRatio: number; widthRatio: number } | null {
-	return function (this: ViewRenderer, seekWrap: HTMLElement) {
-		const surface = this.findPianoRollSurface(seekWrap);
-		return surface ? getPianoRollViewportState(surface) : null;
-	}.call(ctx, seekWrap);
+	const surface = ctx.findPianoRollSurface(seekWrap);
+	return surface ? getPianoRollViewportState(surface) : null;
 }
 
 export function setPianoRollMinimapViewportStart(
@@ -2265,53 +2136,44 @@ export function setPianoRollMinimapViewportStart(
 	seekWrap: HTMLElement,
 	startRatio: number,
 ): boolean {
-	return function (
-		this: ViewRenderer,
-		seekWrap: HTMLElement,
-		startRatio: number,
+	const surface = ctx.findPianoRollSurface(seekWrap);
+	if (!surface) {
+		return false;
+	}
+
+	const viewportState = getPianoRollViewportState(surface);
+	const maxStartRatio = Math.max(0, 1 - viewportState.widthRatio);
+	const nextStartRatio = clamp(startRatio, 0, maxStartRatio);
+	// The minimap shows the file, so a ratio on it is a ratio of the time
+	// width; the scroll it maps to is bounded by the padded surface.
+	const nextScrollLeft = nextStartRatio * getTimelineTimeWidth(surface);
+	const maxScrollLeft = Math.max(
+		0,
+		getTimelineSurfaceWidth(surface) - surface.scrollContainer.clientWidth,
+	);
+	const clampedScrollLeft = clamp(nextScrollLeft, 0, maxScrollLeft);
+	if (
+		Math.abs(clampedScrollLeft - surface.scrollContainer.scrollLeft) < 0.000001
 	) {
-		const surface = this.findPianoRollSurface(seekWrap);
-		if (!surface) {
-			return false;
-		}
-
-		const viewportState = getPianoRollViewportState(surface);
-		const maxStartRatio = Math.max(0, 1 - viewportState.widthRatio);
-		const nextStartRatio = clampTime(startRatio, 0, maxStartRatio);
-		// The minimap shows the file, so a ratio on it is a ratio of the time
-		// width; the scroll it maps to is bounded by the padded surface.
-		const nextScrollLeft = nextStartRatio * getPianoRollTimeWidth(surface);
-		const maxScrollLeft = Math.max(
-			0,
-			getPianoRollSurfaceWidth(surface) - surface.scrollContainer.clientWidth,
-		);
-		const clampedScrollLeft = clampTime(nextScrollLeft, 0, maxScrollLeft);
-		if (
-			Math.abs(clampedScrollLeft - surface.scrollContainer.scrollLeft) <
-			0.000001
-		) {
-			updatePianoRollMinimapViewport(surface);
-			return false;
-		}
-
-		surface.scrollContainer.scrollLeft = clampedScrollLeft;
 		updatePianoRollMinimapViewport(surface);
-		return true;
-	}.call(ctx, seekWrap, startRatio);
+		return false;
+	}
+
+	surface.scrollContainer.scrollLeft = clampedScrollLeft;
+	updatePianoRollMinimapViewport(surface);
+	return true;
 }
 
 export function destroyPianoRollDisplays(ctx: ViewRenderer): void {
-	(function (this: ViewRenderer) {
-		if (this.pianoRollNoteRefreshFrameId !== null) {
-			cancelAnimationFrame(this.pianoRollNoteRefreshFrameId);
-			this.pianoRollNoteRefreshFrameId = null;
+	if (ctx.pianoRollNoteRefreshFrameId !== null) {
+		cancelAnimationFrame(ctx.pianoRollNoteRefreshFrameId);
+		ctx.pianoRollNoteRefreshFrameId = null;
+	}
+	ctx.pianoRollSeekSurfaces.forEach((surface) => {
+		if (surface.scrollAnimation) {
+			cancelAnimationFrame(surface.scrollAnimation.rafId);
 		}
-		this.pianoRollSeekSurfaces.forEach((surface) => {
-			if (surface.scrollAnimation) {
-				cancelAnimationFrame(surface.scrollAnimation.rafId);
-			}
-		});
-		this.latestPianoRollRenderInput = null;
-		this.pianoRollSeekSurfaces.length = 0;
-	}).call(ctx);
+	});
+	ctx.latestPianoRollRenderInput = null;
+	ctx.pianoRollSeekSurfaces.length = 0;
 }

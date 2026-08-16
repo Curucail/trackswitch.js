@@ -1,3 +1,4 @@
+import { clamp01 } from "../../shared/math";
 import type { MeasureMapPoint } from "../../shared/measure-map";
 import type { ScoreMeasureNumbering } from "./measure-numbering";
 import type { OpenSheetMusicDisplayType } from "./osmd";
@@ -91,30 +92,6 @@ export const MAX_OSMD_ZOOM = 8;
 export const TOUCH_TAP_MOVE_THRESHOLD_PX = 10;
 export const MIN_HOST_WIDTH_DELTA_FOR_RERENDER_PX = 2;
 
-export function sanitizeCursorAlpha(value: number): number {
-	if (!Number.isFinite(value)) {
-		return DEFAULT_CURSOR_ALPHA;
-	}
-
-	if (value < 0) {
-		return 0;
-	}
-
-	if (value > 1) {
-		return 1;
-	}
-
-	return value;
-}
-
-export function sanitizePlaybackPosition(value: number): number {
-	if (!Number.isFinite(value) || value < 0) {
-		return 0;
-	}
-
-	return value;
-}
-
 export function sanitizeRenderScale(
 	value: number | null | undefined,
 ): number | null {
@@ -125,22 +102,6 @@ export function sanitizeRenderScale(
 	return value;
 }
 
-export function clampNumber(
-	value: number,
-	minimum: number,
-	maximum: number,
-): number {
-	if (!Number.isFinite(value)) {
-		return minimum;
-	}
-
-	if (value < minimum) {
-		return minimum;
-	}
-
-	if (value > maximum) {
-		return maximum;
-	}
-
-	return value;
+export function sanitizeCursorAlpha(value: number): number {
+	return Number.isFinite(value) ? clamp01(value) : DEFAULT_CURSOR_ALPHA;
 }

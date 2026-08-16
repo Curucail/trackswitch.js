@@ -32,409 +32,389 @@ function getLoadErrorMessage(error: unknown): string {
 	return "Unexpected error while loading TrackSwitch.";
 }
 
-export function load(ctx: TrackSwitchControllerImpl): Promise<void> {
-	return async function (this: TrackSwitchControllerImpl) {
-		if (this.isDestroyed || this.isLoaded || this.isLoading) {
+export async function load(ctx: TrackSwitchControllerImpl): Promise<void> {
+	if (ctx.isDestroyed || ctx.isLoaded || ctx.isLoading) {
+		return;
+	}
+
+	ctx.isLoading = true;
+	ctx.renderer.setOverlayLoading(true);
+	try {
+		const prepared = await ctx.audioEngine.prepareForPlaybackStart();
+		if (!prepared) {
+			ctx.isLoading = false;
+			ctx.renderer.setOverlayLoading(false);
+			ctx.handleError(
+				"Web Audio API is not supported in your browser. Please consider upgrading.",
+			);
 			return;
 		}
 
-		this.isLoading = true;
-		this.renderer.setOverlayLoading(true);
-		try {
-			const prepared = await this.audioEngine.prepareForPlaybackStart();
-			if (!prepared) {
-				this.isLoading = false;
-				this.renderer.setOverlayLoading(false);
-				this.handleError(
-					"Web Audio API is not supported in your browser. Please consider upgrading.",
-				);
-				return;
-			}
-
-			if (!this.iOSPlaybackUnlocked) {
-				this.iOSPlaybackUnlocked = true;
-				await this.audioEngine.unlockIOSPlayback();
-			}
-
-			this.globalSyncEnabled = false;
-			this.syncLockedTrackIndexes.clear();
-			this.preSyncSoloStates = null;
-			this.soloMode = "lists";
-
-			this.runtimes.forEach((runtime: TrackRuntime) => {
-				runtime.successful = false;
-				runtime.errored = false;
-				runtime.buffer = null;
-				runtime.gainNode = null;
-				runtime.pannerNode = null;
-				runtime.panUpmixNode = null;
-				runtime.panSplitterNode = null;
-				runtime.panGainLeftNode = null;
-				runtime.panGainRightNode = null;
-				runtime.panMergerNode = null;
-				runtime.timing = null;
-				runtime.sourceSampleRate = null;
-				runtime.loudnessGain = 1;
-				runtime.activeSource = null;
-				runtime.sourceIndex = -1;
-				runtime.activeVariant = "base";
-				runtime.baseSource = {
-					buffer: null,
-					timing: null,
-					sourceIndex: -1,
-					sourceSampleRate: null,
-					waveformSummary: null,
-					loudnessGain: 1,
-				};
-				runtime.syncedSource = null;
-				runtime.waveformSummary = null;
-			});
-
-			await this.audioEngine.loadTracks(this.runtimes);
-
-			if (this.isDestroyed) {
-				return;
-			}
-
-			this.runtimes.forEach((runtime: TrackRuntime) => {
-				if (runtime.baseSource.buffer) {
-					runtime.baseSource.waveformSummary =
-						this.waveformEngine.createSummary(runtime.baseSource.buffer);
-				}
-
-				if (runtime.syncedSource?.buffer) {
-					runtime.syncedSource.waveformSummary =
-						this.waveformEngine.createSummary(runtime.syncedSource.buffer);
-				}
-
-				const activeSource =
-					runtime.activeVariant === "synced"
-						? runtime.syncedSource
-						: runtime.baseSource;
-				runtime.waveformSummary = activeSource
-					? activeSource.waveformSummary
-					: null;
-			});
-
-			this.isLoading = false;
-			this.renderer.setOverlayLoading(false);
-
-			const erroredTracks = this.runtimes.filter(
-				(runtime: TrackRuntime) => runtime.errored,
-			);
-
-			if (erroredTracks.length > 0) {
-				this.handleError("One or more audio files failed to load.");
-				return;
-			}
-
-			this.longestDuration = this.findLongestDuration();
-			this.alignment = null;
-			this.alignmentPlaybackTrackIndex = null;
-
-			// Every medium is parsed before the alignment resolves so it can read
-			// their natural extents and unit conversions.
-			await this.renderSheetMusic();
-
-			if (this.isDestroyed) {
-				return;
-			}
-
-			await this.renderer.loadMidiSources();
-
-			if (this.isDestroyed) {
-				return;
-			}
-
-			if (this.alignmentConfig) {
-				const alignmentError = await this.initializeAlignmentMode();
-				if (alignmentError) {
-					this.handleError(alignmentError);
-					return;
-				}
-			} else {
-				// No alignment resolves the media profiles, so probe them here — but
-				// only for a `media.timelineUnit`, the one thing left that needs a
-				// conversion out of seconds.
-				this.mediaProfiles = resolveImplicitTimelineUnit(this.media)
-					? await probeMediaProfiles({
-							media: this.media,
-							runtimes: this.runtimes,
-							midiBySource: this.renderer.getLoadedMidiBySource(),
-							measuresByMediaId:
-								this.sheetMusicEngine.getAvailableMeasuresByMediaId(),
-						})
-					: new Map();
-				applyReferenceReadoutUnit(this);
-			}
-
-			if (this.isDestroyed) {
-				return;
-			}
-
-			await this.attachSheetMusicMeasureMaps();
-
-			if (this.isDestroyed) {
-				return;
-			}
-
-			const alignment = this.alignment as ResolvedAlignment | null;
-			this.markerSets = await loadMarkerSets(
-				this.markersConfig,
-				alignment,
-				this.media,
-				alignment?.profiles ?? this.mediaProfiles,
-				this.longestDuration,
-			);
-
-			if (this.isDestroyed) {
-				return;
-			}
-
-			await this.renderer.initializePianoRollDisplays(
-				this.longestDuration,
-				this.isAlignmentMode(),
-			);
-			// The notes exist now, so the first paint can already drop the channels
-			// whose track starts out silent.
-			this.renderer.updatePianoRollChannelVisibility(this.runtimes);
-
-			if (this.isDestroyed) {
-				return;
-			}
-
-			this.isLoaded = true;
-			this.renderer.hideOverlayOnLoaded();
-
-			this.updateMainControls();
-			this.applyTrackProperties();
-
-			this.emit("loaded", {
-				longestDuration: this.longestDuration,
-			});
-		} catch (error) {
-			if (this.isDestroyed) {
-				return;
-			}
-
-			this.isLoading = false;
-			this.renderer.setOverlayLoading(false);
-			this.handleError(getLoadErrorMessage(error));
+		if (!ctx.iOSPlaybackUnlocked) {
+			ctx.iOSPlaybackUnlocked = true;
+			await ctx.audioEngine.unlockIOSPlayback();
 		}
-	}.call(ctx);
+
+		ctx.globalSyncEnabled = false;
+		ctx.syncLockedTrackIndexes.clear();
+		ctx.preSyncSoloStates = null;
+		ctx.soloMode = "lists";
+
+		ctx.runtimes.forEach((runtime: TrackRuntime) => {
+			runtime.successful = false;
+			runtime.errored = false;
+			runtime.buffer = null;
+			runtime.gainNode = null;
+			runtime.pannerNode = null;
+			runtime.panUpmixNode = null;
+			runtime.panSplitterNode = null;
+			runtime.panGainLeftNode = null;
+			runtime.panGainRightNode = null;
+			runtime.panMergerNode = null;
+			runtime.timing = null;
+			runtime.sourceSampleRate = null;
+			runtime.loudnessGain = 1;
+			runtime.activeSource = null;
+			runtime.sourceIndex = -1;
+			runtime.activeVariant = "base";
+			runtime.baseSource = {
+				buffer: null,
+				timing: null,
+				sourceIndex: -1,
+				sourceSampleRate: null,
+				waveformSummary: null,
+				loudnessGain: 1,
+			};
+			runtime.syncedSource = null;
+			runtime.waveformSummary = null;
+		});
+
+		await ctx.audioEngine.loadTracks(ctx.runtimes);
+
+		if (ctx.isDestroyed) {
+			return;
+		}
+
+		ctx.runtimes.forEach((runtime: TrackRuntime) => {
+			if (runtime.baseSource.buffer) {
+				runtime.baseSource.waveformSummary = ctx.waveformEngine.createSummary(
+					runtime.baseSource.buffer,
+				);
+			}
+
+			if (runtime.syncedSource?.buffer) {
+				runtime.syncedSource.waveformSummary = ctx.waveformEngine.createSummary(
+					runtime.syncedSource.buffer,
+				);
+			}
+
+			const activeSource =
+				runtime.activeVariant === "synced"
+					? runtime.syncedSource
+					: runtime.baseSource;
+			runtime.waveformSummary = activeSource
+				? activeSource.waveformSummary
+				: null;
+		});
+
+		ctx.isLoading = false;
+		ctx.renderer.setOverlayLoading(false);
+
+		const erroredTracks = ctx.runtimes.filter(
+			(runtime: TrackRuntime) => runtime.errored,
+		);
+
+		if (erroredTracks.length > 0) {
+			ctx.handleError("One or more audio files failed to load.");
+			return;
+		}
+
+		ctx.longestDuration = ctx.findLongestDuration();
+		ctx.alignment = null;
+		ctx.alignmentPlaybackTrackIndex = null;
+
+		// Every medium is parsed before the alignment resolves so it can read
+		// their natural extents and unit conversions.
+		await ctx.renderSheetMusic();
+
+		if (ctx.isDestroyed) {
+			return;
+		}
+
+		await ctx.renderer.loadMidiSources();
+
+		if (ctx.isDestroyed) {
+			return;
+		}
+
+		if (ctx.alignmentConfig) {
+			const alignmentError = await ctx.initializeAlignmentMode();
+			if (alignmentError) {
+				ctx.handleError(alignmentError);
+				return;
+			}
+		} else {
+			// No alignment resolves the media profiles, so probe them here — but
+			// only for a `media.timelineUnit`, the one thing left that needs a
+			// conversion out of seconds.
+			ctx.mediaProfiles = resolveImplicitTimelineUnit(ctx.media)
+				? await probeMediaProfiles({
+						media: ctx.media,
+						runtimes: ctx.runtimes,
+						midiBySource: ctx.renderer.getLoadedMidiBySource(),
+						measuresByMediaId:
+							ctx.sheetMusicEngine.getAvailableMeasuresByMediaId(),
+					})
+				: new Map();
+			applyReferenceReadoutUnit(ctx);
+		}
+
+		if (ctx.isDestroyed) {
+			return;
+		}
+
+		await ctx.attachSheetMusicMeasureMaps();
+
+		if (ctx.isDestroyed) {
+			return;
+		}
+
+		const alignment = ctx.alignment as ResolvedAlignment | null;
+		ctx.markerSets = await loadMarkerSets(
+			ctx.markersConfig,
+			alignment,
+			ctx.media,
+			alignment?.profiles ?? ctx.mediaProfiles,
+			ctx.longestDuration,
+		);
+
+		if (ctx.isDestroyed) {
+			return;
+		}
+
+		await ctx.renderer.initializePianoRollDisplays(
+			ctx.longestDuration,
+			ctx.isAlignmentMode(),
+		);
+		// The notes exist now, so the first paint can already drop the channels
+		// whose track starts out silent.
+		ctx.renderer.updatePianoRollChannelVisibility(ctx.runtimes);
+
+		if (ctx.isDestroyed) {
+			return;
+		}
+
+		ctx.isLoaded = true;
+		ctx.renderer.hideOverlayOnLoaded();
+
+		ctx.updateMainControls();
+		ctx.applyTrackProperties();
+
+		ctx.emit("loaded", {
+			longestDuration: ctx.longestDuration,
+		});
+	} catch (error) {
+		if (ctx.isDestroyed) {
+			return;
+		}
+
+		ctx.isLoading = false;
+		ctx.renderer.setOverlayLoading(false);
+		ctx.handleError(getLoadErrorMessage(error));
+	}
 }
 
 export function destroy(ctx: TrackSwitchControllerImpl): void {
-	(function (this: TrackSwitchControllerImpl) {
-		if (this.isDestroyed) {
-			return;
-		}
-		this.isDestroyed = true;
+	if (ctx.isDestroyed) {
+		return;
+	}
+	ctx.isDestroyed = true;
 
-		if (this.timerMonitorPosition) {
-			clearInterval(this.timerMonitorPosition);
-			this.timerMonitorPosition = null;
-		}
-		if (this.resizeDebounceTimer) {
-			clearTimeout(this.resizeDebounceTimer);
-			this.resizeDebounceTimer = null;
-		}
-		if (this.waveformRenderFrameId !== null) {
-			cancelAnimationFrame(this.waveformRenderFrameId);
-			this.waveformRenderFrameId = null;
-		}
-		this.seekingElement = null;
-		this.rightClickDragging = false;
-		this.loopDragStart = null;
-		this.draggingMarker = null;
-		this.pinchZoomState = null;
-		this.pendingWaveformTouchSeek = null;
-		this.waveformMinimapDragState = null;
+	if (ctx.timerMonitorPosition) {
+		clearInterval(ctx.timerMonitorPosition);
+		ctx.timerMonitorPosition = null;
+	}
+	if (ctx.resizeDebounceTimer) {
+		clearTimeout(ctx.resizeDebounceTimer);
+		ctx.resizeDebounceTimer = null;
+	}
+	if (ctx.waveformRenderFrameId !== null) {
+		cancelAnimationFrame(ctx.waveformRenderFrameId);
+		ctx.waveformRenderFrameId = null;
+	}
+	ctx.seekingElement = null;
+	ctx.rightClickDragging = false;
+	ctx.loopDragStart = null;
+	ctx.draggingMarker = null;
+	ctx.pinchZoomState = null;
+	ctx.pendingWaveformTouchSeek = null;
+	ctx.waveformMinimapDragState = null;
 
-		if (this.state.playing) {
-			this.stopAudio();
-		}
+	if (ctx.state.playing) {
+		ctx.stopAudio();
+	}
 
-		this.inputBinder.unbind();
-		this.sheetMusicEngine.destroy();
-		this.renderer.destroy();
-		this.audioEngine.disconnect();
+	ctx.inputBinder.unbind();
+	ctx.sheetMusicEngine.destroy();
+	ctx.renderer.destroy();
+	ctx.audioEngine.disconnect();
 
-		this.listeners.loaded.clear();
-		this.listeners.error.clear();
-		this.listeners.position.clear();
-		this.listeners.trackState.clear();
+	ctx.listeners.loaded.clear();
+	ctx.listeners.error.clear();
+	ctx.listeners.position.clear();
+	ctx.listeners.trackState.clear();
 
-		unregisterController(this);
-	}).call(ctx);
+	unregisterController(ctx);
 }
 
 export function togglePlay(ctx: TrackSwitchControllerImpl): void {
-	(function (this: TrackSwitchControllerImpl) {
-		if (this.state.playing) {
-			this.pause();
-		} else {
-			this.play();
-		}
-	}).call(ctx);
+	if (ctx.state.playing) {
+		ctx.pause();
+	} else {
+		ctx.play();
+	}
 }
 
 export function play(ctx: TrackSwitchControllerImpl): void {
-	(function (this: TrackSwitchControllerImpl) {
-		if (this.isDestroyed || !this.isLoaded) {
-			return;
-		}
-		if (this.state.playing) {
-			return;
-		}
+	if (ctx.isDestroyed || !ctx.isLoaded) {
+		return;
+	}
+	if (ctx.state.playing) {
+		return;
+	}
 
-		let startPosition = this.state.position;
+	let startPosition = ctx.state.position;
 
-		if (this.hasReachedPlaybackEnd()) {
-			startPosition = 0;
-		}
+	if (ctx.hasReachedPlaybackEnd()) {
+		startPosition = 0;
+	}
 
-		if (
-			this.navigationBar?.controls.includes("looping") &&
-			this.state.loop.enabled &&
-			this.state.loop.pointA !== null &&
-			this.state.loop.pointB !== null &&
-			(this.state.position < this.state.loop.pointA ||
-				this.state.position > this.state.loop.pointB)
-		) {
-			startPosition = this.state.loop.pointA;
-		}
+	if (
+		ctx.navigationBar?.controls.includes("looping") &&
+		ctx.state.loop.enabled &&
+		ctx.state.loop.pointA !== null &&
+		ctx.state.loop.pointB !== null &&
+		(ctx.state.position < ctx.state.loop.pointA ||
+			ctx.state.position > ctx.state.loop.pointB)
+	) {
+		startPosition = ctx.state.loop.pointA;
+	}
 
-		this.startAudio(startPosition);
-		this.pauseOthers();
-		this.dispatch({ type: "set-playing", playing: true });
-		this.updatePlaybackPositionUi();
-	}).call(ctx);
+	ctx.startAudio(startPosition);
+	ctx.pauseOthers();
+	ctx.dispatch({ type: "set-playing", playing: true });
+	ctx.updatePlaybackPositionUi();
 }
 
 export function pause(ctx: TrackSwitchControllerImpl): void {
-	(function (this: TrackSwitchControllerImpl) {
-		if (!this.state.playing) {
-			return;
-		}
+	if (!ctx.state.playing) {
+		return;
+	}
 
-		const position = this.currentPlaybackReferencePosition();
-		const anchor = this.currentPlaybackAnchor();
-		this.stopAudio();
+	const position = ctx.currentPlaybackReferencePosition();
+	const anchor = ctx.currentPlaybackAnchor();
+	ctx.stopAudio();
 
-		this.dispatch({ type: "set-position", position: position, anchor: anchor });
-		this.dispatch({ type: "set-playing", playing: false });
+	ctx.dispatch({ type: "set-position", position: position, anchor: anchor });
+	ctx.dispatch({ type: "set-playing", playing: false });
 
-		this.updateMainControls();
-	}).call(ctx);
+	ctx.updateMainControls();
 }
 
 export function stop(ctx: TrackSwitchControllerImpl): void {
-	(function (this: TrackSwitchControllerImpl) {
-		if (this.state.playing) {
-			this.stopAudio();
-		}
+	if (ctx.state.playing) {
+		ctx.stopAudio();
+	}
 
-		this.dispatch({ type: "set-position", position: 0 });
-		this.dispatch({ type: "set-playing", playing: false });
-		this.updateMainControls();
-	}).call(ctx);
+	ctx.dispatch({ type: "set-position", position: 0 });
+	ctx.dispatch({ type: "set-playing", playing: false });
+	ctx.updateMainControls();
 }
 
 export function seekTo(ctx: TrackSwitchControllerImpl, seconds: number): void {
-	(function (this: TrackSwitchControllerImpl, seconds: number) {
-		const nextPosition = clamp(seconds, 0, this.longestDuration);
+	const nextPosition = clamp(seconds, 0, ctx.longestDuration);
 
-		if (this.state.playing) {
-			this.stopAudio();
-			this.startAudio(nextPosition);
-		} else {
-			this.dispatch({ type: "set-position", position: nextPosition });
-		}
+	if (ctx.state.playing) {
+		ctx.stopAudio();
+		ctx.startAudio(nextPosition);
+	} else {
+		ctx.dispatch({ type: "set-position", position: nextPosition });
+	}
 
-		this.updateMainControls();
-	}).call(ctx, seconds);
+	ctx.updateMainControls();
 }
 
 export function seekRelative(
 	ctx: TrackSwitchControllerImpl,
 	seconds: number,
 ): void {
-	(function (this: TrackSwitchControllerImpl, seconds: number) {
-		let nextPosition = this.state.position + seconds;
-		nextPosition = clamp(nextPosition, 0, this.longestDuration);
+	let nextPosition = ctx.state.position + seconds;
+	nextPosition = clamp(nextPosition, 0, ctx.longestDuration);
 
-		if (
-			this.navigationBar?.controls.includes("looping") &&
-			this.state.loop.enabled &&
-			this.state.loop.pointA !== null &&
-			this.state.loop.pointB !== null
-		) {
-			const loopStart = this.state.loop.pointA;
-			const loopEnd = this.state.loop.pointB;
-			const loopLength = loopEnd - loopStart;
-			if (loopLength > 0) {
-				let relative = nextPosition - loopStart;
-				relative = ((relative % loopLength) + loopLength) % loopLength;
-				nextPosition = loopStart + relative;
-			}
+	if (
+		ctx.navigationBar?.controls.includes("looping") &&
+		ctx.state.loop.enabled &&
+		ctx.state.loop.pointA !== null &&
+		ctx.state.loop.pointB !== null
+	) {
+		const loopStart = ctx.state.loop.pointA;
+		const loopEnd = ctx.state.loop.pointB;
+		const loopLength = loopEnd - loopStart;
+		if (loopLength > 0) {
+			let relative = nextPosition - loopStart;
+			relative = ((relative % loopLength) + loopLength) % loopLength;
+			nextPosition = loopStart + relative;
 		}
+	}
 
-		if (this.state.playing) {
-			this.stopAudio();
-			this.startAudio(nextPosition);
-		} else {
-			this.dispatch({ type: "set-position", position: nextPosition });
-		}
+	if (ctx.state.playing) {
+		ctx.stopAudio();
+		ctx.startAudio(nextPosition);
+	} else {
+		ctx.dispatch({ type: "set-position", position: nextPosition });
+	}
 
-		this.updateMainControls();
-	}).call(ctx, seconds);
+	ctx.updateMainControls();
 }
 
 export function setRepeat(
 	ctx: TrackSwitchControllerImpl,
 	enabled: boolean,
 ): void {
-	(function (this: TrackSwitchControllerImpl, enabled: boolean) {
-		this.dispatch({ type: "set-repeat", enabled: enabled });
-		this.updateMainControls();
-	}).call(ctx, enabled);
+	ctx.dispatch({ type: "set-repeat", enabled: enabled });
+	ctx.updateMainControls();
 }
 
 export function setVolume(
 	ctx: TrackSwitchControllerImpl,
 	volumeZeroToOne: number,
 ): void {
-	(function (this: TrackSwitchControllerImpl, volumeZeroToOne: number) {
-		if (!this.navigationBar?.controls.includes("globalVolume")) {
-			this.dispatch({ type: "set-volume", volume: 1 });
-			this.audioEngine.setMasterVolume(1);
-			this.renderer.setVolumeSlider(1);
-			return;
-		}
+	if (!ctx.navigationBar?.controls.includes("globalVolume")) {
+		ctx.dispatch({ type: "set-volume", volume: 1 });
+		ctx.audioEngine.setMasterVolume(1);
+		ctx.renderer.setVolumeSlider(1);
+		return;
+	}
 
-		this.dispatch({ type: "set-volume", volume: volumeZeroToOne });
-		this.audioEngine.setMasterVolume(this.state.volume);
-		this.renderer.setVolumeSlider(this.state.volume);
-	}).call(ctx, volumeZeroToOne);
+	ctx.dispatch({ type: "set-volume", volume: volumeZeroToOne });
+	ctx.audioEngine.setMasterVolume(ctx.state.volume);
+	ctx.renderer.setVolumeSlider(ctx.state.volume);
 }
 
 export function setPan(
 	ctx: TrackSwitchControllerImpl,
 	panMinusOneToOne: number,
 ): void {
-	(function (this: TrackSwitchControllerImpl, panMinusOneToOne: number) {
-		if (!this.navigationBar?.controls.includes("globalPan")) {
-			this.dispatch({ type: "set-pan", pan: 0 });
-			this.audioEngine.setMasterPan(0);
-			this.renderer.setPanSlider(0);
-			return;
-		}
+	if (!ctx.navigationBar?.controls.includes("globalPan")) {
+		ctx.dispatch({ type: "set-pan", pan: 0 });
+		ctx.audioEngine.setMasterPan(0);
+		ctx.renderer.setPanSlider(0);
+		return;
+	}
 
-		this.dispatch({ type: "set-pan", pan: panMinusOneToOne });
-		this.audioEngine.setMasterPan(this.state.pan);
-		this.renderer.setPanSlider(this.state.pan);
-	}).call(ctx, panMinusOneToOne);
+	ctx.dispatch({ type: "set-pan", pan: panMinusOneToOne });
+	ctx.audioEngine.setMasterPan(ctx.state.pan);
+	ctx.renderer.setPanSlider(ctx.state.pan);
 }
 
 export function setTrackVolume(
@@ -442,27 +422,21 @@ export function setTrackVolume(
 	trackIndex: number,
 	volumeZeroToOne: number,
 ): void {
-	(function (
-		this: TrackSwitchControllerImpl,
-		trackIndex: number,
-		volumeZeroToOne: number,
+	if (
+		!Number.isInteger(trackIndex) ||
+		trackIndex < 0 ||
+		trackIndex >= ctx.runtimes.length
 	) {
-		if (
-			!Number.isInteger(trackIndex) ||
-			trackIndex < 0 ||
-			trackIndex >= this.runtimes.length
-		) {
-			return;
-		}
+		return;
+	}
 
-		if (this.isTrackSyncLocked(trackIndex)) {
-			return;
-		}
+	if (ctx.isTrackSyncLocked(trackIndex)) {
+		return;
+	}
 
-		const runtime = this.runtimes[trackIndex];
-		runtime.state.volume = clamp(volumeZeroToOne, 0, 1);
-		this.applyTrackProperties();
-	}).call(ctx, trackIndex, volumeZeroToOne);
+	const runtime = ctx.runtimes[trackIndex];
+	runtime.state.volume = clamp(volumeZeroToOne, 0, 1);
+	ctx.applyTrackProperties();
 }
 
 export function setTrackPan(
@@ -470,86 +444,78 @@ export function setTrackPan(
 	trackIndex: number,
 	panMinusOneToOne: number,
 ): void {
-	(function (
-		this: TrackSwitchControllerImpl,
-		trackIndex: number,
-		panMinusOneToOne: number,
+	if (
+		!Number.isInteger(trackIndex) ||
+		trackIndex < 0 ||
+		trackIndex >= ctx.runtimes.length
 	) {
-		if (
-			!Number.isInteger(trackIndex) ||
-			trackIndex < 0 ||
-			trackIndex >= this.runtimes.length
-		) {
-			return;
-		}
+		return;
+	}
 
-		if (this.isTrackSyncLocked(trackIndex)) {
-			return;
-		}
+	if (ctx.isTrackSyncLocked(trackIndex)) {
+		return;
+	}
 
-		const runtime = this.runtimes[trackIndex];
-		const panSupported =
-			runtime.panAlgorithm === "balance" ||
-			this.audioEngine.supportsStereoPanning();
-		runtime.state.pan = panSupported ? clamp(panMinusOneToOne, -1, 1) : 0;
-		this.applyTrackProperties();
-	}).call(ctx, trackIndex, panMinusOneToOne);
+	const runtime = ctx.runtimes[trackIndex];
+	const panSupported =
+		runtime.panAlgorithm === "balance" ||
+		ctx.audioEngine.supportsStereoPanning();
+	runtime.state.pan = panSupported ? clamp(panMinusOneToOne, -1, 1) : 0;
+	ctx.applyTrackProperties();
 }
 
 export function setLoopPoint(
 	ctx: TrackSwitchControllerImpl,
 	marker: LoopMarker,
 ): boolean {
-	return function (this: TrackSwitchControllerImpl, marker: LoopMarker) {
-		if (!this.navigationBar?.controls.includes("looping")) {
-			return false;
-		}
+	if (!ctx.navigationBar?.controls.includes("looping")) {
+		return false;
+	}
 
-		const position = this.state.playing
-			? this.currentPlaybackReferencePosition()
-			: this.state.position;
-		const currentPoint =
-			marker === "A" ? this.state.loop.pointA : this.state.loop.pointB;
-		if (
-			currentPoint !== null &&
-			Math.abs(currentPoint - position) < this.loopMinDistance
-		) {
-			this.state = {
-				...this.state,
-				loop: {
-					...this.state.loop,
-					enabled: false,
-					pointA: marker === "A" ? null : this.state.loop.pointA,
-					pointB: marker === "B" ? null : this.state.loop.pointB,
-				},
-			};
-			this.updateMainControls();
-			return false;
-		}
+	const position = ctx.state.playing
+		? ctx.currentPlaybackReferencePosition()
+		: ctx.state.position;
+	const currentPoint =
+		marker === "A" ? ctx.state.loop.pointA : ctx.state.loop.pointB;
+	if (
+		currentPoint !== null &&
+		Math.abs(currentPoint - position) < ctx.loopMinDistance
+	) {
+		ctx.state = {
+			...ctx.state,
+			loop: {
+				...ctx.state.loop,
+				enabled: false,
+				pointA: marker === "A" ? null : ctx.state.loop.pointA,
+				pointB: marker === "B" ? null : ctx.state.loop.pointB,
+			},
+		};
+		ctx.updateMainControls();
+		return false;
+	}
 
-		this.dispatch({
-			type: "set-loop-point",
-			marker: marker,
-			position: position,
-			minDistance: this.loopMinDistance,
-		});
+	ctx.dispatch({
+		type: "set-loop-point",
+		marker: marker,
+		position: position,
+		minDistance: ctx.loopMinDistance,
+	});
 
-		const nextPoint =
-			marker === "A" ? this.state.loop.pointA : this.state.loop.pointB;
-		if (nextPoint === null) {
-			this.updateMainControls();
-			return false;
-		}
+	const nextPoint =
+		marker === "A" ? ctx.state.loop.pointA : ctx.state.loop.pointB;
+	if (nextPoint === null) {
+		ctx.updateMainControls();
+		return false;
+	}
 
-		if (this.state.loop.pointA !== null && this.state.loop.pointB !== null) {
-			const loopA = this.state.loop.pointA;
-			const loopB = this.state.loop.pointB;
-			activateLoopRange(this, loopA, loopB);
-		}
+	if (ctx.state.loop.pointA !== null && ctx.state.loop.pointB !== null) {
+		const loopA = ctx.state.loop.pointA;
+		const loopB = ctx.state.loop.pointB;
+		activateLoopRange(ctx, loopA, loopB);
+	}
 
-		this.updateMainControls();
-		return true;
-	}.call(ctx, marker);
+	ctx.updateMainControls();
+	return true;
 }
 
 export function activateLoopRange(
@@ -557,68 +523,62 @@ export function activateLoopRange(
 	loopA: number,
 	loopB: number,
 ): void {
-	(function (this: TrackSwitchControllerImpl, loopA: number, loopB: number) {
-		this.state = {
-			...this.state,
-			loop: {
-				...this.state.loop,
-				enabled: true,
-			},
-		};
+	ctx.state = {
+		...ctx.state,
+		loop: {
+			...ctx.state.loop,
+			enabled: true,
+		},
+	};
 
-		if (
-			this.state.playing &&
-			(this.state.position < loopA || this.state.position > loopB)
-		) {
-			this.stopAudio();
-			this.startAudio(loopA);
-		}
-	}).call(ctx, loopA, loopB);
+	if (
+		ctx.state.playing &&
+		(ctx.state.position < loopA || ctx.state.position > loopB)
+	) {
+		ctx.stopAudio();
+		ctx.startAudio(loopA);
+	}
 }
 
 export function toggleLoop(ctx: TrackSwitchControllerImpl): boolean {
-	return function (this: TrackSwitchControllerImpl) {
-		if (!this.navigationBar?.controls.includes("looping")) {
-			return false;
+	if (!ctx.navigationBar?.controls.includes("looping")) {
+		return false;
+	}
+
+	if (ctx.state.loop.pointA === null || ctx.state.loop.pointB === null) {
+		return false;
+	}
+
+	ctx.dispatch({ type: "toggle-loop" });
+
+	if (
+		ctx.state.loop.enabled &&
+		ctx.state.loop.pointA !== null &&
+		ctx.state.loop.pointB !== null &&
+		(ctx.state.position < ctx.state.loop.pointA ||
+			ctx.state.position > ctx.state.loop.pointB)
+	) {
+		if (ctx.state.playing) {
+			ctx.stopAudio();
+			ctx.startAudio(ctx.state.loop.pointA);
+		} else {
+			ctx.dispatch({
+				type: "set-position",
+				position: ctx.state.loop.pointA,
+			});
 		}
+	}
 
-		if (this.state.loop.pointA === null || this.state.loop.pointB === null) {
-			return false;
-		}
-
-		this.dispatch({ type: "toggle-loop" });
-
-		if (
-			this.state.loop.enabled &&
-			this.state.loop.pointA !== null &&
-			this.state.loop.pointB !== null &&
-			(this.state.position < this.state.loop.pointA ||
-				this.state.position > this.state.loop.pointB)
-		) {
-			if (this.state.playing) {
-				this.stopAudio();
-				this.startAudio(this.state.loop.pointA);
-			} else {
-				this.dispatch({
-					type: "set-position",
-					position: this.state.loop.pointA,
-				});
-			}
-		}
-
-		this.updateMainControls();
-		return true;
-	}.call(ctx);
+	ctx.updateMainControls();
+	return true;
 }
 
 export function clearLoop(ctx: TrackSwitchControllerImpl): void {
-	(function (this: TrackSwitchControllerImpl) {
-		this.dispatch({ type: "clear-loop" });
-		this.rightClickDragging = false;
-		this.loopDragStart = null;
-		this.draggingMarker = null;
-		this.updateMainControls();
-	}).call(ctx);
+	ctx.dispatch({ type: "clear-loop" });
+	ctx.rightClickDragging = false;
+	ctx.loopDragStart = null;
+	ctx.draggingMarker = null;
+	ctx.updateMainControls();
 }
 
 /**
@@ -633,161 +593,137 @@ export function toggleSolo(
 	exclusive: boolean,
 	groupIndex?: number,
 ): void {
-	(function (
-		this: TrackSwitchControllerImpl,
-		trackIndex: number,
-		exclusive: boolean,
-		groupIndex: number | undefined,
-	) {
-		const runtime = this.runtimes[trackIndex];
-		if (!runtime) {
-			return;
+	const runtime = ctx.runtimes[trackIndex];
+	if (!runtime) {
+		return;
+	}
+
+	if (ctx.isTrackSyncLocked(trackIndex)) {
+		return;
+	}
+
+	const resolvedGroupIndex = groupIndex ?? ctx.groupIndexForTrack(trackIndex);
+	const previousUnitIndex = ctx.activeSoloUnitIndex();
+
+	if (ctx.soloMode === "alignment") {
+		toggleSoloWithinAlignment(ctx, trackIndex, resolvedGroupIndex, exclusive);
+	} else {
+		const singleSoloMode =
+			exclusive || ctx.isGroupExclusive(resolvedGroupIndex);
+		const currentState = runtime.state.solo;
+
+		if (singleSoloMode) {
+			ctx
+				.trackIndexesInSoloScope(resolvedGroupIndex)
+				.forEach((index: number) => {
+					ctx.runtimes[index].state.solo = false;
+				});
 		}
 
-		if (this.isTrackSyncLocked(trackIndex)) {
-			return;
-		}
+		runtime.state.solo = singleSoloMode && currentState ? true : !currentState;
+	}
 
-		const resolvedGroupIndex =
-			groupIndex ?? this.groupIndexForTrack(trackIndex);
-		const previousUnitIndex = this.activeSoloUnitIndex();
-
-		if (this.soloMode === "alignment") {
-			toggleSoloWithinAlignment(
-				this,
-				trackIndex,
-				resolvedGroupIndex,
-				exclusive,
-			);
-		} else {
-			const singleSoloMode =
-				exclusive || this.isGroupExclusive(resolvedGroupIndex);
-			const currentState = runtime.state.solo;
-
-			if (singleSoloMode) {
-				this.trackIndexesInSoloScope(resolvedGroupIndex).forEach(
-					(index: number) => {
-						this.runtimes[index].state.solo = false;
-					},
-				);
-			}
-
-			runtime.state.solo =
-				singleSoloMode && currentState ? true : !currentState;
-		}
-
-		this.applyTrackProperties();
-		this.finishSoloUnitSwitch(previousUnitIndex);
-	}).call(ctx, trackIndex, exclusive, groupIndex);
+	ctx.applyTrackProperties();
+	ctx.finishSoloUnitSwitch(previousUnitIndex);
 }
 
 export function applyPreset(
 	ctx: TrackSwitchControllerImpl,
 	presetId: string,
 ): void {
-	(function (this: TrackSwitchControllerImpl, presetId: string) {
-		const preset = this.presets[presetId];
-		if (!preset) {
-			return;
-		}
+	const preset = ctx.presets[presetId];
+	if (!preset) {
+		return;
+	}
 
-		const trackIds = new Set(preset.tracks);
-		this.runtimes.forEach((runtime: TrackRuntime) => {
-			runtime.state.solo = trackIds.has(runtime.definition.id);
-		});
+	const trackIds = new Set(preset.tracks);
+	ctx.runtimes.forEach((runtime: TrackRuntime) => {
+		runtime.state.solo = trackIds.has(runtime.definition.id);
+	});
 
-		// A preset may name more than the current mode can play at once — an
-		// exclusive list then keeps the first of its named tracks, and alignment
-		// keeps the first named solo unit.
-		this.collapseToSingleSelection();
+	// A preset may name more than the current mode can play at once — an
+	// exclusive list then keeps the first of its named tracks, and alignment
+	// keeps the first named solo unit.
+	ctx.collapseToSingleSelection();
 
-		this.applyTrackProperties();
-	}).call(ctx, presetId);
+	ctx.applyTrackProperties();
 }
 
 /** Phase A — render the scores; their measure extents feed alignment resolution. */
-export function renderSheetMusic(
+export async function renderSheetMusic(
 	ctx: TrackSwitchControllerImpl,
 ): Promise<void> {
-	return async function (this: TrackSwitchControllerImpl) {
-		const hosts = this.renderer.getPreparedSheetMusicHosts();
+	const hosts = ctx.renderer.getPreparedSheetMusicHosts();
 
-		if (hosts.length === 0) {
-			this.sheetMusicEngine.destroy();
-			return;
-		}
+	if (hosts.length === 0) {
+		ctx.sheetMusicEngine.destroy();
+		return;
+	}
 
-		await this.sheetMusicEngine.initialize(hosts);
-	}.call(ctx);
+	await ctx.sheetMusicEngine.initialize(hosts);
 }
 
 /** Phase B — attach the alignment-derived measure maps to the rendered scores. */
-export function attachSheetMusicMeasureMaps(
+export async function attachSheetMusicMeasureMaps(
 	ctx: TrackSwitchControllerImpl,
 ): Promise<void> {
-	return async function (this: TrackSwitchControllerImpl) {
-		if (this.sheetMusicEngine.entries.length === 0) {
-			return;
-		}
+	if (ctx.sheetMusicEngine.entries.length === 0) {
+		return;
+	}
 
-		await this.sheetMusicEngine.attachMeasureMaps(
-			(measureColumn: string, source: string) =>
-				this.buildSheetMusicMeasureMaps(measureColumn, source),
-		);
-		this.sheetMusicEngine.updatePosition(
-			this.state.position,
-			this.isSyncReferenceAxisActive(),
-		);
-	}.call(ctx);
+	await ctx.sheetMusicEngine.attachMeasureMaps(
+		(measureColumn: string, source: string) =>
+			ctx.buildSheetMusicMeasureMaps(measureColumn, source),
+	);
+	ctx.sheetMusicEngine.updatePosition(
+		ctx.state.position,
+		ctx.isSyncReferenceAxisActive(),
+	);
 }
 
 export function dispatch(
 	ctx: TrackSwitchControllerImpl,
 	action: PlayerAction,
 ): void {
-	(function (this: TrackSwitchControllerImpl, action: PlayerAction) {
-		this.state = playerStateReducer(this.state, action);
-		// Position and loop points are reference-timeline coordinates.
-		const positionTimeline = playerTimeline(this.alignment);
-		if (action.type === "set-position") {
-			this.runtimeMarkers = moveRuntimeMarker(
-				this.runtimeMarkers,
-				"playhead",
-				positionTimeline,
-				this.state.position,
-			);
-		} else if (action.type === "set-loop-point") {
-			this.runtimeMarkers = moveRuntimeMarker(
-				this.runtimeMarkers,
-				action.marker === "A" ? "loopA" : "loopB",
-				positionTimeline,
-				action.marker === "A" ? this.state.loop.pointA : this.state.loop.pointB,
-			);
-		} else if (action.type === "clear-loop") {
-			this.runtimeMarkers = moveRuntimeMarker(
-				this.runtimeMarkers,
-				"loopA",
-				positionTimeline,
-				null,
-			);
-			this.runtimeMarkers = moveRuntimeMarker(
-				this.runtimeMarkers,
-				"loopB",
-				positionTimeline,
-				null,
-			);
-		}
-	}).call(ctx, action);
+	ctx.state = playerStateReducer(ctx.state, action);
+	// Position and loop points are reference-timeline coordinates.
+	const positionTimeline = playerTimeline(ctx.alignment);
+	if (action.type === "set-position") {
+		ctx.runtimeMarkers = moveRuntimeMarker(
+			ctx.runtimeMarkers,
+			"playhead",
+			positionTimeline,
+			ctx.state.position,
+		);
+	} else if (action.type === "set-loop-point") {
+		ctx.runtimeMarkers = moveRuntimeMarker(
+			ctx.runtimeMarkers,
+			action.marker === "A" ? "loopA" : "loopB",
+			positionTimeline,
+			action.marker === "A" ? ctx.state.loop.pointA : ctx.state.loop.pointB,
+		);
+	} else if (action.type === "clear-loop") {
+		ctx.runtimeMarkers = moveRuntimeMarker(
+			ctx.runtimeMarkers,
+			"loopA",
+			positionTimeline,
+			null,
+		);
+		ctx.runtimeMarkers = moveRuntimeMarker(
+			ctx.runtimeMarkers,
+			"loopB",
+			positionTimeline,
+			null,
+		);
+	}
 }
 
 export function pauseOthers(ctx: TrackSwitchControllerImpl): void {
-	(function (this: TrackSwitchControllerImpl) {
-		if (!this.features.muteOtherPlayerInstances) {
-			return;
-		}
+	if (!ctx.features.muteOtherPlayerInstances) {
+		return;
+	}
 
-		pauseOtherControllers(this);
-	}).call(ctx);
+	pauseOtherControllers(ctx);
 }
 
 export function startAudio(
@@ -795,121 +731,111 @@ export function startAudio(
 	newPosition: number | undefined,
 	snippetDuration: number | undefined,
 ): void {
-	(function (
-		this: TrackSwitchControllerImpl,
-		newPosition: number | undefined,
-		snippetDuration: number | undefined,
-	) {
-		const requestedPosition =
-			typeof newPosition === "number" ? newPosition : this.state.position;
-		let enginePosition = requestedPosition;
-		let nextReferencePosition = requestedPosition;
-		let nextAnchor: PlaybackAnchor | null = null;
+	const requestedPosition =
+		typeof newPosition === "number" ? newPosition : ctx.state.position;
+	let enginePosition = requestedPosition;
+	let nextReferencePosition = requestedPosition;
+	let nextAnchor: PlaybackAnchor | null = null;
 
-		if (this.isAlignmentMode() && this.alignment) {
-			const activeTrackIndex = this.getAlignmentPlaybackTrackIndex();
-			if (activeTrackIndex < 0) {
-				return;
-			}
-
-			// An anchor for this position already says where on this track to start;
-			// re-deriving it from the reference would round it to the edge of any
-			// stretch the alignment holds at one reference value.
-			enginePosition =
-				this.trackPlaybackPosition(activeTrackIndex, requestedPosition) ??
-				this.referenceToTrackTime(activeTrackIndex, requestedPosition);
-			nextReferencePosition = this.trackToReferenceTime(
-				activeTrackIndex,
-				enginePosition,
-				requestedPosition,
-			);
-			this.alignmentPlaybackTrackIndex = activeTrackIndex;
-			nextAnchor = this.trackPlaybackAnchor(activeTrackIndex, enginePosition);
-		} else {
-			this.alignmentPlaybackTrackIndex = null;
-		}
-
-		const startResult = this.audioEngine.start(
-			this.runtimes,
-			enginePosition,
-			snippetDuration,
-		);
-		if (!startResult) {
-			this.alignmentPlaybackTrackIndex = null;
+	if (ctx.isAlignmentMode() && ctx.alignment) {
+		const activeTrackIndex = ctx.getAlignmentPlaybackTrackIndex();
+		if (activeTrackIndex < 0) {
 			return;
 		}
 
-		this.dispatch({
-			type: "set-position",
-			position: clamp(nextReferencePosition, 0, this.longestDuration),
-			anchor: nextAnchor,
-		});
-		this.dispatch({ type: "set-start-time", startTime: startResult.startTime });
+		// An anchor for ctx position already says where on ctx track to start;
+		// re-deriving it from the reference would round it to the edge of any
+		// stretch the alignment holds at one reference value.
+		enginePosition =
+			ctx.trackPlaybackPosition(activeTrackIndex, requestedPosition) ??
+			ctx.referenceToTrackTime(activeTrackIndex, requestedPosition);
+		nextReferencePosition = ctx.trackToReferenceTime(
+			activeTrackIndex,
+			enginePosition,
+			requestedPosition,
+		);
+		ctx.alignmentPlaybackTrackIndex = activeTrackIndex;
+		nextAnchor = ctx.trackPlaybackAnchor(activeTrackIndex, enginePosition);
+	} else {
+		ctx.alignmentPlaybackTrackIndex = null;
+	}
 
-		if (this.timerMonitorPosition) {
-			clearInterval(this.timerMonitorPosition);
-		}
+	const startResult = ctx.audioEngine.start(
+		ctx.runtimes,
+		enginePosition,
+		snippetDuration,
+	);
+	if (!startResult) {
+		ctx.alignmentPlaybackTrackIndex = null;
+		return;
+	}
 
-		this.timerMonitorPosition = setInterval(() => {
-			this.monitorPosition();
-		}, 16);
-	}).call(ctx, newPosition, snippetDuration);
+	ctx.dispatch({
+		type: "set-position",
+		position: clamp(nextReferencePosition, 0, ctx.longestDuration),
+		anchor: nextAnchor,
+	});
+	ctx.dispatch({ type: "set-start-time", startTime: startResult.startTime });
+
+	if (ctx.timerMonitorPosition) {
+		clearInterval(ctx.timerMonitorPosition);
+	}
+
+	ctx.timerMonitorPosition = setInterval(() => {
+		ctx.monitorPosition();
+	}, 16);
 }
 
 export function stopAudio(ctx: TrackSwitchControllerImpl): void {
-	(function (this: TrackSwitchControllerImpl) {
-		this.audioEngine.stop(this.runtimes);
-		this.alignmentPlaybackTrackIndex = null;
-		if (this.timerMonitorPosition) {
-			clearInterval(this.timerMonitorPosition);
-			this.timerMonitorPosition = null;
-		}
-	}).call(ctx);
+	ctx.audioEngine.stop(ctx.runtimes);
+	ctx.alignmentPlaybackTrackIndex = null;
+	if (ctx.timerMonitorPosition) {
+		clearInterval(ctx.timerMonitorPosition);
+		ctx.timerMonitorPosition = null;
+	}
 }
 
 export function monitorPosition(ctx: TrackSwitchControllerImpl): void {
-	(function (this: TrackSwitchControllerImpl) {
-		if (this.isDestroyed) {
-			return;
+	if (ctx.isDestroyed) {
+		return;
+	}
+
+	if (ctx.state.playing && !ctx.state.currentlySeeking) {
+		const currentPosition = ctx.currentPlaybackReferencePosition();
+		ctx.dispatch({
+			type: "set-position",
+			position: currentPosition,
+			anchor: ctx.currentPlaybackAnchor(),
+		});
+	}
+
+	if (
+		ctx.navigationBar?.controls.includes("looping") &&
+		ctx.state.loop.enabled &&
+		ctx.state.loop.pointB !== null &&
+		ctx.state.position >= ctx.state.loop.pointB &&
+		!ctx.state.currentlySeeking
+	) {
+		ctx.stopAudio();
+		ctx.startAudio(ctx.state.loop.pointA ?? 0);
+		return;
+	}
+
+	// Playback ends when the selected audio runs out. It can omit the final
+	// reference occurrence and therefore end before the reference extent.
+	if (ctx.hasReachedPlaybackEnd() && !ctx.state.currentlySeeking) {
+		ctx.stopAudio();
+
+		if (ctx.state.repeat) {
+			ctx.dispatch({ type: "set-position", position: 0 });
+			ctx.startAudio(0);
+			ctx.dispatch({ type: "set-playing", playing: true });
+		} else {
+			ctx.dispatch({ type: "set-playing", playing: false });
 		}
+	}
 
-		if (this.state.playing && !this.state.currentlySeeking) {
-			const currentPosition = this.currentPlaybackReferencePosition();
-			this.dispatch({
-				type: "set-position",
-				position: currentPosition,
-				anchor: this.currentPlaybackAnchor(),
-			});
-		}
-
-		if (
-			this.navigationBar?.controls.includes("looping") &&
-			this.state.loop.enabled &&
-			this.state.loop.pointB !== null &&
-			this.state.position >= this.state.loop.pointB &&
-			!this.state.currentlySeeking
-		) {
-			this.stopAudio();
-			this.startAudio(this.state.loop.pointA ?? 0);
-			return;
-		}
-
-		// Playback ends when the selected audio runs out. It can omit the final
-		// reference occurrence and therefore end before the reference extent.
-		if (this.hasReachedPlaybackEnd() && !this.state.currentlySeeking) {
-			this.stopAudio();
-
-			if (this.state.repeat) {
-				this.dispatch({ type: "set-position", position: 0 });
-				this.startAudio(0);
-				this.dispatch({ type: "set-playing", playing: true });
-			} else {
-				this.dispatch({ type: "set-playing", playing: false });
-			}
-		}
-
-		this.updateMainControls();
-	}).call(ctx);
+	ctx.updateMainControls();
 }
 
 /**
@@ -918,21 +844,19 @@ export function monitorPosition(ctx: TrackSwitchControllerImpl): void {
  * the alignment does not cover; otherwise the shared duration decides.
  */
 export function hasReachedPlaybackEnd(ctx: TrackSwitchControllerImpl): boolean {
-	return function (this: TrackSwitchControllerImpl): boolean {
-		if (this.isAlignmentMode() && this.alignmentPlaybackTrackIndex !== null) {
-			const runtime = this.runtimes[this.alignmentPlaybackTrackIndex];
-			const trackDuration = runtime?.timing?.effectiveDuration;
-			if (
-				trackDuration !== undefined &&
-				Number.isFinite(trackDuration) &&
-				trackDuration > 0
-			) {
-				return this.currentPlaybackTrackPosition() >= trackDuration;
-			}
+	if (ctx.isAlignmentMode() && ctx.alignmentPlaybackTrackIndex !== null) {
+		const runtime = ctx.runtimes[ctx.alignmentPlaybackTrackIndex];
+		const trackDuration = runtime?.timing?.effectiveDuration;
+		if (
+			trackDuration !== undefined &&
+			Number.isFinite(trackDuration) &&
+			trackDuration > 0
+		) {
+			return ctx.currentPlaybackTrackPosition() >= trackDuration;
 		}
+	}
 
-		return this.state.position >= this.longestDuration;
-	}.call(ctx);
+	return ctx.state.position >= ctx.longestDuration;
 }
 
 export function seekFromEvent(
@@ -941,94 +865,81 @@ export function seekFromEvent(
 	usePreviewSnippet: boolean,
 	animate = false,
 ): void {
-	(function (
-		this: TrackSwitchControllerImpl,
-		event: ControllerPointerEvent,
-		usePreviewSnippet: boolean,
-		animate: boolean,
-	) {
-		const seekTimelineContext = this.getSeekTimelineContext(
-			this.seekingElement,
-		);
-		const metrics = getSeekMetrics(
-			this.seekingElement,
-			event,
-			seekTimelineContext.duration,
-		);
-		if (!metrics) {
-			return;
-		}
+	const seekTimelineContext = ctx.getSeekTimelineContext(ctx.seekingElement);
+	const metrics = getSeekMetrics(
+		ctx.seekingElement,
+		event,
+		seekTimelineContext.duration,
+	);
+	if (!metrics) {
+		return;
+	}
 
-		const newPosition = seekTimelineContext.toReferenceTime(metrics.time);
-		// A seek on a surface with its own timeline means the spot that was
-		// clicked, not the reference value it summarizes to — inside a stretch the
-		// alignment holds at one reference value those are not the same place.
-		const anchor = seekTimelineContext.toAnchor?.(metrics.time) ?? null;
+	const newPosition = seekTimelineContext.toReferenceTime(metrics.time);
+	// A seek on a surface with its own timeline means the spot that was
+	// clicked, not the reference value it summarizes to — inside a stretch the
+	// alignment holds at one reference value those are not the same place.
+	const anchor = seekTimelineContext.toAnchor?.(metrics.time) ?? null;
 
-		if (metrics.posXRel >= 0 && metrics.posXRel <= metrics.seekWidth) {
-			if (this.state.playing) {
-				this.dispatch({ type: "set-position", position: newPosition, anchor });
-				this.stopAudio();
-				this.startAudio(newPosition, usePreviewSnippet ? 0.03 : undefined);
-			} else {
-				this.dispatch({ type: "set-position", position: newPosition, anchor });
-			}
+	if (metrics.posXRel >= 0 && metrics.posXRel <= metrics.seekWidth) {
+		if (ctx.state.playing) {
+			ctx.dispatch({ type: "set-position", position: newPosition, anchor });
+			ctx.stopAudio();
+			ctx.startAudio(newPosition, usePreviewSnippet ? 0.03 : undefined);
 		} else {
-			this.dispatch({ type: "set-position", position: newPosition, anchor });
+			ctx.dispatch({ type: "set-position", position: newPosition, anchor });
 		}
+	} else {
+		ctx.dispatch({ type: "set-position", position: newPosition, anchor });
+	}
 
-		this.updateMainControls(animate);
-	}).call(ctx, event, usePreviewSnippet, animate);
+	ctx.updateMainControls(animate);
 }
 
 export function findLongestDuration(ctx: TrackSwitchControllerImpl): number {
-	return function (this: TrackSwitchControllerImpl) {
-		let longest = 0;
+	let longest = 0;
 
-		this.runtimes.forEach((runtime: TrackRuntime) => {
-			const duration = (
-				ctx.constructor as typeof TrackSwitchControllerImpl
-			).getRuntimeDuration(runtime);
+	ctx.runtimes.forEach((runtime: TrackRuntime) => {
+		const duration = (
+			ctx.constructor as typeof TrackSwitchControllerImpl
+		).getRuntimeDuration(runtime);
 
-			if (duration > longest) {
-				longest = duration;
-			}
-		});
+		if (duration > longest) {
+			longest = duration;
+		}
+	});
 
-		return longest;
-	}.call(ctx);
+	return longest;
 }
 
 export function handleError(
 	ctx: TrackSwitchControllerImpl,
 	message: string,
 ): void {
-	(function (this: TrackSwitchControllerImpl, message: string) {
-		this.isLoaded = false;
-		this.isLoading = false;
-		this.alignment = null;
-		this.alignmentPlaybackTrackIndex = null;
-		this.globalSyncEnabled = false;
-		this.syncLockedTrackIndexes.clear();
-		this.preSyncSoloStates = null;
-		this.soloMode = "lists";
+	ctx.isLoaded = false;
+	ctx.isLoading = false;
+	ctx.alignment = null;
+	ctx.alignmentPlaybackTrackIndex = null;
+	ctx.globalSyncEnabled = false;
+	ctx.syncLockedTrackIndexes.clear();
+	ctx.preSyncSoloStates = null;
+	ctx.soloMode = "lists";
 
-		this.stopAudio();
+	ctx.stopAudio();
 
-		if (this.resizeDebounceTimer) {
-			clearTimeout(this.resizeDebounceTimer);
-			this.resizeDebounceTimer = null;
-		}
-		if (this.waveformRenderFrameId !== null) {
-			cancelAnimationFrame(this.waveformRenderFrameId);
-			this.waveformRenderFrameId = null;
-		}
-		this.pinchZoomState = null;
-		this.waveformMinimapDragState = null;
-		this.sheetMusicEngine.destroy();
-		this.renderer.destroyPianoRollDisplays();
+	if (ctx.resizeDebounceTimer) {
+		clearTimeout(ctx.resizeDebounceTimer);
+		ctx.resizeDebounceTimer = null;
+	}
+	if (ctx.waveformRenderFrameId !== null) {
+		cancelAnimationFrame(ctx.waveformRenderFrameId);
+		ctx.waveformRenderFrameId = null;
+	}
+	ctx.pinchZoomState = null;
+	ctx.waveformMinimapDragState = null;
+	ctx.sheetMusicEngine.destroy();
+	ctx.renderer.destroyPianoRollDisplays();
 
-		this.renderer.showError(message, this.runtimes);
-		this.emit("error", { message: message });
-	}).call(ctx, message);
+	ctx.renderer.showError(message, ctx.runtimes);
+	ctx.emit("error", { message: message });
 }
