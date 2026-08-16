@@ -8,10 +8,10 @@ body_class: docs-page docs-page--narrow
 
 # Multi-Channel MIDI
 
-MIDI files can contain note events on multiple channels.
-This is often used to encode different instruments playing at the same time.
-One example where this is useful is Multi-Instrument Transcription.
-Trackswitch supports displaying multiple MIDI channels in piano roll views, where note events are colored per channel.
+This page shows a multichannel MIDI transcription of a four-part chorale.
+Trackswitch displays the MIDI notes in a piano roll and gives each channel a different color.
+The configuration links each MIDI channel to an audio track, so the piano roll follows the audible track selection.
+A second player shows the same transcription as notes that move toward a piano keyboard.
 
 <div class="ts-usecase-showcase">
   <aside class="ts-usecase-showcase__code-callout" aria-label="Copy player code">

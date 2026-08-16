@@ -8,11 +8,10 @@ body_class: docs-page docs-page--narrow
 
 # Separated Stems on Aligned Timelines
 
-In the case of aligned timelines, usually there is only one track audible at a time, since each track may carry its own timeline.
-It is possible to configure the player to still provide simultaneous playback for tracks that live on the same timeline.
-In Source Separation for example, several stems belong to *one* timeline, and can be listened to together.
-
-The player below therefore offers two levels of hierarchy. The first level picks the aligned performance, the second mixes the stems inside it. Each performance of *Gefrorne Tränen* was decomposed into a harmonic, a percussive and a residual stem; the three of them sum back to the recording.
+This page shows two performances of *Gefrorne Tränen*, each split into three audio stems.
+The first selection level chooses a performance because the performances use separate aligned timelines.
+The second level mixes the harmonic, percussive, and residual stems of the selected performance.
+These three stems share one timeline and sum to the original recording.
 
 <div class="ts-usecase-showcase">
   <aside class="ts-usecase-showcase__code-callout" aria-label="Copy player code">

@@ -8,10 +8,10 @@ body_class: docs-page docs-page--narrow
 
 # Score Following
 
-A recording and its score describe the same music in different units: the recording in
-seconds, the score in measures. An alignment connects the two, and the connection works
-in both directions — the score view highlights the measure that is currently sounding,
-and clicking a measure moves the recording to the corresponding passage.
+This page shows a recording together with its sheet music.
+An alignment connects seconds in the recording to measures in the MusicXML score.
+During playback, Trackswitch highlights the current measure and moves the score with the recording.
+You can click a measure to seek to the corresponding passage in the recording.
 
 <div class="ts-usecase-showcase">
   <aside class="ts-usecase-showcase__code-callout" aria-label="Copy player code">

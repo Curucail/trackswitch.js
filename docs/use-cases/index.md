@@ -8,8 +8,8 @@ body_class: docs-page docs-page--narrow
 
 # Tutorials & Use Cases
 
-Here you can find different examples on how to configure and use trackswitch for your use case.
-We show pre-configured players and explain the main concepts behind it.
+These tutorials show how to configure Trackswitch for common music processing tasks.
+Each page contains a working player and explains the important parts of its JSON configuration.
 
 ## Basic
 

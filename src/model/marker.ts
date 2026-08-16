@@ -183,10 +183,17 @@ function boundingMarkers(
 		if (!alignment || timeline === alignment.referenceTimeline) {
 			return referenceValue;
 		}
-		const { projection, referenceTimeline } = alignment;
-		return projection.isCovered(referenceTimeline, timeline, referenceValue)
-			? projection.project(referenceValue, referenceTimeline, timeline)
-			: null;
+		const { projection, referenceTimeline, outsideCoverage } = alignment;
+		if (projection.isCovered(referenceTimeline, timeline, referenceValue)) {
+			return projection.project(referenceValue, referenceTimeline, timeline);
+		}
+		// Outside the annotated span, only "error" leaves the bound unresolved:
+		// `project` would throw there, and dropping the bound reproduces the
+		// prior behaviour of leaving the sequence's final segment open. "hold"
+		// and "extrapolate" both have a well-defined answer for this value.
+		return outsideCoverage === "error"
+			? null
+			: projection.project(referenceValue, referenceTimeline, timeline);
 	};
 
 	const start = toLocal(0);

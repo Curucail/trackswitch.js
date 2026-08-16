@@ -8,9 +8,10 @@ body_class: docs-page docs-page--narrow
 
 # Shared Timeline - Groups
 
-A player can show more than one `trackList`, and each list decides on its own whether its tracks play together or one at a time. Combined with a shared timeline, this turns the player into an instrument chooser: every list covers one part of the arrangement, and the listener assembles an ensemble by picking one instrument per part.
-
-The player below contains a four-part chorale. Each voice was recorded with several different instruments, all following the same conductor, so every recording shares one timeline and no alignment is needed. Pick a different instrument for any voice to hear how it changes the ensemble.
+This page shows a four-part chorale with several instrument recordings for each voice.
+All recordings share the same timeline, so they do not need an alignment.
+Each voice has its own `trackList`, and each list keeps one instrument active.
+You can select one instrument for each voice and hear all four voices together.
 
 <div class="ts-usecase-showcase">
   <aside class="ts-usecase-showcase__code-callout" aria-label="Copy player code">

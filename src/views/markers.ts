@@ -91,7 +91,7 @@ export function createMarkerAriaLabel(
 	formatSurfaceValue: (surfaceTime: number) => string,
 	formatReferenceValue: (playerTime: number) => string,
 ): string {
-	const label = marker.label ? `, ${marker.label}` : "";
+	const label = marker.label ? `, label ${marker.label}` : "";
 	return (
 		`Marker ${marker.id}${label}, ` +
 		`local ${formatSurfaceValue(placement.surfaceTime)}, ` +

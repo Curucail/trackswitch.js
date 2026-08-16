@@ -8,12 +8,10 @@ body_class: docs-page docs-page--narrow
 
 # Multitrack Playback
 
-Trackswitch is a multitrack audio player. 
-Multiple audio files are loaded into the player and can be played back in two different modes: default or solo.
-In default mode, multiple tracks can be selected and played back simultaneosly, while in solo mode, only one track is played at a time.
-
-A simple multitrack trackswitch player can be used to compare the output of different processing methods. 
-The player below uses solo mode to compares several dereverberation methods.
+This page shows how to play several synchronized audio files in one player.
+In simultaneous listening mode, users can select and mix multiple tracks.
+In comparative listening mode, only one track plays at a time, which makes direct comparisons easy.
+The example here uses solo mode to compare the output of several dereverberation methods.
 
 <div class="ts-usecase-showcase">
   <aside class="ts-usecase-showcase__code-callout" aria-label="Copy player code">

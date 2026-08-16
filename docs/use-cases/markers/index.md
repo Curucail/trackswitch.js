@@ -8,12 +8,10 @@ body_class: docs-page docs-page--narrow
 
 # Markers
 
-A marker sequence can describe individual positions or the boundaries of longer regions.
-The sequence `type` defines how Trackswitch displays its markers.
-
-The examples use Schubert's *Gefrorne Tränen* from *Winterreise*.
-The first player displays measure positions.
-The second player displays structural annotations as colored regions.
+This page shows two types of markers on a recording of Schubert’s *Gefrorne Tränen*.
+Point markers identify individual positions, such as the start of each measure.
+Segment markers show longer regions, such as parts of the musical structure.
+Trackswitch reads the positions and labels from CSV files and displays them on the waveform.
 
 ## Measure markers
 
