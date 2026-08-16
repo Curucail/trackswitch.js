@@ -85,7 +85,8 @@ Each waveform displays the sequence for its performance.
 
 Audio data: [Schubert Winterreise Dataset](https://www.audiolabs-erlangen.de/resources/MIR/SWD), *Gefrorne Tränen*, D. 911, No. 3, performances HU33 and SC06.
 
-The source files contain start and end times with a structural label:
+The source files contain start and end times with a structural label.
+The `start` and `end` values are seconds on the local audio timeline of each performance.
 
 ```csv
 start;end;structure

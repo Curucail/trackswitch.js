@@ -672,6 +672,18 @@ export class ViewRenderer {
 		return `${pair.position} / ${pair.duration}`;
 	}
 
+	/** Formats one native position in the unit declared for its local timeline. */
+	public formatLocalTimelineValue(
+		timeline: string | null,
+		value: number,
+	): string {
+		const readout =
+			timeline === null ? undefined : this.timelineReadouts.get(timeline);
+		return readout
+			? formatTimelineValue(readout.unit, readout.toReadout(value))
+			: formatSecondsToHHMMSSmmm(value);
+	}
+
 	public query(selector: string): HTMLElement | null {
 		return viewRendererCore.query(this, selector);
 	}

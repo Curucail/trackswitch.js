@@ -17,7 +17,7 @@ export type {
 	MarkerNavigationSetOption,
 } from "../player/markers";
 
-interface MarkerPlacement {
+export interface MarkerPlacement {
 	playerTime: number;
 	surfaceTime: number;
 	duration: number;
@@ -26,6 +26,7 @@ interface MarkerPlacement {
 type SeekTimelineContextResolver = (seekWrap: HTMLElement) => {
 	duration: number;
 	fromReferenceTime(playerTime: number): number;
+	formatValue(surfaceTime: number): string;
 };
 
 export interface MarkerRenderData {
@@ -84,9 +85,18 @@ function resolvePlacement(
 	return { playerTime, surfaceTime, duration: timeline.duration };
 }
 
-function createMarkerAriaLabel(marker: Marker, playerTime: string): string {
+export function createMarkerAriaLabel(
+	marker: Marker,
+	placement: MarkerPlacement,
+	formatSurfaceValue: (surfaceTime: number) => string,
+	formatReferenceValue: (playerTime: number) => string,
+): string {
 	const label = marker.label ? `, ${marker.label}` : "";
-	return `Marker ${marker.id}${label}, ${playerTime}`;
+	return (
+		`Marker ${marker.id}${label}, ` +
+		`local ${formatSurfaceValue(placement.surfaceTime)}, ` +
+		`reference ${formatReferenceValue(placement.playerTime)}`
+	);
 }
 
 function renderSegmentRegions(
@@ -113,10 +123,13 @@ function renderSegmentRegions(
 		region.className = "timeline-segment";
 		region.setAttribute("role", "img");
 		const label = segment.label?.trim();
-		const timeRange = `${data.formatReferenceValue(start.playerTime)} to ${data.formatReferenceValue(end.playerTime)}`;
+		const localRange = `${timeline.formatValue(start.surfaceTime)} to ${timeline.formatValue(end.surfaceTime)}`;
+		const referenceRange = `${data.formatReferenceValue(start.playerTime)} to ${data.formatReferenceValue(end.playerTime)}`;
 		region.setAttribute(
 			"aria-label",
-			label ? `Segment ${label}, ${timeRange}` : `Segment ${timeRange}`,
+			label
+				? `Segment ${label}, local ${localRange}, reference ${referenceRange}`
+				: `Segment local ${localRange}, reference ${referenceRange}`,
 		);
 		region.style.setProperty(
 			"--ts-segment-position",
@@ -194,7 +207,9 @@ function renderMarkerLayer(
 		button.tabIndex = index === 0 ? 0 : -1;
 		const ariaLabel = createMarkerAriaLabel(
 			entry.marker,
-			data.formatReferenceValue(entry.placement.playerTime),
+			entry.placement,
+			timeline.formatValue,
+			data.formatReferenceValue,
 		);
 		button.setAttribute("aria-label", ariaLabel);
 		button.title = ariaLabel;

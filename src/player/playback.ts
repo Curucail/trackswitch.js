@@ -961,6 +961,7 @@ interface SeekTimelineContext {
 	duration: number;
 	toReferenceTime(timelineTime: number): number;
 	fromReferenceTime(referenceTime: number): number;
+	formatValue(timelineTime: number): string;
 	toAnchor?(timelineTime: number): PlaybackOrigin | null;
 	playbackPosition?(): number | null;
 }
@@ -1732,6 +1733,8 @@ export function getSeekTimelineContext(
 ): SeekTimelineContext {
 	const referenceContext: SeekTimelineContext = {
 		duration: ctx.longestDuration,
+		formatValue: (value: number): string =>
+			ctx.renderer.formatReferenceTimelineValue(value),
 		toReferenceTime: (timelineTime: number): number =>
 			clamp(timelineTime, 0, ctx.longestDuration),
 		fromReferenceTime: (referenceTime: number): number =>
@@ -1804,6 +1807,8 @@ export function getSeekTimelineContext(
 
 	return {
 		duration: axisDuration,
+		formatValue: (value: number): string =>
+			ctx.renderer.formatLocalTimelineValue(runtime.definition.id, value),
 		toAnchor: (sharedTime: number) =>
 			ctx.trackPlaybackAnchor(trackIndex, clamp(sharedTime, 0, trackDuration)),
 		playbackPosition: () => ctx.trackPlaybackPosition(trackIndex),
@@ -1859,6 +1864,8 @@ export function getPianoRollTimelineContext(
 			// No timeline declared for ctx MIDI: it shares the reference
 			// timeline, so local and reference coordinates coincide.
 			duration: pianoRollDuration,
+			formatValue: (value: number): string =>
+				ctx.renderer.formatLocalTimelineValue(null, value),
 			toReferenceTime: (pianoRollTime: number): number =>
 				clamp(pianoRollTime, 0, ctx.longestDuration),
 			fromReferenceTime: (referenceTime: number): number =>
@@ -1902,6 +1909,7 @@ function buildProjectedTimelineContext(
 	duration: number;
 	toReferenceTime(surfaceValue: number): number;
 	fromReferenceTime(referenceTime: number): number;
+	formatValue(surfaceValue: number): string;
 	toAnchor(surfaceValue: number): PlaybackOrigin;
 	playbackPosition(): number | null;
 } | null {
@@ -1919,6 +1927,8 @@ function buildProjectedTimelineContext(
 
 	return {
 		duration: surfaceDuration,
+		formatValue: (value: number): string =>
+			ctx.renderer.formatLocalTimelineValue(timeline, value),
 		toAnchor: (surfaceValue: number) => ({
 			timeline,
 			value: clamp(surfaceValue, 0, surfaceDuration),

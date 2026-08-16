@@ -86,6 +86,7 @@ interface SeekTimelineContext {
 	duration: number;
 	toReferenceTime(timelineTime: number): number;
 	fromReferenceTime(referenceTime: number): number;
+	formatValue(timelineTime: number): string;
 	/**
 	 * The anchor a position on this surface carries. Absent on a surface that
 	 * works in reference coordinates, which has nothing finer to remember.
