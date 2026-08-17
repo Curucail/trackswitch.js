@@ -699,35 +699,21 @@ export function buildMainControlHtml(
 
 	const controls = ctx.navigationBar?.controls ?? [];
 	const bodyControls: TrackSwitchNavigationBarControl[] = [];
-	let timerHtml = "";
-	let seekBarHtml = "";
 	let fullscreenHtml = "";
 
-	// Every control flows left in configured order, except "timer" (pinned
-	// right via margin-left:auto) and "fullscreen-control" (pinned to the
-	// top-right corner, out of flow entirely - see main-control.css).
+	// Every control flows left in configured order, including "timer" (which
+	// pins itself right via margin-left:auto but otherwise stays in flow),
+	// except "fullscreen-control", which is pinned to the top-right corner,
+	// out of flow entirely - see main-control.css.
 	controls.forEach((control) => {
-		switch (control) {
-			case "timer":
-				timerHtml = controlHtml(control);
-				break;
-			case "seekBar":
-				seekBarHtml = controlHtml(control);
-				break;
-			case "fullscreen-control":
-				fullscreenHtml = controlHtml(control);
-				break;
-			default:
-				bodyControls.push(control);
-				break;
+		if (control === "fullscreen-control") {
+			fullscreenHtml = controlHtml(control);
+		} else {
+			bodyControls.push(control);
 		}
 	});
 
-	const controlsHtml =
-		bodyControls.map(controlHtml).join("") +
-		timerHtml +
-		fullscreenHtml +
-		seekBarHtml;
+	const controlsHtml = bodyControls.map(controlHtml).join("") + fullscreenHtml;
 
 	return (
 		'<div class="main-control ts-stack-section">' +
