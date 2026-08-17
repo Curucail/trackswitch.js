@@ -9,6 +9,7 @@
 }
 
 .trackswitch .main-control ul.control {
+	position: relative;
 	background-color: var(--ts-color-surface-panel-dark);
 	min-height: var(--ts-main-control-height);
 	padding-block-start: var(--ts-main-control-padding-block-start);
@@ -19,6 +20,16 @@
 	flex-wrap: wrap;
 	align-items: center;
 	gap: var(--ts-main-control-row-gap) var(--ts-main-control-column-gap);
+}
+
+/* fullscreen-control is pinned to the top-right corner (see below), so it
+   needs room reserved on the right that the wrapping flex content won't use. */
+.trackswitch .main-control ul.control:has(> li.fullscreen-toggle) {
+	padding-inline-end: calc(
+		var(--ts-main-control-padding-inline) +
+		var(--ts-main-control-icon-size) +
+		var(--ts-main-control-column-gap)
+	);
 }
 
 .trackswitch .main-control ul.control > li {
@@ -34,6 +45,11 @@
 .trackswitch .main-control .timing {
 	margin-left: auto;
 	text-align: right;
+	font-family: monospace;
+	white-space: nowrap;
+	/* The row is a flex container, so the whitespace around the "/" separator is
+	   dropped. A word unit like "measure 3" needs it back. */
+	gap: 0.35em;
 }
 
 .trackswitch .main-control .settings-button {
@@ -43,6 +59,10 @@
 
 .trackswitch .main-control .seekwrap {
 	flex: 1 1 240px;
+	overflow: visible;
+	height: var(--ts-main-seek-hit-height);
+	cursor: pointer;
+	min-width: 200px;
 }
 
 /* Playback group (play/stop/repeat) */
@@ -68,9 +88,23 @@
 	height: var(--ts-main-control-icon-size);
 }
 
-.trackswitch .main-control li.fullscreen-toggle.button {
+/* Always pinned to the top-right corner, further right than the timer and
+   out of the wrapping flex flow entirely, so it never drops to a lower row
+   no matter how much else wraps below it. (Selector is qualified with
+   "ul.control >" - not just ".main-control" - to outrank the generic
+   ".control li.button:not(.sync-global) { position: relative }" rule in
+   tracks.css, which ties on class-specificity and would otherwise win by
+   source order.) */
+.trackswitch .main-control ul.control > li.fullscreen-toggle.button {
+	position: absolute;
+	/* top/right offsets are relative to ul.control's own padding-box edge, not
+	   its content edge, so the bar's padding has to be added back explicitly.
+	   The li inherits min-height:row-height from the generic "ul.control > li"
+	   rule, same as every sibling group, so no extra centering term is needed. */
+	top: var(--ts-main-control-padding-block-start);
+	right: var(--ts-main-control-padding-inline);
 	width: var(--ts-main-control-icon-size);
-	height: var(--ts-main-control-icon-size);
+	margin: 0;
 }
 
 .trackswitch .main-control .sync-global {
@@ -101,24 +135,7 @@
 	pointer-events: none;
 }
 
-/* Timing */
-.trackswitch .main-control .timing {
-	font-family: monospace;
-	white-space: nowrap;
-	/* The row is a flex container, so the whitespace around the "/" separator is
-	   dropped. A word unit like "measure 3" needs it back. */
-	gap: 0.35em;
-}
-
 /* Seekbar */
-.trackswitch .main-control .seekwrap {
-	overflow: visible;
-	height: var(--ts-main-seek-hit-height);
-	cursor: pointer;
-	min-width: 200px;
-	width: 100%;
-}
-
 .trackswitch .main-control .seekwrap .seekbar {
 	background-color: var(--ts-color-accent);
 	height: var(--ts-seekbar-height);
@@ -237,19 +254,14 @@
 }
 
 /* Loop group */
-.trackswitch .main-control .control > li.loop-group > .loop-controls {
+.trackswitch .main-control .control li.loop-group > .loop-controls {
 	display: flex;
 	align-items: center;
 	gap: var(--ts-main-control-loop-gap);
 	margin-right: -6px;
 }
 
-.trackswitch
-	.main-control
-	.control
-	> li.loop-group
-	> .loop-controls
-	> li.button {
+.trackswitch .main-control .control li.loop-group > .loop-controls > li.button {
 	margin: 0;
 	width: var(--ts-main-control-large-button-size);
 	height: var(--ts-main-control-large-button-size);
@@ -261,7 +273,7 @@
 .trackswitch
 	.main-control
 	.control
-	> li.loop-group
+	li.loop-group
 	> .loop-controls
 	> li.loop-a
 	.ts-icon-slot {
@@ -273,7 +285,7 @@
 .trackswitch
 	.main-control
 	.control
-	> li.loop-group
+	li.loop-group
 	> .loop-controls
 	> li.loop-a
 	.ts-icon-svg {
@@ -284,7 +296,7 @@
 .trackswitch
 	.main-control
 	.control
-	> li.loop-group
+	li.loop-group
 	> .loop-controls
 	> li.loop-b
 	.ts-icon-slot {
@@ -296,7 +308,7 @@
 .trackswitch
 	.main-control
 	.control
-	> li.loop-group
+	li.loop-group
 	> .loop-controls
 	> li.loop-b
 	.ts-icon-svg {
@@ -307,7 +319,7 @@
 .trackswitch
 	.main-control
 	.control
-	> li.loop-group
+	li.loop-group
 	> .loop-controls
 	> li.loop-toggle
 	.ts-icon-slot {
@@ -319,7 +331,7 @@
 .trackswitch
 	.main-control
 	.control
-	> li.loop-group
+	li.loop-group
 	> .loop-controls
 	> li.loop-clear
 	.ts-icon-slot {
@@ -332,7 +344,7 @@
 .trackswitch
 	.main-control
 	.control
-	> li.loop-group
+	li.loop-group
 	> .loop-controls
 	> li.loop-toggle
 	.ts-icon-svg {
@@ -343,7 +355,7 @@
 .trackswitch
 	.main-control
 	.control
-	> li.loop-group
+	li.loop-group
 	> .loop-controls
 	> li.loop-clear
 	.ts-icon-svg {

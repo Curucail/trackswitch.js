@@ -32,7 +32,6 @@
 			"controls": [
 				"playback",
 				"globalVolume",
-				"looping",
 				"timer",
 				"fullscreen-control"
 			]

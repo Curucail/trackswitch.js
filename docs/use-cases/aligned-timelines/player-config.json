@@ -1,10 +1,6 @@
 {
 	"$schema": "https://audiolabs.github.io/trackswitch.js/schema/trackswitch.schema.json",
 	"media": {
-		"score": {
-			"type": "musicxml",
-			"src": "../../assets/alignment/Schubert_D911-03.xml"
-		},
 		"hu33": {
 			"type": "audio",
 			"title": "Performance HU33",
@@ -34,7 +30,6 @@
 		"src": "../../assets/alignment/alignment.csv",
 		"referenceTimeline": "hu33",
 		"timelines": {
-			"score": "measure_Schubert_D911-03_2",
 			"hu33": "time_Schubert_D911-03_HU33",
 			"sc06": "time_Schubert_D911-03_SC06"
 		},
@@ -45,12 +40,6 @@
 		{
 			"type": "navigationBar",
 			"controls": ["playback", "globalVolume", "looping", "sync", "timer"]
-		},
-		{
-			"type": "sheetMusic",
-			"mediaID": "score",
-			"maxHeight": 340,
-			"cursorColor": "#999999"
 		},
 		{
 			"type": "waveform",
