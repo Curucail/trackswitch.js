@@ -1,17 +1,17 @@
 ---
 layout: default
-title: Multi-Channel MIDI
-description: One MIDI transcription of a four-part ensemble, coloured per channel and following the audible tracks.
+title: Piano Roll
+description: A MIDI transcription of a four-part ensemble, displayed in a piano roll and coloured per channel.
 permalink: /use-cases/multi-instrument-transcription/
 body_class: docs-page docs-page--narrow
 ---
 
-# Multi-Channel MIDI
+# Piano Roll
 
 This page shows a multichannel MIDI transcription of a four-part chorale.
-Trackswitch displays the MIDI notes in a piano roll and gives each channel a different color.
-The configuration links each MIDI channel to an audio track, so the piano roll follows the audible track selection.
-A second player shows the same transcription as notes that move toward a piano keyboard.
+Trackswitch displays the MIDI notes in a piano roll.
+This first player is channel unaware: it has no notion of individual channels, so every note is drawn in the same plain colour.
+A second player links each MIDI channel to an audio track, so its piano roll colors each channel and follows the audible track selection, and shows the same transcription as notes that move toward a piano keyboard.
 
 <div class="ts-usecase-showcase">
   <aside class="ts-usecase-showcase__code-callout" aria-label="Copy player code">
@@ -85,7 +85,9 @@ Colours are handed out by ascending channel number — orange, red, green, blue,
 ```
 ## With a piano keyboard
 
-The same transcription again, this time as a falling-notes display: `pianoKeyboard` draws a keyboard column beside the pitch axis, pins the playhead to its edge and scrolls the roll past it, so the notes fly into the keys they sound on.
+The same transcription again, this time channel-aware and as a falling-notes display.
+Each channel is linked to its track through `channelToTrackIDMap`, so the roll follows the audible track selection.
+`pianoKeyboard` draws a keyboard column beside the pitch axis, pins the playhead to its edge and scrolls the roll past it, so the notes fly into the keys they sound on.
 
 <div class="ts-usecase-showcase">
   <aside class="ts-usecase-showcase__code-callout" aria-label="Copy player code">

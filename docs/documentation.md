@@ -1127,7 +1127,7 @@ Because solid notes cannot be told apart by transparency, a pitch several channe
 
 A second note-on for a pitch already sounding on the same channel is read as a re-trigger — the note that was running ends there, instead of the two overlapping on one row.
 
-See [Multi-Instrument Transcription]({{ '/use-cases/multi-instrument-transcription/' | relative_url }}) for a complete player.
+See [Piano Roll]({{ '/use-cases/multi-instrument-transcription/' | relative_url }}) for a complete player.
 
 ### `sheetMusic`
 

@@ -36,12 +36,8 @@
 			"mediaID": "notes",
 			"height": 260,
 			"palette": "colorblind-light",
-			"channelToTrackIDMap": {
-				"0": "soprano",
-				"1": "alto",
-				"2": "tenor",
-				"3": "bass"
-			}
+			"grid": "none",
+			"colorPerChannel": false
 		},
 		{
 			"type": "trackList",

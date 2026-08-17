@@ -81,11 +81,11 @@ Each page contains a working player and explains the important parts of its JSON
   </li>
 
   <li class="ts-usecase-card">
-    <h2><a href="{{ '/use-cases/multi-instrument-transcription/' | relative_url }}">Multi-Instrument Transcription</a></h2>
+    <h2><a href="{{ '/use-cases/multi-instrument-transcription/' | relative_url }}">Piano Roll</a></h2>
     <p>
-      One MIDI file transcribes a four-part ensemble. Each channel is paired with a recording,
-      takes a colour of its own, and is drawn only while that instrument is audible.
-      A second player shows the same transcription flying into a piano keyboard.
+      One MIDI file transcribes a four-part ensemble, each channel taking a colour of its own.
+      A second player pairs each channel with a recording, drawing it only while that instrument
+      is audible, and shows the same transcription flying into a piano keyboard.
     </p>
   </li>
 
