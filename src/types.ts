@@ -16,17 +16,8 @@ export type OutsideCoverageMode = "hold" | "extrapolate" | "error";
  * stretch the other plays only once.
  */
 export type DuplicateAnchorPolicy = "first" | "average" | "error";
-/**
- * How a zoomable surface moves with playback. `pinnedLeft` holds the playhead
- * against the left edge of the viewport and scrolls the surface underneath it,
- * which is what a piano roll with a keyboard column needs; the surface carries a
- * trailing pad so the playhead stays pinned through the end of the medium.
- */
-export type WaveformPlaybackFollowMode =
-	| "off"
-	| "center"
-	| "jump"
-	| "pinnedLeft";
+/** How a zoomable surface moves with playback. */
+export type WaveformPlaybackFollowMode = "off" | "center" | "jump";
 export type TrackSwitchTextAlign = "left" | "center" | "right";
 type MarkerLineStyle = "solid" | "dashed";
 
@@ -251,12 +242,19 @@ export interface TrackSwitchPianoRollViewConfig {
 	height?: number;
 	maxZoom?: number;
 	defaultZoom?: number;
+	/** Ignored while `pianoKeyboard` is on — see there for what takes over. */
 	playbackFollowMode?: WaveformPlaybackFollowMode;
 	timer?: boolean;
 	/**
 	 * Draws a piano keyboard beside the pitch axis and pins the playhead to its
 	 * edge, so the notes fly into the keys and the key of every sounding note
 	 * lights up in the colour of its channel. Defaults to `false`.
+	 *
+	 * Also switches the roll to a pinned-left follow mode that holds the
+	 * playhead against the keys and scrolls the notes underneath it instead of
+	 * whatever `playbackFollowMode` says, and changes the note grid's drag
+	 * gesture: dragging pans the sheet directly under the pointer, panning
+	 * playback position along with it, rather than jumping to the clicked spot.
 	 */
 	pianoKeyboard?: boolean;
 	/**

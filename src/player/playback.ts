@@ -17,10 +17,18 @@ import type {
 	WaveformTimelineContext,
 } from "../views/renderer";
 import {
+	getTimelineTimeWidth,
+	resolveTimelinePlaybackFollowScrollLeft,
+} from "../views/surface";
+import {
 	applyReferenceReadoutUnit,
 	toggleSoloWithinAlignment,
 } from "./alignment";
-import { type ControllerPointerEvent, getSeekMetrics } from "./input";
+import {
+	type ControllerPointerEvent,
+	getPointerPageX,
+	getSeekMetrics,
+} from "./input";
 import { snapLoopEndToMarker } from "./markers";
 import type { TrackSwitchControllerImpl } from "./player";
 import {
@@ -1170,6 +1178,10 @@ export function onSeekMove(
 		return;
 	}
 
+	if (updatePianoRollPanDrag(ctx, event)) {
+		return;
+	}
+
 	if (handleWaveformAuxiliarySeekState(ctx, event)) {
 		return;
 	}
@@ -1367,11 +1379,127 @@ export function isPianoRollSeekSurface(seekWrap: HTMLElement | null): boolean {
 	);
 }
 
+/**
+ * A keyboard-enabled piano roll's note grid pans instead of jumping: the sheet
+ * tracks the pointer directly, panning playback position along with it. Its
+ * own gesture, not the generic click-to-seek below, so it starts a distinct
+ * drag state rather than an interactive seek.
+ */
+function tryStartPianoRollPanDrag(
+	ctx: TrackSwitchControllerImpl,
+	event: ControllerPointerEvent,
+	seekWrap: HTMLElement,
+): boolean {
+	if (!ctx.isPianoRollSeekSurface(seekWrap)) {
+		return false;
+	}
+
+	const surface = ctx.renderer.findPianoRollSurface(seekWrap);
+	if (surface?.playbackFollowMode !== "pinnedLeft") {
+		return false;
+	}
+
+	const pageX = getPointerPageX(event);
+	if (pageX === null) {
+		return false;
+	}
+
+	ctx.pianoRollPanDragState = { seekWrap, lastPageX: pageX };
+	ctx.pendingWaveformTouchSeek = null;
+	ctx.seekingElement = null;
+	ctx.rightClickDragging = false;
+	ctx.loopDragStart = null;
+	ctx.draggingMarker = null;
+	if (ctx.state.currentlySeeking) {
+		ctx.dispatch({ type: "set-seeking", seeking: false });
+	}
+	ctx.disableLoopWhenSeekOutsideRegion();
+
+	return true;
+}
+
+/**
+ * Applies one step of an in-progress piano-roll pan drag: moves playback
+ * position by the pointer's pixel delta (inverted, since dragging right
+ * reveals earlier content, as if pulling the sheet of paper towards you) and
+ * writes `scrollLeft` directly so the pinned-left playhead visibly tracks the
+ * gesture instead of waiting for the next follow-scroll tick, which is
+ * suppressed for this surface while the drag is in progress — see
+ * `shouldSuppressPianoRollPlaybackFollow`.
+ */
+function updatePianoRollPanDrag(
+	ctx: TrackSwitchControllerImpl,
+	event: ControllerPointerEvent,
+): boolean {
+	const dragState = ctx.pianoRollPanDragState;
+	if (!dragState) {
+		return false;
+	}
+
+	event.preventDefault();
+
+	const pageX = getPointerPageX(event);
+	if (pageX === null) {
+		return true;
+	}
+
+	const deltaX = pageX - dragState.lastPageX;
+	dragState.lastPageX = pageX;
+	if (deltaX === 0) {
+		return true;
+	}
+
+	const surface = ctx.renderer.findPianoRollSurface(dragState.seekWrap);
+	if (!surface) {
+		return true;
+	}
+
+	const seekTimelineContext = ctx.getSeekTimelineContext(dragState.seekWrap);
+	const duration = seekTimelineContext.duration;
+	const timeWidth = getTimelineTimeWidth(surface);
+	if (!(duration > 0) || !(timeWidth > 0)) {
+		return true;
+	}
+
+	const currentLocalTime = seekTimelineContext.fromReferenceTime(
+		ctx.state.position,
+	);
+	const nextLocalTime = clamp(
+		currentLocalTime - (deltaX / timeWidth) * duration,
+		0,
+		duration,
+	);
+	const newPosition = seekTimelineContext.toReferenceTime(nextLocalTime);
+	const anchor = seekTimelineContext.toAnchor?.(nextLocalTime) ?? null;
+
+	ctx.dispatch({ type: "set-position", position: newPosition, anchor });
+	if (ctx.state.playing) {
+		ctx.stopAudio();
+		ctx.startAudio(newPosition, 0.03);
+	}
+
+	const scrollLeft = resolveTimelinePlaybackFollowScrollLeft(
+		surface,
+		nextLocalTime / duration,
+	);
+	if (scrollLeft !== null) {
+		surface.lastFollowScrollLeft = scrollLeft;
+		surface.scrollContainer.scrollLeft = scrollLeft;
+	}
+
+	ctx.updateMainControls();
+	return true;
+}
+
 export function startInteractiveSeek(
 	ctx: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 	seekWrap: HTMLElement,
 ): void {
+	if (tryStartPianoRollPanDrag(ctx, event, seekWrap)) {
+		return;
+	}
+
 	ctx.seekingElement = seekWrap;
 	// The initial click/tap of a seek gesture is a discrete jump, worth
 	// animating; a drag's own per-pixel `onSeekMove` calls track the pointer
@@ -2080,6 +2208,7 @@ function shouldSuppressPianoRollPlaybackFollow(
 	return (
 		!!controller.waveformMinimapDragState ||
 		!!controller.pinchZoomState ||
+		!!controller.pianoRollPanDragState ||
 		(controller.state.currentlySeeking &&
 			controller.isPianoRollSeekSurface(controller.seekingElement))
 	);

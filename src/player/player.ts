@@ -114,6 +114,16 @@ interface WaveformMinimapDragState {
 	pointerOffsetRatio: number;
 }
 
+/**
+ * An in-progress drag-to-pan gesture on a keyboard-enabled piano roll's note
+ * grid: the sheet tracks the pointer directly, panning playback position along
+ * with it, rather than jumping to the clicked spot like every other seekwrap.
+ */
+interface PianoRollPanDragState {
+	seekWrap: HTMLElement;
+	lastPageX: number;
+}
+
 export class TrackSwitchControllerImpl
 	implements TrackSwitchController, InputController
 {
@@ -149,6 +159,7 @@ export class TrackSwitchControllerImpl
 	public pinchZoomState: PinchZoomState | null = null;
 	public pendingWaveformTouchSeek: PendingWaveformTouchSeek | null = null;
 	public waveformMinimapDragState: WaveformMinimapDragState | null = null;
+	public pianoRollPanDragState: PianoRollPanDragState | null = null;
 	public waveformRenderFrameId: number | null = null;
 	public readonly loopMinDistance = 0.1;
 	public readonly touchSeekMoveThresholdPx = 10;

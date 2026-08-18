@@ -245,7 +245,7 @@ function normalizePlaybackFollowMode(
 ): WaveformPlaybackFollowMode {
 	return normalizeEnum(
 		value,
-		["off", "center", "jump", "pinnedLeft"] as const,
+		["off", "center", "jump"] as const,
 		`${label}.playbackFollowMode`,
 		fallback,
 	);
@@ -715,10 +715,11 @@ function normalizePianoRollConfig(
 		height: toCanvasSize(pianoRoll.height, 180, "pianoRoll.height"),
 		maxZoom: normalizeWaveformMaxZoom(pianoRoll.maxZoom, "pianoRoll"),
 		defaultZoom: normalizeDefaultZoom(pianoRoll.defaultZoom, "pianoRoll"),
+		// A keyboard forces its own pinned-left follow instead — see
+		// PianoRollSeekSurfaceMetadata.playbackFollowMode.
 		playbackFollowMode: normalizePlaybackFollowMode(
 			pianoRoll.playbackFollowMode,
 			"pianoRoll",
-			pianoKeyboard ? "pinnedLeft" : "center",
 		),
 		timer: normalizeOptionalBoolean(pianoRoll.timer, "pianoRoll.timer"),
 		pianoKeyboard,

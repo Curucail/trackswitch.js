@@ -968,6 +968,17 @@ function finishSeekEndInteraction(
 	controller: TrackSwitchControllerImpl,
 	event: ControllerPointerEvent,
 ): boolean {
+	if (controller.pianoRollPanDragState) {
+		controller.pianoRollPanDragState = null;
+		if (controller.state.playing) {
+			controller.stopAudio();
+			controller.startAudio();
+		}
+		event.preventDefault();
+		event.stopPropagation();
+		return true;
+	}
+
 	if (controller.waveformMinimapDragState) {
 		controller.endWaveformMinimapDrag();
 		event.preventDefault();
@@ -2160,7 +2171,7 @@ export interface ControllerPointerEvent {
 	stopPropagation(): void;
 }
 
-function getPointerPageX(event: ControllerPointerEvent): number | null {
+export function getPointerPageX(event: ControllerPointerEvent): number | null {
 	if (typeof event.pageX === "number") {
 		return event.pageX;
 	}

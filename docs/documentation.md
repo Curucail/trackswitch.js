@@ -950,7 +950,7 @@ In an aligned player, a fixed-track waveform uses the local timeline of that tra
 | `waveformBarWidth?` | `number` | `1` | Specifies the thickness of waveform bars. |
 | `maxZoom?` | `number` | `5` | Specifies the smallest visible interval. A smaller value permits more zoom, and `0` lifts the zoom limit. |
 | `defaultZoom?` | `number` | none | Specifies the visible interval the view opens on. Unset shows the whole timeline. |
-| `playbackFollowMode?` | `"off" \| "center" \| "jump" \| "pinnedLeft"` | `"center"` | Controls how the view moves with playback. |
+| `playbackFollowMode?` | `"off" \| "center" \| "jump"` | `"center"` | Controls how the view moves with playback. |
 | `timeAxis?` | `"shared" \| "individual"` | `"shared"` (`"individual"` for `tracks: "audible"` under `alignment`) | Selects a shared longest-track duration or the duration of each fixed track. |
 | `timer?` | `boolean` | `false` (`true` under `alignment`) | Shows a local timer in the waveform. Each aligned waveform runs on its own timeline, so it carries a timer unless you set this to `false`. |
 | `alignedPlayhead?` | `boolean` | `false` | Shows geometry from the reference playhead to the local playhead. |
@@ -1004,9 +1004,9 @@ A `pianoRoll` view shows a MIDI file as a piano roll. MIDI files do not create a
 | `height?` | `number` | `180` | Specifies the piano-roll height in pixels. |
 | `maxZoom?` | `number` | `5` | Specifies the smallest visible interval, where `0` lifts the zoom limit. |
 | `defaultZoom?` | `number` | none (`10` seconds with `pianoKeyboard`) | Specifies the visible interval the view opens on. Unset shows the whole file. |
-| `playbackFollowMode?` | `"off" \| "center" \| "jump" \| "pinnedLeft"` | `"center"` (`"pinnedLeft"` with `pianoKeyboard`) | Controls how the piano roll moves with playback. |
+| `playbackFollowMode?` | `"off" \| "center" \| "jump"` | `"center"` | Controls how the piano roll moves with playback. Ignored while `pianoKeyboard` is on — see there. |
 | `timer?` | `boolean` | `false` | Shows a local timer in the piano roll. |
-| `pianoKeyboard?` | `boolean` | `false` | Draws a piano keyboard beside the pitch axis and pins the playhead to its edge. |
+| `pianoKeyboard?` | `boolean` | `false` | Draws a piano keyboard beside the pitch axis and pins the playhead to its edge. Forces a pinned-left follow that overrides `playbackFollowMode`, and changes the note grid's drag gesture to pan the sheet under the pointer instead of jumping to the click. |
 | `noteRange?` | `"automatic" \| [note, note]` | `"automatic"` | Fixes the pitch axis. Each entry is a note name or a MIDI note number. |
 | `grid?` | `"none" \| "time" \| "pitch" \| "both"` | `"none"` | Draws reference lines behind the notes: a time grid, a pitch grid, or both. |
 | `noteTooltip?` | `boolean` | `false` | Shows the pitch, channel, start, end, duration and velocity of the note event under the cursor. |
@@ -1114,9 +1114,10 @@ With `noteRange` at its default of `"automatic"`, the pitch axis spans every not
 
 A sounding note lights its key in the colour of its channel. Two channels holding one pitch split that key along its length, one box each.
 
-The keyboard changes two defaults, both of which can be set on their own:
+The keyboard changes how the roll follows playback and how its note grid drags, on top of a `defaultZoom` default that can be set on its own:
 
-- `playbackFollowMode` becomes `"pinnedLeft"`, which holds the playhead against the left edge of the surface — the near edge of the keys — rather than centering on it. The surface carries one viewport of empty space past the end of the medium, so the playhead stays pinned through the final note.
+- Playback follow switches to holding the playhead against the left edge of the surface — the near edge of the keys — rather than whatever `playbackFollowMode` says; that option is ignored while the keyboard is on. The surface carries one viewport of empty space past the end of the medium, so the playhead stays pinned through the final note. This pinned-left follow is not itself configurable — it is exclusive to a keyboard-enabled piano roll and switches on automatically with it.
+- Dragging the note grid pans the sheet directly under the pointer instead of jumping to the click, as if pulling the paper: the notes track the drag, and playback position pans along with them.
 - `defaultZoom` becomes 10 seconds, so the view opens on a phrase rather than on the whole file.
 
 #### Velocity

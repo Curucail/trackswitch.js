@@ -4,6 +4,15 @@ import type { WaveformPlaybackFollowMode } from "../types";
 
 export const MIN_TIMELINE_ZOOM = 1;
 
+/**
+ * `WaveformPlaybackFollowMode` plus `pinnedLeft`, which holds the playhead
+ * against the left edge of the viewport and scrolls the surface underneath it
+ * instead — what a piano roll with a keyboard column needs, so the notes fly
+ * into the keys. Not a publicly configurable value: the piano roll forces it
+ * on internally whenever `pianoKeyboard` is on, and no other view uses it.
+ */
+export type TimelineFollowMode = WaveformPlaybackFollowMode | "pinnedLeft";
+
 export interface TimelineSurfaceGeometry {
 	scrollContainer: HTMLElement;
 	surface: HTMLElement;
@@ -17,7 +26,7 @@ export interface TimelineSurfaceGeometry {
 	 * cache instead. Refreshed whenever the surface is reflowed or resized.
 	 */
 	cachedViewportWidth?: number;
-	playbackFollowMode?: WaveformPlaybackFollowMode;
+	playbackFollowMode?: TimelineFollowMode;
 	/**
 	 * Empty surface past the end of the medium. A `pinnedLeft` surface needs one
 	 * viewport of it so the playhead can hold against the left edge while the
@@ -265,7 +274,7 @@ export function reflowTimelineSurface<T extends TimelineSurfaceGeometry>(
 
 export function resolveTimelinePlaybackFollowScrollLeft(
 	surface: TimelineSurfaceGeometry & {
-		playbackFollowMode: WaveformPlaybackFollowMode;
+		playbackFollowMode: TimelineFollowMode;
 	},
 	playheadRatio: number,
 ): number | null {

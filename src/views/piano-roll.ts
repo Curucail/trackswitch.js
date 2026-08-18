@@ -13,7 +13,6 @@ import type {
 	TrackRuntime,
 	TrackSwitchPianoRollViewConfig,
 	TrackSwitchUiState,
-	WaveformPlaybackFollowMode,
 } from "../types";
 import type {
 	ConfiguredViewHost,
@@ -38,6 +37,7 @@ import {
 	resolveTimelinePlaybackFollowScrollLeft,
 	resolveVisibleTileWindow,
 	setTimelineZoomForSurface,
+	type TimelineFollowMode,
 	type TimelineScrollAnimation,
 	updateTimelineMinimapViewport,
 	updateTimelineZoomIndicators,
@@ -133,7 +133,12 @@ export interface PianoRollSeekSurfaceMetadata {
 	alignmentColumn: string | null;
 	/** The media entry this roll draws, which is also its timeline id. */
 	mediaId: string;
-	playbackFollowMode: WaveformPlaybackFollowMode;
+	/**
+	 * `pinnedLeft` whenever `pianoKeyboard` is on — forced, not the configured
+	 * `playbackFollowMode`, which a keyboard column overrides entirely; see
+	 * `TimelineFollowMode`.
+	 */
+	playbackFollowMode: TimelineFollowMode;
 	trailingPadPx: number;
 	originalHeight: number;
 	/** The configured `height`, immutable — the base a fullscreen grow restores to. */
@@ -1603,8 +1608,9 @@ export function wrapPianoRollCanvases(ctx: ViewRenderer): void {
 			source,
 			alignmentColumn: definition.alignmentTimeline?.trim() || null,
 			mediaId: config.mediaID,
-			playbackFollowMode:
-				config.playbackFollowMode ?? (pianoKeyboard ? "pinnedLeft" : "center"),
+			playbackFollowMode: pianoKeyboard
+				? "pinnedLeft"
+				: (config.playbackFollowMode ?? "center"),
 			trailingPadPx: 0,
 			originalHeight,
 			configuredHeight: originalHeight,

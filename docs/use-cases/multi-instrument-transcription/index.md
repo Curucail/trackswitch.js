@@ -128,9 +128,10 @@ The keyboard is a real keyboard on its far edge — seven white keys per octave,
 
 A sounding note lights its key in the colour of its channel. Two channels holding the same pitch split that key along its length, one box each, so a unison stays readable.
 
-`pianoKeyboard` turns on two things that are also available on their own:
+`pianoKeyboard` turns on a few things, one of which — `defaultZoom` — is also available on its own:
 
-- `playbackFollowMode: "pinnedLeft"` holds the playhead against the left edge of the surface instead of centering on it. The surface carries one viewport of empty space past the end of the file, so the playhead stays pinned through the final note.
+- Playback holds the playhead against the left edge of the surface instead of centering on it. The surface carries one viewport of empty space past the end of the file, so the playhead stays pinned through the final note. This follow behaviour is exclusive to a keyboard-enabled roll and switches on with it; `playbackFollowMode` is ignored while the keyboard is on.
+- Dragging the note grid pans the sheet directly under the pointer, as if pulling the paper, rather than jumping to the click — playback position pans along with it.
 - `defaultZoom` is the span the view opens on, here 8 seconds of a 22-second piece. It only sets the starting zoom; scrolling and zooming from there work as they always do. Both `defaultZoom` and `maxZoom` are read in the unit the medium declares through `media.timelineUnit` — MIDI ticks for a file that declares them — and in seconds when it declares none.
 
 `noteRange` fixes the pitch axis instead of deriving it from the file. Each entry is a note name or a MIDI note number, so `["F2", "F5"]` and `[41, 77]` are the same range. Left at its default of `"automatic"`, the axis spans every note of the file with two semitones of padding.

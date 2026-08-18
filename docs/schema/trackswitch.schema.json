@@ -1813,10 +1813,9 @@
 			"enum": [
 				"off",
 				"center",
-				"jump",
-				"pinnedLeft"
+				"jump"
 			],
-			"description": "How a zoomable surface moves with playback. `pinnedLeft` holds the playhead against the left edge of the viewport and scrolls the surface underneath it, which is what a piano roll with a keyboard column needs; the surface carries a trailing pad so the playhead stays pinned through the end of the medium."
+			"description": "How a zoomable surface moves with playback."
 		},
 		"WaveformTimeAxis": {
 			"type": "string",
@@ -1846,14 +1845,15 @@
 					"type": "number"
 				},
 				"playbackFollowMode": {
-					"$ref": "#/definitions/WaveformPlaybackFollowMode"
+					"$ref": "#/definitions/WaveformPlaybackFollowMode",
+					"description": "Ignored while `pianoKeyboard` is on — see there for what takes over."
 				},
 				"timer": {
 					"type": "boolean"
 				},
 				"pianoKeyboard": {
 					"type": "boolean",
-					"description": "Draws a piano keyboard beside the pitch axis and pins the playhead to its edge, so the notes fly into the keys and the key of every sounding note lights up in the colour of its channel. Defaults to `false`."
+					"description": "Draws a piano keyboard beside the pitch axis and pins the playhead to its edge, so the notes fly into the keys and the key of every sounding note lights up in the colour of its channel. Defaults to `false`.\n\nAlso switches the roll to a pinned-left follow mode that holds the playhead against the keys and scrolls the notes underneath it instead of whatever `playbackFollowMode` says, and changes the note grid's drag gesture: dragging pans the sheet directly under the pointer, panning playback position along with it, rather than jumping to the clicked spot."
 				},
 				"noteRange": {
 					"$ref": "#/definitions/MidiNoteRange",

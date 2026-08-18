@@ -450,6 +450,15 @@
 	--seekhead-color: var(--ts-color-surface-panel-dark);
 }
 
+/* With a keyboard, dragging pans the sheet instead of jumping to the click. */
+.trackswitch .piano-roll-wrap.piano-roll-has-keyboard .seekwrap {
+	cursor: grab;
+}
+
+.trackswitch .piano-roll-wrap.piano-roll-has-keyboard .seekwrap:active {
+	cursor: grabbing;
+}
+
 /*
  * The seekhead, loop-point markers and timeline markers are all dark by
  * default, and so invisible against a dark palette's surface. Flip them to
