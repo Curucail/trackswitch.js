@@ -362,8 +362,10 @@ function createPianoRollLegendNode(
 
 /**
  * Rebuilds the legend rows from `channelToLabelMap`, ascending by channel
- * number. Run once the channel palette is known — after the notes load, and
- * again on a reflow, since a theme change re-reads every channel colour.
+ * number, skipping any channel currently muted out via `hiddenChannels`. Run
+ * once the channel palette is known — after the notes load, again on a
+ * reflow, since a theme change re-reads every channel colour, and again
+ * whenever solo/mute state changes which channels are audible.
  */
 function updatePianoRollLegend(surface: PianoRollSeekSurfaceMetadata): void {
 	const legend = surface.legendNode;
@@ -372,6 +374,7 @@ function updatePianoRollLegend(surface: PianoRollSeekSurfaceMetadata): void {
 	}
 
 	const rows = [...surface.channelToLabelMap.entries()]
+		.filter(([channel]) => !surface.hiddenChannels.has(channel))
 		.sort((a, b) => a[0] - b[0])
 		.map(([channel, label]) =>
 			buildPianoRollLegendRow(surface, channel, label),
@@ -1856,6 +1859,7 @@ export function updatePianoRollChannelVisibility(
 				surface.hiddenChannels.add(channel);
 			}
 		});
+		updatePianoRollLegend(surface);
 	});
 
 	ctx.schedulePianoRollNoteRefresh();
