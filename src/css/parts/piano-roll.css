@@ -579,6 +579,57 @@
 	overflow: hidden;
 }
 
+/*
+ * Names every channel `channelToLabelMap` labels, paired with its colour. Shares
+ * the timer's corner, so it stacks below it when both are on rather than
+ * overlapping.
+ */
+.trackswitch .piano-roll-wrap .piano-roll-legend {
+	position: absolute;
+	z-index: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	max-width: 220px;
+	padding: 4px 6px;
+	border-radius: 4px;
+	font-family: monospace;
+	font-size: 11px;
+	line-height: 1.4;
+	color: var(--ts-color-text-inverse);
+	background: var(--ts-color-surface-panel-dark-50);
+	pointer-events: none;
+	user-select: none;
+}
+
+.trackswitch .piano-roll-wrap .piano-roll-legend-top-right {
+	top: 4px;
+	right: 8px;
+}
+
+.trackswitch .piano-roll-wrap .piano-roll-legend-below-timing {
+	top: 30px;
+}
+
+.trackswitch .piano-roll-wrap .piano-roll-legend-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.trackswitch .piano-roll-wrap .piano-roll-legend-swatch {
+	width: 10px;
+	height: 10px;
+	border-radius: 2px;
+	flex: 0 0 auto;
+}
+
+.trackswitch .piano-roll-wrap .piano-roll-legend-label {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
 .trackswitch .piano-roll-wrap .piano-roll-zoom .piano-roll-zoom-viewport {
 	position: absolute;
 	left: var(--ts-zoom-viewport-left);

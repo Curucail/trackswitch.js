@@ -550,7 +550,7 @@ Audio media properties:
 | `volume?` | `number` | `1` | Specifies the initial track volume. |
 | `pan?` | `number` | `0` | Specifies the initial stereo pan. |
 | `volumeControl?` | `boolean` | trackList's `trackVolumeControls` | Overrides the owning trackList's volume control visibility for this track only. |
-| `panControl?` | `"balance" \| "pan" \| false` | trackList's `trackPanControls` | Overrides the owning trackList's pan control visibility (and algorithm) for this track only. |
+| `panControl?` | `"balance" \| "pan" \| "none"` | trackList's `trackPanControls` | Overrides the owning trackList's pan control visibility (and algorithm) for this track only. |
 | `startOffsetMs?` | `number` | `0` | Trims or pads the start. A positive value trims audio. A negative value adds silence. |
 | `endOffsetMs?` | `number` | `0` | Trims or pads the end. A positive value trims audio. A negative value adds silence. |
 | `srcTimeScaled?` | `object` | none | Specifies optional audio pre-warped onto the reference timeline, played by the `sync` control. |
@@ -1260,7 +1260,7 @@ A `trackList` view shows audio tracks and their controls.
 | `comparisonGroup?` | `number` | none | Names the selection this list belongs to, which permits only one active track at a time. Lists sharing a number share one selection. Use it to compare performances or stems. |
 | `rowHeight?` | `number` | auto | Fixes the track-row height in pixels. Padding, control size, icon size, font size and slider size scale down with it, so values below the default row height produce compact rows. |
 | `trackVolumeControls?` | `boolean` | `false` | Shows a volume control for each track. |
-| `trackPanControls?` | `"balance" \| "pan" \| false` | `false` | Shows a left-right pan control for each track and selects its algorithm. |
+| `trackPanControls?` | `"balance" \| "pan" \| "none"` | `"none"` | Shows a left-right pan control for each track and selects its algorithm. |
 | `channelColorIcons?` | `boolean` | `true` | Repeats a track's piano-roll channel colour(s) on its `solo` icon. Set to `false` to keep every row's icon in the plain foreground colour regardless of channel pairing. |
 
 `tracks` contains audio media IDs. Every track in `media` must appear in some `trackList` view.

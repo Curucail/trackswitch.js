@@ -124,15 +124,7 @@
 					"description": "Overrides the owning trackList's `trackVolumeControls` for this track only."
 				},
 				"panControl": {
-					"anyOf": [
-						{
-							"$ref": "#/definitions/TrackPanAlgorithm"
-						},
-						{
-							"type": "boolean",
-							"const": false
-						}
-					],
+					"$ref": "#/definitions/TrackPanControl",
 					"description": "Overrides the owning trackList's `trackPanControls` for this track only."
 				},
 				"startOffsetMs": {
@@ -1394,6 +1386,18 @@
 			"additionalProperties": false,
 			"description": "Overrides for the player's public `--ts-*` theming custom properties, set on the element the block belongs to. Custom properties inherit, so a block on a view reaches everything that view renders — an accent colour set on one waveform recolours that waveform alone — while the top-level block on `TrackSwitchInit` reaches the whole player."
 		},
+		"TrackPanControl": {
+			"anyOf": [
+				{
+					"$ref": "#/definitions/TrackPanAlgorithm"
+				},
+				{
+					"type": "string",
+					"const": "none"
+				}
+			],
+			"description": "A pan control's algorithm, or `\"none\"` to hide the control entirely."
+		},
 		"TrackPanAlgorithm": {
 			"type": "string",
 			"enum": [
@@ -1867,7 +1871,18 @@
 				},
 				"noteTooltip": {
 					"type": "boolean",
-					"description": "Shows a readout of the note event under the cursor: its pitch, channel, start, end, duration and velocity. Defaults to `false`."
+					"description": "Shows a readout of the note event under the cursor: its pitch, channel, start, end, duration and velocity. Defaults to `false`. When `channelToLabelMap` names the hovered note's channel, its label is shown in place of the plain channel number."
+				},
+				"channelToLabelMap": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "string"
+					},
+					"description": "Labels MIDI channels, keyed by channel number (e.g. `{ \"1\": \"Piano\" }`). Shown on note hover when `noteTooltip` is on, and in the legend when `legend` is not `\"none\"`. A channel with no entry falls back to its plain number."
+				},
+				"legend": {
+					"$ref": "#/definitions/PianoRollLegendPosition",
+					"description": "Draws a legend naming every channel `channelToLabelMap` labels, each entry paired with the channel's colour, at the given position. Defaults to `\"none\"`."
 				},
 				"velocityBars": {
 					"type": "boolean",
@@ -1944,6 +1959,14 @@
 				}
 			],
 			"description": "The pitch axis of a piano roll: derived from the file, or fixed to a range."
+		},
+		"PianoRollLegendPosition": {
+			"type": "string",
+			"enum": [
+				"none",
+				"top-right"
+			],
+			"description": "Where a piano roll's legend is drawn, or `\"none\"` to leave it off. Only `\"top-right\"` is implemented today; the type is a union so more positions can be added later without a breaking change."
 		},
 		"TrackSwitchSheetMusicViewConfig": {
 			"type": "object",
@@ -2098,15 +2121,7 @@
 					"type": "boolean"
 				},
 				"trackPanControls": {
-					"anyOf": [
-						{
-							"$ref": "#/definitions/TrackPanAlgorithm"
-						},
-						{
-							"type": "boolean",
-							"const": false
-						}
-					]
+					"$ref": "#/definitions/TrackPanControl"
 				},
 				"channelColorIcons": {
 					"type": "boolean",

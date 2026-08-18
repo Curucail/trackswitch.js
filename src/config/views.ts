@@ -9,6 +9,7 @@ import type {
 	MidiNoteRange,
 	TrackId,
 	TrackPanAlgorithm,
+	TrackPanControl,
 	TrackSwitchImageViewConfig,
 	TrackSwitchNavigationBarControl,
 	TrackSwitchNavigationBarViewConfig,
@@ -85,6 +86,8 @@ const uiPianoRollAllowedKeys = keysOf<TrackSwitchPianoRollViewConfig>()([
 	"noteRange",
 	"grid",
 	"noteTooltip",
+	"channelToLabelMap",
+	"legend",
 	"velocityBars",
 	"velocityOpacity",
 	"channelToTrackIDMap",
@@ -601,6 +604,45 @@ function normalizeChannelToTrackIDMap(
 	return normalized;
 }
 
+/** Labels MIDI channels for the note tooltip and the legend. */
+function normalizeChannelToLabelMap(
+	value: Record<string, string> | undefined,
+): Record<string, string> | undefined {
+	if (value === undefined) {
+		return undefined;
+	}
+
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		throw new Error(
+			"Invalid pianoRoll configuration: channelToLabelMap must be an object keyed by channel number.",
+		);
+	}
+
+	const normalized: Record<string, string> = {};
+	for (const [key, label] of Object.entries(value)) {
+		const channel = Number(key);
+		if (
+			!Number.isInteger(channel) ||
+			channel < 0 ||
+			channel > MAX_MIDI_CHANNEL
+		) {
+			throw new Error(
+				`Invalid pianoRoll configuration: channel "${key}" must be an integer between 0 and ${MAX_MIDI_CHANNEL}.`,
+			);
+		}
+
+		if (typeof label !== "string" || label.trim().length === 0) {
+			throw new Error(
+				`Invalid pianoRoll configuration: channelToLabelMap["${key}"] must be a non-empty string.`,
+			);
+		}
+
+		normalized[String(channel)] = label;
+	}
+
+	return normalized;
+}
+
 /**
  * The pitch axis of a roll. Kept as the pair the author wrote when it is one,
  * but resolved to note numbers here so the renderer never parses a name — and
@@ -692,6 +734,13 @@ function normalizePianoRollConfig(
 				pianoRoll.noteTooltip,
 				"pianoRoll.noteTooltip",
 			) ?? false,
+		channelToLabelMap: normalizeChannelToLabelMap(pianoRoll.channelToLabelMap),
+		legend: normalizeEnum(
+			pianoRoll.legend,
+			["none", "top-right"] as const,
+			"pianoRoll.legend",
+			"none",
+		),
 		velocityBars:
 			normalizeOptionalBoolean(
 				pianoRoll.velocityBars,
@@ -857,15 +906,15 @@ function normalizeSeparatorConfig(
 }
 
 function normalizeTrackPanControls(
-	value: TrackPanAlgorithm | false | undefined,
-): TrackPanAlgorithm | false {
-	if (value === undefined || value === false) {
-		return false;
+	value: TrackPanControl | undefined,
+): TrackPanControl {
+	if (value === undefined || value === "none") {
+		return "none";
 	}
 
 	if (value !== "balance" && value !== "pan") {
 		throw new Error(
-			"Invalid trackList configuration: trackPanControls must be 'balance', 'pan', or false.",
+			"Invalid trackList configuration: trackPanControls must be 'balance', 'pan', or 'none'.",
 		);
 	}
 

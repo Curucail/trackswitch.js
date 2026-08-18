@@ -9,6 +9,7 @@ import {
 } from "../shared/midi-notes";
 import type {
 	MidiNoteRange,
+	PianoRollLegendPosition,
 	TrackRuntime,
 	TrackSwitchPianoRollViewConfig,
 	TrackSwitchUiState,
@@ -174,6 +175,10 @@ export interface PianoRollSeekSurfaceMetadata {
 	grid: PianoRollGridMode;
 	/** The readout of the note event under the cursor, when the view asks for one. */
 	tooltipNode: HTMLElement | null;
+	/** Channel number to label, from the view's `channelToLabelMap` config. */
+	channelToLabelMap: Map<number, string>;
+	/** The legend naming every labelled channel, when the view asks for one. */
+	legendNode: HTMLElement | null;
 	/**
 	 * The unit this view's medium reads out in, and the conversion to it. Cached
 	 * per render pass because the drawing has no `ViewRenderer` to ask.
@@ -330,6 +335,67 @@ function createPianoRollTooltipNode(overlay: HTMLElement): HTMLElement {
 }
 
 /**
+ * Only `"top-right"` is implemented; the caller has already excluded `"none"`.
+ * The position feeds a CSS class name so a new position needs no branching
+ * here — just a matching `.piano-roll-legend-<position>` rule.
+ */
+function createPianoRollLegendNode(
+	overlay: HTMLElement,
+	timingNode: HTMLElement | null,
+	position: Exclude<PianoRollLegendPosition, "none">,
+): HTMLElement {
+	const legend = document.createElement("div");
+	legend.className = `piano-roll-legend piano-roll-legend-${position}`;
+	// The timer sits in the same corner; stack the legend below it rather than
+	// overlapping.
+	if (timingNode) {
+		legend.classList.add("piano-roll-legend-below-timing");
+	}
+	overlay.appendChild(legend);
+	return legend;
+}
+
+/**
+ * Rebuilds the legend rows from `channelToLabelMap`, ascending by channel
+ * number. Run once the channel palette is known — after the notes load, and
+ * again on a reflow, since a theme change re-reads every channel colour.
+ */
+function updatePianoRollLegend(surface: PianoRollSeekSurfaceMetadata): void {
+	const legend = surface.legendNode;
+	if (!legend) {
+		return;
+	}
+
+	const rows = [...surface.channelToLabelMap.entries()]
+		.sort((a, b) => a[0] - b[0])
+		.map(([channel, label]) =>
+			buildPianoRollLegendRow(surface, channel, label),
+		);
+	legend.replaceChildren(...rows);
+	legend.style.display = rows.length > 0 ? "flex" : "none";
+}
+
+function buildPianoRollLegendRow(
+	surface: PianoRollSeekSurfaceMetadata,
+	channel: number,
+	label: string,
+): HTMLElement {
+	const row = document.createElement("div");
+	row.className = "piano-roll-legend-row";
+	const swatch = document.createElement("span");
+	swatch.className = "piano-roll-legend-swatch";
+	swatch.style.background = resolvePianoRollChannelColors(
+		surface,
+		channel,
+	).velocity;
+	const text = document.createElement("span");
+	text.className = "piano-roll-legend-label";
+	text.textContent = label;
+	row.append(swatch, text);
+	return row;
+}
+
+/**
  * The readout of the note event under the cursor. The note canvas takes no
  * pointer events and the seek surface does, so the pointer is followed on the
  * scroller: it is the one box whose left edge is shared with the overlay the
@@ -459,7 +525,8 @@ function buildPianoRollTooltipContent(
 	pitch.textContent = formatMidiNoteName(note.midi);
 	const channel = document.createElement("span");
 	channel.className = "piano-roll-note-tooltip-channel";
-	channel.textContent = `ch ${note.channel}`;
+	channel.textContent =
+		surface.channelToLabelMap.get(note.channel) ?? `ch ${note.channel}`;
 	channel.style.color = resolvePianoRollChannelColors(
 		surface,
 		note.channel,
@@ -595,6 +662,7 @@ function applyMidiNotes(
 	surface.pianoRollDurationSeconds = durationSeconds;
 	surface.maxNoteDuration = maxNoteDuration;
 	assignChannelPalette(surface, notes);
+	updatePianoRollLegend(surface);
 	surface.lastRenderKey = null;
 	surface.lastMinimapKey = null;
 }
@@ -1378,6 +1446,22 @@ function resolvePianoRollZoomUnits(
 			: ctx.resolveLocalSpanSeconds(surface.mediaId, surface.defaultZoomValue);
 }
 
+/** Reads the `channelToLabelMap` block of a view into a channel → label lookup. */
+function resolveChannelToLabelMap(
+	channelToLabelMap: Record<string, string> | undefined,
+): Map<number, string> {
+	const labels = new Map<number, string>();
+	if (!channelToLabelMap) {
+		return labels;
+	}
+
+	for (const [key, label] of Object.entries(channelToLabelMap)) {
+		labels.set(Number(key), label);
+	}
+
+	return labels;
+}
+
 /** Reads the `channelToTrackIDMap` block of a view into a channel → tracks lookup. */
 function resolveChannelTrackIds(
 	channelToTrackIDMap: Record<string, string | string[]> | undefined,
@@ -1555,6 +1639,11 @@ export function wrapPianoRollCanvases(ctx: ViewRenderer): void {
 				config.noteTooltip === true
 					? createPianoRollTooltipNode(overlay)
 					: null,
+			channelToLabelMap: resolveChannelToLabelMap(config.channelToLabelMap),
+			legendNode:
+				config.legend && config.legend !== "none"
+					? createPianoRollLegendNode(overlay, timingNode, config.legend)
+					: null,
 			timelineReadout: null,
 			minMidi: 0,
 			maxMidi: 0,
@@ -1609,6 +1698,7 @@ export function reflowPianoRollDisplays(ctx: ViewRenderer): void {
 		surface.lastRenderKey = null;
 		surface.channelColors.clear();
 		hidePianoRollTooltip(surface);
+		updatePianoRollLegend(surface);
 		reflowTimelineSurface(surface, setPianoRollSurfaceWidth);
 	});
 }

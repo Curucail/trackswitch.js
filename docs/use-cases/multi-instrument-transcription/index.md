@@ -135,6 +135,29 @@ A sounding note lights its key in the colour of its channel. Two channels holdin
 
 `noteRange` fixes the pitch axis instead of deriving it from the file. Each entry is a note name or a MIDI note number, so `["F2", "F5"]` and `[41, 77]` are the same range. Left at its default of `"automatic"`, the axis spans every note of the file with two semitones of padding.
 
+## Labeling channels
+
+`channelToLabelMap` names each channel — by instrument, part, or anything else — keyed the same way as `channelToTrackIDMap`:
+
+```json
+{
+  "type": "pianoRoll",
+  "mediaID": "notes",
+  "noteTooltip": true,
+  "legend": "top-right",
+  "channelToLabelMap": {
+    "0": "Soprano",
+    "1": "Alto",
+    "2": "Tenor",
+    "3": "Bass"
+  }
+}
+```
+
+A labelled channel shows its name in place of the plain channel number in the [`noteTooltip`](#with-a-piano-keyboard) readout. `legend` draws a small panel — colour swatch and label per channel — at the given position; `"top-right"` is the only one implemented so far, and `"none"` (the default) leaves it off. The tooltip and the legend read from the same map, and either can be turned on without the other. A channel `channelToLabelMap` leaves out falls back to its plain channel number in the tooltip, and is left out of the legend entirely.
+
+The piano roll in the keyboard example above has both switched on — hover a note to see its instrument name, or read the legend in the corner.
+
 ## Velocity and overlapping notes
 
 Note events are drawn solid by default. Velocity is opt-in, through two switches that work independently:

@@ -781,8 +781,9 @@ export function buildTrackRow(
 		runtime.definition.volumeControl ?? trackListOptions.trackVolumeControls;
 	const panControl =
 		runtime.definition.panControl ?? trackListOptions.trackPanControls;
+	const showPanControl = panControl !== undefined && panControl !== "none";
 
-	if (showVolumeControl || panControl) {
+	if (showVolumeControl || showPanControl) {
 		const mixControls = document.createElement("div");
 		mixControls.className = "track-mix-controls";
 
@@ -808,7 +809,7 @@ export function buildTrackRow(
 			mixControls.appendChild(volumeControl);
 		}
 
-		if (panControl) {
+		if (showPanControl) {
 			const panControlEl = document.createElement("div");
 			panControlEl.className = "track-pan-control";
 

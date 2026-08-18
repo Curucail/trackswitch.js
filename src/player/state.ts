@@ -252,7 +252,7 @@ export function buildTrackGroups(
 			exclusiveSolo: view.comparisonGroup !== undefined,
 			rowHeight: view.rowHeight,
 			trackVolumeControls: view.trackVolumeControls ?? false,
-			trackPanControls: view.trackPanControls ?? false,
+			trackPanControls: view.trackPanControls ?? "none",
 			channelColorIcons: view.channelColorIcons ?? true,
 		});
 	});
@@ -371,7 +371,7 @@ export function applyTrackPanAlgorithms(
 	const tracksWithPanControls = new Set<string>();
 
 	trackGroups.forEach((group) => {
-		if (group.trackPanControls === false) {
+		if (group.trackPanControls === "none") {
 			return;
 		}
 

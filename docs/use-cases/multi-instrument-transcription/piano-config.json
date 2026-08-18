@@ -29,12 +29,7 @@
 	"views": [
 		{
 			"type": "navigationBar",
-			"controls": [
-				"playback",
-				"globalVolume",
-				"timer",
-				"fullscreen-control"
-			]
+			"controls": ["playback", "globalVolume", "timer", "fullscreen-control"]
 		},
 		{
 			"type": "pianoRoll",
@@ -51,7 +46,14 @@
 				"1": "alto",
 				"2": "tenor",
 				"3": "bass"
-			}
+			},
+			"channelToLabelMap": {
+				"0": "Soprano",
+				"1": "Alto",
+				"2": "Tenor",
+				"3": "Bass"
+			},
+			"legend": "top-right"
 		},
 		{
 			"type": "trackList",

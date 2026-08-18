@@ -3,6 +3,8 @@ import type { TimelineId, TimelineUnit } from "./model/timeline";
 
 export type LoopMarker = "A" | "B";
 export type TrackPanAlgorithm = "balance" | "pan";
+/** A pan control's algorithm, or `"none"` to hide the control entirely. */
+export type TrackPanControl = TrackPanAlgorithm | "none";
 /**
  * What a projection does for positions outside a timeline's coverage — the span
  * its alignment anchors actually annotate.
@@ -99,7 +101,7 @@ export interface AudioMediaEntryConfig {
 	/** Overrides the owning trackList's `trackVolumeControls` for this track only. */
 	volumeControl?: boolean;
 	/** Overrides the owning trackList's `trackPanControls` for this track only. */
-	panControl?: TrackPanAlgorithm | false;
+	panControl?: TrackPanControl;
 	startOffsetMs?: number;
 	endOffsetMs?: number;
 	srcTimeScaled?: SynchronizedAudioSourceConfig;
@@ -236,6 +238,13 @@ type MidiNoteRef = string | number;
 /** The pitch axis of a piano roll: derived from the file, or fixed to a range. */
 export type MidiNoteRange = "automatic" | [MidiNoteRef, MidiNoteRef];
 
+/**
+ * Where a piano roll's legend is drawn, or `"none"` to leave it off. Only
+ * `"top-right"` is implemented today; the type is a union so more positions
+ * can be added later without a breaking change.
+ */
+export type PianoRollLegendPosition = "none" | "top-right";
+
 export interface TrackSwitchPianoRollViewConfig {
 	type: "pianoRoll";
 	mediaID: MediaId;
@@ -265,9 +274,24 @@ export interface TrackSwitchPianoRollViewConfig {
 	grid?: "none" | "time" | "pitch" | "both";
 	/**
 	 * Shows a readout of the note event under the cursor: its pitch, channel,
-	 * start, end, duration and velocity. Defaults to `false`.
+	 * start, end, duration and velocity. Defaults to `false`. When
+	 * `channelToLabelMap` names the hovered note's channel, its label is shown
+	 * in place of the plain channel number.
 	 */
 	noteTooltip?: boolean;
+	/**
+	 * Labels MIDI channels, keyed by channel number (e.g. `{ "1": "Piano" }`).
+	 * Shown on note hover when `noteTooltip` is on, and in the legend when
+	 * `legend` is not `"none"`. A channel with no entry falls back to its plain
+	 * number.
+	 */
+	channelToLabelMap?: Record<string, string>;
+	/**
+	 * Draws a legend naming every channel `channelToLabelMap` labels, each entry
+	 * paired with the channel's colour, at the given position. Defaults to
+	 * `"none"`.
+	 */
+	legend?: PianoRollLegendPosition;
 	/** Draws a bar inside each note event showing its velocity. Defaults to `false`. */
 	velocityBars?: boolean;
 	/** Fades note events by their velocity rather than drawing them solid. Defaults to `false`. */
@@ -359,7 +383,7 @@ export interface TrackSwitchTrackListViewConfig {
 	comparisonGroup?: number;
 	rowHeight?: number;
 	trackVolumeControls?: boolean;
-	trackPanControls?: TrackPanAlgorithm | false;
+	trackPanControls?: TrackPanControl;
 	/**
 	 * Repeats a track's piano-roll channel colour(s) on its `solo` icon.
 	 * Defaults to `true`. Set to `false` to keep every row's icon in the plain
@@ -445,7 +469,7 @@ export interface TrackListGroup {
 	exclusiveSolo: boolean;
 	rowHeight?: number;
 	trackVolumeControls: boolean;
-	trackPanControls: TrackPanAlgorithm | false;
+	trackPanControls: TrackPanControl;
 	channelColorIcons: boolean;
 }
 
@@ -459,7 +483,7 @@ export interface TrackDefinition {
 	volume?: number;
 	pan?: number;
 	volumeControl?: boolean;
-	panControl?: TrackPanAlgorithm | false;
+	panControl?: TrackPanControl;
 	sources: TrackSourceDefinition[];
 	syncedSources?: TrackSourceDefinition[];
 }

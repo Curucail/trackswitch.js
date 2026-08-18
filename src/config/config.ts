@@ -15,7 +15,7 @@ import type {
 	SynchronizedAudioSourceConfig,
 	TrackDefinition,
 	TrackId,
-	TrackPanAlgorithm,
+	TrackPanControl,
 	TrackSourceDefinition,
 	TrackSwitchCssOverrides,
 	TrackSwitchFeatures,
@@ -680,15 +680,15 @@ function normalizeSynchronizedSource(
 
 function normalizeTrackPanControl(
 	mediaId: string,
-	value: TrackPanAlgorithm | false | undefined,
-): TrackPanAlgorithm | false | undefined {
-	if (value === undefined || value === false) {
+	value: TrackPanControl | undefined,
+): TrackPanControl | undefined {
+	if (value === undefined || value === "none") {
 		return value;
 	}
 
 	if (value !== "balance" && value !== "pan") {
 		throw new Error(
-			`Invalid media.${mediaId}.panControl configuration: must be 'balance', 'pan', or false.`,
+			`Invalid media.${mediaId}.panControl configuration: must be 'balance', 'pan', or 'none'.`,
 		);
 	}
 
