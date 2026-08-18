@@ -69,8 +69,6 @@
 
 	.trackswitch .main-control .control li.loop-group > .loop-controls {
 		gap: 6px;
-		position: relative;
-		top: 2px;
 	}
 
 	.trackswitch .main-control .marker-navigation-controls {
@@ -176,7 +174,7 @@
 	}
 
 	.trackswitch .main-control .timing {
-		font-size: 16px;
+		font-size: 18px;
 	}
 }
 
@@ -211,16 +209,8 @@
 		margin-right: 10px;
 	}
 
-	.trackswitch
-		li.track:not([data-row-height])
-		.mix-slider::-webkit-slider-thumb {
-		width: 16px;
-		height: 16px;
-	}
-
-	.trackswitch li.track:not([data-row-height]) .mix-slider::-moz-range-thumb {
-		width: 16px;
-		height: 16px;
+	.trackswitch li.track:not([data-row-height]) .mix-slider {
+		--ts-slider-thumb-size: 16px;
 	}
 }
 
