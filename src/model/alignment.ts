@@ -703,6 +703,29 @@ function buildProjection(
 }
 
 /**
+ * Widens a medium-backed extent to whatever the alignment actually anchors
+ * beyond it — a score's last printed measure is 19, say, but an anchor lands
+ * at 19.917, partway through it. The extent stays fractional; only a duration
+ * *readout* rounds up to name a whole measure (see `formatTimelineValuePair`).
+ * Kept fractional here because seeking and coverage checks both key off this
+ * value, and rounding it up would let a seek land past what the alignment
+ * actually covers.
+ */
+function widenExtentToAnchors(
+	profileExtent: TimelineExtent,
+	anchoredExtent: TimelineExtent | null,
+): TimelineExtent {
+	if (!anchoredExtent) {
+		return profileExtent;
+	}
+
+	return {
+		start: Math.min(profileExtent.start, anchoredExtent.start),
+		end: Math.max(profileExtent.end, anchoredExtent.end),
+	};
+}
+
+/**
  * The playable reference extent. A medium-backed reference uses that medium's
  * native extent so trimming and padding affect the player duration. An abstract
  * reference falls back to the span its anchors cover.
@@ -769,9 +792,13 @@ export async function buildAlignment(
 		duplicateAnchors,
 	);
 
-	const referenceExtent =
-		profiles.get(referenceTimeline)?.extent ??
-		anchorExtent(anchors, referenceTimeline);
+	const referenceProfile = profiles.get(referenceTimeline);
+	const referenceExtent = referenceProfile
+		? widenExtentToAnchors(
+				referenceProfile.extent,
+				anchorExtent(anchors, referenceTimeline),
+			)
+		: anchorExtent(anchors, referenceTimeline);
 	if (!referenceExtent) {
 		throw new Error(
 			`The alignment has no position on the reference timeline "${referenceTimeline}".`,

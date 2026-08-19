@@ -626,6 +626,13 @@ const REFERENCE_POSITION_EPSILON = 1e-6;
  * stretch to a single point; the anchor carries the full-resolution position,
  * and the projection graph has a direct edge between any two aligned timelines,
  * so a surface can be placed inside the held stretch instead of at its edge.
+ *
+ * A click past the last thing a track's alignment actually annotates still
+ * reports *some* raw local time — the audio keeps playing under `hold`, and
+ * `getSeekMetrics` doesn't know coverage from geometry. `anchor.value` on
+ * `anchor.timeline` itself carries that raw time straight through with no
+ * projection to clamp it, so it's clamped here instead: under `hold`/`error`
+ * a position outside coverage is exactly what a seek should never produce.
  */
 export function projectAnchor(
 	ctx: TrackSwitchControllerImpl,
@@ -637,13 +644,29 @@ export function projectAnchor(
 		return null;
 	}
 	if (anchor.timeline === timeline) {
-		return anchor.value;
+		return clampToTimelineCoverage(alignment, timeline, anchor.value);
 	}
 	if (!alignment.projection.canProject(anchor.timeline, timeline)) {
 		return null;
 	}
 
 	return alignment.projection.project(anchor.value, anchor.timeline, timeline);
+}
+
+function clampToTimelineCoverage(
+	alignment: Alignment,
+	timeline: TimelineId,
+	value: number,
+): number {
+	const coverage = alignment.projection.coverage(
+		timeline,
+		alignment.referenceTimeline,
+	);
+	if (!coverage) {
+		return value;
+	}
+
+	return clamp(value, coverage.start, coverage.end);
 }
 
 /**
@@ -672,16 +695,20 @@ export function playbackPositionOn(
 
 	// Resolved towards `referencePosition`, so on a timeline walked twice by a
 	// repeat the question stays "could the anchor be this position" rather than
-	// "does the default pass happen to land there".
-	const anchorReference = clamp(
+	// "does the default pass happen to land there". Not clamped to
+	// `longestDuration`: under `outsideCoverage: "extrapolate"` playback keeps
+	// advancing past the reference's playable extent, and `referencePosition`
+	// (typically the live, equally unclamped `currentPlaybackReferencePosition`)
+	// tracks right along with it — clamping only this side would make that
+	// ordinary extrapolation look like a stale anchor.
+	const anchorReference = Math.max(
+		0,
 		projection.project(
 			anchor.value,
 			anchor.timeline,
 			referenceTimeline,
 			referencePosition,
 		),
-		0,
-		ctx.longestDuration,
 	);
 	if (
 		Math.abs(anchorReference - referencePosition) > REFERENCE_POSITION_EPSILON

@@ -861,18 +861,40 @@ export function monitorPosition(ctx: TrackSwitchControllerImpl): void {
 
 /**
  * True once there is nothing left to play. In alignment mode that is decided by
- * the lead track's own duration, so a recording keeps sounding through material
- * the alignment does not cover; otherwise the shared duration decides.
+ * the lead track: under `extrapolate` its own duration decides, so a recording
+ * keeps sounding through material the alignment does not cover; under `hold`
+ * playback stops where that coverage ends, mirroring the clamp already applied
+ * when playback starts outside coverage. (`error` never reaches this: projecting
+ * the live position throws as soon as it leaves coverage.) Otherwise the shared
+ * duration decides.
  */
 export function hasReachedPlaybackEnd(ctx: TrackSwitchControllerImpl): boolean {
-	if (ctx.isAlignmentMode() && ctx.alignmentPlaybackTrackIndex !== null) {
-		const runtime = ctx.runtimes[ctx.alignmentPlaybackTrackIndex];
+	if (
+		ctx.isAlignmentMode() &&
+		ctx.alignment &&
+		ctx.alignmentPlaybackTrackIndex !== null
+	) {
+		const trackIndex = ctx.alignmentPlaybackTrackIndex;
+		const runtime = ctx.runtimes[trackIndex];
 		const trackDuration = runtime?.timing?.effectiveDuration;
 		if (
+			runtime &&
 			trackDuration !== undefined &&
 			Number.isFinite(trackDuration) &&
 			trackDuration > 0
 		) {
+			if (
+				ctx.alignment.outsideCoverage === "hold" &&
+				!ctx.shouldBypassAlignmentMapping(trackIndex)
+			) {
+				const coverageEnd = ctx.alignment.projection.coverage(
+					timelineId(runtime.definition.id),
+					ctx.alignment.referenceTimeline,
+				)?.end;
+				if (coverageEnd !== undefined && Number.isFinite(coverageEnd)) {
+					return ctx.currentPlaybackTrackPosition() >= coverageEnd;
+				}
+			}
 			return ctx.currentPlaybackTrackPosition() >= trackDuration;
 		}
 	}
@@ -2105,9 +2127,14 @@ export function getWaveformTimelineContext(
 				return 0;
 			}
 
-			const clampedReferenceTime = clamp(referenceTime, 0, ctx.longestDuration);
+			// Not clamped to `ctx.longestDuration`: that bounds the reference
+			// (score/measure) transport, not a track's own local time axis. Under
+			// `outsideCoverage: "extrapolate"` a track keeps sounding past the
+			// reference's playable extent, and its waveform's own seekhead should
+			// keep advancing with it — bounded only by the track's real duration
+			// below.
 			return clamp(
-				ctx.referenceToTrackTime(trackIndex, clampedReferenceTime),
+				ctx.referenceToTrackTime(trackIndex, Math.max(0, referenceTime)),
 				0,
 				trackDuration,
 			);

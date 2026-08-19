@@ -101,7 +101,11 @@ export function formatTimelineValuePair(
 	if (unit === "measures") {
 		return {
 			position: `measure ${formatWholeOrTwoDecimals(position)}`,
-			duration: formatWholeOrTwoDecimals(duration),
+			// A duration names a count of whole measures. The underlying extent
+			// stays fractional (seeking and coverage checks key off it), so a
+			// piece whose last anchor falls at 19.917 still reads as spanning
+			// measure 19 rather than stopping short of it.
+			duration: String(Math.ceil(duration)),
 		};
 	}
 	if (unit === "ticks") {

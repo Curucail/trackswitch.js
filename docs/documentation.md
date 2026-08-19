@@ -725,8 +725,8 @@ See [Timeline Units]({{ '/use-cases/timeline-units/' | relative_url }}) for a wo
 
 Alignment data covers only the span of its CSV rows. `outsideCoverage` controls positions outside this span:
 
-- `hold` — Holds positions at the nearest covered point. The player dims surfaces without data (`ts-out-of-coverage`). Media playback continues.
-- `extrapolate` — Continues the slope of the outermost segment. Each timeline keeps a value, but values outside coverage are extrapolations.
+- `hold` — Holds positions at the nearest covered point. The player dims surfaces without data (`ts-out-of-coverage`), and stops playback once the lead track reaches the edge of its alignment coverage, mirroring the clamp applied when a seek starts outside coverage.
+- `extrapolate` — Continues the slope of the outermost segment. Each timeline keeps a value, but values outside coverage are extrapolations. The only mode where playback continues into a track's uncovered lead-in or tail.
 - `error` — Throws an error for projection outside coverage. Use this value during CSV development.
 
 The **reference timeline** controls the player position, duration, loops, and
@@ -743,7 +743,7 @@ onto the cropped audio.
 
 The main timer therefore always shows the reference timeline. With `hold`, a
 surface outside alignment coverage stays at its nearest covered position and is
-dimmed.
+dimmed, and playback stops rather than continuing into that uncovered stretch.
 
 ### `markers`
 
