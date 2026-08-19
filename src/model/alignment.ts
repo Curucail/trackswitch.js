@@ -725,6 +725,84 @@ function widenExtentToAnchors(
 	};
 }
 
+const NATIVE_BOUNDARY_SEQUENCE_ID = markerSequenceId(
+	"$alignment-native-bounds",
+);
+
+/**
+ * Two synthetic anchors, as if the CSV carried one extra row at the very
+ * start and one at the very end, each column filled in with that medium's own
+ * native boundary — every track keeps sounding to its own real end under
+ * `extrapolate`, so the reference timeline should reach a real, interpolated
+ * point there too, not the unbounded slope of whichever track's tempo happens
+ * to run fastest right at the edge of the last real row (one synthetic take's
+ * extrapolated slope alone pushed a shared bound to measure 24.5 against
+ * every other take's ~20). A timeline with no probed profile — no media, or
+ * media whose extent couldn't be read — sits out both rows, same as an
+ * unpopulated column in a real CSV row.
+ *
+ * A "measures" native unit treats its printed numbering as labeling material
+ * rather than bounding it, so neither end of `profile.extent` is the actual
+ * boundary: the first printed measure names where its material *begins* (not
+ * where the piece does), so the start row uses measure 0 instead, and
+ * likewise the last printed measure names where its material begins rather
+ * than where the piece finishes sounding, so the end row extends it by one.
+ *
+ * Returned as a `{start, end}` pair rather than a plain list because where
+ * they go relative to the real rows matters: `splitIntoRuns` starts a new run
+ * wherever a source value dips below the one before it, so the caller has to
+ * put `start` before every real anchor and `end` after all of them. Appending
+ * both after (the first cut of this) placed the start row's low x right after
+ * the real rows' high one — a dip that split the real data into its own
+ * short-lived run, which then fell out of coverage the moment a track passed
+ * its last real anchor, leaving only the start-to-end straight line to
+ * interpolate and producing a visible jump backward right at that boundary.
+ */
+function nativeBoundaryAnchors(
+	timelines: readonly TimelineId[],
+	profiles: ReadonlyMap<TimelineId, MediaProfile>,
+): { start: AlignmentAnchor; end: AlignmentAnchor } {
+	const startMarkers = new Map<TimelineId, Marker>();
+	const endMarkers = new Map<TimelineId, Marker>();
+
+	timelines.forEach((timeline) => {
+		const profile = profiles.get(timeline);
+		if (!profile) {
+			return;
+		}
+
+		const start = profile.nativeUnit === "measures" ? 0 : profile.extent.start;
+		const end =
+			profile.nativeUnit === "measures"
+				? profile.extent.end + 1
+				: profile.extent.end;
+
+		startMarkers.set(
+			timeline,
+			createMarker(
+				`native-start:${timeline}`,
+				NATIVE_BOUNDARY_SEQUENCE_ID,
+				timeline,
+				start,
+			),
+		);
+		endMarkers.set(
+			timeline,
+			createMarker(
+				`native-end:${timeline}`,
+				NATIVE_BOUNDARY_SEQUENCE_ID,
+				timeline,
+				end,
+			),
+		);
+	});
+
+	return {
+		start: { id: "$native-start", markers: startMarkers },
+		end: { id: "$native-end", markers: endMarkers },
+	};
+}
+
 /**
  * The playable reference extent. A medium-backed reference uses that medium's
  * native extent so trimming and padding affect the player duration. An abstract
@@ -785,8 +863,21 @@ export async function buildAlignment(
 		duplicateAnchors,
 	);
 
+	// Under `extrapolate`, project as if the CSV carried one extra row at each
+	// medium's own native start and one at its native end — see
+	// `nativeBoundaryAnchors`. Kept out of the anchors an alignment actually
+	// exposes (warping matrices, anchor markers) since nobody authored them.
+	// Order matters here — see that function's doc comment.
+	const anchorsForProjection = (() => {
+		if (outsideCoverage !== "extrapolate") {
+			return anchors;
+		}
+		const { start, end } = nativeBoundaryAnchors(orderedTimelines, profiles);
+		return [start, ...anchors, end];
+	})();
+
 	const projection = buildProjection(
-		anchors,
+		anchorsForProjection,
 		referenceTimeline,
 		outsideCoverage,
 		duplicateAnchors,
@@ -796,9 +887,9 @@ export async function buildAlignment(
 	const referenceExtent = referenceProfile
 		? widenExtentToAnchors(
 				referenceProfile.extent,
-				anchorExtent(anchors, referenceTimeline),
+				anchorExtent(anchorsForProjection, referenceTimeline),
 			)
-		: anchorExtent(anchors, referenceTimeline);
+		: anchorExtent(anchorsForProjection, referenceTimeline);
 	if (!referenceExtent) {
 		throw new Error(
 			`The alignment has no position on the reference timeline "${referenceTimeline}".`,
