@@ -18,6 +18,18 @@ const docsAssets = [
 		source: "dist/interactive/trackswitch-interactive-worker.js",
 		docs: "docs/js/trackswitch-interactive-worker.js",
 	},
+	{
+		source: "dist/docs/trackswitch-builder.js",
+		docs: "docs/js/trackswitch-builder.js",
+	},
+	{
+		source: "LICENSE",
+		docs: "docs/assets/builder/LICENSE",
+	},
+	{
+		source: "THIRD_PARTY_NOTICES.md",
+		docs: "docs/assets/builder/THIRD_PARTY_NOTICES.md",
+	},
 ];
 
 /**

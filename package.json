@@ -89,6 +89,7 @@
 		"build:interactive": "npm run build:interactive-browser && npm run build:interactive-worker",
 		"build:interactive-browser": "vite build --mode interactive-browser",
 		"build:interactive-worker": "vite build --mode interactive-worker",
+		"build:builder": "vite build --mode builder",
 		"build:all": "npm run build && npm run build:interactive",
 		"build:esm": "vite build --mode esm",
 		"tokens:build": "node scripts/generate-css-tokens.mjs",
@@ -97,7 +98,7 @@
 		"generate": "npm run tokens:build && npm run schema:build",
 		"generate:check": "npm run generate && git diff --exit-code -- src/generated docs/schema docs/_includes/css-tokens.md",
 		"docs:assets": "node scripts/sync-docs-assets.mjs",
-		"docs:build": "npm run build:all && npm run docs:assets",
+		"docs:build": "npm run build:all && npm run build:builder && npm run docs:assets",
 		"build:types": "tsc --project tsconfig.build.json",
 		"prebuild": "npm run clean",
 		"prepack": "npm run build",
@@ -109,6 +110,7 @@
 	"dependencies": {
 		"@tonejs/midi": "^2.0.28",
 		"d3": "^7.9.0",
+		"fflate": "0.8.3",
 		"opensheetmusicdisplay": "^2.1.2",
 		"papaparse": "^5.5.4"
 	},

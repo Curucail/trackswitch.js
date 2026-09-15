@@ -77,6 +77,22 @@ const buildTargets = {
 			},
 		},
 	},
+	builder: {
+		build: {
+			...commonBuild,
+			outDir: "dist/docs",
+			assetsInlineLimit: Number.MAX_SAFE_INTEGER,
+			lib: {
+				entry: resolve(rootDir, "src/builder/index.ts"),
+				name: "TrackSwitchBuilder",
+				formats: ["iife"],
+				fileName: () => "trackswitch-builder.js",
+			},
+			rollupOptions: {
+				output: iifeOutput,
+			},
+		},
+	},
 	esm: {
 		build: {
 			...commonBuild,

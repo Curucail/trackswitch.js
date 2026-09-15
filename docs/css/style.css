@@ -1457,6 +1457,721 @@ kbd {
 	}
 }
 
+/* Player Builder */
+
+.builder-page .site-main {
+	width: min(1540px, calc(100% - 2rem));
+	padding-top: 1rem;
+}
+
+.ts-builder-mobile-message {
+	display: none;
+}
+
+.ts-builder-app {
+	display: grid;
+	gap: 1rem;
+}
+
+.ts-builder-header {
+	padding: 0.25rem 0;
+	text-align: center;
+}
+
+.ts-builder-header h1,
+.ts-builder-sidebar h2,
+.ts-builder-dialog h2,
+.ts-builder-sidebar h3 {
+	margin: 0;
+	line-height: 1.25;
+}
+
+.ts-builder-header h1 {
+	font-size: clamp(1.6rem, 3vw, 2.3rem);
+	letter-spacing: -0.025em;
+}
+
+.ts-builder-add-view,
+.ts-builder-sidebar-item > div:last-child {
+	display: flex;
+	align-items: center;
+	gap: 0.45rem;
+}
+
+.ts-builder-primary-button,
+.ts-builder-secondary-button,
+.ts-builder-text-button,
+.ts-builder-icon-button,
+.ts-builder-input {
+	box-sizing: border-box;
+	font: inherit;
+}
+
+.ts-builder-primary-button,
+.ts-builder-secondary-button,
+.ts-builder-text-button,
+.ts-builder-icon-button {
+	cursor: pointer;
+}
+
+.ts-builder-primary-button,
+.ts-builder-secondary-button {
+	min-height: 38px;
+	padding: 0.45rem 0.8rem;
+	border: 1px solid var(--ts-doc-color-border);
+	border-radius: 5px;
+	font-size: 0.82rem;
+	font-weight: 650;
+}
+
+.ts-builder-primary-button {
+	border-color: var(--ts-doc-color-surface-panel-dark);
+	background: var(--ts-doc-color-surface-panel-dark);
+	color: #ffffff;
+}
+
+.ts-builder-secondary-button {
+	background: #ffffff;
+	color: var(--ts-doc-color-text-primary);
+}
+
+.ts-builder-primary-button:hover,
+.ts-builder-secondary-button:hover {
+	border-color: var(--ts-doc-color-accent);
+}
+
+.ts-builder-primary-button:disabled,
+.ts-builder-secondary-button:disabled,
+.ts-builder-icon-button:disabled {
+	cursor: not-allowed;
+	opacity: 0.45;
+}
+
+.ts-builder-text-button {
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: var(--ts-doc-color-text-secondary);
+	font-size: 0.78rem;
+	text-decoration: underline;
+}
+
+.ts-builder-icon-button {
+	display: inline-grid;
+	place-items: center;
+	width: 34px;
+	height: 34px;
+	padding: 0;
+	border: 1px solid var(--ts-doc-color-border-soft);
+	border-radius: 4px;
+	background: #ffffff;
+	color: var(--ts-doc-color-text-primary);
+	font-size: 1rem;
+}
+
+.ts-builder-icon-button:hover:not(:disabled) {
+	border-color: var(--ts-doc-color-accent);
+}
+
+.ts-builder-workspace {
+	display: grid;
+	grid-template-columns: 290px minmax(0, 1fr);
+	gap: 1rem;
+	align-items: start;
+}
+
+.ts-builder-sidebar {
+	position: sticky;
+	top: 88px;
+	z-index: 3;
+	grid-column: 1;
+	grid-row: 1;
+	display: grid;
+	gap: 0;
+	max-height: calc(100vh - 104px);
+	overflow: auto;
+	border: 1px solid var(--ts-doc-color-border-soft);
+	background: var(--ts-doc-color-surface-panel);
+}
+
+.ts-builder-sidebar__section {
+	display: grid;
+	gap: 0.55rem;
+	padding: 1rem;
+	border-bottom: 1px solid var(--ts-doc-color-border-soft);
+}
+
+.ts-builder-sidebar__section:last-child {
+	border-bottom: 0;
+}
+
+.ts-builder-sidebar h2 {
+	font-size: 0.94rem;
+}
+
+.ts-builder-sidebar h3 {
+	margin-top: 0.4rem;
+	font-size: 0.76rem;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	color: var(--ts-doc-color-text-secondary);
+}
+
+.ts-builder-sidebar-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	min-width: 0;
+	padding: 0.55rem;
+	border: 1px solid var(--ts-doc-color-border-soft);
+	background: #ffffff;
+}
+
+.ts-builder-sidebar-item > div:first-child {
+	display: grid;
+	min-width: 0;
+}
+
+.ts-builder-sidebar-item strong,
+.ts-builder-sidebar-item span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.ts-builder-sidebar-item strong {
+	font-size: 0.8rem;
+}
+
+.ts-builder-sidebar-item span {
+	font-size: 0.68rem;
+	color: var(--ts-doc-color-text-secondary);
+}
+
+.ts-builder-sidebar-actions {
+	display: grid;
+	gap: 0.45rem;
+}
+
+.ts-builder-main {
+	grid-column: 1 / -1;
+	grid-row: 1;
+	display: grid;
+	align-content: start;
+	justify-items: center;
+	gap: 0.75rem;
+	min-width: 0;
+}
+
+.ts-builder-preview-stage {
+	position: relative;
+	display: grid;
+	place-items: start center;
+	width: 100%;
+	padding: 1.5rem 0 0;
+	box-sizing: border-box;
+}
+
+.ts-builder-drop-overlay {
+	position: absolute;
+	inset: 0;
+	z-index: 10;
+	display: none;
+	place-items: center;
+	border: 2px dashed var(--ts-doc-color-accent);
+	background: rgba(255, 248, 239, 0.92);
+	color: var(--ts-doc-color-text-primary);
+	font-size: 1rem;
+	font-weight: 700;
+	pointer-events: none;
+}
+
+.ts-builder-preview-shell.is-dragging .ts-builder-drop-overlay {
+	display: grid;
+}
+
+.ts-builder-preview-shell {
+	position: relative;
+	width: min(760px, calc(100vw - 640px));
+	min-width: 340px;
+}
+
+.ts-builder-preview {
+	display: grid;
+	width: 100%;
+	min-width: 0;
+}
+
+.ts-builder-preview > trackswitch-player {
+	display: block;
+	width: 100%;
+}
+
+.ts-builder-drop-prompt {
+	display: grid;
+	align-content: center;
+	justify-items: center;
+	gap: 0.5rem;
+	width: 100%;
+	min-height: 420px;
+	padding: 3rem 2rem;
+	box-sizing: border-box;
+	border: 1px dashed var(--ts-doc-color-border);
+	background: rgba(255, 255, 255, 0.58);
+	color: var(--ts-doc-color-text-primary);
+	font: inherit;
+	cursor: pointer;
+}
+
+.ts-builder-drop-prompt strong {
+	font-size: 1.15rem;
+}
+
+.ts-builder-drop-prompt span {
+	max-width: 34rem;
+	color: var(--ts-doc-color-text-secondary);
+	font-size: 0.8rem;
+	font-weight: 400;
+	line-height: 1.5;
+}
+
+.ts-builder-drop-prompt:hover,
+.ts-builder-drop-prompt:focus-visible {
+	border-color: var(--ts-doc-color-accent);
+}
+
+.ts-builder-panel-rail {
+	position: absolute;
+	top: 0;
+	left: calc(100% + 0.75rem);
+	width: 168px;
+	height: 100%;
+	pointer-events: none;
+}
+
+.ts-builder-panel-rail__item {
+	position: absolute;
+	left: 0;
+	display: grid;
+	gap: 0.3rem;
+	width: 100%;
+	padding: 0.35rem;
+	box-sizing: border-box;
+	border: 1px solid var(--ts-doc-color-border-soft);
+	background: rgba(246, 246, 246, 0.94);
+	box-shadow: 0 3px 12px var(--ts-doc-color-shadow);
+	pointer-events: auto;
+}
+
+.ts-builder-panel-rail__item.is-dragging {
+	opacity: 0.45;
+}
+
+.ts-builder-panel-rail__heading {
+	display: flex;
+	align-items: center;
+	gap: 0.3rem;
+	min-width: 0;
+	font-size: 0.69rem;
+	font-weight: 700;
+}
+
+.ts-builder-panel-rail__heading span:last-child {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.ts-builder-panel-rail__grip {
+	color: var(--ts-doc-color-text-secondary);
+	font-size: 1rem;
+	line-height: 1;
+}
+
+.ts-builder-panel-rail__actions {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 0.25rem;
+}
+
+.ts-builder-panel-rail__actions .ts-builder-icon-button {
+	width: 100%;
+	height: 27px;
+	font-size: 0.78rem;
+}
+
+.ts-builder-add-view {
+	position: relative;
+	justify-content: center;
+	margin: 0 auto 1.5rem;
+}
+
+.ts-builder-panel-menu {
+	position: absolute;
+	top: calc(100% + 0.45rem);
+	left: 50%;
+	z-index: 12;
+	display: grid;
+	grid-template-columns: repeat(2, minmax(140px, 1fr));
+	gap: 0.3rem;
+	width: 330px;
+	padding: 0.45rem;
+	border: 1px solid var(--ts-doc-color-border);
+	background: var(--ts-doc-color-surface-panel);
+	box-shadow: 0 10px 24px var(--ts-doc-color-shadow-strong);
+	transform: translateX(-50%);
+}
+
+.ts-builder-panel-menu[hidden] {
+	display: none;
+}
+
+.ts-builder-panel-menu__item {
+	padding: 0.5rem 0.6rem;
+	border: 1px solid transparent;
+	background: #ffffff;
+	color: var(--ts-doc-color-text-primary);
+	font: inherit;
+	font-size: 0.76rem;
+	text-align: left;
+	cursor: pointer;
+}
+
+.ts-builder-panel-menu__item:hover,
+.ts-builder-panel-menu__item:focus-visible {
+	border-color: var(--ts-doc-color-accent);
+}
+
+.ts-builder-status {
+	position: static;
+	min-height: 1.4rem;
+	margin: 0;
+	padding: 0.55rem 0.8rem;
+	border: 0;
+	border-top: 1px solid var(--ts-doc-color-border-soft);
+	background: var(--ts-doc-color-surface-panel-dark);
+	color: #ffffff;
+	font-size: 0.78rem;
+}
+
+.ts-builder-status:empty {
+	display: none;
+}
+
+.ts-builder-status.is-error {
+	background: var(--ts-doc-color-text-error);
+}
+
+.ts-builder-dialog {
+	width: min(560px, calc(100vw - 2rem));
+	max-height: calc(100vh - 2rem);
+	padding: 0;
+	border: 1px solid var(--ts-doc-color-border);
+	background: var(--ts-doc-color-surface-panel);
+	box-shadow: 0 20px 50px var(--ts-doc-color-shadow-strong);
+}
+
+.ts-builder-dialog::backdrop {
+	background: rgba(0, 0, 0, 0.42);
+}
+
+.ts-builder-dialog__header {
+	position: sticky;
+	top: 0;
+	z-index: 2;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: 0.9rem 1rem;
+	border-bottom: 1px solid var(--ts-doc-color-border-soft);
+	background: var(--ts-doc-color-surface-panel);
+}
+
+.ts-builder-dialog__header h2 {
+	font-size: 1rem;
+}
+
+.ts-builder-dialog__body {
+	display: grid;
+	gap: 0.8rem;
+	padding: 1rem;
+	overflow: auto;
+}
+
+.ts-builder-form {
+	display: grid;
+	gap: 0.8rem;
+}
+
+.ts-builder-field,
+.ts-builder-special-field {
+	display: grid;
+	gap: 0.4rem;
+	padding: 0.7rem;
+	border: 1px solid var(--ts-doc-color-border-soft);
+	background: #ffffff;
+}
+
+.ts-builder-field__heading {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	font-size: 0.8rem;
+	font-weight: 650;
+}
+
+.ts-builder-field__description {
+	margin: 0;
+	font-size: 0.7rem;
+	line-height: 1.45;
+	color: var(--ts-doc-color-text-secondary);
+}
+
+.ts-builder-switch {
+	position: relative;
+	display: inline-flex;
+	flex: 0 0 auto;
+	cursor: pointer;
+}
+
+.ts-builder-switch input {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	opacity: 0;
+}
+
+.ts-builder-switch__track {
+	position: relative;
+	display: block;
+	width: 36px;
+	height: 20px;
+	box-sizing: border-box;
+	border: 1px solid var(--ts-doc-color-border);
+	border-radius: 10px;
+	background: var(--ts-doc-color-surface-base);
+	transition:
+		background-color 0.15s ease,
+		border-color 0.15s ease;
+}
+
+.ts-builder-switch__track::after {
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	background: var(--ts-doc-color-surface-control);
+	content: "";
+	transition: transform 0.15s ease;
+}
+
+.ts-builder-switch input:checked + .ts-builder-switch__track {
+	border-color: var(--ts-doc-color-accent);
+	background: var(--ts-doc-color-accent);
+}
+
+.ts-builder-switch input:checked + .ts-builder-switch__track::after {
+	background: #ffffff;
+	transform: translateX(16px);
+}
+
+.ts-builder-switch input:focus-visible + .ts-builder-switch__track {
+	outline: 2px solid var(--ts-doc-color-focus);
+	outline-offset: 2px;
+}
+
+.ts-builder-field__control,
+.ts-builder-union,
+.ts-builder-nested-list,
+.ts-builder-record,
+.ts-builder-special-field {
+	display: grid;
+	gap: 0.45rem;
+}
+
+.ts-builder-input {
+	width: 100%;
+	min-height: 36px;
+	padding: 0.4rem 0.5rem;
+	border: 1px solid var(--ts-doc-color-border);
+	border-radius: 3px;
+	background: #ffffff;
+	color: var(--ts-doc-color-text-primary);
+	font-size: 0.78rem;
+}
+
+textarea.ts-builder-input {
+	resize: vertical;
+}
+
+input[type="checkbox"].ts-builder-input {
+	width: auto;
+	min-height: auto;
+}
+
+.ts-builder-choices {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 0.3rem 0.75rem;
+}
+
+.ts-builder-choices label {
+	display: flex;
+	align-items: center;
+	gap: 0.35rem;
+	font-size: 0.75rem;
+}
+
+.ts-builder-control-editor,
+.ts-builder-control-group {
+	display: grid;
+	gap: 0.45rem;
+}
+
+.ts-builder-control-editor__instruction,
+.ts-builder-control-zone__empty {
+	margin: 0;
+	color: var(--ts-doc-color-text-secondary);
+	font-size: 0.7rem;
+	line-height: 1.4;
+}
+
+.ts-builder-control-group > strong {
+	font-size: 0.72rem;
+}
+
+.ts-builder-control-zone {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.35rem;
+	min-height: 44px;
+	padding: 0.45rem;
+	border: 1px dashed var(--ts-doc-color-border);
+	background: var(--ts-doc-color-surface-panel);
+}
+
+.ts-builder-control-card {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	min-height: 30px;
+	padding: 0.25rem 0.4rem;
+	box-sizing: border-box;
+	border: 1px solid var(--ts-doc-color-border-soft);
+	border-radius: 3px;
+	background: #ffffff;
+	color: var(--ts-doc-color-text-primary);
+	font: inherit;
+	font-size: 0.7rem;
+	font-weight: 650;
+	cursor: grab;
+}
+
+.ts-builder-control-card.is-available {
+	font-weight: 500;
+}
+
+.ts-builder-control-card.is-dragging {
+	opacity: 0.4;
+}
+
+.ts-builder-control-card__grip {
+	color: var(--ts-doc-color-text-secondary);
+	font-size: 0.9rem;
+	line-height: 1;
+}
+
+.ts-builder-control-card__remove {
+	display: inline-grid;
+	place-items: center;
+	width: 20px;
+	height: 20px;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: var(--ts-doc-color-text-secondary);
+	font: inherit;
+	font-size: 0.9rem;
+	cursor: pointer;
+}
+
+.ts-builder-control-card:hover,
+.ts-builder-control-card:focus-visible,
+.ts-builder-control-card__remove:hover,
+.ts-builder-control-card__remove:focus-visible {
+	border-color: var(--ts-doc-color-accent);
+	color: var(--ts-doc-color-text-primary);
+}
+
+.ts-builder-nested-item {
+	display: grid;
+	gap: 0.45rem;
+	margin: 0;
+	padding: 0.6rem;
+	border: 1px solid var(--ts-doc-color-border-soft);
+}
+
+.ts-builder-nested-item legend {
+	font-size: 0.72rem;
+	font-weight: 650;
+}
+
+.ts-builder-nested-actions {
+	display: flex;
+	gap: 0.65rem;
+}
+
+.ts-builder-record__row {
+	display: grid;
+	grid-template-columns: minmax(100px, 0.8fr) minmax(120px, 1fr) auto;
+	gap: 0.4rem;
+	align-items: start;
+}
+
+.ts-builder-record__value {
+	min-width: 0;
+}
+
+@media (max-width: 1120px) {
+	.ts-builder-workspace {
+		grid-template-columns: 250px minmax(0, 1fr);
+	}
+
+	.ts-builder-preview-shell {
+		width: min(660px, calc(100vw - 590px));
+	}
+}
+
+@media (max-width: 900px) {
+	.builder-page .site-main {
+		width: min(100% - 2rem, 640px);
+	}
+
+	.ts-builder-app {
+		display: none;
+	}
+
+	.ts-builder-mobile-message {
+		display: grid;
+		gap: 0.35rem;
+		margin-top: 2rem;
+		padding: 1.25rem;
+		border: 1px solid var(--ts-doc-color-border-soft);
+		background: var(--ts-doc-color-surface-panel);
+		text-align: center;
+	}
+
+	.ts-builder-mobile-message span {
+		color: var(--ts-doc-color-text-secondary);
+	}
+}
+
 .site-main > p code,
 .site-main > ul code,
 .site-main > ol code,
