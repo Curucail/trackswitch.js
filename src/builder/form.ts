@@ -1,10 +1,20 @@
+import type { TrackSwitchViewConfig } from "../types";
 import type { BuilderProject } from "./model";
 import { type JsonSchema, resolveSchema } from "./schema";
 
 export interface FormTarget {
-	kind: "media" | "view" | "alignment" | "marker" | "preset" | "features";
+	kind:
+		| "media"
+		| "view"
+		| "view-draft"
+		| "alignment"
+		| "marker"
+		| "preset"
+		| "features";
 	id?: string;
 	resourceId?: string;
+	/** Set for "view-draft" targets, whose view isn't in project.views yet. */
+	viewType?: TrackSwitchViewConfig["type"];
 }
 
 export interface FormContext {
@@ -154,12 +164,16 @@ function defaultFieldValue(
 	schema: JsonSchema,
 ): unknown {
 	const node = resolved(context, schema);
-	if (key === "height" && context.target.kind === "view") {
-		const view = context.project.views.find(
-			(entry) => entry.id === context.target.id,
-		)?.config;
-		if (view?.type === "pianoRoll") return 180;
-		if (view?.type === "warpingMatrix") return "";
+	if (
+		key === "height" &&
+		(context.target.kind === "view" || context.target.kind === "view-draft")
+	) {
+		const viewType =
+			context.target.viewType ??
+			context.project.views.find((entry) => entry.id === context.target.id)
+				?.config.type;
+		if (viewType === "pianoRoll") return 180;
+		if (viewType === "warpingMatrix") return "";
 	}
 	const describedDefault = node.description?.match(/^Default: (.+)$/)?.[1];
 	if (describedDefault !== undefined && schemaType(context, node) === "string")
@@ -181,14 +195,16 @@ function fieldOptions(
 			.map(([id]) => id);
 	}
 	if (key === "mediaID") {
-		const view = context.target.id
-			? context.project.views.find((entry) => entry.id === context.target.id)
-					?.config
-			: undefined;
+		const viewType =
+			context.target.viewType ??
+			(context.target.id
+				? context.project.views.find((entry) => entry.id === context.target.id)
+						?.config.type
+				: undefined);
 		const wanted =
-			view?.type === "pianoRoll"
+			viewType === "pianoRoll"
 				? "midi"
-				: view?.type === "sheetMusic"
+				: viewType === "sheetMusic"
 					? "musicxml"
 					: "image";
 		return media
@@ -516,7 +532,10 @@ function renderArray(
 	context: FormContext,
 	path: string,
 ): void {
-	if (key === "controls" && context.target.kind === "view") {
+	if (
+		key === "controls" &&
+		(context.target.kind === "view" || context.target.kind === "view-draft")
+	) {
 		renderNavigationControls(container, value, setValue, context);
 		return;
 	}

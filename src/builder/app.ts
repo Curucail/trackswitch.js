@@ -1,3 +1,15 @@
+import { processFile } from "../../extensions/interactive-alignment/file-handler";
+import type {
+	AlignmentAlgorithmId,
+	AlignmentFeatureSetId,
+	InteractiveFile,
+} from "../../extensions/interactive-alignment/types";
+import {
+	bindAlignmentHelpTooltips,
+	buildAlignmentHelpLabelHtml,
+} from "../../extensions/interactive-alignment/ui/alignment-help";
+import type { AlignmentHelpTooltipId } from "../../extensions/interactive-alignment/ui/alignment-help-types";
+import { AlignmentWorkerBridge } from "../../extensions/interactive-alignment/worker/alignment-worker-bridge";
 import { normalizeTrackSwitchConfig } from "../config/config";
 import { parseCsvRecords } from "../shared/csv";
 import type {
@@ -16,11 +28,12 @@ import {
 	addFilesToProject,
 	type BuilderProject,
 	type BuilderResource,
+	type BuilderView,
 	buildPlayerConfig,
 	buildRuntimePreviewConfig,
 	createBuilderProject,
+	detachMedia,
 	findMarkerReferences,
-	findMediaReferences,
 	renameMarkerId,
 	renameMediaId,
 	slugifyId,
@@ -38,6 +51,14 @@ interface BuilderAssetUrls {
 	playerScript: string;
 	license: string;
 	thirdPartyNotices: string;
+	alignmentWorkerUrl: string;
+}
+
+interface ComputeProgressElements {
+	wrapper: HTMLElement;
+	fill: HTMLElement;
+	percent: HTMLElement;
+	message: HTMLElement;
 }
 
 interface TrackswitchPreviewElement extends HTMLElement {
@@ -144,7 +165,14 @@ export class BuilderApp {
 	private readonly dialog: HTMLDialogElement;
 	private readonly dialogTitle: HTMLElement;
 	private readonly dialogBody: HTMLElement;
+	private readonly dialogFooter: HTMLElement;
+	private readonly dialogError: HTMLElement;
+	private readonly alignmentWorkerBridge: AlignmentWorkerBridge;
 	private activeTarget: FormTarget | null = null;
+	private pendingDraft: {
+		type: TrackSwitchViewConfig["type"];
+		config: TrackSwitchViewConfig;
+	} | null = null;
 	private previewTimer: number | undefined;
 	private preview: TrackswitchPreviewElement | null = null;
 	private runtimeFailed = false;
@@ -192,6 +220,11 @@ export class BuilderApp {
 			<dialog class="ts-builder-dialog" aria-labelledby="ts-builder-dialog-title">
 				<div class="ts-builder-dialog__header"><h2 id="ts-builder-dialog-title"></h2><button type="button" class="ts-builder-icon-button" data-action="close" aria-label="Close settings">×</button></div>
 				<div class="ts-builder-dialog__body"></div>
+				<p class="ts-builder-dialog__error" role="alert" hidden></p>
+				<div class="ts-builder-dialog__footer" hidden>
+					<button type="button" class="ts-builder-secondary-button" data-action="cancel-draft">Cancel</button>
+					<button type="button" class="ts-builder-primary-button" data-action="confirm-draft">Add panel</button>
+				</div>
 			</dialog>`;
 
 		this.fileInput = this.required('[data-input="media"]');
@@ -204,6 +237,11 @@ export class BuilderApp {
 		this.dialog = this.required(".ts-builder-dialog");
 		this.dialogTitle = this.required("#ts-builder-dialog-title");
 		this.dialogBody = this.required(".ts-builder-dialog__body");
+		this.dialogFooter = this.required(".ts-builder-dialog__footer");
+		this.dialogError = this.required(".ts-builder-dialog__error");
+		this.alignmentWorkerBridge = new AlignmentWorkerBridge(
+			this.assetUrls.alignmentWorkerUrl,
+		);
 		this.bindStaticEvents();
 		this.renderPanelMenu();
 		this.render();
@@ -257,8 +295,15 @@ export class BuilderApp {
 			"click",
 			() => this.dialog.close(),
 		);
+		this.required<HTMLButtonElement>(
+			'[data-action="cancel-draft"]',
+		).addEventListener("click", () => this.dialog.close());
+		this.required<HTMLButtonElement>(
+			'[data-action="confirm-draft"]',
+		).addEventListener("click", () => this.commitDraft());
 		this.dialog.addEventListener("close", () => {
 			this.activeTarget = null;
+			this.pendingDraft = null;
 			this.render();
 		});
 		const menuButton = this.required<HTMLButtonElement>(
@@ -281,6 +326,20 @@ export class BuilderApp {
 			if (event.target instanceof Node && addView.contains(event.target))
 				return;
 			this.closePanelMenu();
+		});
+		document.addEventListener("click", (event) => {
+			const group = this.sidebar.querySelector<HTMLElement>(
+				".ts-builder-download-split",
+			);
+			const menu = group?.querySelector<HTMLElement>(
+				".ts-builder-download-menu",
+			);
+			if (!group || !menu || menu.hidden) return;
+			if (event.target instanceof Node && group.contains(event.target)) return;
+			menu.hidden = true;
+			group
+				.querySelector<HTMLButtonElement>(".ts-builder-download-split__toggle")
+				?.setAttribute("aria-expanded", "false");
 		});
 		window.addEventListener("resize", () => this.decoratePreviewPanels());
 	}
@@ -366,9 +425,8 @@ export class BuilderApp {
 
 	private setExportDisabled(disabled: boolean): void {
 		for (const selector of [
-			'[data-action="copy"]',
-			'[data-action="project-zip"]',
 			'[data-action="standalone-zip"]',
+			'[data-action="toggle-download-menu"]',
 		]) {
 			this.required<HTMLButtonElement>(selector).disabled = disabled;
 		}
@@ -378,9 +436,6 @@ export class BuilderApp {
 		this.sidebar.replaceChildren();
 		const mediaSection = this.sidebarSection("Media");
 		const mediaEntries = Object.entries(this.project.media);
-		const addFiles = button("Add media");
-		addFiles.addEventListener("click", () => this.fileInput.click());
-		mediaSection.append(addFiles);
 		for (const [id, media] of mediaEntries) {
 			const resource = this.project.resources[media.resourceId];
 			mediaSection.append(
@@ -409,6 +464,9 @@ export class BuilderApp {
 				);
 			}
 		}
+		const addFiles = button("Add media");
+		addFiles.addEventListener("click", () => this.fileInput.click());
+		mediaSection.append(addFiles);
 		this.sidebar.append(mediaSection);
 
 		const alignment = this.sidebarSection("Alignment");
@@ -430,9 +488,18 @@ export class BuilderApp {
 				),
 			);
 		} else {
-			const add = button("Add alignment");
-			add.addEventListener("click", () => this.pickCsvFor("alignment"));
-			alignment.append(add);
+			const actions = document.createElement("div");
+			actions.className =
+				"ts-builder-sidebar-actions ts-builder-sidebar-actions--or";
+			const uploadCsv = button("Upload CSV");
+			uploadCsv.addEventListener("click", () => this.pickCsvFor("alignment"));
+			const or = document.createElement("span");
+			or.className = "ts-builder-sidebar-actions__or";
+			or.textContent = "or";
+			const compute = button("Compute in browser");
+			compute.addEventListener("click", () => this.openAlignmentCompute());
+			actions.append(uploadCsv, or, compute);
+			alignment.append(actions);
 		}
 		this.sidebar.append(alignment);
 
@@ -485,25 +552,7 @@ export class BuilderApp {
 		this.sidebar.append(global);
 
 		const exportSection = this.sidebarSection("Export");
-		const exportActions = document.createElement("div");
-		exportActions.className = "ts-builder-sidebar-actions";
-		const copy = button("Copy config");
-		copy.dataset.action = "copy";
-		copy.addEventListener("click", () => void this.copyConfig());
-		const projectZip = button("Config + media ZIP");
-		projectZip.dataset.action = "project-zip";
-		projectZip.addEventListener(
-			"click",
-			() => void this.downloadArchive("project"),
-		);
-		const standaloneZip = button("Standalone ZIP", "ts-builder-primary-button");
-		standaloneZip.dataset.action = "standalone-zip";
-		standaloneZip.addEventListener(
-			"click",
-			() => void this.downloadArchive("standalone"),
-		);
-		exportActions.append(copy, projectZip, standaloneZip);
-		exportSection.append(exportActions);
+		exportSection.append(this.renderDownloadSplitButton());
 		this.sidebar.append(exportSection);
 		this.sidebar.append(this.status);
 	}
@@ -512,6 +561,9 @@ export class BuilderApp {
 		const section = document.createElement("section");
 		section.className = "ts-builder-sidebar__section";
 		section.setAttribute("aria-label", label);
+		const heading = document.createElement("h3");
+		heading.textContent = label;
+		section.append(heading);
 		return section;
 	}
 
@@ -546,6 +598,73 @@ export class BuilderApp {
 		return item;
 	}
 
+	private renderDownloadSplitButton(): HTMLElement {
+		const group = document.createElement("div");
+		group.className = "ts-builder-download-split";
+
+		const main = button("Download player", "ts-builder-primary-button");
+		main.classList.add("ts-builder-download-split__main");
+		main.dataset.action = "standalone-zip";
+		main.addEventListener(
+			"click",
+			() => void this.downloadArchive("standalone"),
+		);
+
+		const toggle = document.createElement("button");
+		toggle.type = "button";
+		toggle.className = "ts-builder-download-split__toggle";
+		toggle.dataset.action = "toggle-download-menu";
+		toggle.setAttribute("aria-haspopup", "menu");
+		toggle.setAttribute("aria-expanded", "false");
+		toggle.setAttribute("aria-label", "More download options");
+		toggle.textContent = "▾";
+
+		const menu = document.createElement("div");
+		menu.className = "ts-builder-download-menu";
+		menu.setAttribute("role", "menu");
+		menu.hidden = true;
+
+		const closeMenu = () => {
+			menu.hidden = true;
+			toggle.setAttribute("aria-expanded", "false");
+		};
+
+		const configOnly = button(
+			"Config only (.json)",
+			"ts-builder-panel-menu__item",
+		);
+		configOnly.setAttribute("role", "menuitem");
+		configOnly.addEventListener("click", () => {
+			closeMenu();
+			this.downloadConfig();
+		});
+		const projectZip = button(
+			"Config + media (.zip)",
+			"ts-builder-panel-menu__item",
+		);
+		projectZip.setAttribute("role", "menuitem");
+		projectZip.addEventListener("click", () => {
+			closeMenu();
+			void this.downloadArchive("project");
+		});
+		menu.append(configOnly, projectZip);
+
+		toggle.addEventListener("click", () => {
+			const open = menu.hidden;
+			menu.hidden = !open;
+			toggle.setAttribute("aria-expanded", String(open));
+			if (open) configOnly.focus();
+		});
+		menu.addEventListener("keydown", (event) => {
+			if (event.key !== "Escape") return;
+			closeMenu();
+			toggle.focus();
+		});
+
+		group.append(main, toggle, menu);
+		return group;
+	}
+
 	private moveView(from: number, to: number): void {
 		if (to < 0 || to >= this.project.views.length) return;
 		const [view] = this.project.views.splice(from, 1);
@@ -569,38 +688,62 @@ export class BuilderApp {
 			this.setStatus("Only one navigation bar is allowed.", true);
 			return;
 		}
-		const config = defaultView(this.project, type);
+		this.pendingDraft = { type, config: defaultView(this.project, type) };
+		this.openInspector({ kind: "view-draft", viewType: type });
+	}
+
+	private commitDraft(): void {
+		const draft = this.pendingDraft;
+		if (!draft) return;
+		if (
+			draft.type === "navigationBar" &&
+			this.project.views.some((view) => view.config.type === draft.type)
+		) {
+			this.setDialogError("Only one navigation bar is allowed.");
+			return;
+		}
 		const id = uniqueId(
-			type,
+			draft.type,
 			this.project.views.map((view) => view.id),
 		);
 		const result = appendViewIfValid(
 			this.project,
-			{ id, config },
+			{ id, config: draft.config },
 			normalizeTrackSwitchConfig,
 		);
 		if (!result.added) {
-			this.setStatus(
-				`Could not add ${VIEW_LABELS[type]}: ${result.errors.join(" ")}`,
-				true,
+			this.setDialogError(
+				`Could not add ${VIEW_LABELS[draft.type]}: ${result.errors.join(" ")}`,
 			);
-			this.render();
 			return;
 		}
+		this.pendingDraft = null;
 		this.pendingViewId = id;
-		this.render();
-		this.openInspector({ kind: "view", id });
+		this.dialog.close();
 	}
 
-	private addAlignment(csv: BuilderResource): void {
+	private setDialogError(message: string): void {
+		this.dialogError.textContent = message;
+		this.dialogError.hidden = false;
+	}
+
+	private addAlignment(
+		csv: BuilderResource,
+		preferredReference?: string,
+	): void {
 		const timelines: Record<string, string> = {};
 		Object.keys(this.project.media).forEach((id, index) => {
 			timelines[id] = csv.csvHeaders?.[index] ?? "";
 		});
 		this.project.alignment = {
 			resourceId: csv.id,
-			config: { referenceTimeline: Object.keys(timelines)[0] ?? "", timelines },
+			config: {
+				referenceTimeline:
+					preferredReference ?? Object.keys(timelines)[0] ?? "",
+				timelines,
+			},
 		};
+		this.applyAlignmentFriendlyDefaults();
 		const errors = this.validationErrors();
 		if (errors.length) {
 			this.project.alignment = undefined;
@@ -610,6 +753,249 @@ export class BuilderApp {
 		}
 		this.render();
 		this.openInspector({ kind: "alignment", resourceId: csv.id });
+	}
+
+	/**
+	 * Alignment plays one timeline at a time, so a trackList without a
+	 * comparisonGroup requires all its tracks to share one alignment column —
+	 * which almost never holds for tracks that were separate uploads. Give
+	 * those lists a comparisonGroup automatically so alignment stays valid and
+	 * its tracks become independently selectable timelines instead.
+	 */
+	private applyAlignmentFriendlyDefaults(): void {
+		const alignment = this.project.alignment;
+		if (!alignment) return;
+		const timelines = alignment.config.timelines;
+		const trackLists = this.project.views.filter(
+			(
+				view,
+			): view is BuilderView & {
+				config: Extract<TrackSwitchViewConfig, { type: "trackList" }>;
+			} => view.config.type === "trackList",
+		);
+		const existingGroup = trackLists
+			.map((view) => view.config.comparisonGroup)
+			.find((group) => group !== undefined);
+		for (const view of trackLists) {
+			const config = view.config;
+			if (config.comparisonGroup !== undefined) continue;
+			const placements = config.tracks.map((id) => timelines[id] ?? "");
+			const diverges = placements.some(
+				(placement) => placement !== placements[0],
+			);
+			if (diverges) config.comparisonGroup = existingGroup ?? 0;
+		}
+		for (const view of this.project.views) {
+			if (
+				view.config.type === "waveform" &&
+				view.config.alignedPlayhead === undefined
+			) {
+				view.config.alignedPlayhead = true;
+			}
+		}
+	}
+
+	private openAlignmentCompute(): void {
+		this.activeTarget = null;
+		this.pendingDraft = null;
+		this.dialogFooter.hidden = true;
+		this.dialogError.hidden = true;
+		this.dialogError.textContent = "";
+		this.dialogTitle.textContent = "Compute alignment in browser";
+		this.dialogBody.replaceChildren();
+		this.renderAlignmentComputeForm();
+		if (!this.dialog.open) this.dialog.showModal();
+	}
+
+	private renderAlignmentComputeForm(): void {
+		const eligible = Object.entries(this.project.media).filter(
+			([, media]) =>
+				media.config.type === "audio" ||
+				media.config.type === "midi" ||
+				media.config.type === "musicxml",
+		);
+		const container = document.createElement("div");
+		container.className = "ts-builder-form";
+
+		if (eligible.length < 2) {
+			const note = document.createElement("p");
+			note.textContent =
+				"Add at least two audio, MIDI, or MusicXML files before computing an alignment.";
+			container.append(note);
+			this.dialogBody.append(container);
+			return;
+		}
+
+		const selectField = (
+			labelText: string,
+			options: [string, string][],
+			tooltipId?: AlignmentHelpTooltipId,
+		) => {
+			const field = document.createElement("label");
+			field.className = "ts-builder-special-field";
+			if (tooltipId) {
+				field.innerHTML = buildAlignmentHelpLabelHtml({
+					label: labelText,
+					tooltipId,
+					idPrefix: "builder-alignment",
+				});
+			} else {
+				field.append(document.createTextNode(labelText));
+			}
+			const select = document.createElement("select");
+			select.className = "ts-builder-input";
+			for (const [value, text] of options) {
+				const option = document.createElement("option");
+				option.value = value;
+				option.textContent = text;
+				select.append(option);
+			}
+			field.append(select);
+			return { field, select };
+		};
+
+		const reference = selectField(
+			"Reference track",
+			eligible.map(([id]) => [id, id]),
+		);
+		const featureSet = selectField(
+			"Feature set",
+			[
+				["chroma", "Chroma"],
+				["chroma_dlnco", "Chroma + DLNCO"],
+				["chroma_dlnco_synctoolbox", "Chroma + DLNCO (synctoolbox)"],
+			],
+			"features",
+		);
+		featureSet.select.value = "chroma_dlnco_synctoolbox";
+		const algorithm = selectField(
+			"Algorithm",
+			[
+				["dtw", "DTW"],
+				["mrmsdtw", "MrMsDTW"],
+			],
+			"algorithm",
+		);
+		algorithm.select.value = "mrmsdtw";
+
+		const actions = document.createElement("div");
+		actions.className = "ts-builder-sidebar-actions";
+		const cancel = button("Cancel");
+		cancel.addEventListener("click", () => this.dialog.close());
+		const compute = button("Compute alignment", "ts-builder-primary-button");
+
+		const progress = this.buildComputeProgressElement();
+
+		compute.addEventListener("click", () => {
+			void this.runAlignmentCompute(
+				eligible.map(([id]) => id),
+				reference.select.value,
+				featureSet.select.value as AlignmentFeatureSetId,
+				algorithm.select.value as AlignmentAlgorithmId,
+				{ compute, cancel, progress },
+			);
+		});
+		actions.append(cancel, compute);
+
+		container.append(
+			reference.field,
+			featureSet.field,
+			algorithm.field,
+			actions,
+			progress.wrapper,
+		);
+		this.dialogBody.append(container);
+		bindAlignmentHelpTooltips(container);
+	}
+
+	private buildComputeProgressElement(): ComputeProgressElements {
+		const wrapper = document.createElement("div");
+		wrapper.className = "ts-builder-compute-progress";
+		wrapper.hidden = true;
+		const bar = document.createElement("div");
+		bar.className = "ts-progress-bar";
+		const fill = document.createElement("div");
+		fill.className = "ts-progress-fill";
+		fill.style.width = "0%";
+		bar.append(fill);
+		const row = document.createElement("div");
+		row.className = "ts-builder-compute-progress__row";
+		const percent = document.createElement("span");
+		percent.className = "ts-progress-percent";
+		percent.textContent = "--%";
+		const message = document.createElement("span");
+		message.className = "ts-computing-message";
+		row.append(percent, message);
+		wrapper.append(bar, row);
+		return { wrapper, fill, percent, message };
+	}
+
+	private updateComputeProgress(
+		progress: ComputeProgressElements,
+		rawMessage: string,
+		isError = false,
+	): void {
+		progress.wrapper.hidden = false;
+		progress.wrapper.classList.toggle("is-error", isError);
+		const match = rawMessage.match(/^\[(\d+)%\]\s*(.*)/);
+		const displayText = match ? match[2] : rawMessage;
+		const percentage = match ? Number.parseInt(match[1], 10) : -1;
+		progress.message.textContent = displayText;
+		progress.percent.textContent =
+			percentage >= 0 ? `${String(percentage)}%` : "--%";
+		if (percentage >= 0) progress.fill.style.width = `${String(percentage)}%`;
+	}
+
+	private async runAlignmentCompute(
+		mediaIds: string[],
+		referenceId: string,
+		featureSet: AlignmentFeatureSetId,
+		algorithm: AlignmentAlgorithmId,
+		controls: {
+			compute: HTMLButtonElement;
+			cancel: HTMLButtonElement;
+			progress: ComputeProgressElements;
+		},
+	): Promise<void> {
+		controls.compute.disabled = true;
+		controls.cancel.disabled = true;
+		this.updateComputeProgress(controls.progress, "Preparing files…");
+		this.alignmentWorkerBridge.setProgressCallback((message) => {
+			this.updateComputeProgress(controls.progress, message);
+		});
+		try {
+			const files: InteractiveFile[] = [];
+			for (const id of mediaIds) {
+				const media = this.project.media[id];
+				const resource = this.project.resources[media.resourceId];
+				const interactiveFile = await processFile(resource.file);
+				files.push({ ...interactiveFile, id });
+			}
+			this.updateComputeProgress(controls.progress, "Initializing Pyodide…");
+			await this.alignmentWorkerBridge.initialize();
+			this.updateComputeProgress(controls.progress, "Computing alignment…");
+			const result = await this.alignmentWorkerBridge.computeAlignment(
+				files,
+				referenceId,
+				featureSet,
+				algorithm,
+				false,
+				false,
+			);
+			const csvFile = new File([result.csv], "alignment.csv", {
+				type: "text/csv",
+			});
+			const added = await this.addFiles([csvFile]);
+			const csv = added.find((resource) => resource.kind === "csv");
+			if (!csv) throw new Error("Could not read the computed alignment.");
+			this.addAlignment(csv, referenceId);
+		} catch (error) {
+			this.updateComputeProgress(controls.progress, describeError(error), true);
+			controls.compute.disabled = false;
+			controls.cancel.disabled = false;
+		} finally {
+			this.alignmentWorkerBridge.setProgressCallback(null);
+		}
 	}
 
 	private addMarker(csv: BuilderResource): void {
@@ -691,6 +1077,35 @@ export class BuilderApp {
 				"TrackSwitchViewConfig",
 				view.config.type,
 			);
+			if (view.config.type === "image") {
+				skip = new Set(["type", "src", "css", "mediaID"]);
+				this.dialogBody.append(
+					this.imageMediaEditor(
+						() =>
+							view.config as Extract<TrackSwitchViewConfig, { type: "image" }>,
+						() => this.render(),
+					),
+				);
+			}
+		} else if (target.kind === "view-draft" && this.pendingDraft) {
+			const draft = this.pendingDraft;
+			title = `${VIEW_LABELS[draft.type]} settings`;
+			value = draft.config as unknown as Record<string, unknown>;
+			schema = getDiscriminatedSchema(
+				this.rootSchema,
+				"TrackSwitchViewConfig",
+				draft.type,
+			);
+			if (draft.type === "image") {
+				skip = new Set(["type", "src", "css", "mediaID"]);
+				this.dialogBody.append(
+					this.imageMediaEditor(
+						() =>
+							draft.config as Extract<TrackSwitchViewConfig, { type: "image" }>,
+						() => this.render(),
+					),
+				);
+			}
 		} else if (target.kind === "alignment" && this.project.alignment) {
 			title = "Alignment settings";
 			value = this.project.alignment.config as unknown as Record<
@@ -736,6 +1151,9 @@ export class BuilderApp {
 			schema = schemaForFeatures(this.rootSchema);
 		} else return;
 
+		this.dialogFooter.hidden = target.kind !== "view-draft";
+		this.dialogError.hidden = true;
+		this.dialogError.textContent = "";
 		this.dialogTitle.textContent = title;
 		const form = document.createElement("div");
 		form.className = "ts-builder-form";
@@ -780,6 +1198,107 @@ export class BuilderApp {
 		});
 		field.append(input);
 		return field;
+	}
+
+	private imageMediaEditor(
+		getConfig: () => Extract<TrackSwitchViewConfig, { type: "image" }>,
+		onPicked: () => void,
+	): HTMLElement {
+		const wrapper = document.createElement("div");
+		wrapper.className = "ts-builder-special-field";
+		const label = document.createElement("strong");
+		label.textContent = "Track image";
+		wrapper.append(label);
+
+		const config = getConfig();
+		const currentBinding = config.mediaID
+			? this.project.media[config.mediaID]
+			: undefined;
+		if (currentBinding) {
+			const preview = document.createElement("img");
+			preview.className = "ts-builder-image-picker__preview";
+			preview.alt = "";
+			preview.src =
+				this.project.resources[currentBinding.resourceId].previewUrl;
+			wrapper.append(preview);
+		}
+
+		const existingImages = Object.entries(this.project.media).filter(
+			([, media]) => media.config.type === "image",
+		);
+		if (existingImages.length) {
+			const select = document.createElement("select");
+			select.className = "ts-builder-input";
+			const blank = document.createElement("option");
+			blank.value = "";
+			blank.textContent = "Choose an uploaded image…";
+			blank.selected = !config.mediaID;
+			select.append(blank);
+			for (const [id] of existingImages) {
+				const option = document.createElement("option");
+				option.value = id;
+				option.textContent = id;
+				option.selected = id === config.mediaID;
+				select.append(option);
+			}
+			select.addEventListener("change", () => {
+				getConfig().mediaID = select.value;
+				onPicked();
+			});
+			wrapper.append(select);
+		}
+
+		const picker = document.createElement("div");
+		picker.className = "ts-builder-image-picker";
+		picker.tabIndex = 0;
+		picker.textContent = "Paste an image, or click to choose a file";
+		const input = document.createElement("input");
+		input.type = "file";
+		input.accept = "image/*";
+		input.hidden = true;
+		picker.append(input);
+		picker.addEventListener("click", () => input.click());
+		picker.addEventListener("paste", (event) => {
+			const item = Array.from(event.clipboardData?.items ?? []).find((entry) =>
+				entry.type.startsWith("image/"),
+			);
+			const file = item?.getAsFile();
+			if (file) this.pickImageFile(file, getConfig, onPicked);
+		});
+		input.addEventListener("change", () => {
+			const file = input.files?.[0];
+			if (file) this.pickImageFile(file, getConfig, onPicked);
+			input.value = "";
+		});
+		wrapper.append(picker);
+
+		return wrapper;
+	}
+
+	private pickImageFile(
+		file: File,
+		getConfig: () => Extract<TrackSwitchViewConfig, { type: "image" }>,
+		onPicked: () => void,
+	): void {
+		const result = addFilesToProject(this.project, [file], undefined, false);
+		const resource = result.added[0];
+		if (!resource || resource.kind !== "image") {
+			this.setStatus(
+				result.errors[0] ?? "Select a supported image file.",
+				true,
+			);
+			return;
+		}
+		const mediaId = uniqueId(
+			slugifyId(file.name.replace(/\.[^./]+$/, "")),
+			Object.keys(this.project.media),
+		);
+		this.project.media[mediaId] = {
+			resourceId: resource.id,
+			config: { type: "image", src: resource.exportPath },
+		};
+		getConfig().mediaID = mediaId;
+		onPicked();
 	}
 
 	private csvSourceEditor(
@@ -1060,16 +1579,9 @@ export class BuilderApp {
 	}
 
 	private removeMedia(id: string): void {
-		const references = findMediaReferences(this.project, id);
-		if (references.length) {
-			this.setStatus(
-				`Remove references before deleting ${id}: ${references.join(", ")}.`,
-				true,
-			);
-			return;
-		}
 		const binding = this.project.media[id];
 		if (!binding) return;
+		detachMedia(this.project, id);
 		this.removeResourceNow(binding.resourceId);
 		if (binding.synchronizedResourceId)
 			this.removeResourceNow(binding.synchronizedResourceId);
@@ -1114,18 +1626,22 @@ export class BuilderApp {
 		delete this.project.resources[id];
 	}
 
-	private async copyConfig(): Promise<void> {
-		try {
-			await navigator.clipboard.writeText(
-				`${JSON.stringify(buildPlayerConfig(this.project, "export"), null, "\t")}\n`,
-			);
-			this.setStatus("Player config copied.");
-		} catch (error) {
-			this.setStatus(
-				`Could not copy the config: ${describeError(error)}`,
-				true,
-			);
+	private downloadConfig(): void {
+		const errors = this.validationErrors();
+		if (errors.length) {
+			this.setStatus(errors.join(" "), true);
+			return;
 		}
+		const json = `${JSON.stringify(buildPlayerConfig(this.project, "export"), null, "\t")}\n`;
+		const url = URL.createObjectURL(
+			new Blob([json], { type: "application/json" }),
+		);
+		const link = document.createElement("a");
+		link.href = url;
+		link.download = "trackswitch-config.json";
+		link.click();
+		window.setTimeout(() => URL.revokeObjectURL(url), 0);
+		this.setStatus("trackswitch-config.json downloaded.");
 	}
 
 	private async downloadArchive(variant: ArchiveVariant): Promise<void> {

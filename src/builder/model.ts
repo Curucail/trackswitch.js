@@ -459,6 +459,122 @@ export function renameMediaId(
 	return newId;
 }
 
+function firstMediaIdOfType(
+	project: BuilderProject,
+	type: MediaEntryConfig["type"],
+	exclude: ReadonlySet<string>,
+): string | undefined {
+	return Object.entries(project.media).find(
+		([id, media]) => media.config.type === type && !exclude.has(id),
+	)?.[0];
+}
+
+/**
+ * Drops every reference to `mediaId` before it's deleted, instead of blocking
+ * the deletion: a reference that can fall back to another matching media
+ * entry does so (e.g. a warpingMatrix track, or an image view's mediaID),
+ * and one that can't (the last audio track of a trackList, the last entry of
+ * a preset) is removed along with whatever solely depended on it.
+ */
+export function detachMedia(project: BuilderProject, mediaId: string): void {
+	for (const media of Object.values(project.media)) {
+		if (media.config.type === "audio" && media.config.imageID === mediaId) {
+			delete media.config.imageID;
+		}
+	}
+
+	if (project.alignment) {
+		if (hasOwn(project.alignment.config.timelines, mediaId)) {
+			delete project.alignment.config.timelines[mediaId];
+		}
+		const remaining = Object.keys(project.alignment.config.timelines);
+		if (remaining.length === 0) {
+			project.alignment = undefined;
+		} else if (project.alignment.config.referenceTimeline === mediaId) {
+			project.alignment.config.referenceTimeline = remaining[0];
+		}
+	}
+
+	for (const marker of Object.values(project.markers)) {
+		if (marker.config.timeline !== mediaId) continue;
+		if (project.alignment) {
+			marker.config.timeline = project.alignment.config.referenceTimeline;
+		} else {
+			delete marker.config.timeline;
+		}
+	}
+
+	for (const [id, preset] of Object.entries(project.presets)) {
+		if (!preset.tracks.includes(mediaId)) continue;
+		preset.tracks = preset.tracks.filter((track) => track !== mediaId);
+		if (preset.tracks.length === 0) delete project.presets[id];
+	}
+
+	const exclude = new Set([mediaId]);
+	const removedViewIds = new Set<string>();
+	for (const view of project.views) {
+		const config = view.config;
+		if (
+			(config.type === "image" ||
+				config.type === "pianoRoll" ||
+				config.type === "sheetMusic") &&
+			config.mediaID === mediaId
+		) {
+			const wanted =
+				config.type === "image"
+					? "image"
+					: config.type === "pianoRoll"
+						? "midi"
+						: "musicxml";
+			const fallback = firstMediaIdOfType(project, wanted, exclude);
+			if (fallback) config.mediaID = fallback;
+			else removedViewIds.add(view.id);
+		}
+		if (config.type === "waveform" && Array.isArray(config.tracks)) {
+			if (config.tracks.includes(mediaId)) {
+				const remaining = config.tracks.filter((track) => track !== mediaId);
+				config.tracks = remaining.length ? remaining : "audible";
+			}
+		}
+		if (config.type === "trackList" && config.tracks.includes(mediaId)) {
+			config.tracks = config.tracks.filter((track) => track !== mediaId);
+			if (config.tracks.length === 0) removedViewIds.add(view.id);
+		}
+		if (
+			config.type === "warpingMatrix" &&
+			(config.x === mediaId || config.y === mediaId)
+		) {
+			const other = config.x === mediaId ? config.y : config.x;
+			const fallback = firstMediaIdOfType(
+				project,
+				"audio",
+				new Set([mediaId, other]),
+			);
+			if (!fallback) removedViewIds.add(view.id);
+			else if (config.x === mediaId) config.x = fallback;
+			else config.y = fallback;
+		}
+		if (config.type === "pianoRoll" && config.channelToTrackIDMap) {
+			for (const [channel, value] of Object.entries(
+				config.channelToTrackIDMap,
+			)) {
+				if (Array.isArray(value)) {
+					const next = value.filter((track) => track !== mediaId);
+					if (next.length === 0) delete config.channelToTrackIDMap[channel];
+					else config.channelToTrackIDMap[channel] = next;
+				} else if (value === mediaId) {
+					delete config.channelToTrackIDMap[channel];
+				}
+			}
+		}
+	}
+	if (removedViewIds.size) {
+		project.views = project.views.filter(
+			(view) => !removedViewIds.has(view.id),
+		);
+	}
+}
+
 export function renameMarkerId(
 	project: BuilderProject,
 	oldId: string,
@@ -480,68 +596,6 @@ export function renameMarkerId(
 		}
 	}
 	return newId;
-}
-
-export function findMediaReferences(
-	project: BuilderProject,
-	mediaId: string,
-): string[] {
-	const references: string[] = [];
-	for (const [id, media] of Object.entries(project.media)) {
-		if (media.config.type === "audio" && media.config.imageID === mediaId) {
-			references.push(`media.${id}.imageID`);
-		}
-	}
-	if (project.alignment?.config.referenceTimeline === mediaId) {
-		references.push("alignment.referenceTimeline");
-	}
-	if (project.alignment?.config.timelines[mediaId] !== undefined) {
-		references.push(`alignment.timelines.${mediaId}`);
-	}
-	for (const [id, marker] of Object.entries(project.markers)) {
-		if (marker.config.timeline === mediaId)
-			references.push(`markers.${id}.timeline`);
-	}
-	for (const [id, preset] of Object.entries(project.presets)) {
-		if (preset.tracks.includes(mediaId))
-			references.push(`presets.${id}.tracks`);
-	}
-	for (const view of project.views) {
-		const config = view.config;
-		if (
-			(config.type === "image" ||
-				config.type === "pianoRoll" ||
-				config.type === "sheetMusic") &&
-			config.mediaID === mediaId
-		) {
-			references.push(`views.${view.id}.mediaID`);
-		}
-		if (
-			config.type === "waveform" &&
-			Array.isArray(config.tracks) &&
-			config.tracks.includes(mediaId)
-		) {
-			references.push(`views.${view.id}.tracks`);
-		}
-		if (config.type === "trackList" && config.tracks.includes(mediaId)) {
-			references.push(`views.${view.id}.tracks`);
-		}
-		if (config.type === "warpingMatrix") {
-			if (config.x === mediaId) references.push(`views.${view.id}.x`);
-			if (config.y === mediaId) references.push(`views.${view.id}.y`);
-		}
-		if (config.type === "pianoRoll" && config.channelToTrackIDMap) {
-			const channels = Object.entries(config.channelToTrackIDMap)
-				.filter(([, value]) =>
-					Array.isArray(value) ? value.includes(mediaId) : value === mediaId,
-				)
-				.map(([channel]) => channel);
-			for (const channel of channels) {
-				references.push(`views.${view.id}.channelToTrackIDMap.${channel}`);
-			}
-		}
-	}
-	return references;
 }
 
 export function findMarkerReferences(
