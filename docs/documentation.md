@@ -804,6 +804,26 @@ Previous and next navigation can use boundary markers. Marker layers and searcha
 
 If a set does not have `labelCol`, the marker hover text shows the numerical ID.
 
+#### Editing markers
+
+The `"markerEditing"` navigation bar control lets the listener add, move, relabel, and remove markers by hand.
+Its button switches editing on and off. While editing is on, a tool group opens beside it with the sequence that new markers are added to, the add tool, the remove tool, a click toggle, and a CSV download.
+
+- **Add.** With the add tool selected, click or tap a waveform, piano roll, or image view to place a marker. If the sequence has a `labelCol`, a label field opens at that position: Enter confirms, Escape cancels. `M` adds a marker at the current position without interrupting playback. During playback that is the position being heard at the keypress: the marker is set back by the audio output latency the browser reports.
+- **Move.** Press and hold a marker, or drag it with the mouse. A magnified window opens over the view, centred on the marker, and horizontal movement moves the marker on a fine scale. Playback pauses for the adjustment and resumes afterwards; the playhead follows the marker and a short snippet of audio (0.3 s) is played from its position.
+- **Relabel and remove.** Double-click a marker, or hold it without moving, to open its label field with a remove button. With the remove tool selected, a click or tap on a marker removes it. `Delete` removes the focused marker.
+- **Undo.** `Ctrl + Z` undoes the last marker edit.
+- **Listen.** The click toggle is on when editing starts. With it on, playback sounds a short click on every marker of the selected sequence, so a marker can be checked against the audio by ear.
+
+A click on a marker still jumps to it, and a right-click drag still sets a loop.
+Boundaries of a `segments` sequence cannot be moved past their neighbours.
+
+A marker CSV may consist of a header row only, which gives an empty sequence to fill by hand.
+The download writes the sequence in the column layout of its CSV, with positions in the unit of its timeline. Untouched rows keep their original values, including columns the player does not read.
+After an edit, the markers of a sequence are numbered again in timeline order.
+
+The same edits are available from code: `addMarker`, `updateMarker`, `removeMarker`, and `getMarkersCsv` on the controller, and the `markers` event (`trackswitch-markers` on the element), which reports the ID of the edited sequence.
+
 Views show marker sequences through `markerLayers`:
 
 ```json
@@ -1358,7 +1378,7 @@ If at least two presets exist, it shows `presets`.
 | `repeatEnabled?` | `boolean` | `false` | Enables repeat at player startup. |
 | `globalPanControl?` | `"balance" \| "pan"` | `"balance"` | Selects the pan algorithm for the global pan control shown by `"globalPan"`. See [`trackPanControls`](#tracklist) for the algorithm behaviors. |
 
-`controls` supports `"playback"`, `"globalVolume"`, `"globalPan"`, `"markerNavigation"`, `"looping"`, `"sync"`, `"presets"`, `"timer"`, and `"seekBar"`.
+`controls` supports `"playback"`, `"globalVolume"`, `"globalPan"`, `"markerNavigation"`, `"markerEditing"`, `"looping"`, `"sync"`, `"presets"`, `"timer"`, and `"seekBar"`.
 
 `"globalPan"` shows a left-right pan control that adjusts every track together, styled like a track's own pan control. It snaps to dead center the same way per-track pan controls do.
 
@@ -1477,12 +1497,20 @@ If `controls` contains `"looping"`, use these additional shortcuts:
 
 The loop buttons also control loops. On a seekable control, right-click to add a loop region.
 
-If `controls` contains `"markerNavigation"`, use these additional shortcuts:
+These shortcuts step through the markers and are always available. The start and the end of the timeline count as stops, so they also work without any marker sequence:
 
 | Keys | Action |
 | --- | --- |
-| `,` | Jump to the previous marker. |
-| `.` | Jump to the next marker. |
+| `,` | Jump to the previous marker, or to the start. |
+| `.` | Jump to the next marker, or to the end. |
+
+If `controls` contains `"markerEditing"`, these shortcuts apply while marker editing is on:
+
+| Keys | Action |
+| --- | --- |
+| `M` | Add a marker at the current position. |
+| `Delete` | Remove the focused marker. |
+| `Ctrl + Z` | Undo the last marker edit. |
 
 ## Configuration requirements
 

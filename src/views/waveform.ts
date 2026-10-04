@@ -20,6 +20,7 @@ import type {
 	WaveformTimeAxis,
 } from "../types";
 import type { ViewRenderer, WaveformTimelineContext } from "./renderer";
+import type { SeekSurfaceRangeRenderer } from "./surface";
 import {
 	applyTimelineFollowScrollLeft,
 	buildSeekWrap,
@@ -54,6 +55,11 @@ interface WaveformSeekSurfaceMetadata {
 	/** Empty surface past the end of the medium; see `TimelineSurfaceGeometry`. */
 	trailingPadPx?: number;
 	timeAxis: WaveformTimeAxis;
+	/**
+	 * Draws a stretch of this waveform, given as fractions of the surface's
+	 * timeline, at whatever size the canvas asks for — set by each render.
+	 */
+	drawRange: SeekSurfaceRangeRenderer | null;
 	originalHeight: number;
 	/** The configured `height`, immutable — the base a fullscreen grow restores to. */
 	configuredHeight: number;
@@ -270,6 +276,45 @@ function renderWaveformCanvas(
 	}
 
 	context.restore();
+}
+
+/**
+ * Draws peaks that carry the signal's true range — see
+ * `calculateSampleWaveform` — as one column each, at the height the signal has
+ * there. Unlike the overview's bars, a column is not anchored to the centre
+ * line, which is what lets a magnified window show the oscillation itself.
+ */
+function renderWaveformTrace(
+	canvas: HTMLCanvasElement,
+	width: number,
+	height: number,
+	buckets: WaveformPeakBuckets | null,
+	color: string,
+	normalizationPeak: number,
+): void {
+	const context = resizeCanvasForCssSize(canvas, width, height);
+	if (!context || !buckets || width <= 0 || height <= 0) {
+		return;
+	}
+
+	const count = buckets.maxes.length;
+	const columnWidth = width / count;
+	const centerY = height / 2;
+	const scale =
+		(height * 0.475) / (normalizationPeak > 0 ? normalizationPeak : 1);
+	// A flat stretch still shows as a line one device pixel thick.
+	const minimumHeight = 1 / Math.max(1, window.devicePixelRatio || 1);
+	context.fillStyle = color;
+	for (let index = 0; index < count; index += 1) {
+		const top = clamp(centerY - buckets.maxes[index] * scale, 0, height);
+		const bottom = clamp(centerY - buckets.mins[index] * scale, 0, height);
+		context.fillRect(
+			index * columnWidth,
+			top,
+			columnWidth,
+			Math.max(minimumHeight, bottom - top),
+		);
+	}
 }
 
 function renderPlaceholderCanvas(
@@ -590,6 +635,7 @@ export function wrapWaveformCanvases(ctx: ViewRenderer): void {
 				seekWrap: seekWrap,
 				waveformSource: waveformSource,
 				playbackFollowMode: playbackFollowMode,
+				drawRange: null,
 				timeAxis: timeAxis,
 				originalHeight: originalHeight,
 				configuredHeight: originalHeight,
@@ -1223,6 +1269,50 @@ export function renderWaveformsInternal(
 		}
 
 		const normalizationPeak = surfaceMetadata.normalizationPeak;
+		surfaceMetadata.drawRange = (
+			canvas,
+			cssWidth,
+			cssHeight,
+			startRatio,
+			widthRatio,
+		) => {
+			const color = resolveWaveformColor(surfaceMetadata.seekWrap);
+			if (waveformProjector) {
+				// Warped onto the reference timeline: only the summary knows how.
+				renderWaveformCanvas(
+					canvas,
+					cssWidth,
+					cssHeight,
+					waveformEngine.calculateMixedWaveform(
+						sourceRuntimes,
+						Math.max(1, Math.floor(cssWidth / surfaceRenderBarWidth)),
+						surfaceRenderBarWidth,
+						fullDuration,
+						waveformProjector,
+						fullDuration * startRatio,
+						fullDuration * widthRatio,
+					),
+					surfaceRenderBarWidth,
+					color,
+					normalizationPeak,
+				);
+				return;
+			}
+			// One peak per device pixel, read from the samples themselves.
+			renderWaveformTrace(
+				canvas,
+				cssWidth,
+				cssHeight,
+				waveformEngine.calculateSampleWaveform(
+					sourceRuntimes,
+					Math.round(cssWidth * Math.max(1, window.devicePixelRatio || 1)),
+					fullDuration * startRatio,
+					fullDuration * widthRatio,
+				),
+				color,
+				normalizationPeak,
+			);
+		};
 
 		ctx.forEachVisibleWaveformTile(
 			surfaceMetadata,

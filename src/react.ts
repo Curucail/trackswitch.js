@@ -24,6 +24,7 @@ export interface TrackSwitchEventProps {
 	onError?: (payload: TrackSwitchEventMap["error"]) => void;
 	onPosition?: (payload: TrackSwitchEventMap["position"]) => void;
 	onTrackState?: (payload: TrackSwitchEventMap["trackState"]) => void;
+	onMarkers?: (payload: TrackSwitchEventMap["markers"]) => void;
 }
 
 export interface TrackSwitchPlayerProps extends TrackSwitchEventProps {
@@ -80,6 +81,7 @@ export function useTrackSwitchElement(
 		onError,
 		onPosition,
 		onTrackState,
+		onMarkers,
 	}: UseTrackSwitchElementOptions = {},
 	tagName = "trackswitch-player",
 ): UseTrackSwitchElementResult {
@@ -117,15 +119,21 @@ export function useTrackSwitchElement(
 			TRACKSWITCH_DOM_EVENTS.trackState,
 			onTrackState,
 		);
+		const unsubscribeMarkers = addTrackswitchListener(
+			element,
+			TRACKSWITCH_DOM_EVENTS.markers,
+			onMarkers,
+		);
 
 		return () => {
 			unsubscribeLoaded();
 			unsubscribeError();
 			unsubscribePosition();
 			unsubscribeTrackState();
+			unsubscribeMarkers();
 			controllerRef.current = null;
 		};
-	}, [configKey, onLoaded, onError, onPosition, onTrackState]);
+	}, [configKey, onLoaded, onError, onPosition, onTrackState, onMarkers]);
 
 	useEffect(() => {
 		void configKey;
@@ -158,6 +166,7 @@ function createTrackSwitchReactComponent(
 			onError,
 			onPosition,
 			onTrackState,
+			onMarkers,
 		}: TrackSwitchPlayerProps,
 		ref: Ref<TrackSwitchController | null>,
 	) {
@@ -169,6 +178,7 @@ function createTrackSwitchReactComponent(
 				onError,
 				onPosition,
 				onTrackState,
+				onMarkers,
 			},
 			tagName,
 		);

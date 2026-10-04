@@ -1010,6 +1010,7 @@ function normalizeNavigationBarConfig(
 		"globalVolume",
 		"globalPan",
 		"markerNavigation",
+		"markerEditing",
 		"looping",
 		"sync",
 		"presets",

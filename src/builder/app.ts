@@ -14,7 +14,9 @@ import { AlignmentWorkerBridge } from "../../extensions/interactive-alignment/wo
 import { normalizeTrackSwitchConfig } from "../config/config";
 import { parseCsvRecords } from "../shared/csv";
 import type {
+	MarkerLayerConfig,
 	MediaEntryConfig,
+	TrackSwitchController,
 	TrackSwitchInit,
 	TrackSwitchViewConfig,
 } from "../types";
@@ -64,7 +66,16 @@ interface ComputeProgressElements {
 
 interface TrackswitchPreviewElement extends HTMLElement {
 	config: TrackSwitchInit | undefined;
+	readonly controller: TrackSwitchController | null;
 }
+
+/** Views that can draw marker layers. */
+const MARKER_LAYER_VIEW_TYPES = new Set([
+	"image",
+	"perTrackImage",
+	"waveform",
+	"pianoRoll",
+]);
 
 const VIEW_LABELS: Record<(typeof BUILDER_VIEW_TYPES)[number], string> = {
 	image: "Image",
@@ -388,8 +399,9 @@ export class BuilderApp {
 			if (resource.kind !== "csv") continue;
 			try {
 				const parsed = parseCsvRecords(await resource.file.text(), {
-					emptyDataError:
-						"CSV must contain a header row and at least one data row.",
+					emptyDataError: "CSV must contain a header row.",
+					// A marker sequence may start empty and be filled in the player.
+					allowNoRows: true,
 				});
 				resource.csvHeaders = parsed.headers;
 			} catch (error) {
@@ -536,9 +548,21 @@ export class BuilderApp {
 				),
 			);
 		}
-		const addMarker = button("Add marker sequence");
-		addMarker.addEventListener("click", () => this.pickCsvFor("marker"));
-		markers.append(addMarker);
+		const markerActions = document.createElement("div");
+		markerActions.className =
+			"ts-builder-sidebar-actions ts-builder-sidebar-actions--or";
+		const uploadMarkers = button("Upload marker set CSV");
+		uploadMarkers.addEventListener("click", () => this.pickCsvFor("marker"));
+		const markersOr = document.createElement("span");
+		markersOr.className = "ts-builder-sidebar-actions__or";
+		markersOr.textContent = "or";
+		const addInBrowser = button("Add blank marker set");
+		addInBrowser.addEventListener(
+			"click",
+			() => void this.createEmptyMarkerSequence(),
+		);
+		markerActions.append(uploadMarkers, markersOr, addInBrowser);
+		markers.append(markerActions);
 		this.sidebar.append(markers);
 
 		const presets = this.sidebarSection("Presets");
@@ -1132,11 +1156,16 @@ export class BuilderApp {
 		this.render();
 	}
 
-	private addMarker(csv: BuilderResource): void {
+	/** `labelCol` is given for a blank set, which is added without asking for settings. */
+	private addMarker(csv: BuilderResource, labelCol?: string): string | null {
 		const id = uniqueId("markers", Object.keys(this.project.markers));
 		this.project.markers[id] = {
 			resourceId: csv.id,
-			config: { type: "points", timeCol: csv.csvHeaders?.[0] ?? "" },
+			config: {
+				type: "points",
+				timeCol: csv.csvHeaders?.[0] ?? "",
+				...(labelCol ? { labelCol } : {}),
+			},
 		};
 		const errors = this.validationErrors();
 		if (errors.length) {
@@ -1146,10 +1175,84 @@ export class BuilderApp {
 				`Could not add marker sequence: ${errors.join(" ")}`,
 				true,
 			);
-			return;
+			return null;
 		}
 		this.render();
-		this.openInspector({ kind: "marker", id, resourceId: csv.id });
+		if (!labelCol) {
+			this.openInspector({ kind: "marker", id, resourceId: csv.id });
+		}
+		return id;
+	}
+
+	/**
+	 * A sequence with no markers yet, to be filled by hand in the player. It is
+	 * only useful where it can be seen and edited, so every view that draws
+	 * marker layers gets one for it and the navigation bar gets the marker tools.
+	 */
+	private async createEmptyMarkerSequence(): Promise<void> {
+		const fileName = `${uniqueId(
+			"markers",
+			Object.values(this.project.resources).map((resource) =>
+				resource.file.name.replace(/\.csv$/, ""),
+			),
+		)}.csv`;
+		const added = await this.addFiles([
+			new File(["time,label\n"], fileName, { type: "text/csv" }),
+		]);
+		const csv = added.find((resource) => resource.kind === "csv");
+		const id = csv ? this.addMarker(csv, "label") : null;
+		if (id === null) return;
+
+		for (const view of this.project.views) {
+			const config = view.config;
+			if (MARKER_LAYER_VIEW_TYPES.has(config.type)) {
+				const layered = config as { markerLayers?: MarkerLayerConfig[] };
+				layered.markerLayers = [
+					...(layered.markerLayers ?? []),
+					{ sequence: id },
+				];
+			} else if (config.type === "navigationBar") {
+				// The marker tools go with the transport: right after playback and
+				// the global volume and pan, ahead of everything else in the bar.
+				const added = (["markerNavigation", "markerEditing"] as const).filter(
+					(control) => !config.controls.includes(control),
+				);
+				const insertAt =
+					Math.max(
+						...(["playback", "globalVolume", "globalPan"] as const).map(
+							(control) => config.controls.indexOf(control),
+						),
+					) + 1;
+				config.controls = [
+					...config.controls.slice(0, insertAt),
+					...added,
+					...config.controls.slice(insertAt),
+				];
+			}
+		}
+		this.render();
+	}
+
+	/**
+	 * Markers edited in the preview live in the player. Writing them back into
+	 * the sequence's CSV resource is what carries them through the next preview
+	 * reload and into the export.
+	 */
+	private persistEditedMarkers(sequenceId: string): void {
+		const marker = this.project.markers[sequenceId];
+		const resource = marker
+			? this.project.resources[marker.resourceId]
+			: undefined;
+		const controller = this.preview?.controller;
+		if (!resource || !controller) return;
+
+		resource.file = new File(
+			[controller.getMarkersCsv(sequenceId)],
+			resource.file.name,
+			{ type: "text/csv" },
+		);
+		URL.revokeObjectURL(resource.previewUrl);
+		resource.previewUrl = URL.createObjectURL(resource.file);
 	}
 
 	private addPreset(): void {
@@ -1648,6 +1751,10 @@ export class BuilderApp {
 				this.runtimeFailed = true;
 				this.setExportDisabled(true);
 				this.setStatus(`Player could not load: ${message}`, true);
+			});
+			this.preview.addEventListener("trackswitch-markers", (event) => {
+				const detail = (event as CustomEvent<{ sequenceId: string }>).detail;
+				this.persistEditedMarkers(detail.sequenceId);
 			});
 			this.previewHost.replaceChildren(this.preview);
 		}

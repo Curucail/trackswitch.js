@@ -29,6 +29,8 @@ import {
 	getPointerPageX,
 	getSeekMetrics,
 } from "./input";
+import { placeMarkerFromEvent, updateMarkerAdjust } from "./marker-editing";
+import { resetMarkerClicks, scheduleMarkerClicks } from "./marker-sonification";
 import { snapLoopEndToMarker } from "./markers";
 import type { TrackSwitchControllerImpl } from "./player";
 import {
@@ -201,6 +203,7 @@ export async function load(ctx: TrackSwitchControllerImpl): Promise<void> {
 		}
 
 		const alignment = ctx.alignment as Alignment | null;
+		ctx.markerUndoStack = [];
 		ctx.markerSequences = await loadMarkerSequences(
 			ctx.markersConfig,
 			alignment,
@@ -797,6 +800,11 @@ export function startAudio(
 		anchor: nextAnchor,
 	});
 	ctx.dispatch({ type: "set-start-time", startTime: startResult.startTime });
+	resetMarkerClicks(ctx, ctx.state.position);
+	if (snippetDuration === undefined) {
+		// A marker right at the start is due now, not at the monitor's first tick.
+		scheduleMarkerClicks(ctx);
+	}
 
 	if (ctx.timerMonitorPosition) {
 		clearInterval(ctx.timerMonitorPosition);
@@ -809,6 +817,7 @@ export function startAudio(
 
 export function stopAudio(ctx: TrackSwitchControllerImpl): void {
 	ctx.audioEngine.stop(ctx.runtimes);
+	resetMarkerClicks(ctx, null);
 	ctx.alignmentPlaybackTrackIndex = null;
 	if (ctx.timerMonitorPosition) {
 		clearInterval(ctx.timerMonitorPosition);
@@ -828,6 +837,7 @@ export function monitorPosition(ctx: TrackSwitchControllerImpl): void {
 			position: currentPosition,
 			anchor: ctx.currentPlaybackAnchor(),
 		});
+		scheduleMarkerClicks(ctx);
 	}
 
 	if (
@@ -1197,6 +1207,10 @@ export function onSeekMove(
 	event: ControllerPointerEvent,
 ): void {
 	if (!ctx.isLoaded) {
+		return;
+	}
+
+	if (updateMarkerAdjust(ctx, event)) {
 		return;
 	}
 
@@ -1653,6 +1667,9 @@ export function applyPendingWaveformTouchSeekTap(
 
 	ctx.seekingElement = ctx.pendingWaveformTouchSeek.seekWrap;
 	ctx.pendingWaveformTouchSeek = null;
+	if (placeMarkerFromEvent(ctx, event, ctx.seekingElement)) {
+		return;
+	}
 	ctx.seekFromEvent(event, false, true);
 }
 

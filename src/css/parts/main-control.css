@@ -244,6 +244,85 @@
 	font-size: 16px;
 }
 
+/* Marker editing */
+.trackswitch .main-control .marker-editing-controls {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+/* The tools belong to the edit button: they open beside it as one framed group. */
+.trackswitch .main-control .marker-editing-tools {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 0 4px;
+	border: 1px solid var(--ts-color-surface-control);
+	border-radius: 4px;
+}
+
+.trackswitch .main-control .marker-editing-tools[hidden] {
+	display: none;
+}
+
+.trackswitch .main-control .marker-editing-controls .button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: var(--ts-main-control-large-button-size);
+	color: var(--ts-color-text-muted);
+	transition:
+		color 100ms ease-out,
+		opacity 100ms ease-out;
+}
+
+.trackswitch
+	.main-control
+	.marker-editing-controls
+	.button:hover:not(:disabled),
+.trackswitch .main-control .marker-editing-controls .button:focus-visible {
+	color: var(--ts-color-text-inverse);
+}
+
+/* A tool that is switched on reads as a lit key, not just a brighter icon. */
+.trackswitch.trackswitch .main-control .marker-editing-controls .button.checked {
+	color: var(--ts-color-text-inverse);
+	background: var(--ts-color-accent);
+	border-radius: 3px;
+}
+
+.trackswitch .main-control .marker-editing-controls .button:focus-visible {
+	outline: 2px solid var(--ts-focus-ring-color);
+	outline-offset: 2px;
+}
+
+.trackswitch .main-control .marker-editing-controls .button:disabled {
+	opacity: 0.3;
+	cursor: default;
+}
+
+.trackswitch .main-control .marker-editing-controls .ts-icon-slot,
+.trackswitch .main-control .marker-editing-controls .ts-icon-svg {
+	width: 16px;
+	height: 16px;
+	font-size: 16px;
+}
+
+.trackswitch .main-control .marker-edit-sequence {
+	appearance: auto;
+	background-color: var(--ts-color-surface-control);
+	color: var(--ts-color-text-muted);
+	border: 1px solid var(--ts-color-surface-panel-dark);
+	box-sizing: border-box;
+	height: var(--ts-preset-selector-height);
+	max-width: 140px;
+	padding: 0 4px;
+	font: 12px var(--ts-font-ui);
+	cursor: pointer;
+	border-radius: 4px;
+}
+
 .trackswitch
 	.main-control
 	.playback-group

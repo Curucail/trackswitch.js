@@ -395,6 +395,7 @@ export type TrackSwitchNavigationBarControl =
 	| "globalVolume"
 	| "globalPan"
 	| "markerNavigation"
+	| "markerEditing"
 	| "looping"
 	| "sync"
 	| "presets"
@@ -621,13 +622,16 @@ export type TrackSwitchEventName =
 	| "loaded"
 	| "error"
 	| "position"
-	| "trackState";
+	| "trackState"
+	| "markers";
 
 export interface TrackSwitchEventMap {
 	loaded: { longestDuration: number };
 	error: { message: string };
 	position: { position: number; duration: number };
 	trackState: { index: number; state: TrackState };
+	/** A marker sequence was edited; `getMarkersCsv` returns its current content. */
+	markers: { sequenceId: string };
 }
 
 export type TrackSwitchEventHandler<K extends TrackSwitchEventName> = (
@@ -662,6 +666,21 @@ export interface TrackSwitchController {
 	setLoopPoint(marker: LoopMarker): boolean;
 	toggleLoop(): boolean;
 	clearLoop(): void;
+	/**
+	 * Adds a marker to a sequence and returns its id. `position` is read in the
+	 * unit of the sequence's timeline, exactly like the sequence's CSV. Ids number
+	 * the markers of a sequence in timeline order, so an edit can renumber them.
+	 */
+	addMarker(sequenceId: string, position: number, label?: string): string;
+	/** Moves and/or relabels a marker and returns the id it has afterwards. */
+	updateMarker(
+		sequenceId: string,
+		markerId: string,
+		changes: { position?: number; label?: string },
+	): string;
+	removeMarker(sequenceId: string, markerId: string): void;
+	/** The sequence as CSV text, in the column layout of the file it was read from. */
+	getMarkersCsv(sequenceId: string): string;
 	/** `groupIndex` picks which trackList the toggle acts within; defaults to the track's first list. */
 	toggleSolo(
 		trackIndex: number,

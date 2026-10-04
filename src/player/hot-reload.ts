@@ -288,6 +288,7 @@ async function applyAudioPreservingConfig(
 	}
 	controller.restoreSoloMode();
 
+	controller.markerUndoStack = [];
 	controller.markerSequences = await loadMarkerSequences(
 		controller.markersConfig,
 		controller.alignment,
@@ -474,6 +475,7 @@ async function updateConfigNow(
 			controller.navigationBar?.globalPanControl ?? "balance",
 		);
 		controller.markersConfig = nextConfig.markers;
+		controller.markerUndoStack = [];
 		controller.markerSequences = stagedMarkerSequences;
 		controller.trackGroups = nextTrackGroups;
 		controller.renderer.updateConfig(

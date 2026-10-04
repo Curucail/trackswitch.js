@@ -88,6 +88,11 @@ function computeBalanceGains(pan: number): { gainL: number; gainR: number } {
 	};
 }
 
+const SNIPPET_FADE_SECONDS = 0.1;
+const CLICK_FREQUENCY_HZ = 1000;
+const CLICK_DURATION_SECONDS = 0.04;
+const CLICK_GAIN = 0.6;
+
 export class AudioEngine {
 	private context: AudioContext | null;
 	private readonly alignmentEnabled: boolean;
@@ -97,6 +102,7 @@ export class AudioEngine {
 	private globalPanAlgorithm: TrackPanAlgorithm;
 	private gainNodeMaster: GainNode | null;
 	private gainNodeVolume: GainNode | null;
+	private readonly pendingClicks = new Set<GainNode>();
 	private masterVolume: number;
 	private masterPan: number;
 	private masterPannerNode: StereoPannerNode | null;
@@ -957,14 +963,14 @@ export class AudioEngine {
 				now + downwardRamp + upwardRamp,
 			);
 
+			// A short snippet fades over its whole length; a longer one holds at
+			// full level and fades only at its end.
+			const snippetEnd = now + downwardRamp + upwardRamp + snippetDuration;
 			this.gainNodeMaster.gain.setValueAtTime(
 				1.0,
-				now + downwardRamp + upwardRamp,
+				snippetEnd - Math.min(snippetDuration, SNIPPET_FADE_SECONDS),
 			);
-			this.gainNodeMaster.gain.linearRampToValueAtTime(
-				0.0,
-				now + downwardRamp + upwardRamp + snippetDuration,
-			);
+			this.gainNodeMaster.gain.linearRampToValueAtTime(0.0, snippetEnd);
 		} else {
 			this.gainNodeMaster.gain.cancelScheduledValues(now);
 			this.gainNodeMaster.gain.setValueAtTime(0.0, now);
@@ -1033,6 +1039,60 @@ export class AudioEngine {
 		return {
 			startTime: now - position,
 		};
+	}
+
+	/**
+	 * Schedules a short click `delaySeconds` from now. It joins the output behind
+	 * the master gain, so the global volume applies to it while the fades that
+	 * start and stop the tracks do not swallow it.
+	 */
+	scheduleClick(delaySeconds: number): void {
+		if (!this.context || !this.gainNodeVolume) {
+			return;
+		}
+
+		const startAt = this.context.currentTime + Math.max(0, delaySeconds);
+		const oscillator = this.context.createOscillator();
+		const envelope = this.context.createGain();
+		oscillator.frequency.value = CLICK_FREQUENCY_HZ;
+		envelope.gain.setValueAtTime(CLICK_GAIN, startAt);
+		envelope.gain.exponentialRampToValueAtTime(
+			0.001,
+			startAt + CLICK_DURATION_SECONDS,
+		);
+		oscillator.connect(envelope);
+		envelope.connect(this.gainNodeVolume);
+		this.pendingClicks.add(envelope);
+		oscillator.onended = () => {
+			envelope.disconnect();
+			this.pendingClicks.delete(envelope);
+		};
+		oscillator.start(startAt);
+		oscillator.stop(startAt + CLICK_DURATION_SECONDS);
+	}
+
+	/**
+	 * Seconds between the audio clock and what the listener hears: audio handed
+	 * to the output now only leaves the speakers this much later. Browsers that
+	 * do not report the device's share contribute the engine's own share only.
+	 */
+	getOutputLatency(): number {
+		if (!this.context) {
+			return 0;
+		}
+		const deviceLatency = this.context.outputLatency;
+		return (
+			this.context.baseLatency +
+			(Number.isFinite(deviceLatency) ? deviceLatency : 0)
+		);
+	}
+
+	/** Silences every click that is scheduled or sounding. */
+	cancelClicks(): void {
+		this.pendingClicks.forEach((envelope) => {
+			envelope.disconnect();
+		});
+		this.pendingClicks.clear();
 	}
 
 	stop(runtimes: TrackRuntime[]): void {

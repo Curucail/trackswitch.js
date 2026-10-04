@@ -105,3 +105,17 @@ export function closestInRoot(
 export function setDisplay(element: Element, displayValue: string): void {
 	(element as HTMLElement).style.display = displayValue;
 }
+
+export function downloadTextFile(
+	document: Document,
+	fileName: string,
+	text: string,
+	mimeType: string,
+): void {
+	const url = URL.createObjectURL(new Blob([text], { type: mimeType }));
+	const link = document.createElement("a");
+	link.href = url;
+	link.download = fileName;
+	link.click();
+	document.defaultView?.setTimeout(() => URL.revokeObjectURL(url), 0);
+}

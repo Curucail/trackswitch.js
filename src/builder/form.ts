@@ -54,6 +54,7 @@ const NAVIGATION_CONTROLS = [
 	"globalVolume",
 	"globalPan",
 	"markerNavigation",
+	"markerEditing",
 	"looping",
 	"sync",
 	"presets",

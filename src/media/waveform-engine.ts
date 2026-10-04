@@ -194,6 +194,91 @@ export class WaveformEngine {
 		return mixed;
 	}
 
+	/**
+	 * The mixed waveform of a window read straight from the decoded samples,
+	 * rather than from the summary the overview is drawn with: a summary entry
+	 * spans hundreds of samples and turns into blocks once a view magnifies past
+	 * it. Each peak holds the true range its samples cover, so a window narrow
+	 * enough to resolve single samples traces the signal itself.
+	 *
+	 * `startSeconds` is a position on the tracks' own, unwarped timeline.
+	 */
+	calculateSampleWaveform(
+		runtimes: TrackRuntime[],
+		peakCount: number,
+		startSeconds: number,
+		durationSeconds: number,
+	): WaveformPeakBuckets | null {
+		const count = Math.floor(peakCount);
+		const audible = runtimes.filter(
+			(runtime) => runtime.state.volume > 0 && runtime.buffer,
+		);
+		if (!audible.length || count <= 0 || durationSeconds <= 0) {
+			return null;
+		}
+
+		const mixed: WaveformPeakBuckets = {
+			mins: new Float32Array(count),
+			maxes: new Float32Array(count),
+		};
+		const divisor = Math.sqrt(audible.length);
+
+		audible.forEach((runtime) => {
+			const buffer = runtime.buffer as AudioBuffer;
+			const timing = WaveformEngine.normalizeTiming(runtime);
+			const trimStart = timing ? timing.trimStart : 0;
+			const padStart = timing ? timing.padStart : 0;
+			const audioDuration = timing ? timing.audioDuration : buffer.duration;
+			const rate = buffer.sampleRate;
+			const firstSample = Math.max(0, Math.floor(trimStart * rate));
+			const endSample = Math.min(
+				buffer.length,
+				Math.ceil((trimStart + audioDuration) * rate),
+			);
+			const channels: Float32Array[] = [];
+			for (let index = 0; index < buffer.numberOfChannels; index += 1) {
+				channels.push(buffer.getChannelData(index));
+			}
+
+			const weight = Math.min(1, runtime.state.volume) / divisor;
+			const originSample = (startSeconds - padStart + trimStart) * rate;
+			const samplesPerPeak = (durationSeconds * rate) / count;
+			for (let peakIndex = 0; peakIndex < count; peakIndex += 1) {
+				// Reaching one sample back into the previous peak keeps neighbouring
+				// peaks touching, so the trace has no gaps where the signal is steep.
+				const from = Math.floor(originSample + peakIndex * samplesPerPeak) - 1;
+				const to = Math.max(
+					from + 2,
+					Math.floor(originSample + (peakIndex + 1) * samplesPerPeak),
+				);
+				let min = Number.POSITIVE_INFINITY;
+				let max = Number.NEGATIVE_INFINITY;
+				for (
+					let sample = Math.max(from, firstSample);
+					sample < Math.min(to, endSample);
+					sample += 1
+				) {
+					for (const channel of channels) {
+						const value = channel[sample];
+						if (value < min) {
+							min = value;
+						}
+						if (value > max) {
+							max = value;
+						}
+					}
+				}
+				// Outside the track's audio the peak stays on the zero line.
+				if (min <= max) {
+					mixed.mins[peakIndex] += min * weight;
+					mixed.maxes[peakIndex] += max * weight;
+				}
+			}
+		});
+
+		return mixed;
+	}
+
 	private createBaseSummaryLevel(buffer: AudioBuffer): WaveformSummaryLevel {
 		const sampleCount = buffer.length;
 		const entryCount = Math.max(

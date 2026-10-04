@@ -349,11 +349,26 @@ function getShortcutHelpEntries(
 		);
 	}
 
-	if (navigationBarHasControl(navigationBar, "markerNavigation")) {
-		entries.push({
-			keys: ", / .",
-			action: "Jump to the previous or next marker.",
-		});
+	entries.push({
+		keys: ", / .",
+		action: "Jump to the previous or next marker, or to the start or end.",
+	});
+
+	if (navigationBarHasControl(navigationBar, "markerEditing")) {
+		entries.push(
+			{
+				keys: "M",
+				action: "While editing markers, add a marker at the current position.",
+			},
+			{
+				keys: "Delete",
+				action: "While editing markers, remove the focused marker.",
+			},
+			{
+				keys: "Ctrl + Z",
+				action: "While editing markers, undo the last marker edit.",
+			},
+		);
 	}
 
 	if (navigationBarHasControl(navigationBar, "fullscreen-control")) {
@@ -650,6 +665,29 @@ export function buildMainControlHtml(
 					'<button type="button" class="marker-next button" title="Next marker" aria-label="Next marker" disabled>' +
 					renderIconSlotHtml("marker-next") +
 					"</button>" +
+					"</div></li>"
+				);
+			case "markerEditing":
+				return (
+					'<li class="marker-editing-group"><div class="marker-editing-controls" role="group" aria-label="Marker editing">' +
+					'<button type="button" class="marker-edit-toggle button" title="Edit markers" aria-label="Edit markers" aria-pressed="false" disabled>' +
+					renderIconSlotHtml("marker-edit") +
+					"</button>" +
+					'<div class="marker-editing-tools" role="group" aria-label="Marker editing tools" hidden>' +
+					'<select class="marker-edit-sequence" title="Marker sequence to edit" aria-label="Marker sequence to edit"></select>' +
+					'<button type="button" class="marker-edit-add button" title="Add markers by clicking a view (M adds one at the current position)" aria-label="Add markers" aria-pressed="false">' +
+					renderIconSlotHtml("marker-add") +
+					"</button>" +
+					'<button type="button" class="marker-edit-remove button" title="Remove markers by clicking them" aria-label="Remove markers" aria-pressed="false">' +
+					renderIconSlotHtml("marker-remove") +
+					"</button>" +
+					'<button type="button" class="marker-edit-sonify button" title="Play a click on every marker" aria-label="Play a click on every marker" aria-pressed="false">' +
+					renderIconSlotHtml("marker-sonify") +
+					"</button>" +
+					'<button type="button" class="marker-edit-download button" title="Download markers as CSV" aria-label="Download markers as CSV">' +
+					renderIconSlotHtml("download") +
+					"</button>" +
+					"</div>" +
 					"</div></li>"
 				);
 			case "looping":

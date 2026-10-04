@@ -9,6 +9,11 @@ export type TrackSwitchIconName =
 	| "marker-previous"
 	| "marker-jump"
 	| "marker-next"
+	| "marker-edit"
+	| "marker-add"
+	| "marker-remove"
+	| "marker-sonify"
+	| "download"
 	| "pause"
 	| "stop"
 	| "repeat"
@@ -46,6 +51,16 @@ const ICON_SVG_BY_NAME: Record<TrackSwitchIconName, string> = {
 		'<svg class="ts-icon-svg" role="img" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5.8 2.5h12.4L13.1 9v12.5h-2.2V9L5.8 2.5Z"></path></svg>',
 	"marker-next":
 		'<svg class="ts-icon-svg" role="img" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12.8 5.2 21.5 12l-8.7 6.8V5.2Zm-10.3 0L11.2 12l-8.7 6.8V5.2Z"></path></svg>',
+	"marker-edit":
+		'<svg class="ts-icon-svg" role="img" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3.5 20.5 4.7 15.4 15.9 4.2l3.9 3.9L8.6 19.3l-5.1 1.2ZM17.3 2.8l1.1-1.1a1.6 1.6 0 0 1 2.2 0l1.7 1.7a1.6 1.6 0 0 1 0 2.2l-1.1 1.1-3.9-3.9Z"></path></svg>',
+	"marker-add":
+		'<svg class="ts-icon-svg" role="img" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M2.5 2.5h9.8L8.5 7.6v13.9H6.3V7.6L2.5 2.5Zm13.4 7.4h2.2v3.5h3.4v2.2h-3.4v3.5h-2.2v-3.5h-3.4v-2.2h3.4V9.9Z"></path></svg>',
+	"marker-remove":
+		'<svg class="ts-icon-svg" role="img" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M2.5 2.5h9.8L8.5 7.6v13.9H6.3V7.6L2.5 2.5Zm10 10.9h9v2.2h-9v-2.2Z"></path></svg>',
+	"marker-sonify":
+		'<svg class="ts-icon-svg" role="img" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M2.5 2.5h9.8L8.5 7.6v13.9H6.3V7.6L2.5 2.5Z"></path><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M13.6 11.2a4.6 4.6 0 0 1 0 6.6M17 8.4a8.8 8.8 0 0 1 0 12.2"></path></svg>',
+	download:
+		'<svg class="ts-icon-svg" role="img" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10.9 3h2.2v9.3l3.3-3.3 1.6 1.6-6 6-6-6L7.6 9l3.3 3.3V3ZM4 18.8h16V21H4v-2.2Z"></path></svg>',
 	pause:
 		'<svg class="ts-icon-svg" role="img" viewBox="0 32 384 448" aria-hidden="true"><path fill="currentColor" d="M48 32C21.5 32 0 53.5 0 80L0 432c0 26.5 21.5 48 48 48l64 0c26.5 0 48-21.5 48-48l0-352c0-26.5-21.5-48-48-48L48 32zm224 0c-26.5 0-48 21.5-48 48l0 352c0 26.5 21.5 48 48 48l64 0c26.5 0 48-21.5 48-48l0-352c0-26.5-21.5-48-48-48l-64 0z"></path></svg>',
 	stop: '<svg class="ts-icon-svg" role="img" viewBox="0 32 448 448" aria-hidden="true"><path fill="currentColor" d="M64 32l320 0c35.3 0 64 28.7 64 64l0 320c0 35.3-28.7 64-64 64L64 480c-35.3 0-64-28.7-64-64L0 96C0 60.7 28.7 32 64 32z"></path></svg>',

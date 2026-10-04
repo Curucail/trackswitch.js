@@ -29,6 +29,7 @@ import type {
 } from "../types";
 import * as viewRendererCore from "./layout";
 import { renderConfiguredViews } from "./layout";
+import * as viewRendererMarkerEditing from "./marker-editing";
 import type { MarkerRenderData } from "./markers";
 import * as viewRendererMarkers from "./markers";
 import * as viewRendererWarping from "./matrix";
@@ -153,6 +154,7 @@ interface WaveformSeekSurfaceMetadata {
 	/** Empty surface past the end of the medium; see `TimelineSurfaceGeometry`. */
 	trailingPadPx?: number;
 	timeAxis: WaveformTimeAxis;
+	drawRange: viewRendererSeek.SeekSurfaceRangeRenderer | null;
 	originalHeight: number;
 	/** The configured `height`, immutable — the base a fullscreen grow restores to. */
 	configuredHeight: number;
@@ -839,6 +841,77 @@ export class ViewRenderer {
 		sets: viewRendererMarkers.MarkerNavigationSetOption[],
 	): void {
 		viewRendererMarkers.updateMarkerNavigationDialogSets(this.root, sets);
+	}
+
+	public updateMarkerEditingControls(
+		state: viewRendererMarkerEditing.MarkerEditingControlsState,
+	): void {
+		viewRendererMarkerEditing.updateMarkerEditingControls(this.root, state);
+	}
+
+	public openMarkerLabelEditor(
+		seekWrap: HTMLElement,
+		options: viewRendererMarkerEditing.MarkerLabelEditorOptions,
+	): void {
+		viewRendererMarkerEditing.openMarkerLabelEditor(
+			this.root,
+			seekWrap,
+			options,
+		);
+	}
+
+	/**
+	 * Draws a stretch of the surface behind `seekWrap` — waveform, notes or image
+	 * — magnified into `canvas`. Ratios are fractions of the seek surface's width.
+	 */
+	public drawSeekSurfaceRange(
+		seekWrap: HTMLElement,
+		canvas: HTMLCanvasElement,
+		cssWidth: number,
+		cssHeight: number,
+		startRatio: number,
+		widthRatio: number,
+	): void {
+		const pianoRoll = this.findPianoRollSurface(seekWrap);
+		if (pianoRoll) {
+			viewRendererPianoRoll.drawPianoRollRange(
+				pianoRoll,
+				canvas,
+				cssWidth,
+				cssHeight,
+				startRatio,
+				widthRatio,
+			);
+			return;
+		}
+		const waveform = this.findWaveformSurface(seekWrap);
+		if (waveform) {
+			waveform.drawRange?.(canvas, cssWidth, cssHeight, startRatio, widthRatio);
+			return;
+		}
+		viewRendererMarkerEditing.drawImageSurfaceRange(
+			seekWrap,
+			canvas,
+			cssWidth,
+			cssHeight,
+			startRatio,
+			widthRatio,
+		);
+	}
+
+	public openMarkerLoupe(
+		seekWrap: HTMLElement,
+		clientX: number,
+	): viewRendererMarkerEditing.MarkerLoupe {
+		return viewRendererMarkerEditing.openMarkerLoupe(
+			this.root,
+			seekWrap,
+			clientX,
+		);
+	}
+
+	public closeMarkerLabelEditor(commit = false): void {
+		viewRendererMarkerEditing.closeMarkerLabelEditor(this.root, commit);
 	}
 
 	public handleMarkerNavigationInteraction(

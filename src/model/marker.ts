@@ -1,4 +1,4 @@
-import { parseCsvRecords } from "../shared/csv";
+import { formatCsvRecords, parseCsvRecords } from "../shared/csv";
 import { requestText } from "../shared/request-text";
 import type { MarkerSequenceType, MarkersConfig, MediaConfig } from "../types";
 import type { Alignment } from "./alignment";
@@ -6,6 +6,7 @@ import {
 	IMPLICIT_REFERENCE_TIMELINE,
 	type MediaProfile,
 	referenceNativeValue,
+	referenceReadoutValue,
 	resolveImplicitTimelineUnit,
 	type TimelineId,
 	timelineId,
@@ -34,6 +35,19 @@ export interface Marker {
 	readonly label?: string;
 	/** Reachable by navigation but never drawn — the bounding markers of a sequence. */
 	readonly hidden?: boolean;
+	/**
+	 * The CSV record an authored marker was read from, so columns the player does
+	 * not interpret survive an export. Its time column is dropped once the marker
+	 * moves, which is what tells an export to write the new position.
+	 */
+	readonly row?: Readonly<Record<string, unknown>>;
+}
+
+/** Column layout of the CSV an annotation sequence is read from and written back to. */
+interface MarkerCsvLayout {
+	readonly headers: readonly string[];
+	readonly timeCol: string;
+	readonly labelCol?: string;
 }
 
 /**
@@ -53,6 +67,8 @@ export interface MarkerSequence {
 	readonly colors?: Readonly<Record<string, string>>;
 	readonly hasLabels: boolean;
 	readonly markers: readonly Marker[];
+	/** Present on annotation sequences only; the player's own markers have no file. */
+	readonly csv?: MarkerCsvLayout;
 }
 
 export function createMarker(
@@ -88,10 +104,14 @@ interface MarkerCsvSpec {
  * sequence belongs to — the same unit that timeline's alignment column and
  * readout use.
  */
-function parseMarkerCsv(spec: MarkerCsvSpec): Marker[] {
+function parseMarkerCsv(spec: MarkerCsvSpec): {
+	headers: string[];
+	markers: Marker[];
+} {
 	const sequence = markerSequenceId(spec.sequenceId);
 	const parsed = parseCsvRecords(spec.csvText, {
-		emptyDataError: `Marker sequence "${spec.sequenceId}" must include a header and at least one data row.`,
+		emptyDataError: `Marker sequence "${spec.sequenceId}" must include a header row.`,
+		allowNoRows: true,
 	});
 
 	if (!parsed.headers.includes(spec.timeCol)) {
@@ -120,39 +140,55 @@ function parseMarkerCsv(spec: MarkerCsvSpec): Marker[] {
 			);
 		}
 
-		return createMarker(
-			String(rowIndex + 1),
-			sequence,
-			spec.timeline,
-			value,
-			spec.labelCol ? String(row[spec.labelCol] ?? "") : undefined,
-		);
+		return {
+			...createMarker(
+				String(rowIndex + 1),
+				sequence,
+				spec.timeline,
+				value,
+				spec.labelCol ? String(row[spec.labelCol] ?? "") : undefined,
+			),
+			row,
+		};
 	});
 
 	// A sequence is ordered: `m_n < m_{n+1}` is what intra-timeline navigation
 	// steps along.
-	return markers.sort((left, right) => left.position - right.position);
+	return {
+		headers: parsed.headers,
+		markers: markers.sort((left, right) => left.position - right.position),
+	};
+}
+
+/** Converts between a timeline's authored unit and the native coordinate the player runs on. */
+export interface MarkerUnitConverter {
+	toNative(timeline: TimelineId, value: number): number;
+	fromNative(timeline: TimelineId, value: number): number;
 }
 
 /**
  * A marker CSV is authored in the unit of its timeline, so entries convert into
- * the native coordinate the player runs on, exactly as alignment anchors do.
+ * the native coordinate the player runs on, exactly as alignment anchors do —
+ * and back again when a sequence is written out.
  *
  * Without an alignment every medium shares the implicit timeline, whose unit is
  * the one the player reads out; there the conversion is that readout's inverse,
  * so a marker lands where the timer says it should.
  */
-function buildNativeConverter(
+export function createMarkerUnitConverter(
 	alignment: Alignment | null,
 	media: MediaConfig,
 	profiles: ReadonlyMap<TimelineId, MediaProfile>,
-): (timeline: TimelineId, value: number) => number {
+): MarkerUnitConverter {
 	if (alignment) {
-		return (timeline, value) => {
-			const unit = alignment.timelines.get(timeline)?.unit;
-			const profile = profiles.get(timeline);
-			return unit && profile ? profile.toNative(value, unit) : value;
-		};
+		const convert =
+			(direction: "toNative" | "fromNative") =>
+			(timeline: TimelineId, value: number): number => {
+				const unit = alignment.timelines.get(timeline)?.unit;
+				const profile = profiles.get(timeline);
+				return unit && profile ? profile[direction](value, unit) : value;
+			};
+		return { toNative: convert("toNative"), fromNative: convert("fromNative") };
 	}
 
 	const implicit = resolveImplicitTimelineUnit(media);
@@ -160,11 +196,18 @@ function buildNativeConverter(
 		? profiles.get(timelineId(implicit.mediaId))
 		: undefined;
 	if (!implicit || !profile) {
-		return (_timeline, value) => value;
+		return {
+			toNative: (_timeline, value) => value,
+			fromNative: (_timeline, value) => value,
+		};
 	}
 
-	return (_timeline, value) =>
-		referenceNativeValue(profile, value, implicit.unit);
+	return {
+		toNative: (_timeline, value) =>
+			referenceNativeValue(profile, value, implicit.unit),
+		fromNative: (_timeline, value) =>
+			referenceReadoutValue(profile, value, implicit.unit),
+	};
 }
 
 /**
@@ -242,7 +285,7 @@ export async function loadMarkerSequences(
 ): Promise<Map<string, MarkerSequence>> {
 	const referenceTimeline =
 		alignment?.referenceTimeline ?? IMPLICIT_REFERENCE_TIMELINE;
-	const toNative = buildNativeConverter(alignment, media, profiles);
+	const { toNative } = createMarkerUnitConverter(alignment, media, profiles);
 
 	const csvTextBySrc = new Map<string, Promise<string>>();
 	const loadCsvText = (src: string, sequenceId: string): Promise<string> => {
@@ -262,13 +305,14 @@ export async function loadMarkerSequences(
 				: referenceTimeline;
 			const id = markerSequenceId(sequenceId);
 
-			const authored = parseMarkerCsv({
+			const parsed = parseMarkerCsv({
 				sequenceId,
 				csvText,
 				timeline,
 				timeCol: config.timeCol,
 				labelCol: config.labelCol,
-			}).map((marker) => ({
+			});
+			const authored = parsed.markers.map((marker) => ({
 				...marker,
 				position: toNative(timeline, marker.position),
 			}));
@@ -292,6 +336,11 @@ export async function loadMarkerSequences(
 					...authored,
 					...(bounds.last ? [bounds.last] : []),
 				],
+				csv: {
+					headers: parsed.headers,
+					timeCol: config.timeCol,
+					labelCol: config.labelCol,
+				},
 			};
 
 			assertReachable(sequence, alignment);
@@ -300,6 +349,192 @@ export async function loadMarkerSequences(
 	);
 
 	return new Map(entries);
+}
+
+// ═══════════ editing authored sequences ═══════════
+
+interface MarkerChanges {
+	position?: number;
+	label?: string;
+}
+
+function requireCsvLayout(sequence: MarkerSequence): MarkerCsvLayout {
+	if (!sequence.csv) {
+		throw new Error(`Marker sequence "${sequence.id}" cannot be edited.`);
+	}
+	return sequence.csv;
+}
+
+function assertEditable(
+	sequence: MarkerSequence,
+	{ position, label }: MarkerChanges,
+): void {
+	const csv = requireCsvLayout(sequence);
+	if (position !== undefined && !Number.isFinite(position)) {
+		throw new Error(
+			`Marker sequence "${sequence.id}" needs a finite marker position.`,
+		);
+	}
+	if (label !== undefined && !csv.labelCol) {
+		throw new Error(
+			`Marker sequence "${sequence.id}" has no label column to store a label in.`,
+		);
+	}
+}
+
+/**
+ * Rebuilds a sequence around its authored markers: ordered by position and
+ * numbered from 1 in that order, between the hidden bounds it already had. An
+ * id therefore always names a marker's place in the sequence, as it does for a
+ * freshly loaded CSV, and changes when an edit reorders the sequence.
+ */
+function withAuthoredMarkers(
+	sequence: MarkerSequence,
+	authored: readonly Marker[],
+	/** The marker whose new id is reported back. */
+	tracked: Marker | null,
+): { sequence: MarkerSequence; markerId: string | null } {
+	const ordered = [...authored].sort(
+		(left, right) => left.position - right.position,
+	);
+	const first = sequence.markers.find(
+		(marker) => marker.hidden && marker.id === "0",
+	);
+	const last = sequence.markers.find(
+		(marker) => marker.hidden && marker.id !== "0",
+	);
+
+	return {
+		sequence: {
+			...sequence,
+			markers: [
+				...(first ? [first] : []),
+				...ordered.map((marker, index) => ({
+					...marker,
+					id: String(index + 1),
+				})),
+				...(last ? [{ ...last, id: String(ordered.length + 1) }] : []),
+			],
+		},
+		markerId: tracked ? String(ordered.indexOf(tracked) + 1) : null,
+	};
+}
+
+function authoredMarkers(sequence: MarkerSequence): Marker[] {
+	return sequence.markers.filter((marker) => !marker.hidden);
+}
+
+function requireAuthoredMarker(
+	sequence: MarkerSequence,
+	markerId: string,
+): Marker {
+	const marker = authoredMarkers(sequence).find(
+		(candidate) => candidate.id === markerId,
+	);
+	if (!marker) {
+		throw new Error(
+			`Marker sequence "${sequence.id}" has no marker "${markerId}".`,
+		);
+	}
+	return marker;
+}
+
+/** Adds a marker at a native `position`; returns the sequence and the new marker's id. */
+export function addMarker(
+	sequence: MarkerSequence,
+	position: number,
+	label?: string,
+): { sequence: MarkerSequence; markerId: string } {
+	assertEditable(sequence, { position, label });
+	const marker: Marker = {
+		...createMarker(
+			"",
+			sequence.id,
+			sequence.timeline,
+			position,
+			sequence.hasLabels ? (label ?? "") : undefined,
+		),
+		row: {},
+	};
+	const result = withAuthoredMarkers(
+		sequence,
+		[...authoredMarkers(sequence), marker],
+		marker,
+	);
+	return { sequence: result.sequence, markerId: result.markerId as string };
+}
+
+/** Moves and/or relabels a marker; returns the sequence and the marker's id afterwards. */
+export function updateMarker(
+	sequence: MarkerSequence,
+	markerId: string,
+	changes: MarkerChanges,
+): { sequence: MarkerSequence; markerId: string } {
+	assertEditable(sequence, changes);
+	const { timeCol } = requireCsvLayout(sequence);
+	const current = requireAuthoredMarker(sequence, markerId);
+
+	let updated: Marker = current;
+	if (changes.position !== undefined) {
+		const { [timeCol]: _moved, ...row } = current.row ?? {};
+		updated = { ...updated, position: changes.position, row };
+	}
+	if (changes.label !== undefined) {
+		updated = { ...updated, label: changes.label };
+	}
+
+	const result = withAuthoredMarkers(
+		sequence,
+		authoredMarkers(sequence).map((marker) =>
+			marker === current ? updated : marker,
+		),
+		updated,
+	);
+	return { sequence: result.sequence, markerId: result.markerId as string };
+}
+
+export function removeMarker(
+	sequence: MarkerSequence,
+	markerId: string,
+): MarkerSequence {
+	requireCsvLayout(sequence);
+	const removed = requireAuthoredMarker(sequence, markerId);
+	return withAuthoredMarkers(
+		sequence,
+		authoredMarkers(sequence).filter((marker) => marker !== removed),
+		null,
+	).sequence;
+}
+
+/** Microsecond resolution, which also absorbs the round trip through native coordinates. */
+const CSV_POSITION_DECIMALS = 6;
+
+/**
+ * The sequence as CSV text in its original column layout. Untouched markers keep
+ * the value they were read with; moved and new ones are written in the unit of
+ * the sequence's timeline.
+ */
+export function formatMarkerSequenceCsv(
+	sequence: MarkerSequence,
+	units: MarkerUnitConverter,
+): string {
+	const { headers, timeCol, labelCol } = requireCsvLayout(sequence);
+	const rows = authoredMarkers(sequence).map((marker) => {
+		const row: Record<string, unknown> = { ...marker.row };
+		if (!(timeCol in row)) {
+			row[timeCol] = Number(
+				units
+					.fromNative(sequence.timeline, marker.position)
+					.toFixed(CSV_POSITION_DECIMALS),
+			);
+		}
+		if (labelCol) {
+			row[labelCol] = marker.label ?? "";
+		}
+		return row;
+	});
+	// An empty sequence unparses to the header line with its own line break.
+	return `${formatCsvRecords(headers, rows).replace(/\n+$/, "")}\n`;
 }
 
 // ═══════════ the player's own markers ═══════════

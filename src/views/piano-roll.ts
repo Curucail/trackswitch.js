@@ -933,6 +933,29 @@ function renderPianoRollNotes(
 		return;
 	}
 
+	surface.lastNoteGeometry = drawPianoRollNotes(
+		context,
+		surface,
+		safeDuration,
+		{ tileStartPx, tileCssWidth, timeWidth },
+		height,
+	);
+}
+
+/**
+ * Draws the grid and the notes of one window of the roll. `timeWidth` is the
+ * width the whole duration would take at the window's scale, which need not be
+ * the surface's own: the marker loupe draws the same notes magnified.
+ */
+function drawPianoRollNotes(
+	context: CanvasRenderingContext2D,
+	surface: PianoRollSeekSurfaceMetadata,
+	safeDuration: number,
+	tileWindow: { tileStartPx: number; tileCssWidth: number; timeWidth: number },
+	height: number,
+): NoteGeometry {
+	const { tileStartPx, tileCssWidth, timeWidth } = tileWindow;
+
 	// Draw in surface coordinates; the canvas only covers [tileStartPx, +width).
 	context.translate(-tileStartPx, 0);
 
@@ -954,7 +977,6 @@ function renderPianoRollNotes(
 		visibleEndTime,
 	);
 	const geometry: NoteGeometry = { pixelsPerSecond, rowHeight, noteHeight };
-	surface.lastNoteGeometry = geometry;
 
 	drawPianoRollGrid(context, surface, tileWindow, geometry);
 
@@ -1004,6 +1026,32 @@ function renderPianoRollNotes(
 			context.fillRect(left + 3, top + noteHeight - 5, barWidth, 3);
 		}
 	}
+
+	return geometry;
+}
+
+/** See `SeekSurfaceRangeRenderer`; draws a stretch of the roll's notes. */
+export function drawPianoRollRange(
+	surface: PianoRollSeekSurfaceMetadata,
+	canvas: HTMLCanvasElement,
+	cssWidth: number,
+	cssHeight: number,
+	startRatio: number,
+	widthRatio: number,
+): void {
+	const context = resizeCanvasForCssSize(canvas, cssWidth, cssHeight);
+	const safeDuration = sanitizeDuration(surface.lastRenderedDurationSeconds);
+	if (!context || safeDuration <= 0 || widthRatio <= 0) {
+		return;
+	}
+	const timeWidth = cssWidth / widthRatio;
+	drawPianoRollNotes(
+		context,
+		surface,
+		safeDuration,
+		{ tileStartPx: startRatio * timeWidth, tileCssWidth: cssWidth, timeWidth },
+		cssHeight,
+	);
 }
 
 /**

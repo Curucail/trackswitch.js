@@ -58,6 +58,7 @@ Features
 - Global volume control
 - Looping controls
 - Annotation marker navigation by previous/next or searchable sequence, ID, and label
+- Manual marker editing with fine adjustment in a magnified window, and CSV export
 - Per-track solo, volume, and pan controls
 - Presets for common track combinations
 - (Seekable) images and per-track images

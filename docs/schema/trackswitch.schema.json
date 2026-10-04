@@ -2168,6 +2168,7 @@
 				"globalVolume",
 				"globalPan",
 				"markerNavigation",
+				"markerEditing",
 				"looping",
 				"sync",
 				"presets",

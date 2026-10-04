@@ -1,7 +1,13 @@
 import {
+	addMarker as addSequenceMarker,
+	createMarkerUnitConverter,
+	formatMarkerSequenceCsv,
 	type Marker,
 	type MarkerSequence,
+	type MarkerUnitConverter,
 	moveRuntimeMarker,
+	removeMarker as removeSequenceMarker,
+	updateMarker as updateSequenceMarker,
 } from "../model/marker";
 import { playerTimeline } from "../model/timeline";
 import type { ControllerPointerEvent } from "./input";
@@ -81,6 +87,108 @@ export function synchronizeRuntimeMarkers(
 	);
 }
 
+export function requireMarkerSequence(
+	controller: TrackSwitchControllerImpl,
+	sequenceId: string,
+): MarkerSequence {
+	const sequence = controller.markerSequences.get(sequenceId);
+	if (!sequence) {
+		throw new Error(`Unknown marker sequence "${sequenceId}".`);
+	}
+	return sequence;
+}
+
+function markerUnits(
+	controller: TrackSwitchControllerImpl,
+): MarkerUnitConverter {
+	return createMarkerUnitConverter(
+		controller.alignment,
+		controller.media,
+		controller.alignment?.profiles ?? controller.mediaProfiles,
+	);
+}
+
+/**
+ * Replaces a sequence with an edited copy. Every edit — from the editing tools
+ * or the public API — goes through here, so each one is undoable and announced.
+ */
+export function commitMarkerSequence(
+	controller: TrackSwitchControllerImpl,
+	sequenceId: string,
+	sequence: MarkerSequence,
+	recordUndo = true,
+): void {
+	if (recordUndo) {
+		controller.markerUndoStack.push({
+			sequenceId,
+			sequence: requireMarkerSequence(controller, sequenceId),
+		});
+	}
+	controller.markerSequences.set(sequenceId, sequence);
+	controller.renderMarkerLayers();
+	controller.updateMarkerNavigation();
+	controller.emit("markers", { sequenceId });
+}
+
+export function addMarker(
+	controller: TrackSwitchControllerImpl,
+	sequenceId: string,
+	position: number,
+	label?: string,
+): string {
+	const sequence = requireMarkerSequence(controller, sequenceId);
+	const result = addSequenceMarker(
+		sequence,
+		markerUnits(controller).toNative(sequence.timeline, position),
+		label,
+	);
+	commitMarkerSequence(controller, sequenceId, result.sequence);
+	return result.markerId;
+}
+
+export function updateMarker(
+	controller: TrackSwitchControllerImpl,
+	sequenceId: string,
+	markerId: string,
+	changes: { position?: number; label?: string },
+): string {
+	const sequence = requireMarkerSequence(controller, sequenceId);
+	const result = updateSequenceMarker(sequence, markerId, {
+		label: changes.label,
+		position:
+			changes.position === undefined
+				? undefined
+				: markerUnits(controller).toNative(sequence.timeline, changes.position),
+	});
+	commitMarkerSequence(controller, sequenceId, result.sequence);
+	return result.markerId;
+}
+
+export function removeMarker(
+	controller: TrackSwitchControllerImpl,
+	sequenceId: string,
+	markerId: string,
+): void {
+	commitMarkerSequence(
+		controller,
+		sequenceId,
+		removeSequenceMarker(
+			requireMarkerSequence(controller, sequenceId),
+			markerId,
+		),
+	);
+}
+
+export function getMarkersCsv(
+	controller: TrackSwitchControllerImpl,
+	sequenceId: string,
+): string {
+	return formatMarkerSequenceCsv(
+		requireMarkerSequence(controller, sequenceId),
+		markerUnits(controller),
+	);
+}
+
 function getAudibleMarkerSequences(
 	controller: TrackSwitchControllerImpl,
 ): MarkerSequence[] {
@@ -130,7 +238,7 @@ function getDialogMarkerSequences(
 	return Array.from(controller.markerSequences.values());
 }
 
-function resolveMarkerPlayerTime(
+export function resolveMarkerPlayerTime(
 	controller: TrackSwitchControllerImpl,
 	marker: Marker,
 ): number | null {
@@ -203,7 +311,9 @@ function getVisibleMarkerSequences(
 function getNavigationMarkerTimes(
 	controller: TrackSwitchControllerImpl,
 ): number[] {
-	const times: number[] = [];
+	// The ends of the timeline are always stops, so stepping works on a player
+	// that shows no marker sequence at all.
+	const times: number[] = [0, controller.longestDuration];
 	getVisibleMarkerSequences(controller).forEach((resolved) => {
 		resolved.markers.forEach((marker) => {
 			const time = resolveMarkerPlayerTime(controller, marker);

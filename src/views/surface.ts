@@ -56,6 +56,19 @@ export interface TimelineViewportState {
 	widthRatio: number;
 }
 
+/**
+ * Draws a stretch of a seek surface into a canvas of the given CSS size. The
+ * stretch is given as fractions of the surface's timeline, so the same call
+ * serves any magnification — it is what the marker loupe is drawn with.
+ */
+export type SeekSurfaceRangeRenderer = (
+	canvas: HTMLCanvasElement,
+	cssWidth: number,
+	cssHeight: number,
+	startRatio: number,
+	widthRatio: number,
+) => void;
+
 /** Visible slice of a virtual surface that a sliding tile canvas has to cover. */
 export interface TimelineTileWindow {
 	tileStartPx: number;

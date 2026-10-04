@@ -65,6 +65,9 @@ import * as controllerHotReload from "./hot-reload";
 import type { ControllerPointerEvent } from "./input";
 import * as controllerInput from "./input";
 import { InputBinder, type InputController } from "./input";
+import type { MarkerAdjustState, MarkerEditingState } from "./marker-editing";
+import * as controllerMarkerEditing from "./marker-editing";
+import type { MarkerClickHorizon } from "./marker-sonification";
 import * as controllerMarkers from "./markers";
 import * as controllerPlayback from "./playback";
 import * as controllerSeek from "./playback";
@@ -172,6 +175,22 @@ export class TrackSwitchControllerImpl
 	 */
 	public mediaProfiles: ReadonlyMap<TimelineId, MediaProfile> = new Map();
 	public markerSequences: Map<string, MarkerSequence> = new Map();
+	/** Sequences as they were before each marker edit, most recent last. */
+	public markerUndoStack: Array<{
+		sequenceId: string;
+		sequence: MarkerSequence;
+	}> = [];
+	public markerAdjust: MarkerAdjustState | null = null;
+	public markerClickHorizon: MarkerClickHorizon = null;
+	/** A marker adjustment just ended; the click the browser sends after it is not a jump. */
+	public markerClickSuppressedUntil = 0;
+	public markerEditing: MarkerEditingState = {
+		active: false,
+		adding: false,
+		removing: false,
+		sonifying: false,
+		sequenceId: null,
+	};
 	/** Marker sequence ids currently rendered somewhere in the configured views — see renderTimelineMarkers. */
 	public visibleMarkerSequenceIds: ReadonlySet<string> = new Set();
 	public runtimeMarkers: RuntimeMarkers;
@@ -194,6 +213,7 @@ export class TrackSwitchControllerImpl
 		error: new Set(),
 		position: new Set(),
 		trackState: new Set(),
+		markers: new Set(),
 	};
 
 	public readonly eventNamespace: string;
@@ -485,6 +505,26 @@ export class TrackSwitchControllerImpl
 		controllerPlayback.clearLoop(this);
 	}
 
+	addMarker(sequenceId: string, position: number, label?: string): string {
+		return controllerMarkers.addMarker(this, sequenceId, position, label);
+	}
+
+	updateMarker(
+		sequenceId: string,
+		markerId: string,
+		changes: { position?: number; label?: string },
+	): string {
+		return controllerMarkers.updateMarker(this, sequenceId, markerId, changes);
+	}
+
+	removeMarker(sequenceId: string, markerId: string): void {
+		controllerMarkers.removeMarker(this, sequenceId, markerId);
+	}
+
+	getMarkersCsv(sequenceId: string): string {
+		return controllerMarkers.getMarkersCsv(this, sequenceId);
+	}
+
 	toggleSolo(trackIndex: number, exclusive = false, groupIndex?: number): void {
 		controllerPlayback.toggleSolo(this, trackIndex, exclusive, groupIndex);
 	}
@@ -568,6 +608,13 @@ export class TrackSwitchControllerImpl
 		direction: "previous" | "next",
 	): void {
 		controllerInput.onAdjacentMarker(this, event, direction);
+	}
+
+	onMarkerEditAction(
+		event: ControllerPointerEvent,
+		action: controllerInput.MarkerEditAction,
+	): void {
+		controllerInput.onMarkerEditAction(this, event, action);
 	}
 
 	onMarkerNavigationOpen(event: ControllerPointerEvent): void {
@@ -918,6 +965,7 @@ export class TrackSwitchControllerImpl
 
 	public updateMarkerNavigation(): void {
 		controllerMarkers.updateMarkerNavigation(this);
+		controllerMarkerEditing.refreshMarkerEditing(this);
 	}
 
 	public seekToAdjacentMarker(direction: "previous" | "next"): void {

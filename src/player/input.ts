@@ -6,6 +6,22 @@ import {
 } from "../shared/dom";
 import type { PresetsConfig, TrackSwitchFeatures } from "../types";
 import {
+	addMarkerAtPlayhead,
+	downloadMarkers,
+	editMarkerElementLabel,
+	finishMarkerAdjust,
+	placeMarkerFromEvent,
+	removeMarkerElement,
+	removeMarkerWithTool,
+	selectMarkerEditingSequence,
+	startMarkerAdjust,
+	toggleMarkerAdding,
+	toggleMarkerEditing,
+	toggleMarkerRemoving,
+	toggleMarkerSonifying,
+	undoMarkerEdit,
+} from "./marker-editing";
+import {
 	activateTimelineMarker,
 	closeMarkerNavigationDialog,
 	moveTimelineMarkerFocus,
@@ -231,6 +247,11 @@ export function onSeekStart(
 		return;
 	}
 
+	if (placeMarkerFromEvent(ctx, event, targetSeekWrap)) {
+		event.stopPropagation();
+		return;
+	}
+
 	ctx.startInteractiveSeek(event, targetSeekWrap);
 
 	event.stopPropagation();
@@ -252,7 +273,13 @@ export function onTimelineMarkerActivate(
 
 	event.preventDefault();
 	event.stopPropagation();
+	if (Date.now() < ctx.markerClickSuppressedUntil) {
+		return;
+	}
 	ctx.setKeyboardActive();
+	if (removeMarkerWithTool(ctx, marker)) {
+		return;
+	}
 	marker
 		.closest(".timeline-marker-layer")
 		?.querySelectorAll<HTMLElement>(".timeline-marker")
@@ -282,11 +309,79 @@ export function onTimelineMarkerKeydown(
 		return;
 	}
 
+	if (
+		(event.key === "Delete" || event.key === "Backspace") &&
+		removeMarkerElement(ctx, marker)
+	) {
+		event.preventDefault();
+		event.stopPropagation();
+		return;
+	}
+
 	// Space remains the global play/pause shortcut while a marker has focus.
 	if (event.key === "Enter") {
 		event.preventDefault();
 		event.stopPropagation();
 		activateTimelineMarker(ctx, marker);
+	}
+}
+
+export type MarkerEditAction =
+	| "toggle"
+	| "add"
+	| "remove"
+	| "sonify"
+	| "download"
+	| "sequence"
+	| "label"
+	| "adjust";
+
+export function onMarkerEditAction(
+	ctx: TrackSwitchControllerImpl,
+	event: ControllerPointerEvent,
+	action: MarkerEditAction,
+): void {
+	const target = eventTargetAsElement(event.target ?? null);
+	ctx.setKeyboardActive();
+
+	if (action === "adjust") {
+		const marker = target?.closest(".timeline-marker");
+		if (
+			marker instanceof HTMLElement &&
+			isPrimaryInput(event) &&
+			!ctx.pinchZoomState
+		) {
+			startMarkerAdjust(ctx, event, marker);
+		}
+		return;
+	}
+	if (action === "sequence") {
+		if (target instanceof HTMLSelectElement) {
+			selectMarkerEditingSequence(ctx, target.value);
+		}
+		return;
+	}
+	if (action === "label") {
+		const marker = target?.closest(".timeline-marker");
+		if (marker instanceof HTMLElement && editMarkerElementLabel(ctx, marker)) {
+			event.preventDefault();
+			event.stopPropagation();
+		}
+		return;
+	}
+
+	event.preventDefault();
+	event.stopPropagation();
+	if (action === "toggle") {
+		toggleMarkerEditing(ctx);
+	} else if (action === "add") {
+		toggleMarkerAdding(ctx);
+	} else if (action === "remove") {
+		toggleMarkerRemoving(ctx);
+	} else if (action === "sonify") {
+		toggleMarkerSonifying(ctx);
+	} else {
+		downloadMarkers(ctx);
 	}
 }
 
@@ -455,6 +550,12 @@ export function onSeekEnd(
 	event: ControllerPointerEvent,
 ): void {
 	if (!ctx.isLoaded) {
+		return;
+	}
+
+	if (finishMarkerAdjust(ctx)) {
+		event.preventDefault();
+		event.stopPropagation();
 		return;
 	}
 
@@ -789,6 +890,14 @@ export function onKeyboard(
 	const key = event.key || event.code || "";
 	const code = event.code || "";
 	const trackIndex = ctx.getKeyboardTrackIndex(event);
+
+	if (event.ctrlKey || event.metaKey) {
+		if (key.toLowerCase() === "z" && undoMarkerEdit(ctx)) {
+			event.preventDefault();
+			event.stopPropagation();
+		}
+		return;
+	}
 
 	if (isShortcutHelpToggleKey(event)) {
 		event.preventDefault();
@@ -1158,19 +1267,16 @@ const KEYBOARD_SHORTCUT_HANDLERS: Record<
 		return true;
 	},
 	",": (controller) => {
-		if (!controller.navigationBar?.controls.includes("markerNavigation")) {
-			return false;
-		}
 		controller.seekToAdjacentMarker("previous");
 		return true;
 	},
 	".": (controller) => {
-		if (!controller.navigationBar?.controls.includes("markerNavigation")) {
-			return false;
-		}
 		controller.seekToAdjacentMarker("next");
 		return true;
 	},
+	m: (controller) => addMarkerAtPlayhead(controller),
+	M: (controller) => addMarkerAtPlayhead(controller),
+	KeyM: (controller) => addMarkerAtPlayhead(controller),
 	r: (controller) => {
 		controller.dispatch({ type: "toggle-repeat" });
 		controller.updateMainControls();
@@ -1534,6 +1640,10 @@ export interface InputController {
 		event: ControllerPointerEvent,
 		direction: "previous" | "next",
 	): void;
+	onMarkerEditAction(
+		event: ControllerPointerEvent,
+		action: MarkerEditAction,
+	): void;
 	onMarkerNavigationOpen(event: ControllerPointerEvent): void;
 	onMarkerNavigationOverlay(event: ControllerPointerEvent): void;
 	onMarkerNavigationInput(event: ControllerPointerEvent): void;
@@ -1583,6 +1693,8 @@ function eventToPointerEvent(event: Event): ControllerPointerEvent {
 		key: keyboardEvent.key,
 		code: keyboardEvent.code,
 		shiftKey: keyboardEvent.shiftKey,
+		ctrlKey: keyboardEvent.ctrlKey,
+		metaKey: keyboardEvent.metaKey,
 		target: event.target,
 		originalEvent: event as Event & {
 			deltaY?: number;
@@ -1819,6 +1931,34 @@ export class InputBinder {
 				this.controller.onMarkerNavigationKeydown(event);
 			},
 		);
+	}
+
+	private bindMarkerEditingControls(): void {
+		this.addDelegatedListener("click", ".marker-edit-toggle", (event) => {
+			this.controller.onMarkerEditAction(event, "toggle");
+		});
+		this.addDelegatedListener("click", ".marker-edit-add", (event) => {
+			this.controller.onMarkerEditAction(event, "add");
+		});
+		this.addDelegatedListener("click", ".marker-edit-remove", (event) => {
+			this.controller.onMarkerEditAction(event, "remove");
+		});
+		this.addDelegatedListener("click", ".marker-edit-sonify", (event) => {
+			this.controller.onMarkerEditAction(event, "sonify");
+		});
+		this.addDelegatedListener("click", ".marker-edit-download", (event) => {
+			this.controller.onMarkerEditAction(event, "download");
+		});
+		this.addDelegatedListener("change", ".marker-edit-sequence", (event) => {
+			this.controller.onMarkerEditAction(event, "sequence");
+			this.blurFocusedManagedControl();
+		});
+		this.addPointerDelegatedListener(".timeline-marker", (event) => {
+			this.controller.onMarkerEditAction(event, "adjust");
+		});
+		this.addDelegatedListener("dblclick", ".timeline-marker", (event) => {
+			this.controller.onMarkerEditAction(event, "label");
+		});
 	}
 
 	private bindPanelReorder(): void {
@@ -2102,6 +2242,7 @@ export class InputBinder {
 		this.bindSeekLifecycle();
 		this.bindTrackControls();
 		this.bindMarkerNavigationControls();
+		this.bindMarkerEditingControls();
 		this.bindGlobalVolumeControls();
 		this.bindGlobalPanControls();
 		this.bindTrackVolumeControls();
@@ -2161,6 +2302,8 @@ export interface ControllerPointerEvent {
 	key?: string;
 	code?: string;
 	shiftKey?: boolean;
+	ctrlKey?: boolean;
+	metaKey?: boolean;
 	target?: EventTarget | null;
 	originalEvent?: Event & {
 		deltaY?: number;
