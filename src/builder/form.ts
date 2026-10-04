@@ -417,11 +417,53 @@ function renderNavigationControls(
 	shownZone.className = "ts-builder-control-zone is-shown";
 	shownZone.setAttribute("role", "list");
 	shownZone.setAttribute("aria-label", "Shown navigation controls");
-	shownZone.addEventListener("dragover", (event) => event.preventDefault());
-	shownZone.addEventListener("drop", (event) => {
+	const shownCards: HTMLElement[] = [];
+	const clearIndicator = () => {
+		shownZone.classList.remove("is-drop-target");
+		for (const card of shownCards)
+			card.classList.remove("is-drop-before", "is-drop-after");
+	};
+	// Slot (0..controls.length) the pointer is closest to, reading the wrapped
+	// cards in order: before the first card whose row the pointer is above, or
+	// whose left half it is in.
+	const slotAt = (x: number, y: number): number => {
+		for (const [slot, card] of shownCards.entries()) {
+			const rect = card.getBoundingClientRect();
+			if (y < rect.top || (y <= rect.bottom && x < rect.left + rect.width / 2))
+				return slot;
+		}
+		return shownCards.length;
+	};
+	const showIndicator = (slot: number) => {
+		clearIndicator();
+		if (shownCards.length === 0) shownZone.classList.add("is-drop-target");
+		else if (slot < shownCards.length)
+			shownCards[slot].classList.add("is-drop-before");
+		else shownCards[slot - 1].classList.add("is-drop-after");
+	};
+	shownZone.addEventListener("dragover", (event) => {
+		if (!dragged) return;
 		event.preventDefault();
-		if (dragged)
-			commit(placeNavigationControl(controls, dragged, controls.length));
+		if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+		showIndicator(slotAt(event.clientX, event.clientY));
+	});
+	shownZone.addEventListener("dragleave", (event) => {
+		if (
+			event.relatedTarget instanceof Node &&
+			shownZone.contains(event.relatedTarget)
+		)
+			return;
+		clearIndicator();
+	});
+	shownZone.addEventListener("drop", (event) => {
+		if (!dragged) return;
+		event.preventDefault();
+		let slot = slotAt(event.clientX, event.clientY);
+		const from = controls.indexOf(dragged);
+		// placeNavigationControl removes the dragged control before inserting.
+		if (from >= 0 && from < slot) slot -= 1;
+		clearIndicator();
+		commit(placeNavigationControl(controls, dragged, slot));
 	});
 	for (const [index, control] of controls.entries()) {
 		const card = document.createElement("div");
@@ -450,18 +492,16 @@ function renderNavigationControls(
 		card.append(grip, name, remove);
 		card.addEventListener("dragstart", (event) => {
 			dragged = control;
-			event.dataTransfer?.setData("text/plain", control);
+			if (event.dataTransfer) {
+				event.dataTransfer.effectAllowed = "move";
+				event.dataTransfer.setData("text/plain", control);
+			}
 			card.classList.add("is-dragging");
 		});
 		card.addEventListener("dragend", () => {
 			dragged = null;
 			card.classList.remove("is-dragging");
-		});
-		card.addEventListener("dragover", (event) => event.preventDefault());
-		card.addEventListener("drop", (event) => {
-			event.preventDefault();
-			event.stopPropagation();
-			if (dragged) commit(placeNavigationControl(controls, dragged, index));
+			clearIndicator();
 		});
 		card.addEventListener("keydown", (event) => {
 			if (event.key === "ArrowLeft" && index > 0) {
@@ -476,6 +516,7 @@ function renderNavigationControls(
 			}
 		});
 		shownZone.append(card);
+		shownCards.push(card);
 	}
 	if (controls.length === 0)
 		shownZone.append(smallEmptyMessage("No controls shown."));
@@ -488,10 +529,25 @@ function renderNavigationControls(
 	const availableZone = document.createElement("div");
 	availableZone.className = "ts-builder-control-zone is-available";
 	availableZone.setAttribute("aria-label", "Available navigation controls");
-	availableZone.addEventListener("dragover", (event) => event.preventDefault());
-	availableZone.addEventListener("drop", (event) => {
+	availableZone.addEventListener("dragover", (event) => {
+		if (!dragged) return;
 		event.preventDefault();
-		if (dragged) commit(removeNavigationControl(controls, dragged));
+		if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+		availableZone.classList.add("is-drop-target");
+	});
+	availableZone.addEventListener("dragleave", (event) => {
+		if (
+			event.relatedTarget instanceof Node &&
+			availableZone.contains(event.relatedTarget)
+		)
+			return;
+		availableZone.classList.remove("is-drop-target");
+	});
+	availableZone.addEventListener("drop", (event) => {
+		if (!dragged) return;
+		event.preventDefault();
+		availableZone.classList.remove("is-drop-target");
+		commit(removeNavigationControl(controls, dragged));
 	});
 	for (const control of NAVIGATION_CONTROLS.filter(
 		(candidate) => !controls.includes(candidate),
@@ -507,12 +563,16 @@ function renderNavigationControls(
 		);
 		add.addEventListener("dragstart", (event) => {
 			dragged = control;
-			event.dataTransfer?.setData("text/plain", control);
+			if (event.dataTransfer) {
+				event.dataTransfer.effectAllowed = "move";
+				event.dataTransfer.setData("text/plain", control);
+			}
 			add.classList.add("is-dragging");
 		});
 		add.addEventListener("dragend", () => {
 			dragged = null;
 			add.classList.remove("is-dragging");
+			clearIndicator();
 		});
 		availableZone.append(add);
 	}

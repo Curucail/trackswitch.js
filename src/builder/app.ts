@@ -3,6 +3,7 @@ import type {
 	AlignmentAlgorithmId,
 	AlignmentFeatureSetId,
 	InteractiveFile,
+	WorkerComputeResult,
 } from "../../extensions/interactive-alignment/types";
 import {
 	bindAlignmentHelpTooltips,
@@ -131,7 +132,11 @@ function defaultView(
 		case "waveform":
 			return { type, tracks: "audible" };
 		case "pianoRoll":
-			return { type, mediaID: firstMediaId(project, "midi") };
+			return {
+				type,
+				mediaID: firstMediaId(project, "midi"),
+				pianoKeyboard: true,
+			};
 		case "sheetMusic":
 			return { type, mediaID: firstMediaId(project, "musicxml") };
 		case "warpingMatrix":
@@ -150,6 +155,16 @@ function defaultView(
 	}
 }
 
+/** Only drags from the file explorer add files; panel reordering drags carry no files. */
+function isFileDrag(event: DragEvent): boolean {
+	return event.dataTransfer?.types.includes("Files") ?? false;
+}
+
+interface DialogSnapshot {
+	resources: BuilderProject["resources"];
+	rest: Omit<BuilderProject, "resources">;
+}
+
 export class BuilderApp {
 	private readonly project = createBuilderProject();
 	private readonly rootSchema: JsonSchema;
@@ -165,10 +180,16 @@ export class BuilderApp {
 	private readonly dialog: HTMLDialogElement;
 	private readonly dialogTitle: HTMLElement;
 	private readonly dialogBody: HTMLElement;
-	private readonly dialogFooter: HTMLElement;
+	private readonly dialogOk: HTMLButtonElement;
+	private readonly dialogCancel: HTMLButtonElement;
 	private readonly dialogError: HTMLElement;
 	private readonly alignmentWorkerBridge: AlignmentWorkerBridge;
 	private activeTarget: FormTarget | null = null;
+	/** What OK does for the open dialog; closing it accepts the live edits. */
+	private confirmDialog: () => void = () => this.acceptDialog();
+	private dialogSnapshot: DialogSnapshot | null = null;
+	private dialogAccepted = false;
+	private deferredRevocations: string[] = [];
 	private pendingDraft: {
 		type: TrackSwitchViewConfig["type"];
 		config: TrackSwitchViewConfig;
@@ -218,12 +239,12 @@ export class BuilderApp {
 				</div>
 			</div>
 			<dialog class="ts-builder-dialog" aria-labelledby="ts-builder-dialog-title">
-				<div class="ts-builder-dialog__header"><h2 id="ts-builder-dialog-title"></h2><button type="button" class="ts-builder-icon-button" data-action="close" aria-label="Close settings">×</button></div>
+				<div class="ts-builder-dialog__header"><h2 id="ts-builder-dialog-title"></h2></div>
 				<div class="ts-builder-dialog__body"></div>
 				<p class="ts-builder-dialog__error" role="alert" hidden></p>
-				<div class="ts-builder-dialog__footer" hidden>
-					<button type="button" class="ts-builder-secondary-button" data-action="cancel-draft">Cancel</button>
-					<button type="button" class="ts-builder-primary-button" data-action="confirm-draft">Add panel</button>
+				<div class="ts-builder-dialog__footer">
+					<button type="button" class="ts-builder-secondary-button" data-action="dialog-cancel">Cancel</button>
+					<button type="button" class="ts-builder-primary-button" data-action="dialog-ok">OK</button>
 				</div>
 			</dialog>`;
 
@@ -237,7 +258,8 @@ export class BuilderApp {
 		this.dialog = this.required(".ts-builder-dialog");
 		this.dialogTitle = this.required("#ts-builder-dialog-title");
 		this.dialogBody = this.required(".ts-builder-dialog__body");
-		this.dialogFooter = this.required(".ts-builder-dialog__footer");
+		this.dialogOk = this.required('[data-action="dialog-ok"]');
+		this.dialogCancel = this.required('[data-action="dialog-cancel"]');
 		this.dialogError = this.required(".ts-builder-dialog__error");
 		this.alignmentWorkerBridge = new AlignmentWorkerBridge(
 			this.assetUrls.alignmentWorkerUrl,
@@ -265,8 +287,9 @@ export class BuilderApp {
 		this.required<HTMLButtonElement>(
 			'[data-action="empty-choose-files"]',
 		).addEventListener("click", () => this.fileInput.click());
-		for (const eventName of ["dragenter", "dragover"]) {
+		for (const eventName of ["dragenter", "dragover"] as const) {
 			dropzone.addEventListener(eventName, (event) => {
+				if (!isFileDrag(event)) return;
 				event.preventDefault();
 				dropzone.classList.add("is-dragging");
 			});
@@ -280,6 +303,7 @@ export class BuilderApp {
 			dropzone.classList.remove("is-dragging");
 		});
 		dropzone.addEventListener("drop", (event) => {
+			if (!isFileDrag(event)) return;
 			event.preventDefault();
 			dropzone.classList.remove("is-dragging");
 			void this.addFiles(event.dataTransfer?.files ?? []);
@@ -291,17 +315,10 @@ export class BuilderApp {
 		this.csvInput.addEventListener("change", () => {
 			void this.finishCsvIntake();
 		});
-		this.required<HTMLButtonElement>('[data-action="close"]').addEventListener(
-			"click",
-			() => this.dialog.close(),
-		);
-		this.required<HTMLButtonElement>(
-			'[data-action="cancel-draft"]',
-		).addEventListener("click", () => this.dialog.close());
-		this.required<HTMLButtonElement>(
-			'[data-action="confirm-draft"]',
-		).addEventListener("click", () => this.commitDraft());
+		this.dialogCancel.addEventListener("click", () => this.dialog.close());
+		this.dialogOk.addEventListener("click", () => this.confirmDialog());
 		this.dialog.addEventListener("close", () => {
+			this.finishDialogTransaction();
 			this.activeTarget = null;
 			this.pendingDraft = null;
 			this.render();
@@ -672,12 +689,21 @@ export class BuilderApp {
 		this.render();
 	}
 
-	private dropViewAt(index: number): void {
+	private showViewDropIndicator(row: HTMLElement, before: boolean): void {
+		for (const item of this.panelRail.children) {
+			item.classList.remove("is-drop-before", "is-drop-after");
+		}
+		row.classList.add(before ? "is-drop-before" : "is-drop-after");
+	}
+
+	/** `slot` is the gap to drop into: 0 is above the first panel. */
+	private dropViewAt(slot: number): void {
 		if (!this.draggedViewId) return;
 		const from = this.project.views.findIndex(
 			(view) => view.id === this.draggedViewId,
 		);
-		if (from >= 0) this.moveView(from, index);
+		if (from < 0) return;
+		this.moveView(from, from < slot ? slot - 1 : slot);
 	}
 
 	private addView(type: TrackSwitchViewConfig["type"]): void {
@@ -719,7 +745,7 @@ export class BuilderApp {
 		}
 		this.pendingDraft = null;
 		this.pendingViewId = id;
-		this.dialog.close();
+		this.acceptDialog();
 	}
 
 	private setDialogError(message: string): void {
@@ -730,11 +756,14 @@ export class BuilderApp {
 	private addAlignment(
 		csv: BuilderResource,
 		preferredReference?: string,
+		openSettings = true,
+		syncTimelineColumn: string | null = null,
 	): void {
 		const timelines: Record<string, string> = {};
 		Object.keys(this.project.media).forEach((id, index) => {
 			timelines[id] = csv.csvHeaders?.[index] ?? "";
 		});
+		if (syncTimelineColumn) timelines[syncTimelineColumn] = syncTimelineColumn;
 		this.project.alignment = {
 			resourceId: csv.id,
 			config: {
@@ -752,7 +781,11 @@ export class BuilderApp {
 			return;
 		}
 		this.render();
-		this.openInspector({ kind: "alignment", resourceId: csv.id });
+		if (openSettings) {
+			this.openInspector({ kind: "alignment", resourceId: csv.id });
+		} else {
+			this.acceptDialog();
+		}
 	}
 
 	/**
@@ -785,26 +818,66 @@ export class BuilderApp {
 			);
 			if (diverges) config.comparisonGroup = existingGroup ?? 0;
 		}
-		for (const view of this.project.views) {
-			if (
-				view.config.type === "waveform" &&
-				view.config.alignedPlayhead === undefined
-			) {
-				view.config.alignedPlayhead = true;
+	}
+
+	/**
+	 * Settings apply live to the preview, so Cancel has to undo them: the
+	 * dialog snapshots the project when it opens and restores it unless OK was
+	 * pressed. Resource URLs stay valid until the outcome is known.
+	 */
+	private showDialog(): void {
+		if (this.dialog.open) return;
+		const { resources, ...rest } = this.project;
+		this.dialogSnapshot = {
+			resources: { ...resources },
+			rest: structuredClone(rest),
+		};
+		this.dialogAccepted = false;
+		this.deferredRevocations = [];
+		this.dialogOk.disabled = false;
+		this.dialogCancel.disabled = false;
+		this.dialog.showModal();
+	}
+
+	private acceptDialog(): void {
+		this.dialogAccepted = true;
+		this.dialog.close();
+	}
+
+	private finishDialogTransaction(): void {
+		const snapshot = this.dialogSnapshot;
+		this.dialogSnapshot = null;
+		if (!snapshot) return;
+		if (this.dialogAccepted) {
+			for (const url of this.deferredRevocations) URL.revokeObjectURL(url);
+		} else {
+			for (const [id, resource] of Object.entries(this.project.resources)) {
+				if (!(id in snapshot.resources))
+					URL.revokeObjectURL(resource.previewUrl);
 			}
+			for (const key of Object.keys(this.project.resources)) {
+				delete this.project.resources[key];
+			}
+			Object.assign(this.project.resources, snapshot.resources);
+			const project = this.project as unknown as Record<string, unknown>;
+			for (const key of Object.keys(project)) {
+				if (key !== "resources") delete project[key];
+			}
+			Object.assign(project, snapshot.rest);
 		}
+		this.deferredRevocations = [];
 	}
 
 	private openAlignmentCompute(): void {
 		this.activeTarget = null;
 		this.pendingDraft = null;
-		this.dialogFooter.hidden = true;
 		this.dialogError.hidden = true;
 		this.dialogError.textContent = "";
 		this.dialogTitle.textContent = "Compute alignment in browser";
 		this.dialogBody.replaceChildren();
+		this.confirmDialog = () => this.acceptDialog();
 		this.renderAlignmentComputeForm();
-		if (!this.dialog.open) this.dialog.showModal();
+		this.showDialog();
 	}
 
 	private renderAlignmentComputeForm(): void {
@@ -878,30 +951,57 @@ export class BuilderApp {
 		);
 		algorithm.select.value = "mrmsdtw";
 
-		const actions = document.createElement("div");
-		actions.className = "ts-builder-sidebar-actions";
-		const cancel = button("Cancel");
-		cancel.addEventListener("click", () => this.dialog.close());
-		const compute = button("Compute alignment", "ts-builder-primary-button");
+		const checkboxField = (
+			labelText: string,
+			tooltipId: AlignmentHelpTooltipId,
+		) => {
+			const field = document.createElement("label");
+			field.className = "ts-builder-special-field";
+			field.innerHTML = buildAlignmentHelpLabelHtml({
+				label: labelText,
+				tooltipId,
+				idPrefix: "builder-alignment",
+			});
+			const checkbox = document.createElement("input");
+			checkbox.type = "checkbox";
+			checkbox.style.justifySelf = "start";
+			field.append(checkbox);
+			return { field, checkbox };
+		};
+		const syncGeneration = checkboxField(
+			"Generate time-synchronized versions of audio",
+			"sync-generation",
+		);
+		const pitchShift = checkboxField(
+			"Pitch-shift synchronized audio to match the reference key",
+			"pitch-shift",
+		);
+		pitchShift.checkbox.disabled = true;
+		syncGeneration.checkbox.addEventListener("change", () => {
+			pitchShift.checkbox.disabled = !syncGeneration.checkbox.checked;
+			if (!syncGeneration.checkbox.checked) pitchShift.checkbox.checked = false;
+		});
 
 		const progress = this.buildComputeProgressElement();
 
-		compute.addEventListener("click", () => {
+		this.confirmDialog = () => {
 			void this.runAlignmentCompute(
 				eligible.map(([id]) => id),
 				reference.select.value,
 				featureSet.select.value as AlignmentFeatureSetId,
 				algorithm.select.value as AlignmentAlgorithmId,
-				{ compute, cancel, progress },
+				syncGeneration.checkbox.checked,
+				pitchShift.checkbox.checked,
+				{ compute: this.dialogOk, cancel: this.dialogCancel, progress },
 			);
-		});
-		actions.append(cancel, compute);
+		};
 
 		container.append(
 			reference.field,
 			featureSet.field,
 			algorithm.field,
-			actions,
+			syncGeneration.field,
+			pitchShift.field,
 			progress.wrapper,
 		);
 		this.dialogBody.append(container);
@@ -951,6 +1051,8 @@ export class BuilderApp {
 		referenceId: string,
 		featureSet: AlignmentFeatureSetId,
 		algorithm: AlignmentAlgorithmId,
+		generateSyncedAudio: boolean,
+		pitchShiftEnabled: boolean,
 		controls: {
 			compute: HTMLButtonElement;
 			cancel: HTMLButtonElement;
@@ -979,8 +1081,8 @@ export class BuilderApp {
 				referenceId,
 				featureSet,
 				algorithm,
-				false,
-				false,
+				generateSyncedAudio,
+				pitchShiftEnabled,
 			);
 			const csvFile = new File([result.csv], "alignment.csv", {
 				type: "text/csv",
@@ -988,7 +1090,13 @@ export class BuilderApp {
 			const added = await this.addFiles([csvFile]);
 			const csv = added.find((resource) => resource.kind === "csv");
 			if (!csv) throw new Error("Could not read the computed alignment.");
-			this.addAlignment(csv, referenceId);
+			this.addSynchronizedAudio(result.synchronizedAudio);
+			this.addAlignment(
+				csv,
+				referenceId,
+				false,
+				result.syncReferenceTimeColumn,
+			);
 		} catch (error) {
 			this.updateComputeProgress(controls.progress, describeError(error), true);
 			controls.compute.disabled = false;
@@ -996,6 +1104,32 @@ export class BuilderApp {
 		} finally {
 			this.alignmentWorkerBridge.setProgressCallback(null);
 		}
+	}
+
+	private addSynchronizedAudio(
+		synchronizedAudio: WorkerComputeResult["synchronizedAudio"],
+	): void {
+		for (const entry of synchronizedAudio) {
+			const binding = this.project.media[entry.fileId];
+			if (binding?.config.type !== "audio") continue;
+			const file = new File(
+				[entry.wavData],
+				`${entry.fileId}-synchronized.wav`,
+				{
+					type: entry.mimeType || "audio/wav",
+				},
+			);
+			const result = addFilesToProject(this.project, [file], undefined, false);
+			if (result.added[0]?.kind !== "audio") {
+				for (const added of result.added) this.removeResourceNow(added.id);
+				throw new Error(
+					result.errors[0] ?? "Could not add synchronized audio.",
+				);
+			}
+			binding.synchronizedResourceId = result.added[0].id;
+			binding.config.srcTimeScaled = { src: result.added[0].exportPath };
+		}
+		this.render();
 	}
 
 	private addMarker(csv: BuilderResource): void {
@@ -1034,8 +1168,12 @@ export class BuilderApp {
 
 	private openInspector(target: FormTarget): void {
 		this.activeTarget = target;
+		this.confirmDialog =
+			target.kind === "view-draft"
+				? () => this.commitDraft()
+				: () => this.acceptDialog();
 		this.renderInspector(target);
-		if (!this.dialog.open) this.dialog.showModal();
+		this.showDialog();
 		this.dialogBody
 			.querySelector<HTMLElement>("input, select, button")
 			?.focus();
@@ -1077,12 +1215,13 @@ export class BuilderApp {
 				"TrackSwitchViewConfig",
 				view.config.type,
 			);
-			if (view.config.type === "image") {
+			if (view.config.type === "image" || view.config.type === "pianoRoll") {
+				const config = view.config;
 				skip = new Set(["type", "src", "css", "mediaID"]);
 				this.dialogBody.append(
-					this.imageMediaEditor(
-						() =>
-							view.config as Extract<TrackSwitchViewConfig, { type: "image" }>,
+					this.mediaFileEditor(
+						config.type === "image" ? "image" : "midi",
+						() => config,
 						() => this.render(),
 					),
 				);
@@ -1096,12 +1235,13 @@ export class BuilderApp {
 				"TrackSwitchViewConfig",
 				draft.type,
 			);
-			if (draft.type === "image") {
+			if (draft.config.type === "image" || draft.config.type === "pianoRoll") {
+				const config = draft.config;
 				skip = new Set(["type", "src", "css", "mediaID"]);
 				this.dialogBody.append(
-					this.imageMediaEditor(
-						() =>
-							draft.config as Extract<TrackSwitchViewConfig, { type: "image" }>,
+					this.mediaFileEditor(
+						config.type === "image" ? "image" : "midi",
+						() => config,
 						() => this.render(),
 					),
 				);
@@ -1151,7 +1291,6 @@ export class BuilderApp {
 			schema = schemaForFeatures(this.rootSchema);
 		} else return;
 
-		this.dialogFooter.hidden = target.kind !== "view-draft";
 		this.dialogError.hidden = true;
 		this.dialogError.textContent = "";
 		this.dialogTitle.textContent = title;
@@ -1200,21 +1339,38 @@ export class BuilderApp {
 		return field;
 	}
 
-	private imageMediaEditor(
-		getConfig: () => Extract<TrackSwitchViewConfig, { type: "image" }>,
+	private mediaFileEditor(
+		kind: "image" | "midi",
+		getConfig: () => { mediaID: string },
 		onPicked: () => void,
 	): HTMLElement {
+		const labels = {
+			image: {
+				title: "Track image",
+				choose: "Choose an uploaded image…",
+				prompt: "Drop or paste an image, or click to choose a file",
+				accept: "image/*",
+				invalid: "Select a supported image file.",
+			},
+			midi: {
+				title: "MIDI file",
+				choose: "Choose an uploaded MIDI file…",
+				prompt: "Drop a MIDI file here, or click to choose a file",
+				accept: ".mid,.midi,audio/midi,audio/x-midi",
+				invalid: "Select a supported MIDI file.",
+			},
+		}[kind];
 		const wrapper = document.createElement("div");
 		wrapper.className = "ts-builder-special-field";
 		const label = document.createElement("strong");
-		label.textContent = "Track image";
+		label.textContent = labels.title;
 		wrapper.append(label);
 
 		const config = getConfig();
 		const currentBinding = config.mediaID
 			? this.project.media[config.mediaID]
 			: undefined;
-		if (currentBinding) {
+		if (currentBinding && kind === "image") {
 			const preview = document.createElement("img");
 			preview.className = "ts-builder-image-picker__preview";
 			preview.alt = "";
@@ -1223,18 +1379,18 @@ export class BuilderApp {
 			wrapper.append(preview);
 		}
 
-		const existingImages = Object.entries(this.project.media).filter(
-			([, media]) => media.config.type === "image",
+		const existing = Object.entries(this.project.media).filter(
+			([, media]) => media.config.type === kind,
 		);
-		if (existingImages.length) {
+		if (existing.length) {
 			const select = document.createElement("select");
 			select.className = "ts-builder-input";
 			const blank = document.createElement("option");
 			blank.value = "";
-			blank.textContent = "Choose an uploaded image…";
+			blank.textContent = labels.choose;
 			blank.selected = !config.mediaID;
 			select.append(blank);
-			for (const [id] of existingImages) {
+			for (const [id] of existing) {
 				const option = document.createElement("option");
 				option.value = id;
 				option.textContent = id;
@@ -1251,23 +1407,48 @@ export class BuilderApp {
 		const picker = document.createElement("div");
 		picker.className = "ts-builder-image-picker";
 		picker.tabIndex = 0;
-		picker.textContent = "Paste an image, or click to choose a file";
+		picker.textContent = labels.prompt;
 		const input = document.createElement("input");
 		input.type = "file";
-		input.accept = "image/*";
+		input.accept = labels.accept;
 		input.hidden = true;
 		picker.append(input);
+		const pick = (file: File) =>
+			this.pickMediaFile(kind, labels.invalid, file, getConfig, onPicked);
 		picker.addEventListener("click", () => input.click());
-		picker.addEventListener("paste", (event) => {
-			const item = Array.from(event.clipboardData?.items ?? []).find((entry) =>
-				entry.type.startsWith("image/"),
-			);
-			const file = item?.getAsFile();
-			if (file) this.pickImageFile(file, getConfig, onPicked);
+		picker.addEventListener("keydown", (event) => {
+			if (event.key === "Enter" || event.key === " ") {
+				event.preventDefault();
+				input.click();
+			}
 		});
+		picker.addEventListener("dragover", (event) => {
+			if (!isFileDrag(event)) return;
+			event.preventDefault();
+			picker.classList.add("is-drop-target");
+		});
+		picker.addEventListener("dragleave", () =>
+			picker.classList.remove("is-drop-target"),
+		);
+		picker.addEventListener("drop", (event) => {
+			if (!isFileDrag(event)) return;
+			event.preventDefault();
+			picker.classList.remove("is-drop-target");
+			const file = event.dataTransfer?.files[0];
+			if (file) pick(file);
+		});
+		if (kind === "image") {
+			picker.addEventListener("paste", (event) => {
+				const item = Array.from(event.clipboardData?.items ?? []).find(
+					(entry) => entry.type.startsWith("image/"),
+				);
+				const file = item?.getAsFile();
+				if (file) pick(file);
+			});
+		}
 		input.addEventListener("change", () => {
 			const file = input.files?.[0];
-			if (file) this.pickImageFile(file, getConfig, onPicked);
+			if (file) pick(file);
 			input.value = "";
 		});
 		wrapper.append(picker);
@@ -1275,18 +1456,18 @@ export class BuilderApp {
 		return wrapper;
 	}
 
-	private pickImageFile(
+	private pickMediaFile(
+		kind: "image" | "midi",
+		invalidMessage: string,
 		file: File,
-		getConfig: () => Extract<TrackSwitchViewConfig, { type: "image" }>,
+		getConfig: () => { mediaID: string },
 		onPicked: () => void,
 	): void {
 		const result = addFilesToProject(this.project, [file], undefined, false);
 		const resource = result.added[0];
-		if (!resource || resource.kind !== "image") {
-			this.setStatus(
-				result.errors[0] ?? "Select a supported image file.",
-				true,
-			);
+		if (resource?.kind !== kind) {
+			for (const added of result.added) this.removeResourceNow(added.id);
+			this.setStatus(result.errors[0] ?? invalidMessage, true);
 			return;
 		}
 		const mediaId = uniqueId(
@@ -1295,7 +1476,7 @@ export class BuilderApp {
 		);
 		this.project.media[mediaId] = {
 			resourceId: resource.id,
-			config: { type: "image", src: resource.exportPath },
+			config: { type: kind, src: resource.exportPath },
 		};
 		getConfig().mediaID = mediaId;
 		onPicked();
@@ -1454,7 +1635,7 @@ export class BuilderApp {
 						this.dialog.open
 					) {
 						this.activeTarget = null;
-						this.dialog.close();
+						this.acceptDialog();
 					} else {
 						this.render();
 					}
@@ -1562,17 +1743,38 @@ export class BuilderApp {
 			row.append(heading, actions);
 			row.addEventListener("dragstart", (event) => {
 				this.draggedViewId = view.id;
-				event.dataTransfer?.setData("text/plain", view.id);
+				if (event.dataTransfer) {
+					event.dataTransfer.effectAllowed = "move";
+					event.dataTransfer.setData("text/plain", view.id);
+				}
 				row.classList.add("is-dragging");
 			});
 			row.addEventListener("dragend", () => {
 				this.draggedViewId = null;
 				row.classList.remove("is-dragging");
+				for (const item of this.panelRail.children) {
+					item.classList.remove("is-drop-before", "is-drop-after");
+				}
 			});
-			row.addEventListener("dragover", (event) => event.preventDefault());
-			row.addEventListener("drop", (event) => {
+			// Insertion slot (0..views.length): before this panel when the pointer
+			// is in its upper half, after it otherwise.
+			const slotFor = (event: DragEvent) => {
+				const rect = row.getBoundingClientRect();
+				return event.clientY < rect.top + rect.height / 2 ? index : index + 1;
+			};
+			row.addEventListener("dragover", (event) => {
+				if (!this.draggedViewId) return;
 				event.preventDefault();
-				this.dropViewAt(index);
+				if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+				this.showViewDropIndicator(row, slotFor(event) === index);
+			});
+			row.addEventListener("dragleave", () =>
+				row.classList.remove("is-drop-before", "is-drop-after"),
+			);
+			row.addEventListener("drop", (event) => {
+				if (!this.draggedViewId) return;
+				event.preventDefault();
+				this.dropViewAt(slotFor(event));
 			});
 			this.panelRail.append(row);
 		});
@@ -1622,7 +1824,11 @@ export class BuilderApp {
 
 	private removeResourceNow(id: string): void {
 		const resource = this.project.resources[id];
-		if (resource) URL.revokeObjectURL(resource.previewUrl);
+		if (resource) {
+			if (this.dialogSnapshot)
+				this.deferredRevocations.push(resource.previewUrl);
+			else URL.revokeObjectURL(resource.previewUrl);
+		}
 		delete this.project.resources[id];
 	}
 

@@ -22,11 +22,13 @@
 	gap: var(--ts-main-control-row-gap) var(--ts-main-control-column-gap);
 }
 
-/* fullscreen-control is pinned to the top-right corner (see below), so it
-   needs room reserved on the right that the wrapping flex content won't use. */
-.trackswitch .main-control ul.control:has(> li.fullscreen-toggle) {
-	padding-inline-end: calc(
-		var(--ts-main-control-padding-inline) +
+/* fullscreen-control is pinned to the top-right corner (see below). Room for
+   it is reserved only on the items that sit at the right edge of the first
+   row, so a seekbar wrapped onto its own row can still span the full width. */
+.trackswitch .main-control ul.control:has(> li.fullscreen-toggle) > li.timing,
+.trackswitch .main-control ul.control:has(> li.fullscreen-toggle) > li.settings-button,
+.trackswitch .main-control ul.control:has(> li.fullscreen-toggle) > li.seekwrap:first-child {
+	margin-inline-end: calc(
 		var(--ts-main-control-icon-size) +
 		var(--ts-main-control-column-gap)
 	);

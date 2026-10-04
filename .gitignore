@@ -9,6 +9,7 @@ testings.ipynb
 docs/js/trackswitch.min.js
 docs/js/trackswitch.js
 docs/js/trackswitch-interactive.js
+docs/js/trackswitch-builder.js
 docs/js/trackswitch-player.js
 docs/js/trackswitch-alignment-player.js
 docs/js/trackswitch-alignment-interactive.js
@@ -47,3 +48,8 @@ tmp/
 .agents/
 .claude/
 .impeccable.md
+.playwright-cli/
+
+examples/
+docs/assets
+CLAUDE.md

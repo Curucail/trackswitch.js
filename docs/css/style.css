@@ -1836,6 +1836,25 @@ kbd {
 	opacity: 0.45;
 }
 
+.ts-builder-panel-rail__item.is-drop-before::before,
+.ts-builder-panel-rail__item.is-drop-after::after {
+	content: "";
+	position: absolute;
+	left: 0;
+	right: 0;
+	height: 4px;
+	background: var(--ts-doc-color-accent);
+	pointer-events: none;
+}
+
+.ts-builder-panel-rail__item.is-drop-before::before {
+	top: -4px;
+}
+
+.ts-builder-panel-rail__item.is-drop-after::after {
+	bottom: -4px;
+}
+
 .ts-builder-panel-rail__heading {
 	display: flex;
 	align-items: center;
@@ -1938,6 +1957,12 @@ kbd {
 	border: 1px solid var(--ts-doc-color-border);
 	background: var(--ts-doc-color-surface-panel);
 	box-shadow: 0 20px 50px var(--ts-doc-color-shadow-strong);
+	overflow: hidden;
+}
+
+.ts-builder-dialog[open] {
+	display: flex;
+	flex-direction: column;
 }
 
 .ts-builder-dialog::backdrop {
@@ -1945,9 +1970,7 @@ kbd {
 }
 
 .ts-builder-dialog__header {
-	position: sticky;
-	top: 0;
-	z-index: 2;
+	flex: none;
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -1966,9 +1989,13 @@ kbd {
 	gap: 0.8rem;
 	padding: 1rem;
 	overflow: auto;
+	flex: 1 1 auto;
+	min-height: 0;
+	align-content: start;
 }
 
 .ts-builder-dialog__error {
+	flex: none;
 	margin: 0;
 	padding: 0 1rem 0.8rem;
 	color: var(--ts-doc-color-text-error);
@@ -1980,19 +2007,13 @@ kbd {
 }
 
 .ts-builder-dialog__footer {
-	position: sticky;
-	bottom: 0;
-	z-index: 2;
+	flex: none;
 	display: flex;
 	justify-content: flex-end;
 	gap: 0.6rem;
 	padding: 0.9rem 1rem;
 	border-top: 1px solid var(--ts-doc-color-border-soft);
 	background: var(--ts-doc-color-surface-panel);
-}
-
-.ts-builder-dialog__footer[hidden] {
-	display: none;
 }
 
 .ts-builder-compute-progress {
@@ -2179,6 +2200,7 @@ kbd {
 	cursor: pointer;
 }
 
+.ts-builder-image-picker.is-drop-target,
 .ts-builder-image-picker:hover,
 .ts-builder-image-picker:focus-visible {
 	border-color: var(--ts-doc-color-accent);
@@ -2370,6 +2392,19 @@ input[type="checkbox"].ts-builder-input {
 
 .ts-builder-control-card.is-dragging {
 	opacity: 0.4;
+}
+
+.ts-builder-control-card.is-drop-before {
+	box-shadow: -4px 0 0 var(--ts-doc-color-accent);
+}
+
+.ts-builder-control-card.is-drop-after {
+	box-shadow: 4px 0 0 var(--ts-doc-color-accent);
+}
+
+.ts-builder-control-zone.is-drop-target {
+	border-color: var(--ts-doc-color-accent);
+	background: rgba(237, 140, 1, 0.08);
 }
 
 .ts-builder-control-card__grip {

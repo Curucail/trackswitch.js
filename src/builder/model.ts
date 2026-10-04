@@ -234,7 +234,11 @@ function addMediaDefaults(
 	};
 	project.media[mediaId] = { resourceId: resource.id, config };
 	if (resource.kind === "midi") {
-		addViewBeforeTrackList(project, { type: "pianoRoll", mediaID: mediaId });
+		addViewBeforeTrackList(project, {
+			type: "pianoRoll",
+			mediaID: mediaId,
+			pianoKeyboard: true,
+		});
 	} else if (resource.kind === "musicxml") {
 		addViewBeforeTrackList(project, { type: "sheetMusic", mediaID: mediaId });
 	} else if (resource.kind === "image") {

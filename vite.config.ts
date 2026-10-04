@@ -122,6 +122,16 @@ const buildTargets = {
 
 export default defineConfig(({ mode }) => {
 	const buildTarget = Object.hasOwn(buildTargets, mode) ? mode : "browser";
+	const config = buildTargets[buildTarget as keyof typeof buildTargets];
 
-	return buildTargets[buildTarget as keyof typeof buildTargets];
+	// `npm run docs:watch` writes the bundles straight into the Jekyll site;
+	// their file names already match the ones docs:assets copies them to.
+	if (process.env.TRACKSWITCH_DOCS_WATCH === "1") {
+		return {
+			...config,
+			build: { ...config.build, outDir: "docs/js", watch: {} },
+		};
+	}
+
+	return config;
 });
