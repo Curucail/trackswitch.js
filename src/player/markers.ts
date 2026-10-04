@@ -24,8 +24,6 @@ export interface MarkerNavigationSelection {
 
 export interface MarkerNavigationDialogValues {
 	jumpMarker: MarkerNavigationSelection | null;
-	loopAMarker: MarkerNavigationSelection | null;
-	loopBMarker: MarkerNavigationSelection | null;
 }
 
 export interface MarkerNavigationMarkerOption {
@@ -415,7 +413,6 @@ export function closeMarkerNavigationDialog(
 function resolveDialogMarker(
 	controller: TrackSwitchControllerImpl,
 	selection: MarkerNavigationSelection | null,
-	fieldName: string,
 ): { time: number | null; error: string | null } {
 	if (!selection) {
 		return { time: null, error: null };
@@ -426,7 +423,8 @@ function resolveDialogMarker(
 	if (!set) {
 		return {
 			time: null,
-			error: `${fieldName} marker sequence is no longer available. Choose another marker.`,
+			error:
+				"The marker sequence is no longer available. Choose another marker.",
 		};
 	}
 	const marker = set.markers.find(
@@ -436,7 +434,7 @@ function resolveDialogMarker(
 	return time === null
 		? {
 				time: null,
-				error: `${fieldName} is no longer available. Choose another marker.`,
+				error: "The marker is no longer available. Choose another marker.",
 			}
 		: { time, error: null };
 }
@@ -445,77 +443,16 @@ export function submitMarkerNavigationDialog(
 	controller: TrackSwitchControllerImpl,
 	values: MarkerNavigationDialogValues,
 ): void {
-	const jumpRequested = values.jumpMarker !== null;
-	const loopARequested = values.loopAMarker !== null;
-	const loopBRequested = values.loopBMarker !== null;
-	if (!jumpRequested && !loopARequested && !loopBRequested) {
-		closeMarkerNavigationDialog(controller);
+	const jump = resolveDialogMarker(controller, values.jumpMarker);
+	if (jump.error) {
+		controller.renderer.setMarkerNavigationDialogError(jump.error);
 		return;
-	}
-	if (loopARequested !== loopBRequested) {
-		controller.renderer.setMarkerNavigationDialogError(
-			"Choose both loop point A and loop point B.",
-		);
-		return;
-	}
-
-	const jump = resolveDialogMarker(
-		controller,
-		values.jumpMarker,
-		"Jump marker",
-	);
-	const loopA = resolveDialogMarker(
-		controller,
-		values.loopAMarker,
-		"Loop point A",
-	);
-	const loopB = resolveDialogMarker(
-		controller,
-		values.loopBMarker,
-		"Loop point B",
-	);
-	const resolutionError = jump.error ?? loopA.error ?? loopB.error;
-	if (resolutionError) {
-		controller.renderer.setMarkerNavigationDialogError(resolutionError);
-		return;
-	}
-
-	let loopStart: number | null = null;
-	let loopEnd: number | null = null;
-	if (loopARequested && loopA.time !== null && loopB.time !== null) {
-		loopStart = Math.min(loopA.time, loopB.time);
-		loopEnd = Math.max(loopA.time, loopB.time);
-		if (loopEnd - loopStart < controller.loopMinDistance) {
-			controller.renderer.setMarkerNavigationDialogError(
-				"Loop points must be different markers with enough time between them.",
-			);
-			return;
-		}
-	}
-
-	if (loopStart !== null && loopEnd !== null) {
-		controller.state = {
-			...controller.state,
-			loop: { pointA: loopStart, pointB: loopEnd, enabled: true },
-		};
-		synchronizeRuntimeMarkers(controller);
 	}
 
 	closeMarkerNavigationDialog(controller);
-	if (jumpRequested && jump.time !== null) {
+	if (jump.time !== null) {
 		controller.seekTo(jump.time);
-		return;
 	}
-	if (
-		loopStart !== null &&
-		loopEnd !== null &&
-		(controller.state.position < loopStart ||
-			controller.state.position > loopEnd)
-	) {
-		controller.seekTo(loopStart);
-		return;
-	}
-	controller.updateMainControls();
 }
 
 export function activateTimelineMarker(

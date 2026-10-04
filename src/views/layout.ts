@@ -427,7 +427,7 @@ function buildShortcutHelpHtml(
 
 let markerNavigationDialogId = 0;
 
-function buildMarkerNavigationDialogHtml(looping: boolean): string {
+function buildMarkerNavigationDialogHtml(): string {
 	const dialogId = ++markerNavigationDialogId;
 	const field = (className: string, label: string, fieldId: string): string => {
 		const inputId = `marker-navigation-${dialogId}-${fieldId}`;
@@ -453,19 +453,6 @@ function buildMarkerNavigationDialogHtml(looping: boolean): string {
 		);
 	};
 
-	const loopHtml = looping
-		? '<fieldset class="marker-navigation-loop-fields" aria-label="Set loop points between markers">' +
-			'<div class="marker-navigation-section-heading">Set loop points between markers</div>' +
-			'<div class="marker-navigation-loop-grid">' +
-			'<div class="marker-navigation-loop-column"><span class="marker-navigation-loop-point">A</span>' +
-			field("marker-loop-a", "Loop point A marker", "loop-a") +
-			"</div>" +
-			'<div class="marker-navigation-loop-column"><span class="marker-navigation-loop-point">B</span>' +
-			field("marker-loop-b", "Loop point B marker", "loop-b") +
-			"</div>" +
-			"</div></fieldset>"
-		: "";
-
 	return (
 		'<div class="overlay marker-navigation-overlay is-hidden" aria-hidden="true">' +
 		'<form class="marker-navigation-dialog" role="dialog" aria-modal="true" aria-label="Jump to annotation marker" tabindex="-1">' +
@@ -477,9 +464,8 @@ function buildMarkerNavigationDialogHtml(looping: boolean): string {
 			"jump",
 		) +
 		"</div>" +
-		loopHtml +
 		'<p class="marker-navigation-error" role="alert" aria-live="assertive"></p>' +
-		'<div class="marker-navigation-dialog-actions"><button type="submit" class="marker-navigation-ok">Apply</button></div>' +
+		'<div class="marker-navigation-dialog-actions"><button type="submit" class="marker-navigation-ok">Go!</button></div>' +
 		"</form></div>"
 	);
 }
@@ -593,9 +579,7 @@ export function buildPlayerOverlayHtml(
 			runtimes.length,
 		) +
 		(navigationBarHasControl(ctx.navigationBar, "markerNavigation")
-			? buildMarkerNavigationDialogHtml(
-					navigationBarHasControl(ctx.navigationBar, "looping"),
-				)
+			? buildMarkerNavigationDialogHtml()
 			: "")
 	);
 }

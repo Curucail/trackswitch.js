@@ -792,7 +792,7 @@ Previous and next navigation uses the marker sequences a view currently shows. A
 
 On a waveform with `tracks: "audible"`, the layers follow the audible tracks. Track selection and track-volume changes therefore update the available navigation targets immediately. Layers on a fixed-track waveform, a `pianoRoll` view, or an image keep their markers regardless of solo state.
 
-The jump and loop-point fields search all annotation sets. Visibility and audible track state do not affect these searches.
+The jump field searches all annotation sets. Visibility and audible track state do not affect these searches.
 
 Each result identifies the marker sequence, numerical ID, label, and reference-timeline position.
 

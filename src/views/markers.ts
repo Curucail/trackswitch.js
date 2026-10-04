@@ -927,18 +927,10 @@ export function openMarkerNavigationDialog(
 	resetMarkerNavigationDialogComboboxes(root);
 	overlay.classList.remove("is-hidden");
 	overlay.setAttribute("aria-hidden", "false");
-	const hasLoopFields = !!root.querySelector(".marker-navigation-loop-fields");
 	root.ownerDocument.defaultView?.requestAnimationFrame(() => {
-		if (!hasLoopFields) {
-			const jumpInput = root.querySelector(".marker-jump-target");
-			if (jumpInput instanceof HTMLInputElement) {
-				jumpInput.focus();
-				return;
-			}
-		}
-		const dialog = root.querySelector(".marker-navigation-dialog");
-		if (dialog instanceof HTMLElement) {
-			dialog.focus();
+		const jumpInput = root.querySelector(".marker-jump-target");
+		if (jumpInput instanceof HTMLInputElement) {
+			jumpInput.focus();
 		}
 	});
 }
@@ -969,8 +961,6 @@ export function readMarkerNavigationDialogValues(
 	};
 	return {
 		jumpMarker: selection(".marker-jump-target"),
-		loopAMarker: selection(".marker-loop-a"),
-		loopBMarker: selection(".marker-loop-b"),
 	};
 }
 
