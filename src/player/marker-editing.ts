@@ -40,6 +40,8 @@ const MARKER_LOUPE_MAGNIFICATION = 16;
 /** Length of the snippet that sounds from the marker while it is adjusted. */
 const MARKER_PAUSED_PREVIEW_SECONDS = 0.3;
 const MARKER_CLICK_SUPPRESSION_MS = 400;
+/** A keypress older than this was not waiting for the handler; its timestamp is not trusted. */
+const MAX_KEYPRESS_AGE_SECONDS = 0.25;
 /** Keeps a segment boundary from landing exactly on its neighbour. */
 const SEGMENT_BOUNDARY_GAP = 0.000001;
 
@@ -264,19 +266,29 @@ export function placeMarkerFromEvent(
 /** Drops a marker at the playhead without interrupting playback — for tapping along. */
 export function addMarkerAtPlayhead(
 	controller: TrackSwitchControllerImpl,
+	event: ControllerPointerEvent,
 ): boolean {
 	if (!targetSequence(controller)) {
 		return false;
 	}
-	// A key pressed on a heard event marks what was heard: the audio clock read
-	// at the keypress, not the position of the last monitor tick, and set back
-	// by the output latency, which the clock runs ahead of the speakers by.
+	// A key pressed on a heard event marks what was heard. The audio clock is
+	// read now and set back twice: by the time the keypress waited for this
+	// handler — playback keeps the main thread busy drawing — and by the output
+	// latency, which the clock runs ahead of the speakers by.
+	const ownerWindow = controller.root.ownerDocument.defaultView as Window;
+	const keypressAge = clamp(
+		(ownerWindow.performance.now() - (event.originalEvent?.timeStamp ?? 0)) /
+			1000,
+		0,
+		MAX_KEYPRESS_AGE_SECONDS,
+	);
 	addMarkerAtReferenceTime(
 		controller,
 		controller.state.playing
 			? Math.max(
 					0,
 					controller.currentPlaybackReferencePosition() -
+						keypressAge -
 						controller.audioEngine.getOutputLatency(),
 				)
 			: controller.state.position,

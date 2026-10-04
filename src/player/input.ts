@@ -1274,9 +1274,9 @@ const KEYBOARD_SHORTCUT_HANDLERS: Record<
 		controller.seekToAdjacentMarker("next");
 		return true;
 	},
-	m: (controller) => addMarkerAtPlayhead(controller),
-	M: (controller) => addMarkerAtPlayhead(controller),
-	KeyM: (controller) => addMarkerAtPlayhead(controller),
+	m: (controller, event) => addMarkerAtPlayhead(controller, event),
+	M: (controller, event) => addMarkerAtPlayhead(controller, event),
+	KeyM: (controller, event) => addMarkerAtPlayhead(controller, event),
 	r: (controller) => {
 		controller.dispatch({ type: "toggle-repeat" });
 		controller.updateMainControls();
