@@ -184,6 +184,7 @@
 		if (controls.markers) {
 			config.markers = {
 				sections: {
+					type: "segments",
 					src: basePath + "/showcase-markers.csv",
 					timeCol: "time",
 					labelCol: "label",
@@ -348,12 +349,14 @@
 		if (controls.markers) {
 			config.markers = {
 				hu33Measures: {
+					type: "points",
 					src: basePath + "/HU33-markers.csv",
 					timeline: "hu33",
 					timeCol: "start",
 					labelCol: "label",
 				},
 				sc06Structure: {
+					type: "segments",
 					src: basePath + "/SC06-markers.csv",
 					timeline: "sc06",
 					timeCol: "start",
