@@ -30,8 +30,11 @@ Or download the browser bundle from GitHub Releases:
 ```text
 trackswitch-release/
 ├── dist/
-│   └── js/
-│       └── trackswitch.js
+│   ├── js/
+│   │   └── trackswitch.js
+│   └── interactive/
+│       ├── trackswitch-interactive.js
+│       └── trackswitch-interactive-worker.js
 ├── LICENSE
 └── THIRD_PARTY_NOTICES.md
 ```
@@ -57,22 +60,38 @@ Features
 - Play, pause, stop, seek, and repeat controls
 - Global volume control
 - Looping controls
+- Per-track solo, volume, and pan controls (balance or equal-power pan law)
 - Annotation marker navigation by previous/next or searchable sequence, ID, and label
-- Manual marker editing with fine adjustment in a magnified window, and CSV export
-- Per-track solo, volume, and pan controls
 - Presets for common track combinations
+- Comparison groups: switch tracks inside groups, each group living in one shared timeline
+- Automatic loudness normalization
 - (Seekable) images and per-track images
 - Interactive waveforms with zoom support and optional playback-follow modes
-- Interactive Sheet music (musicxml) display with playback-following cursor
+- MIDI piano roll with per-channel colors, light/dark/colorblind palettes, velocity and note event info on hover
+- Interactive sheet music (MusicXML) display with playback-following cursor
+- Text and separator views for annotating and structuring the layout
+- Completely customizable order of panels and elements in the navigation bar
 - Keyboard shortcuts
+- Responsive layout for narrow and mobile screens
+- Theming through CSS custom properties, globally or per view
+- Optional autoload
+- Manual marker editing with fine adjustment in a magnified window, audible marker clicks, undo, and CSV export
 
 ### Aligned timelines (Sync mode)
 
-- Compare different performances of the same piece across their own timelines
-- Every timeline related to one reference timeline through alignment anchors
+- Compare and switch between different audio tracks living on separate, aligned timelines
+- Timelines in custom units possible, e.g. seconds, measures or ticks
+- Handling of repeated sections and positions where the reference stands still
+- Configurable behavior outside alignment coverage (hold, extrapolate, error)
 - Marker sequences projected between timelines
 - Optional synchronized playback for mixing performances together
-- Alignment warping path and local tempo deviation visualizations
+- Optional alignment warping path and local tempo deviation visualizations
+
+### Additional Features
+
+- [Player Builder](https://audiolabs.github.io/trackswitch.js/builder.html): assemble and export a player from local media
+- Interactive alignment: run DTW in the browser on your own recordings and get a configured player and alignment CSV back
+- Published JSON Schema for completion and validation in your editor
 
 Programmatic API
 ----------------

@@ -551,7 +551,7 @@ export class BuilderApp {
 		const markerActions = document.createElement("div");
 		markerActions.className =
 			"ts-builder-sidebar-actions ts-builder-sidebar-actions--or";
-		const uploadMarkers = button("Upload marker set CSV");
+		const uploadMarkers = button("Upload CSV");
 		uploadMarkers.addEventListener("click", () => this.pickCsvFor("marker"));
 		const markersOr = document.createElement("span");
 		markersOr.className = "ts-builder-sidebar-actions__or";
