@@ -12,6 +12,69 @@
 	}
 }
 
+/* Corner-anchored rows: every control group takes half a row, so a row holds
+   at most two groups - the first pinned left, the second pinned right. A group
+   that ends up alone on its row (last of its kind, or followed by the timer or
+   seek bar, which own a full row) is centered instead. */
+@container ts-main-control (max-width: 700px) {
+	.trackswitch .main-control ul.control > li:not(.seekwrap, .fullscreen-toggle, .timing) {
+		flex: 0 0 calc(50% - var(--ts-main-control-column-gap) / 2);
+		min-width: 0;
+		margin-inline: 0;
+	}
+
+	.trackswitch .main-control ul.control > li:nth-child(odd of :not(.seekwrap, .fullscreen-toggle, .timing)) {
+		justify-content: flex-start;
+	}
+
+	.trackswitch .main-control ul.control > li:nth-child(even of :not(.seekwrap, .fullscreen-toggle, .timing)) {
+		justify-content: flex-end;
+	}
+
+	.trackswitch .main-control ul.control > li:nth-child(odd of :not(.seekwrap, .fullscreen-toggle, .timing)):nth-last-child(1 of :not(.seekwrap, .fullscreen-toggle, .timing)),
+	.trackswitch .main-control ul.control > li:nth-child(odd of :not(.seekwrap, .fullscreen-toggle, .timing)):has(+ :is(.timing, .seekwrap)) {
+		flex-basis: 100%;
+		justify-content: center;
+	}
+
+	/* The sync toggle is itself the button, so it keeps its own width and is
+	   positioned with margins rather than stretched over the half-row cell. */
+	.trackswitch .main-control ul.control > li.sync-global {
+		flex: 0 0 auto;
+		justify-content: center;
+	}
+
+	.trackswitch .main-control ul.control > li.sync-global:nth-child(even of :not(.seekwrap, .fullscreen-toggle, .timing)) {
+		margin-left: auto;
+	}
+
+	.trackswitch .main-control ul.control > li.sync-global:nth-child(odd of :not(.seekwrap, .fullscreen-toggle, .timing)):nth-last-child(1 of :not(.seekwrap, .fullscreen-toggle, .timing)),
+	.trackswitch .main-control ul.control > li.sync-global:nth-child(odd of :not(.seekwrap, .fullscreen-toggle, .timing)):has(+ :is(.timing, .seekwrap)) {
+		margin-inline: auto;
+	}
+
+	.trackswitch .main-control ul.control > li.timing {
+		flex: 0 0 100%;
+		margin-inline: 0;
+		justify-content: center;
+		text-align: center;
+	}
+
+	.trackswitch .main-control .volume-control {
+		width: 100%;
+		max-width: 200px;
+	}
+
+	.trackswitch .main-control .volume-control .volume-slider {
+		flex: 1 1 auto;
+		min-width: 0;
+	}
+
+	.trackswitch .main-control .control li.loop-group > .loop-controls {
+		margin-right: 0;
+	}
+}
+
 @container ts-main-control (max-width: 700px) {
 	.trackswitch
 		.main-control
@@ -50,11 +113,14 @@
 	}
 
 	.trackswitch .main-control .sync-global {
-		min-width: 68px;
-		height: 26px;
-		line-height: 26px;
-		font-size: 14px;
-		padding: 0;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 52px;
+		height: 22px;
+		line-height: 1;
+		font-size: 12px;
+		padding: 0 8px;
 	}
 
 	.trackswitch .main-control .volume-control .volume-icon {

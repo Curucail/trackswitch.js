@@ -254,6 +254,12 @@ kbd {
 	font-weight: 600;
 }
 
+.ts-nav-toggle,
+.ts-nav-toggle__button,
+.ts-icon-link__npm-logo {
+	display: none;
+}
+
 .ts-icon-link__badge {
 	display: inline-flex;
 	align-items: center;
@@ -281,9 +287,10 @@ kbd {
 	--ts-showcase-gap: 2.1rem;
 	position: relative;
 	display: grid;
-	grid-template-columns: var(--ts-showcase-side-width) var(
-			--ts-showcase-stage-width
-		) var(--ts-showcase-side-width);
+	grid-template-columns:
+		var(--ts-showcase-side-width)
+		minmax(0, var(--ts-showcase-stage-width))
+		var(--ts-showcase-side-width);
 	grid-template-areas: "copy player controls";
 	gap: var(--ts-showcase-gap);
 	align-items: center;
@@ -292,7 +299,9 @@ kbd {
 
 .ts-showcase__player-stage {
 	grid-area: player;
-	width: var(--ts-showcase-stage-width);
+	min-width: 0;
+	width: min(var(--ts-showcase-stage-width), 100%);
+	justify-self: center;
 	display: flex;
 	flex-direction: column;
 	align-self: center;
@@ -381,7 +390,9 @@ kbd {
 }
 
 #ts-showcase-player {
+	box-sizing: border-box;
 	width: 100%;
+	margin: 0;
 	filter: drop-shadow(0 26px 56px rgba(0, 0, 0, 0.26));
 }
 
@@ -548,6 +559,8 @@ kbd {
 
 .ts-control-panel,
 .ts-mode-panel {
+	position: relative;
+	z-index: 1;
 	background: var(--ts-doc-color-surface-panel);
 }
 
@@ -1040,15 +1053,15 @@ kbd {
 
 @media (max-width: 1560px) {
 	.ts-showcase__layout {
-		grid-template-columns: 1fr;
+		grid-template-columns: minmax(0, 1fr);
 		grid-template-areas:
 			"player"
 			"copy"
 			"controls";
 	}
 
-	.ts-showcase__player-stage {
-		width: 100%;
+	.ts-showcase__layout {
+		justify-items: center;
 	}
 
 	.ts-showcase__snippet-panel {
@@ -1077,13 +1090,137 @@ kbd {
 		padding-top: 1.6rem;
 	}
 
+	.home-page .site-main {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.ts-hero,
 	.ts-hero__row {
-		grid-template-columns: 1fr;
-		gap: 0.9rem;
+		display: contents;
 	}
 
 	.ts-hero__copy {
 		grid-column: auto;
+		padding: 0.25rem 0 1.25rem;
+		gap: 0.35rem;
+	}
+
+	.ts-hero h1 {
+		min-height: 44px;
+		padding-inline: 56px;
+		line-height: 44px;
+	}
+
+	.ts-hero__description {
+		max-width: none;
+		font-size: 0.95rem;
+	}
+
+	.ts-showcase {
+		order: 1;
+		margin-bottom: 1.5rem;
+	}
+
+	.ts-hero__actions {
+		order: 2;
+		position: relative;
+		z-index: 30;
+	}
+
+	.ts-showcase__code-callout {
+		display: none;
+	}
+
+	.ts-nav-toggle__button {
+		position: absolute;
+		top: 0.9rem;
+		left: 0;
+		z-index: 20;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 44px;
+		height: 44px;
+		border: 1px solid rgba(56, 56, 56, 0.18);
+		border-radius: 50%;
+		background: rgba(255, 255, 255, 0.72);
+		cursor: pointer;
+	}
+
+	.ts-nav-toggle__button span,
+	.ts-nav-toggle__button span::before,
+	.ts-nav-toggle__button span::after {
+		display: block;
+		width: 18px;
+		height: 2px;
+		border-radius: 1px;
+		background: var(--ts-doc-color-text-primary);
+	}
+
+	.ts-nav-toggle__button span {
+		position: relative;
+	}
+
+	.ts-nav-toggle__button span::before,
+	.ts-nav-toggle__button span::after {
+		content: "";
+		position: absolute;
+		left: 0;
+	}
+
+	.ts-nav-toggle__button span::before {
+		top: -6px;
+	}
+
+	.ts-nav-toggle__button span::after {
+		top: 6px;
+	}
+
+	.ts-nav-toggle:focus-visible + .ts-nav-toggle__button {
+		outline: 2px solid var(--ts-doc-color-text-primary);
+		outline-offset: 2px;
+	}
+
+	.ts-hero__nav {
+		display: none;
+		position: absolute;
+		top: 4.2rem;
+		left: 0;
+		z-index: 20;
+		flex-direction: column;
+		align-items: stretch;
+		gap: 0.15rem;
+		padding: 0.5rem;
+		border: 1px solid rgba(56, 56, 56, 0.14);
+		border-radius: 16px;
+		background: var(--ts-doc-color-surface-panel);
+		box-shadow: 0 18px 36px var(--ts-doc-color-shadow);
+	}
+
+	.ts-nav-toggle:checked ~ .ts-hero__nav {
+		display: flex;
+	}
+
+	.ts-showcase__layout {
+		grid-template-areas:
+			"mode"
+			"player"
+			"controls";
+		gap: 0.85rem;
+	}
+
+	.ts-showcase__sidebar {
+		display: contents;
+	}
+
+	.ts-mode-panel {
+		grid-area: mode;
+	}
+
+	.ts-control-panel {
+		grid-area: controls;
 	}
 
 	.ts-showcase__sidebar {
@@ -1095,20 +1232,14 @@ kbd {
 
 	.ts-control-panel {
 		height: auto;
-	}
-
-	.ts-hero__nav {
-		grid-column: auto;
-		justify-content: center;
+		overflow: visible;
+		overscroll-behavior: auto;
 	}
 
 	.ts-hero__actions {
 		grid-column: auto;
 		justify-content: center;
-	}
-
-	.ts-showcase__player-stage {
-		margin-inline: calc(var(--ts-doc-page-gutter) * -1);
+		padding-bottom: 1.5rem;
 	}
 
 	.ts-showcase__player-shell {
@@ -1122,12 +1253,28 @@ kbd {
 
 @media (max-width: 560px) {
 	.ts-hero h1 {
-		font-size: clamp(2.4rem, 15vw, 3.4rem);
+		font-size: clamp(1.8rem, 9vw, 2.6rem);
 	}
 
 	.ts-icon-link {
-		width: 100%;
+		width: 48px;
+		padding: 0;
 		justify-content: center;
+		border-radius: 50%;
+	}
+
+	.ts-icon-link span,
+	.ts-icon-link__badge {
+		display: none;
+	}
+
+	.ts-icon-link svg {
+		width: 22px;
+		height: 22px;
+	}
+
+	.ts-icon-link .ts-icon-link__npm-logo {
+		display: block;
 	}
 
 	.ts-showcase__code-callout,
