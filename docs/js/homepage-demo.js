@@ -361,6 +361,12 @@
 					timeline: "sc06",
 					timeCol: "start",
 					labelCol: "structure",
+					colors: {
+						I: "var(--ts-color-channel-1)",
+						A: "var(--ts-color-channel-2)",
+						B: "var(--ts-color-channel-3)",
+						C: "var(--ts-color-channel-4)",
+					},
 				},
 			};
 		}
