@@ -1772,9 +1772,6 @@
 				"height": {
 					"type": "number"
 				},
-				"waveformBarWidth": {
-					"type": "number"
-				},
 				"maxZoom": {
 					"type": "number"
 				},

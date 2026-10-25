@@ -1,13 +1,13 @@
 import type {
 	TrackTimelineProjector,
 	WaveformEngine,
-	WaveformPeakBuckets,
+	WaveformRange,
+	WaveformSignal,
 } from "../media/waveform-engine";
 import {
 	isWaveformTrackAudible,
 	resolveAudibleWaveformTrackIndex,
 	resolveWaveformTrackIndices,
-	serializeWaveformSource,
 } from "../media/waveform-engine";
 import { applyCssOverrides } from "../shared/dom";
 import { clamp, sanitizeDuration } from "../shared/math";
@@ -42,7 +42,7 @@ import {
 	updateTimelineZoomIndicators,
 } from "./surface";
 
-interface WaveformSeekSurfaceMetadata {
+export interface WaveformSeekSurfaceMetadata {
 	wrapper: HTMLElement;
 	scrollContainer: HTMLElement;
 	overlay: HTMLElement;
@@ -63,7 +63,6 @@ interface WaveformSeekSurfaceMetadata {
 	originalHeight: number;
 	/** The configured `height`, immutable — the base a fullscreen grow restores to. */
 	configuredHeight: number;
-	barWidth: number;
 	/** `maxZoom` and `defaultZoom` as configured, in the reference timeline's unit. */
 	maxZoomValue: number;
 	defaultZoomValue: number | null;
@@ -82,7 +81,8 @@ interface WaveformSeekSurfaceMetadata {
 	zoomEndedRegion: HTMLElement;
 	zoomViewportNode: HTMLElement;
 	zoomCanvasLastDrawKey: string | null;
-	waveformColor: string | null;
+	/** Rate of the signal last drawn, which bounds the zoom; 0 before one is. */
+	sampleRate: number;
 	tiles: Map<
 		number,
 		{
@@ -90,19 +90,49 @@ interface WaveformSeekSurfaceMetadata {
 			lastDrawKey: string | null;
 		}
 	>;
-	normalizationPeak: number;
-	normalizationCacheKey: string | null;
-	tilePeakCache: Map<string, WaveformPeakBuckets>;
-	tilePeakCacheOrder: string[];
 	alignedPlayhead: boolean;
 	refHooksCanvas: HTMLCanvasElement | null;
 	showAlignmentPoints: boolean;
-	alignmentPointsLastW: number;
-	alignmentPointsLastH: number;
+	/**
+	 * The hooks `refHooksCanvas` shows, as fractions of the seek surface: the
+	 * canvas covers only the window around the viewport, so they are redrawn
+	 * whenever that window moves.
+	 */
+	hooks: WaveformHooks;
+	hooksDrawKey: string | null;
+}
+
+/** Lines that run from a reference position at the edges to a local one inside. */
+interface WaveformHooks {
+	/** Bumped whenever the hooks change. */
+	version: number;
+	playhead: Array<{ reference: number; local: number }>;
+	alignmentPoints: Array<{ reference: number; local: number }>;
 }
 
 const MIN_WAVEFORM_ZOOM = MIN_TIMELINE_ZOOM;
-const WAVEFORM_TILE_PEAK_CACHE_LIMIT = 64;
+/** Below this many samples per device pixel, a column is read from the samples. */
+const RAW_SAMPLES_PER_COLUMN = 64;
+/** Below this many samples per device pixel, the samples are traced as a line. */
+const TRACE_SAMPLES_PER_COLUMN = 1;
+const TRACE_LINE_WIDTH = 1.25;
+/** CSS pixels one sample may span at most; zooming further only spreads them. */
+const MAX_PIXELS_PER_SAMPLE = 32;
+/** Share of the half height the loudest sample reaches. */
+const WAVEFORM_PEAK_EXTENT = 0.95;
+
+/** A signal as a surface shows it. */
+interface WaveformLayer {
+	signal: WaveformSignal;
+	/**
+	 * Takes a time on the signal's own timeline to the surface's; null where
+	 * the two are the same.
+	 */
+	project: ((seconds: number) => number) | null;
+	/** Length of the signal's own timeline in seconds — `project`'s domain. */
+	duration: number;
+}
+
 /** The player draws the waveform itself, so the seek surface spans it exactly. */
 function isWaveformTrackAudibleForCtx(
 	ctx: ViewRenderer,
@@ -154,188 +184,289 @@ function updateWaveformEndedRegions(
 	surfaceMetadata.zoomEndedRegion.style.left = left;
 }
 
-function getWaveformBucketPeak(buckets: WaveformPeakBuckets | null): number {
-	if (!buckets) {
-		return 0;
+/** The earliest time in [`low`, `high`] that `project` takes to `target` or later. */
+function invertProjection(
+	project: (seconds: number) => number,
+	target: number,
+	low: number,
+	high: number,
+): number {
+	if (project(low) >= target) {
+		return low;
 	}
 
-	let peak = 0;
-	for (let index = 0; index < buckets.maxes.length; index += 1) {
-		peak = Math.max(
-			peak,
-			Math.abs(buckets.mins[index]),
-			Math.abs(buckets.maxes[index]),
-		);
-	}
-	return peak;
-}
-
-function clearWaveformTilePeakCache(
-	surfaceMetadata: WaveformSeekSurfaceMetadata,
-): void {
-	surfaceMetadata.tilePeakCache.clear();
-	surfaceMetadata.tilePeakCacheOrder = [];
-}
-
-function getCachedWaveformTilePeaks(
-	surfaceMetadata: WaveformSeekSurfaceMetadata,
-	key: string,
-): WaveformPeakBuckets | null {
-	const cached = surfaceMetadata.tilePeakCache.get(key);
-	if (!cached) {
-		return null;
-	}
-
-	const existingIndex = surfaceMetadata.tilePeakCacheOrder.indexOf(key);
-	if (existingIndex !== -1) {
-		surfaceMetadata.tilePeakCacheOrder.splice(existingIndex, 1);
-	}
-	surfaceMetadata.tilePeakCacheOrder.push(key);
-	return cached;
-}
-
-function setCachedWaveformTilePeaks(
-	surfaceMetadata: WaveformSeekSurfaceMetadata,
-	key: string,
-	buckets: WaveformPeakBuckets,
-): void {
-	if (!surfaceMetadata.tilePeakCache.has(key)) {
-		surfaceMetadata.tilePeakCacheOrder.push(key);
-	}
-	surfaceMetadata.tilePeakCache.set(key, buckets);
-
-	while (
-		surfaceMetadata.tilePeakCacheOrder.length > WAVEFORM_TILE_PEAK_CACHE_LIMIT
-	) {
-		const oldestKey = surfaceMetadata.tilePeakCacheOrder.shift();
-		if (oldestKey) {
-			surfaceMetadata.tilePeakCache.delete(oldestKey);
+	for (let iteration = 0; iteration < 52; iteration += 1) {
+		const middle = (low + high) / 2;
+		if (project(middle) >= target) {
+			high = middle;
+		} else {
+			low = middle;
 		}
 	}
+	return high;
 }
 
-function renderWaveformCanvas(
-	canvas: HTMLCanvasElement,
-	width: number,
-	height: number,
-	buckets: WaveformPeakBuckets | null,
-	barWidth: number,
-	color: string,
-	normalizationPeak?: number,
-	alpha = 1,
-	maxDrawWidth = width,
+/**
+ * Where the edges of `columns` equal columns spanning a stretch of the surface
+ * fall in a layer's signal, in fractional samples.
+ */
+function resolveColumnEdges(
+	layer: WaveformLayer,
+	startSeconds: number,
+	durationSeconds: number,
+	columns: number,
+): Float64Array {
+	const edges = new Float64Array(columns + 1);
+	const rate = layer.signal.sampleRate;
+	const secondsPerColumn = durationSeconds / columns;
+	const project = layer.project;
+	if (!project) {
+		for (let column = 0; column <= columns; column += 1) {
+			edges[column] = (startSeconds + column * secondsPerColumn) * rate;
+		}
+		return edges;
+	}
+
+	// The projection runs from the signal's timeline to the surface's, so it is
+	// inverted here: bracket the stretch, sample the projection twice per
+	// column across it, and interpolate between those samples.
+	const first = invertProjection(project, startSeconds, 0, layer.duration);
+	const last = invertProjection(
+		project,
+		startSeconds + durationSeconds,
+		first,
+		layer.duration,
+	);
+	const steps = columns * 2;
+	const times = new Float64Array(steps + 1);
+	const projected = new Float64Array(steps + 1);
+	for (let step = 0; step <= steps; step += 1) {
+		times[step] = first + ((last - first) * step) / steps;
+		projected[step] = project(times[step]);
+	}
+	let step = 0;
+	for (let column = 0; column <= columns; column += 1) {
+		const target = startSeconds + column * secondsPerColumn;
+		while (step < steps - 1 && projected[step + 1] <= target) {
+			step += 1;
+		}
+		const span = projected[step + 1] - projected[step];
+		const fraction =
+			span > 0 ? clamp((target - projected[step]) / span, 0, 1) : 0;
+		edges[column] =
+			(times[step] + (times[step + 1] - times[step]) * fraction) * rate;
+	}
+	return edges;
+}
+
+/**
+ * Fills one device-pixel column per span between `edges` with the range the
+ * signal covers there: from the summary where a column spans many samples,
+ * from the samples themselves where it spans few.
+ */
+function drawWaveformEnvelope(
+	context: CanvasRenderingContext2D,
+	signal: WaveformSignal,
+	edges: Float64Array,
+	drawColumns: number,
+	centerY: number,
+	scale: number,
 ): void {
-	const context = resizeCanvasForCssSize(canvas, width, height);
-	if (
-		!context ||
-		!buckets ||
-		buckets.maxes.length === 0 ||
-		width <= 0 ||
-		height <= 0
-	) {
-		return;
+	const height = centerY * 2;
+	const range: WaveformRange = { min: 0, max: 0 };
+	let samples = new Float32Array(0);
+	const addColumn = (column: number, min: number, max: number): void => {
+		let top = clamp(centerY - max * scale, 0, height);
+		let bottom = clamp(centerY - min * scale, 0, height);
+		// Silence still shows as a line one device pixel thick.
+		if (bottom - top < 1) {
+			const middle = (top + bottom) / 2;
+			top = middle - 0.5;
+			bottom = middle + 0.5;
+		}
+		context.rect(column, top, 1, bottom - top);
+	};
+
+	context.beginPath();
+	let column = 0;
+	while (column < drawColumns) {
+		if (edges[column + 1] - edges[column] >= RAW_SAMPLES_PER_COLUMN) {
+			if (
+				signal.envelope(
+					Math.floor(edges[column]),
+					Math.floor(edges[column + 1]) + 1,
+					range,
+				)
+			) {
+				addColumn(column, range.min, range.max);
+			} else {
+				addColumn(column, 0, 0);
+			}
+			column += 1;
+			continue;
+		}
+
+		// A run of columns read sample by sample. Each also takes the first
+		// sample of the next column, so neighbouring columns always touch.
+		let runEnd = column + 1;
+		while (
+			runEnd < drawColumns &&
+			edges[runEnd + 1] - edges[runEnd] < RAW_SAMPLES_PER_COLUMN
+		) {
+			runEnd += 1;
+		}
+		const first = Math.floor(edges[column]);
+		const count = Math.floor(edges[runEnd]) - first + 1;
+		if (samples.length < count) {
+			samples = new Float32Array(count);
+		}
+		signal.read(first, samples, count);
+		for (; column < runEnd; column += 1) {
+			const from = Math.floor(edges[column]) - first;
+			const to = Math.floor(edges[column + 1]) - first;
+			let min = samples[from];
+			let max = min;
+			for (let index = from + 1; index <= to; index += 1) {
+				const value = samples[index];
+				if (value < min) {
+					min = value;
+				} else if (value > max) {
+					max = value;
+				}
+			}
+			addColumn(column, min, max);
+		}
+	}
+	context.fill();
+}
+
+/**
+ * Traces the samples themselves as a line, once columns are narrower than a
+ * sample.
+ */
+function drawWaveformTrace(
+	context: CanvasRenderingContext2D,
+	signal: WaveformSignal,
+	edges: Float64Array,
+	columns: number,
+	drawColumns: number,
+	centerY: number,
+	scale: number,
+	pixelRatio: number,
+): void {
+	const first = Math.floor(edges[0]) - 1;
+	const count = Math.ceil(edges[columns]) + 2 - first;
+	const samples = new Float32Array(count);
+	signal.read(first, samples, count);
+	const xs = new Float64Array(count);
+	let column = 0;
+	for (let index = 0; index < count; index += 1) {
+		const position = first + index;
+		while (column < columns - 1 && edges[column + 1] <= position) {
+			column += 1;
+		}
+		const span = edges[column + 1] - edges[column];
+		xs[index] = span > 0 ? column + (position - edges[column]) / span : column;
 	}
 
-	let maxPeak =
-		Number.isFinite(normalizationPeak) && (normalizationPeak as number) > 0
-			? (normalizationPeak as number)
-			: getWaveformBucketPeak(buckets);
-	if (maxPeak <= 0) {
-		maxPeak = 1;
-	}
-
-	const centerY = Math.round(height / 2);
-	const scale = (height * 0.475) / maxPeak;
-	const snappedBarWidth = Math.max(1, Math.round(barWidth));
-	const safeMaxDrawWidth = Math.max(0, Math.min(width, maxDrawWidth));
 	context.save();
-	context.globalAlpha = alpha;
-	context.fillStyle = color;
-
-	for (let index = 0; index < buckets.maxes.length; index += 1) {
-		const x = Math.round(index * snappedBarWidth);
-		if (x >= safeMaxDrawWidth) {
-			break;
-		}
-
-		const top = Math.round(centerY - buckets.maxes[index] * scale);
-		const bottom = Math.round(centerY - buckets.mins[index] * scale);
-		let y1 = Math.round(clamp(Math.min(top, bottom), 0, height));
-		let y2 = Math.round(clamp(Math.max(top, bottom), 0, height));
-		if (y2 <= y1) {
-			y1 = clamp(centerY, 0, Math.max(0, height - 1));
-			y2 = y1 + 1;
-		}
-
-		context.fillRect(
-			x,
-			y1,
-			Math.min(snappedBarWidth, Math.max(0, safeMaxDrawWidth - x)),
-			Math.max(1, y2 - y1),
-		);
+	if (drawColumns < columns) {
+		context.beginPath();
+		context.rect(0, 0, drawColumns, centerY * 2);
+		context.clip();
 	}
-
+	context.lineWidth = TRACE_LINE_WIDTH * pixelRatio;
+	context.lineJoin = "round";
+	context.beginPath();
+	for (let index = 0; index < count; index += 1) {
+		const y = centerY - samples[index] * scale;
+		if (index === 0) {
+			context.moveTo(xs[index], y);
+		} else {
+			context.lineTo(xs[index], y);
+		}
+	}
+	context.stroke();
 	context.restore();
 }
 
 /**
- * Draws peaks that carry the signal's true range — see
- * `calculateSampleWaveform` — as one column each, at the height the signal has
- * there. Unlike the overview's bars, a column is not anchored to the centre
- * line, which is what lets a magnified window show the oscillation itself.
+ * Draws a stretch of the surface's timeline into a canvas at device-pixel
+ * resolution, scaled so the loudest sample of any layer reaches the same
+ * height everywhere. Nothing is drawn right of `drawCssWidth`.
  */
-function renderWaveformTrace(
+function drawWaveform(
 	canvas: HTMLCanvasElement,
-	width: number,
-	height: number,
-	buckets: WaveformPeakBuckets | null,
+	cssWidth: number,
+	cssHeight: number,
+	layers: WaveformLayer[],
+	startSeconds: number,
+	durationSeconds: number,
 	color: string,
-	normalizationPeak: number,
+	drawCssWidth = cssWidth,
 ): void {
-	const context = resizeCanvasForCssSize(canvas, width, height);
-	if (!context || !buckets || width <= 0 || height <= 0) {
+	const context = resizeCanvasForCssSize(canvas, cssWidth, cssHeight);
+	if (!context || durationSeconds <= 0) {
 		return;
 	}
 
-	const count = buckets.maxes.length;
-	const columnWidth = width / count;
-	const centerY = height / 2;
-	const scale =
-		(height * 0.475) / (normalizationPeak > 0 ? normalizationPeak : 1);
-	// A flat stretch still shows as a line one device pixel thick.
-	const minimumHeight = 1 / Math.max(1, window.devicePixelRatio || 1);
+	const pixelRatio = Math.max(1, window.devicePixelRatio || 1);
+	const columns = canvas.width;
+	const drawColumns = clamp(Math.round(drawCssWidth * pixelRatio), 0, columns);
+	const centerY = canvas.height / 2;
+	const peak = layers.reduce(
+		(loudest, layer) => Math.max(loudest, layer.signal.peak),
+		0,
+	);
+	const scale = (centerY * WAVEFORM_PEAK_EXTENT) / (peak > 0 ? peak : 1);
+
+	context.setTransform(1, 0, 0, 1, 0, 0);
 	context.fillStyle = color;
-	for (let index = 0; index < count; index += 1) {
-		const top = clamp(centerY - buckets.maxes[index] * scale, 0, height);
-		const bottom = clamp(centerY - buckets.mins[index] * scale, 0, height);
-		context.fillRect(
-			index * columnWidth,
-			top,
-			columnWidth,
-			Math.max(minimumHeight, bottom - top),
+	context.strokeStyle = color;
+	layers.forEach((layer) => {
+		const edges = resolveColumnEdges(
+			layer,
+			startSeconds,
+			durationSeconds,
+			columns,
 		);
-	}
+		if ((edges[columns] - edges[0]) / columns < TRACE_SAMPLES_PER_COLUMN) {
+			drawWaveformTrace(
+				context,
+				layer.signal,
+				edges,
+				columns,
+				drawColumns,
+				centerY,
+				scale,
+				pixelRatio,
+			);
+		} else {
+			drawWaveformEnvelope(
+				context,
+				layer.signal,
+				edges,
+				drawColumns,
+				centerY,
+				scale,
+			);
+		}
+	});
 }
 
 function renderPlaceholderCanvas(
 	canvas: HTMLCanvasElement,
 	width: number,
 	height: number,
-	barWidth: number,
 	color: string,
 	alpha: number,
 ): void {
 	const context = resizeCanvasForCssSize(canvas, width, height);
-	if (width <= 0 || height <= 0) {
+	if (!context || width <= 0 || height <= 0) {
 		return;
 	}
 
-	const snappedBarWidth = Math.max(1, Math.round(barWidth));
-	const bars = Math.max(1, Math.floor(width / snappedBarWidth));
-	if (!context) {
-		return;
-	}
-
+	const bars = Math.max(1, Math.floor(width));
 	context.save();
 	context.globalAlpha = alpha;
 	context.fillStyle = color;
@@ -345,25 +476,10 @@ function renderPlaceholderCanvas(
 		const waveB = Math.sin(x * 0.051 + 0.8);
 		const amplitude = 0.25 + 0.75 * (Math.abs(waveA + waveB) / 2);
 		const barHeight = Math.max(1, Math.round(amplitude * height * 0.7));
-		const y = Math.round((height - barHeight) / 2);
-		const barX = Math.round(x * snappedBarWidth);
-		context.fillRect(
-			barX,
-			y,
-			Math.min(snappedBarWidth, Math.max(1, width - barX)),
-			barHeight,
-		);
+		context.fillRect(x, Math.round((height - barHeight) / 2), 1, barHeight);
 	}
 
 	context.restore();
-}
-
-function clearCanvas(
-	canvas: HTMLCanvasElement,
-	width: number,
-	height: number,
-): void {
-	resizeCanvasForCssSize(canvas, width, height);
 }
 
 /**
@@ -475,7 +591,9 @@ function applyWaveformPlaybackFollowScroll(
 		animate,
 		(surface) => {
 			updateTimelineMinimapViewport(surface);
-			ctx.scheduleVisibleWaveformTileRefresh();
+			// Drawn right away rather than on the next frame: zoomed in far, playback
+			// carries the viewport past the tile's buffer within a single frame.
+			ctx.refreshVisibleWaveformTilesFromLatestInput();
 		},
 	);
 }
@@ -507,9 +625,22 @@ function getWaveformMaximumZoom(
 	surfaceMetadata: WaveformSeekSurfaceMetadata,
 	durationSeconds: number,
 ): number {
-	return getTimelineMaximumZoom(
+	const maximum = getTimelineMaximumZoom(
 		durationSeconds,
 		surfaceMetadata.maxZoomSeconds,
+		surfaceMetadata.baseWidth,
+	);
+	if (surfaceMetadata.sampleRate <= 0) {
+		return maximum;
+	}
+
+	return Math.max(
+		MIN_WAVEFORM_ZOOM,
+		Math.min(
+			maximum,
+			(durationSeconds * surfaceMetadata.sampleRate * MAX_PIXELS_PER_SAMPLE) /
+				surfaceMetadata.baseWidth,
+		),
 	);
 }
 
@@ -543,8 +674,7 @@ export function wrapWaveformCanvases(ctx: ViewRenderer): void {
 		if (definition.view.type !== "waveform") return;
 		const config = definition.view as TrackSwitchWaveformViewConfig;
 		const waveformSource = definition.waveformSource ?? "audible";
-		const barWidth = config.waveformBarWidth ?? 1;
-		const maxZoomSeconds = config.maxZoom ?? 5;
+		const maxZoomSeconds = config.maxZoom ?? 0;
 		const playbackFollowMode = config.playbackFollowMode ?? "center";
 		const timeAxis = config.timeAxis ?? "shared";
 		const timerEnabled = config.timer ?? ctx.isAlignmentMode();
@@ -639,7 +769,6 @@ export function wrapWaveformCanvases(ctx: ViewRenderer): void {
 				timeAxis: timeAxis,
 				originalHeight: originalHeight,
 				configuredHeight: originalHeight,
-				barWidth: barWidth,
 				maxZoomValue: maxZoomSeconds,
 				defaultZoomValue: config.defaultZoom ?? null,
 				maxZoomSeconds: maxZoomSeconds,
@@ -658,7 +787,7 @@ export function wrapWaveformCanvases(ctx: ViewRenderer): void {
 				zoomEndedRegion: zoomEndedRegion,
 				zoomViewportNode: zoomViewportNode,
 				zoomCanvasLastDrawKey: null,
-				waveformColor: null,
+				sampleRate: 0,
 				tiles: new Map<
 					number,
 					{
@@ -666,16 +795,12 @@ export function wrapWaveformCanvases(ctx: ViewRenderer): void {
 						lastDrawKey: string | null;
 					}
 				>([[0, { canvas: tileLayer, lastDrawKey: null }]]),
-				normalizationPeak: 1,
-				normalizationCacheKey: null,
-				tilePeakCache: new Map<string, WaveformPeakBuckets>(),
-				tilePeakCacheOrder: [],
 				alignedPlayhead: alignedPlayhead,
 				refHooksCanvas:
 					refHooksCanvas instanceof HTMLCanvasElement ? refHooksCanvas : null,
 				showAlignmentPoints: showAlignmentPoints,
-				alignmentPointsLastW: -1,
-				alignmentPointsLastH: -1,
+				hooks: { version: 0, playhead: [], alignmentPoints: [] },
+				hooksDrawKey: null,
 			});
 
 			scrollContainer.addEventListener(
@@ -718,8 +843,6 @@ export function setWaveformSurfaceHeight(
 	surfaceMetadata.scrollContainer.style.height = `${height}px`;
 	surfaceMetadata.tileLayer.style.height = `${height}px`;
 	surfaceMetadata.zoomCanvasLastDrawKey = null;
-	surfaceMetadata.alignmentPointsLastW = -1;
-	surfaceMetadata.alignmentPointsLastH = -1;
 	ctx.refreshVisibleWaveformTilesFromLatestInput();
 }
 
@@ -732,7 +855,6 @@ export interface WaveformVisibleTile {
 	/** The part of the surface the medium occupies, without a trailing pad. */
 	timeWidth: number;
 	canvas: HTMLCanvasElement;
-	renderBarWidth: number;
 	isNew: boolean;
 	record: {
 		canvas: HTMLCanvasElement;
@@ -762,7 +884,6 @@ export function forEachVisibleWaveformTile(
 		surfaceWidth,
 		timeWidth,
 		canvas: tileCanvas,
-		renderBarWidth: Math.max(1, Math.round(surfaceMetadata.barWidth)),
 		isNew: false,
 		record: tileRecord,
 	});
@@ -798,95 +919,11 @@ export function refreshVisibleWaveformTilesFromLatestInput(
 	);
 }
 
-export function computeNormalizationPeak(
-	waveformEngine: WaveformEngine,
-	sourceRuntimes: TrackRuntime[],
-	renderBarWidth: number,
-	duration: number,
-	baseProjector: TrackTimelineProjector | undefined,
-	baseWidth: number,
-): number {
-	if (
-		!Number.isFinite(duration) ||
-		duration <= 0 ||
-		sourceRuntimes.length === 0
-	) {
-		return 1;
-	}
-
-	const normalizationPeakCount = Math.max(
-		256,
-		Math.min(4096, Math.round(baseWidth)),
-	);
-	const mixed = waveformEngine.calculateMixedWaveform(
-		sourceRuntimes,
-		normalizationPeakCount,
-		renderBarWidth,
-		duration,
-		baseProjector,
-		0,
-		undefined,
-	);
-	if (!mixed || mixed.maxes.length === 0) {
-		return 1;
-	}
-
-	const maxPeak = getWaveformBucketPeak(mixed);
-	return maxPeak > 0 ? maxPeak : 1;
-}
-
-export function buildWaveformNormalizationCacheKey(
-	surfaceMetadata: WaveformSeekSurfaceMetadata,
-	runtimes: TrackRuntime[],
-	sourceRuntimes: TrackRuntime[],
-	fullDuration: number,
-	renderBarWidth: number,
-	useLocalAxis: boolean,
-	hasTimelineProjector: boolean,
-): string {
-	const sourceKey = runtimes
-		.map((runtime: TrackRuntime, index: number) => {
-			const duration = runtime.buffer ? runtime.buffer.duration : 0;
-			const timingDuration = runtime.timing
-				? runtime.timing.effectiveDuration
-				: 0;
-			const summarySampleCount = runtime.waveformSummary
-				? runtime.waveformSummary.sampleCount
-				: 0;
-			const selected = sourceRuntimes.indexOf(runtime) !== -1 ? 1 : 0;
-			return [
-				index,
-				selected,
-				runtime.activeVariant,
-				runtime.sourceIndex,
-				runtime.state.solo ? 1 : 0,
-				Math.round(runtime.state.volume * 1000),
-				Math.round(duration * 1000),
-				Math.round(timingDuration * 1000),
-				summarySampleCount,
-			].join(":");
-		})
-		.join("|");
-
-	return [
-		serializeWaveformSource(surfaceMetadata.waveformSource),
-		useLocalAxis ? "local" : "reference",
-		hasTimelineProjector ? "projector" : "identity",
-		Math.round(fullDuration * 1000),
-		renderBarWidth,
-		Math.round(surfaceMetadata.baseWidth),
-		sourceKey,
-	].join("#");
-}
-
 function renderWaveformMinimap(
 	surfaceMetadata: WaveformSeekSurfaceMetadata,
-	waveformEngine: WaveformEngine,
-	sourceRuntimes: TrackRuntime[],
+	layers: WaveformLayer[] | null,
+	layersKey: string,
 	fullDuration: number,
-	baseProjector: TrackTimelineProjector | undefined,
-	normalizationPeak: number,
-	normalizationCacheKey: string,
 	waveformEndRatio: number,
 ): void {
 	if (surfaceMetadata.zoom <= MIN_WAVEFORM_ZOOM + 0.000001) {
@@ -894,8 +931,6 @@ function renderWaveformMinimap(
 	}
 
 	const waveformColor = resolveWaveformColor(surfaceMetadata.zoomCanvas);
-	surfaceMetadata.waveformColor = waveformColor;
-
 	const cssWidth = Math.max(
 		1,
 		Math.round(surfaceMetadata.zoomMinimapNode.clientWidth),
@@ -907,8 +942,9 @@ function renderWaveformMinimap(
 	const canvas = surfaceMetadata.zoomCanvas;
 
 	const drawKey = [
-		normalizationCacheKey,
-		"minimap",
+		layersKey,
+		fullDuration,
+		waveformEndRatio,
 		cssWidth,
 		cssHeight,
 		waveformColor,
@@ -917,40 +953,23 @@ function renderWaveformMinimap(
 	if (surfaceMetadata.zoomCanvasLastDrawKey === drawKey) {
 		return;
 	}
+	surfaceMetadata.zoomCanvasLastDrawKey = drawKey;
 
-	if (fullDuration <= 0) {
-		renderPlaceholderCanvas(canvas, cssWidth, cssHeight, 1, waveformColor, 0.2);
-		surfaceMetadata.zoomCanvasLastDrawKey = drawKey;
+	if (!layers || fullDuration <= 0) {
+		renderPlaceholderCanvas(canvas, cssWidth, cssHeight, waveformColor, 0.2);
 		return;
 	}
 
-	const mixed = waveformEngine.calculateMixedWaveform(
-		sourceRuntimes,
-		cssWidth,
-		1,
-		fullDuration,
-		baseProjector,
-		0,
-		undefined,
-	);
-	if (!mixed) {
-		renderPlaceholderCanvas(canvas, cssWidth, cssHeight, 1, waveformColor, 0.2);
-		surfaceMetadata.zoomCanvasLastDrawKey = drawKey;
-		return;
-	}
-
-	renderWaveformCanvas(
+	drawWaveform(
 		canvas,
 		cssWidth,
 		cssHeight,
-		mixed,
-		1,
+		layers,
+		0,
+		fullDuration,
 		waveformColor,
-		normalizationPeak,
-		1,
 		cssWidth * waveformEndRatio,
 	);
-	surfaceMetadata.zoomCanvasLastDrawKey = drawKey;
 }
 
 export function findWaveformSurface(
@@ -1072,10 +1091,7 @@ export function setWaveformZoom(
 	);
 }
 
-export function drawDummyWaveforms(
-	ctx: ViewRenderer,
-	waveformEngine: WaveformEngine,
-): void {
+export function drawDummyWaveforms(ctx: ViewRenderer): void {
 	if (ctx.waveformSeekSurfaces.length === 0) {
 		return;
 	}
@@ -1084,36 +1100,16 @@ export function drawDummyWaveforms(
 
 	for (let i = 0; i < ctx.waveformSeekSurfaces.length; i += 1) {
 		const surfaceMetadata = ctx.waveformSeekSurfaces[i];
-		ctx.forEachVisibleWaveformTile(
-			surfaceMetadata,
-			(tile: {
-				canvas: HTMLCanvasElement;
-				tileCssWidth: number;
-				tileCssHeight: number;
-				renderBarWidth: number;
-			}) => {
-				renderPlaceholderCanvas(
-					tile.canvas,
-					tile.tileCssWidth,
-					tile.tileCssHeight,
-					tile.renderBarWidth,
-					resolveWaveformColor(tile.canvas),
-					0.3,
-				);
-			},
-		);
-		if (surfaceMetadata.zoom > MIN_WAVEFORM_ZOOM) {
-			renderWaveformMinimap(
-				surfaceMetadata,
-				waveformEngine,
-				[],
-				0,
-				undefined,
-				1,
-				"placeholder",
-				1,
+		ctx.forEachVisibleWaveformTile(surfaceMetadata, (tile) => {
+			renderPlaceholderCanvas(
+				tile.canvas,
+				tile.tileCssWidth,
+				tile.tileCssHeight,
+				resolveWaveformColor(tile.canvas),
+				0.3,
 			);
-		}
+		});
+		renderWaveformMinimap(surfaceMetadata, null, "placeholder", 0, 1);
 	}
 	updateTimelineZoomIndicators(ctx.waveformSeekSurfaces);
 }
@@ -1142,6 +1138,44 @@ export function renderWaveforms(
 		waveformTimelineContext,
 		true,
 	);
+}
+
+/**
+ * What a surface shows: the mix of its sources on the surface's timeline, or,
+ * where alignment warps that timeline, each source on its own projected onto
+ * it. While a changed mix is still being built, the mix last shown stands in.
+ * Null while there is nothing to show yet.
+ */
+function resolveWaveformLayers(
+	ctx: ViewRenderer,
+	surfaceMetadata: WaveformSeekSurfaceMetadata,
+	waveformEngine: WaveformEngine,
+	sourceRuntimes: TrackRuntime[],
+	fullDuration: number,
+	waveformProjector: TrackTimelineProjector | undefined,
+): WaveformLayer[] | null {
+	if (!waveformProjector) {
+		const signal = waveformEngine.getSignal(
+			surfaceMetadata,
+			sourceRuntimes,
+			fullDuration,
+			() => ctx.scheduleVisibleWaveformTileRefresh(),
+		);
+		return signal ? [{ signal, project: null, duration: fullDuration }] : null;
+	}
+
+	const layers: WaveformLayer[] = [];
+	sourceRuntimes.forEach((runtime) => {
+		const signal = waveformEngine.getTrackSignal(runtime);
+		if (signal && runtime.timing) {
+			layers.push({
+				signal,
+				project: (seconds) => waveformProjector(runtime, seconds),
+				duration: runtime.timing.effectiveDuration,
+			});
+		}
+	});
+	return layers.length > 0 ? layers : null;
 }
 
 export function renderWaveformsInternal(
@@ -1214,18 +1248,36 @@ export function renderWaveformsInternal(
 					? longestTrackDuration
 					: localTrackDuration
 			: safeTimelineDuration;
-		const baseProjector: TrackTimelineProjector = useFixedTrackAxis
-			? (_runtime, trackTimelineTimeSeconds) => trackTimelineTimeSeconds
-			: trackTimelineProjector ||
-				((_runtime, trackTimelineTimeSeconds) => trackTimelineTimeSeconds);
-		const waveformProjector =
-			!useFixedTrackAxis && trackTimelineProjector ? baseProjector : undefined;
+		// On its own track's axis a waveform is never warped.
+		const waveformProjector = useFixedTrackAxis
+			? undefined
+			: trackTimelineProjector;
 		updateWaveformEndedRegions(
 			surfaceMetadata,
 			localTrackDuration,
 			fullDuration,
 			useFixedTrackAxis && !useIndividualAxis,
 		);
+
+		const layers = resolveWaveformLayers(
+			ctx,
+			surfaceMetadata,
+			waveformEngine,
+			sourceRuntimes,
+			fullDuration,
+			waveformProjector,
+		);
+		if (layers && layers.length > 0) {
+			surfaceMetadata.sampleRate = layers[0].signal.sampleRate;
+		}
+		const layersKey = layers
+			? `${layers.map((layer) => layer.signal.id).join(",")}${waveformProjector ? "@warped" : ""}`
+			: "placeholder";
+		const waveformEndRatio =
+			useFixedTrackAxis && !useIndividualAxis && fullDuration > 0
+				? clamp(localTrackDuration / fullDuration, 0, 1)
+				: 1;
+
 		resolveWaveformZoomUnits(ctx, surfaceMetadata);
 		const maximumZoom = getWaveformMaximumZoom(surfaceMetadata, fullDuration);
 		// `defaultZoom` only ever opens the surface: once it has, a reflow or a
@@ -1241,34 +1293,6 @@ export function renderWaveformsInternal(
 		}
 		setWaveformZoomForSurface(surfaceMetadata, targetZoom, maximumZoom);
 
-		const surfaceRenderBarWidth = Math.max(
-			1,
-			Math.round(surfaceMetadata.barWidth),
-		);
-		const normalizationCacheKey = ctx.buildWaveformNormalizationCacheKey(
-			surfaceMetadata,
-			runtimes,
-			sourceRuntimes,
-			fullDuration,
-			surfaceRenderBarWidth,
-			useFixedTrackAxis,
-			!useFixedTrackAxis && !!trackTimelineProjector,
-		);
-
-		if (surfaceMetadata.normalizationCacheKey !== normalizationCacheKey) {
-			surfaceMetadata.normalizationPeak = ctx.computeNormalizationPeak(
-				waveformEngine,
-				sourceRuntimes,
-				surfaceRenderBarWidth,
-				fullDuration,
-				waveformProjector,
-				surfaceMetadata.baseWidth,
-			);
-			surfaceMetadata.normalizationCacheKey = normalizationCacheKey;
-			clearWaveformTilePeakCache(surfaceMetadata);
-		}
-
-		const normalizationPeak = surfaceMetadata.normalizationPeak;
 		surfaceMetadata.drawRange = (
 			canvas,
 			cssWidth,
@@ -1277,179 +1301,79 @@ export function renderWaveformsInternal(
 			widthRatio,
 		) => {
 			const color = resolveWaveformColor(surfaceMetadata.seekWrap);
-			if (waveformProjector) {
-				// Warped onto the reference timeline: only the summary knows how.
-				renderWaveformCanvas(
-					canvas,
-					cssWidth,
-					cssHeight,
-					waveformEngine.calculateMixedWaveform(
-						sourceRuntimes,
-						Math.max(1, Math.floor(cssWidth / surfaceRenderBarWidth)),
-						surfaceRenderBarWidth,
-						fullDuration,
-						waveformProjector,
-						fullDuration * startRatio,
-						fullDuration * widthRatio,
-					),
-					surfaceRenderBarWidth,
-					color,
-					normalizationPeak,
-				);
+			if (!layers || fullDuration <= 0) {
+				renderPlaceholderCanvas(canvas, cssWidth, cssHeight, color, 0.3);
 				return;
 			}
-			// One peak per device pixel, read from the samples themselves.
-			renderWaveformTrace(
+			drawWaveform(
 				canvas,
 				cssWidth,
 				cssHeight,
-				waveformEngine.calculateSampleWaveform(
-					sourceRuntimes,
-					Math.round(cssWidth * Math.max(1, window.devicePixelRatio || 1)),
-					fullDuration * startRatio,
-					fullDuration * widthRatio,
-				),
+				layers,
+				fullDuration * startRatio,
+				fullDuration * widthRatio,
 				color,
-				normalizationPeak,
+				cssWidth * clamp((waveformEndRatio - startRatio) / widthRatio, 0, 1),
 			);
 		};
 
-		ctx.forEachVisibleWaveformTile(
-			surfaceMetadata,
-			(tile: {
-				tileStartPx: number;
-				tileCssWidth: number;
-				tileCssHeight: number;
-				surfaceWidth: number;
-				timeWidth: number;
-				canvas: HTMLCanvasElement;
-				renderBarWidth: number;
-				isNew: boolean;
-				record: { lastDrawKey: string | null };
-			}) => {
-				const waveformColor = resolveWaveformColor(tile.canvas);
-				const tileDrawKey = [
-					normalizationCacheKey,
-					Math.round(tile.tileStartPx),
-					Math.round(tile.tileCssWidth),
-					Math.round(tile.tileCssHeight),
-					tile.renderBarWidth,
-					waveformColor,
-					Math.max(1, window.devicePixelRatio || 1),
-				].join("#");
+		ctx.forEachVisibleWaveformTile(surfaceMetadata, (tile) => {
+			const waveformColor = resolveWaveformColor(tile.canvas);
+			const tileDrawKey = [
+				layersKey,
+				fullDuration,
+				waveformEndRatio,
+				tile.timeWidth,
+				Math.round(tile.tileStartPx),
+				Math.round(tile.tileCssWidth),
+				Math.round(tile.tileCssHeight),
+				waveformColor,
+				Math.max(1, window.devicePixelRatio || 1),
+			].join("#");
 
-				if (
-					!forceRedrawVisibleTiles &&
-					!tile.isNew &&
-					tile.record.lastDrawKey === tileDrawKey
-				) {
-					return;
-				}
+			if (
+				!forceRedrawVisibleTiles &&
+				!tile.isNew &&
+				tile.record.lastDrawKey === tileDrawKey
+			) {
+				return;
+			}
+			tile.record.lastDrawKey = tileDrawKey;
 
-				const peakCount = Math.max(
-					1,
-					Math.floor(tile.tileCssWidth / tile.renderBarWidth),
-				);
-				if (fullDuration <= 0) {
-					renderPlaceholderCanvas(
-						tile.canvas,
-						tile.tileCssWidth,
-						tile.tileCssHeight,
-						tile.renderBarWidth,
-						waveformColor,
-						0.3,
-					);
-					tile.record.lastDrawKey = tileDrawKey;
-					return;
-				}
-
-				const tileStartTime =
-					fullDuration * (tile.tileStartPx / tile.timeWidth);
-				const tileDuration =
-					fullDuration * (tile.tileCssWidth / tile.timeWidth);
-				if (!Number.isFinite(tileDuration) || tileDuration <= 0) {
-					renderPlaceholderCanvas(
-						tile.canvas,
-						tile.tileCssWidth,
-						tile.tileCssHeight,
-						tile.renderBarWidth,
-						waveformColor,
-						0.3,
-					);
-					tile.record.lastDrawKey = tileDrawKey;
-					return;
-				}
-
-				const peakCacheKey = [
-					tileDrawKey,
-					Math.round(tileStartTime * 1000000),
-					Math.round(tileDuration * 1000000),
-					peakCount,
-				].join("#");
-				let mixed = getCachedWaveformTilePeaks(surfaceMetadata, peakCacheKey);
-				if (!mixed) {
-					mixed = waveformEngine.calculateMixedWaveform(
-						sourceRuntimes,
-						peakCount,
-						tile.renderBarWidth,
-						fullDuration,
-						waveformProjector,
-						tileStartTime,
-						tileDuration,
-					);
-					if (mixed) {
-						setCachedWaveformTilePeaks(surfaceMetadata, peakCacheKey, mixed);
-					}
-				}
-
-				if (!mixed) {
-					renderPlaceholderCanvas(
-						tile.canvas,
-						tile.tileCssWidth,
-						tile.tileCssHeight,
-						tile.renderBarWidth,
-						waveformColor,
-						0.3,
-					);
-					tile.record.lastDrawKey = tileDrawKey;
-					return;
-				}
-
-				renderWaveformCanvas(
+			if (!layers || fullDuration <= 0) {
+				renderPlaceholderCanvas(
 					tile.canvas,
 					tile.tileCssWidth,
 					tile.tileCssHeight,
-					mixed,
-					tile.renderBarWidth,
 					waveformColor,
-					normalizationPeak,
-					1,
-					useFixedTrackAxis && !useIndividualAxis
-						? Math.max(
-								0,
-								Math.min(
-									tile.tileCssWidth,
-									(localTrackDuration / fullDuration) * tile.timeWidth -
-										tile.tileStartPx,
-								),
-							)
-						: tile.tileCssWidth,
+					0.3,
 				);
-				tile.record.lastDrawKey = tileDrawKey;
-			},
-		);
+				return;
+			}
+
+			drawWaveform(
+				tile.canvas,
+				tile.tileCssWidth,
+				tile.tileCssHeight,
+				layers,
+				fullDuration * (tile.tileStartPx / tile.timeWidth),
+				fullDuration * (tile.tileCssWidth / tile.timeWidth),
+				waveformColor,
+				clamp(
+					waveformEndRatio * tile.timeWidth - tile.tileStartPx,
+					0,
+					tile.tileCssWidth,
+				),
+			);
+		});
 		renderWaveformMinimap(
 			surfaceMetadata,
-			waveformEngine,
-			sourceRuntimes,
+			layers,
+			layersKey,
 			fullDuration,
-			waveformProjector,
-			normalizationPeak,
-			normalizationCacheKey,
-			useFixedTrackAxis && !useIndividualAxis
-				? Math.max(0, Math.min(1, localTrackDuration / fullDuration))
-				: 1,
+			waveformEndRatio,
 		);
+		drawWaveformAlignmentOverlay(surfaceMetadata);
 	}
 	updateTimelineZoomIndicators(ctx.waveformSeekSurfaces);
 }
@@ -1466,22 +1390,67 @@ export function getWaveformSourceRuntimes(
 		.map((trackIndex: number) => runtimes[trackIndex]);
 }
 
+function setWaveformHooks(
+	surface: WaveformSeekSurfaceMetadata,
+	playhead: WaveformHooks["playhead"],
+	alignmentPoints: WaveformHooks["alignmentPoints"],
+): void {
+	const hooks = surface.hooks;
+	if (
+		playhead.length === 0 &&
+		alignmentPoints.length === 0 &&
+		hooks.playhead.length === 0 &&
+		hooks.alignmentPoints.length === 0
+	) {
+		return;
+	}
+
+	surface.hooks = {
+		version: hooks.version + 1,
+		playhead,
+		alignmentPoints,
+	};
+	drawWaveformAlignmentOverlay(surface);
+}
+
+/**
+ * Draws the hooks into the same window around the viewport the waveform tile
+ * covers. A canvas spanning the whole surface would outgrow the largest one a
+ * browser composites long before the waveform runs out of zoom.
+ */
 function drawWaveformAlignmentOverlay(
 	surface: WaveformSeekSurfaceMetadata,
-	width: number,
-	height: number,
-	refSegments: Array<{ refPx: number; localPx: number }> = [],
-	alignmentSegments: Array<{ refPx: number; trackPx: number }> = [],
 ): void {
-	if (!surface.refHooksCanvas) {
+	const canvas = surface.refHooksCanvas;
+	if (!canvas) {
 		return;
 	}
 
-	const context = resizeCanvasForCssSize(surface.refHooksCanvas, width, height);
-	if (!context || width <= 0 || height <= 0) {
+	const tileWindow = resolveVisibleTileWindow(surface, surface.originalHeight);
+	const { playhead, alignmentPoints, version } = surface.hooks;
+	const drawKey = [
+		version,
+		tileWindow.tileStartPx,
+		tileWindow.tileCssWidth,
+		tileWindow.tileCssHeight,
+		tileWindow.timeWidth,
+	].join("#");
+	if (surface.hooksDrawKey === drawKey) {
+		return;
+	}
+	surface.hooksDrawKey = drawKey;
+
+	positionTileCanvas(canvas, tileWindow);
+	const context = resizeCanvasForCssSize(
+		canvas,
+		tileWindow.tileCssWidth,
+		tileWindow.tileCssHeight,
+	);
+	if (!context || (playhead.length === 0 && alignmentPoints.length === 0)) {
 		return;
 	}
 
+	const height = tileWindow.tileCssHeight;
 	const computedStyle = getComputedStyle(surface.seekWrap);
 	const vertExtentRaw = parseFloat(
 		computedStyle.getPropertyValue("--seekhead-vertical-extent").trim(),
@@ -1491,42 +1460,47 @@ function drawWaveformAlignmentOverlay(
 		: 0.35;
 	const segTop = height * (0.5 - vertExtent);
 	const segBot = height * (0.5 + vertExtent);
+	const windowEnd = tileWindow.tileCssWidth;
+	const traceHooks = (hooks: WaveformHooks["playhead"]): void => {
+		context.beginPath();
+		for (let index = 0; index < hooks.length; index += 1) {
+			const referenceX =
+				hooks[index].reference * tileWindow.timeWidth - tileWindow.tileStartPx;
+			const localX =
+				hooks[index].local * tileWindow.timeWidth - tileWindow.tileStartPx;
+			if (
+				Math.max(referenceX, localX) < 0 ||
+				Math.min(referenceX, localX) > windowEnd
+			) {
+				continue;
+			}
+			context.moveTo(referenceX, 0);
+			context.lineTo(localX, segTop);
+			context.lineTo(localX, segBot);
+			context.lineTo(referenceX, height);
+		}
+		context.stroke();
+	};
 
-	if (alignmentSegments.length > 0) {
+	if (alignmentPoints.length > 0) {
 		context.save();
 		context.strokeStyle =
 			computedStyle.getPropertyValue("--alignment-points-color").trim() ||
 			"rgba(128, 128, 128, 0.5)";
 		context.lineWidth = 1;
 		context.setLineDash([1, 1]);
-		context.beginPath();
-		for (let index = 0; index < alignmentSegments.length; index += 1) {
-			const segment = alignmentSegments[index];
-			context.moveTo(segment.refPx, 0);
-			context.lineTo(segment.trackPx, segTop);
-			context.lineTo(segment.trackPx, segBot);
-			context.lineTo(segment.refPx, height);
-		}
-		context.stroke();
+		traceHooks(alignmentPoints);
 		context.restore();
 	}
 
-	if (refSegments.length > 0) {
+	if (playhead.length > 0) {
 		context.save();
 		context.strokeStyle =
 			computedStyle.getPropertyValue("--seekhead-ref-color").trim() ||
 			"#383838";
 		context.lineWidth = 2;
 		context.setLineDash([]);
-		context.beginPath();
-		for (let index = 0; index < refSegments.length; index += 1) {
-			const segment = refSegments[index];
-			context.moveTo(segment.refPx, 0);
-			context.lineTo(segment.localPx, segTop);
-			context.lineTo(segment.localPx, segBot);
-			context.lineTo(segment.refPx, height);
-		}
-		context.stroke();
+		traceHooks(playhead);
 		context.restore();
 	}
 }
@@ -1540,15 +1514,7 @@ export function applyWaveformLocalSeekVisuals(
 	if (!waveformTimelineContext?.enabled) {
 		ctx.waveformSeekSurfaces.forEach((surface: WaveformSeekSurfaceMetadata) => {
 			surface.seekWrap.classList.remove("aligned-playhead");
-			if (surface.refHooksCanvas) {
-				clearCanvas(
-					surface.refHooksCanvas,
-					surface.seekWrap.offsetWidth,
-					surface.seekWrap.offsetHeight,
-				);
-			}
-			surface.alignmentPointsLastW = -1;
-			surface.alignmentPointsLastH = -1;
+			setWaveformHooks(surface, [], []);
 		});
 		return;
 	}
@@ -1568,13 +1534,7 @@ export function applyWaveformLocalSeekVisuals(
 		);
 		if (trackIndex === null) {
 			surface.seekWrap.classList.remove("aligned-playhead");
-			if (surface.refHooksCanvas) {
-				clearCanvas(
-					surface.refHooksCanvas,
-					surface.seekWrap.offsetWidth,
-					surface.seekWrap.offsetHeight,
-				);
-			}
+			setWaveformHooks(surface, [], []);
 			return;
 		}
 
@@ -1583,13 +1543,7 @@ export function applyWaveformLocalSeekVisuals(
 		);
 		if (trackDuration <= 0) {
 			surface.seekWrap.classList.remove("aligned-playhead");
-			if (surface.refHooksCanvas) {
-				clearCanvas(
-					surface.refHooksCanvas,
-					surface.seekWrap.offsetWidth,
-					surface.seekWrap.offsetHeight,
-				);
-			}
+			setWaveformHooks(surface, [], []);
 			return;
 		}
 
@@ -1655,22 +1609,14 @@ export function applyWaveformLocalSeekVisuals(
 			enabled: state.loop.enabled,
 		});
 
-		const needsDimensions =
-			(surface.refHooksCanvas && surface.alignedPlayhead && seekDuration > 0) ||
-			(surface.refHooksCanvas &&
-				surface.showAlignmentPoints &&
-				seekDuration > 0);
-		const w = needsDimensions ? surface.seekWrap.offsetWidth : 0;
-		const h = needsDimensions ? surface.seekWrap.offsetHeight : 0;
-
-		const refSegments: Array<{ refPx: number; localPx: number }> = [];
-		const alignmentSegments: Array<{ refPx: number; trackPx: number }> = [];
+		const playhead: WaveformHooks["playhead"] = [];
+		const alignmentPoints: WaveformHooks["alignmentPoints"] = [];
 
 		if (surface.alignedPlayhead && seekDuration > 0) {
 			surface.seekWrap.classList.add("aligned-playhead");
-			refSegments.push({
-				localPx: (localPosition / seekDuration) * w,
-				refPx: (state.position / referenceDisplayDuration) * w,
+			playhead.push({
+				local: localPosition / seekDuration,
+				reference: state.position / referenceDisplayDuration,
 			});
 		} else {
 			surface.seekWrap.classList.remove("aligned-playhead");
@@ -1681,27 +1627,14 @@ export function applyWaveformLocalSeekVisuals(
 				waveformTimelineContext.getTrackAlignmentPoints(trackIndex);
 			for (let pi = 0; pi < points.length; pi++) {
 				const pt = points[pi];
-				alignmentSegments.push({
-					trackPx: (pt.trackTime / seekDuration) * w,
-					refPx: (pt.referenceTime / referenceDisplayDuration) * w,
+				alignmentPoints.push({
+					local: pt.trackTime / seekDuration,
+					reference: pt.referenceTime / referenceDisplayDuration,
 				});
 			}
-			surface.alignmentPointsLastW = w;
-			surface.alignmentPointsLastH = h;
-		} else {
-			surface.alignmentPointsLastW = -1;
-			surface.alignmentPointsLastH = -1;
 		}
 
-		if (surface.refHooksCanvas) {
-			drawWaveformAlignmentOverlay(
-				surface,
-				Math.max(1, w),
-				Math.max(1, h),
-				refSegments,
-				alignmentSegments,
-			);
-		}
+		setWaveformHooks(surface, playhead, alignmentPoints);
 	});
 }
 

@@ -945,6 +945,8 @@ Because that entry is a medium, it carries its own alignment column. The surface
 
 A `waveform` view shows an interactive waveform. In a standard multitrack player, it can represent all audible tracks.
 
+With several tracks selected, the waveform shows their mix at the current volumes. Zoomed out, each pixel shows the range the signal covers in its time span. Zoomed in far enough, the view traces the individual samples.
+
 In an aligned player, a fixed-track waveform uses the local timeline of that track.
 
 ```json
@@ -952,8 +954,7 @@ In an aligned player, a fixed-track waveform uses the local timeline of that tra
   "type": "waveform",
   "tracks": ["takeA"],
   "height": 120,
-  "waveformBarWidth": 1,
-  "maxZoom": 5,
+  "maxZoom": 0,
   "defaultZoom": 30,
   "playbackFollowMode": "center",
   "timeAxis": "individual",
@@ -967,8 +968,7 @@ In an aligned player, a fixed-track waveform uses the local timeline of that tra
 | --- | --- | --- | --- |
 | `tracks?` | `"audible" \| string[]` | `"audible"` | Selects the audio tracks for the waveform. |
 | `height?` | `number` | `150` | Specifies the waveform height in pixels. |
-| `waveformBarWidth?` | `number` | `1` | Specifies the thickness of waveform bars. |
-| `maxZoom?` | `number` | `5` | Specifies the smallest visible interval. A smaller value permits more zoom, and `0` lifts the zoom limit. |
+| `maxZoom?` | `number` | `0` | Specifies the smallest visible interval. A smaller value permits more zoom, and `0` lets the view zoom in until individual samples show. |
 | `defaultZoom?` | `number` | none | Specifies the visible interval the view opens on. Unset shows the whole timeline. |
 | `playbackFollowMode?` | `"off" \| "center" \| "jump"` | `"center"` | Controls how the view moves with playback. |
 | `timeAxis?` | `"shared" \| "individual"` | `"shared"` (`"individual"` for `tracks: "audible"` under `alignment`) | Selects a shared longest-track duration or the duration of each fixed track. |

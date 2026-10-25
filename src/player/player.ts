@@ -324,7 +324,7 @@ export class TrackSwitchControllerImpl
 		this.eventNamespace = `.trackswitch.${this.instanceId}`;
 
 		this.renderer.initialize(this.runtimes);
-		this.renderer.drawDummyWaveforms(this.waveformEngine);
+		this.renderer.drawDummyWaveforms();
 
 		this.inputBinder = new InputBinder(this.root, this.features, this);
 		this.inputBinder.bind();
