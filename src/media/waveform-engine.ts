@@ -1,3 +1,4 @@
+import { waveformKernelBase64 } from "../generated/waveform-kernel";
 import type {
 	TrackRuntime,
 	TrackTiming,
@@ -14,7 +15,10 @@ export type TrackTimelineProjector = (
 const SUMMARY_BASE_SAMPLES = 16;
 /** Entries of a level that one entry of the next coarser level spans. */
 const SUMMARY_LEVEL_FACTOR = 4;
-/** Samples a summary build reads at once — a multiple of `SUMMARY_BASE_SAMPLES`. */
+/**
+ * Samples the kernel mixes at once — a multiple of `SUMMARY_BASE_SAMPLES`, and
+ * the most a single kernel call ever handles.
+ */
 const SUMMARY_CHUNK_SAMPLES = 65536;
 /** Main-thread time a mix build may take before it yields to the event loop. */
 const MIX_BUILD_SLICE_MS = 8;
@@ -43,6 +47,90 @@ export interface WaveformRange {
 	max: number;
 }
 
+/** The compiled waveform-kernel.wat, over views of its memory regions. */
+interface WaveformKernel {
+	clear(count: number): void;
+	accumulate(offset: number, count: number, gain: number): void;
+	reduce(count: number): void;
+	/** Where a chunk is mixed. */
+	accumulator: Float32Array;
+	/** Where a channel is copied before it is added to the accumulator. */
+	input: Float32Array;
+	/** The min/max pairs `reduce` writes. */
+	pairs: Float32Array;
+}
+
+let kernel: WaveformKernel | null = null;
+
+/**
+ * The kernel, compiled on first use. It is a few hundred bytes, well within
+ * what browsers compile synchronously on the main thread. Every caller mixes,
+ * reduces and copies out a chunk without yielding in between, so all of them
+ * share one instance.
+ */
+function getKernel(): WaveformKernel {
+	if (kernel) {
+		return kernel;
+	}
+
+	const bytes = Uint8Array.from(atob(waveformKernelBase64), (character) =>
+		character.charCodeAt(0),
+	);
+	const exports = new WebAssembly.Instance(new WebAssembly.Module(bytes))
+		.exports as unknown as {
+		memory: WebAssembly.Memory;
+		setup(chunk: number): void;
+		clear(count: number): void;
+		accumulate(offset: number, count: number, gain: number): void;
+		reduce(count: number): void;
+	};
+	const pairCount = (SUMMARY_CHUNK_SAMPLES / SUMMARY_BASE_SAMPLES) * 2;
+	const pageBytes = 65536;
+	exports.memory.grow(
+		Math.ceil(((SUMMARY_CHUNK_SAMPLES * 2 + pairCount) * 4) / pageBytes) -
+			exports.memory.buffer.byteLength / pageBytes,
+	);
+	exports.setup(SUMMARY_CHUNK_SAMPLES);
+	const memory = exports.memory.buffer;
+	kernel = {
+		clear: exports.clear,
+		accumulate: exports.accumulate,
+		reduce: exports.reduce,
+		accumulator: new Float32Array(memory, 0, SUMMARY_CHUNK_SAMPLES),
+		input: new Float32Array(
+			memory,
+			SUMMARY_CHUNK_SAMPLES * 4,
+			SUMMARY_CHUNK_SAMPLES,
+		),
+		pairs: new Float32Array(memory, SUMMARY_CHUNK_SAMPLES * 8, pairCount),
+	};
+	return kernel;
+}
+
+/**
+ * Mixes `count` samples of the signal from sample `start` on — at most
+ * `SUMMARY_CHUNK_SAMPLES` — into the kernel's accumulator.
+ */
+function mixChunk(
+	waveformKernel: WaveformKernel,
+	contributions: WaveformContribution[],
+	start: number,
+	count: number,
+): void {
+	waveformKernel.clear(count);
+	for (const contribution of contributions) {
+		const base = start + contribution.offset;
+		const from = Math.max(0, contribution.start - base);
+		const to = Math.min(count, contribution.end - base);
+		if (to <= from) {
+			continue;
+		}
+		const channel = contribution.buffer.getChannelData(contribution.channel);
+		waveformKernel.input.set(channel.subarray(base + from, base + to));
+		waveformKernel.accumulate(from, to - from, contribution.gain);
+	}
+}
+
 /** Fills `out[0, count)` with the signal from sample `start` on. */
 function readContributions(
 	contributions: WaveformContribution[],
@@ -50,16 +138,11 @@ function readContributions(
 	out: Float32Array,
 	count: number,
 ): void {
-	out.fill(0, 0, count);
-	for (const contribution of contributions) {
-		const { gain } = contribution;
-		const channel = contribution.buffer.getChannelData(contribution.channel);
-		const base = start + contribution.offset;
-		const from = Math.max(0, contribution.start - base);
-		const to = Math.min(count, contribution.end - base);
-		for (let index = from; index < to; index += 1) {
-			out[index] += channel[base + index] * gain;
-		}
+	const waveformKernel = getKernel();
+	for (let done = 0; done < count; done += SUMMARY_CHUNK_SAMPLES) {
+		const chunk = Math.min(SUMMARY_CHUNK_SAMPLES, count - done);
+		mixChunk(waveformKernel, contributions, start + done, chunk);
+		out.set(waveformKernel.accumulator.subarray(0, chunk), done);
 	}
 }
 
@@ -99,27 +182,18 @@ function* summarize(
 	const base = new Float32Array(
 		Math.ceil(sampleCount / SUMMARY_BASE_SAMPLES) * 2,
 	);
-	const chunk = new Float32Array(Math.min(SUMMARY_CHUNK_SAMPLES, sampleCount));
+	const waveformKernel = getKernel();
 	for (let start = 0; start < sampleCount; start += SUMMARY_CHUNK_SAMPLES) {
 		const count = Math.min(SUMMARY_CHUNK_SAMPLES, sampleCount - start);
-		readContributions(contributions, start, chunk, count);
-		let target = (start / SUMMARY_BASE_SAMPLES) * 2;
-		for (let block = 0; block < count; block += SUMMARY_BASE_SAMPLES) {
-			const end = Math.min(count, block + SUMMARY_BASE_SAMPLES);
-			let min = chunk[block];
-			let max = min;
-			for (let index = block + 1; index < end; index += 1) {
-				const value = chunk[index];
-				if (value < min) {
-					min = value;
-				} else if (value > max) {
-					max = value;
-				}
-			}
-			base[target] = min;
-			base[target + 1] = max;
-			target += 2;
-		}
+		mixChunk(waveformKernel, contributions, start, count);
+		waveformKernel.reduce(count);
+		base.set(
+			waveformKernel.pairs.subarray(
+				0,
+				Math.ceil(count / SUMMARY_BASE_SAMPLES) * 2,
+			),
+			(start / SUMMARY_BASE_SAMPLES) * 2,
+		);
 		yield;
 	}
 
