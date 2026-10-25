@@ -1,15 +1,26 @@
 import { waveformKernelBase64 } from "../generated/waveform-kernel";
+import { clampPan } from "../shared/math";
 import type {
+	TrackId,
+	TrackLoadedSource,
 	TrackRuntime,
+	TrackSwitchViewConfig,
 	TrackTiming,
 	WaveformSourceIndex,
 	WaveformSummary,
 } from "../types";
+import { computeBalanceGains } from "./audio-engine";
 
 export type TrackTimelineProjector = (
 	runtime: TrackRuntime,
 	trackTimelineTimeSeconds: number,
 ) => number;
+
+/**
+ * What a waveform lane shows: every track's channels averaged, or the left or
+ * the right output of the mix, after each track's pan.
+ */
+export type WaveformLane = "mono" | "left" | "right";
 
 /** Samples one entry of a summary's finest level spans. */
 const SUMMARY_BASE_SAMPLES = 16;
@@ -17,30 +28,20 @@ const SUMMARY_BASE_SAMPLES = 16;
 const SUMMARY_LEVEL_FACTOR = 4;
 /**
  * Samples the kernel mixes at once — a multiple of `SUMMARY_BASE_SAMPLES`, and
- * the most a single kernel call ever handles.
+ * the most a single kernel call ever handles. A compact channel is scaled
+ * chunk by chunk of this size.
  */
 const SUMMARY_CHUNK_SAMPLES = 65536;
+/**
+ * Main-thread time a mix build takes right away, when it is asked for. A
+ * build of a few tracks is done within it, so the view shows the exact mix
+ * in the same frame.
+ */
+const MIX_BUILD_SYNC_MS = 16;
 /** Main-thread time a mix build may take before it yields to the event loop. */
 const MIX_BUILD_SLICE_MS = 8;
 /** Built mixes kept around, so switching back to a recent selection is instant. */
-const MIX_CACHE_LIMIT = 4;
-
-/**
- * One channel's share of a signal: signal sample `i` receives
- * `gain * channel[i + offset]` wherever `i + offset` lies within
- * [`start`, `end`), and nothing elsewhere.
- *
- * The channel is fetched on every read: starting playback acquires a buffer's
- * contents, which detaches the arrays `getChannelData` handed out before.
- */
-interface WaveformContribution {
-	buffer: AudioBuffer;
-	channel: number;
-	gain: number;
-	offset: number;
-	start: number;
-	end: number;
-}
+const MIX_CACHE_LIMIT = 6;
 
 export interface WaveformRange {
 	min: number;
@@ -51,13 +52,25 @@ export interface WaveformRange {
 interface WaveformKernel {
 	clear(count: number): void;
 	accumulate(offset: number, count: number, gain: number): void;
+	accumulate16(offset: number, count: number, gain: number): void;
 	reduce(count: number): void;
+	compact(count: number): number;
+	coarsen(count: number, source: number, target: number): void;
 	/** Where a chunk is mixed. */
 	accumulator: Float32Array;
 	/** Where a channel is copied before it is added to the accumulator. */
 	input: Float32Array;
 	/** The min/max pairs `reduce` writes. */
 	pairs: Float32Array;
+	pairsByte: number;
+	/** The 16-bit samples `accumulate16` reads and `compact` writes. */
+	input16: Int16Array;
+	/**
+	 * A chunk's coarser levels, each one where `coarsen` writes it from the
+	 * one before: as many as it takes to reach a single entry.
+	 */
+	chunkLevels: Float32Array[];
+	chunkLevelBytes: number[];
 }
 
 let kernel: WaveformKernel | null = null;
@@ -82,29 +95,147 @@ function getKernel(): WaveformKernel {
 		setup(chunk: number): void;
 		clear(count: number): void;
 		accumulate(offset: number, count: number, gain: number): void;
+		accumulate16(offset: number, count: number, gain: number): void;
 		reduce(count: number): void;
+		compact(count: number): number;
+		coarsen(count: number, source: number, target: number): void;
 	};
-	const pairCount = (SUMMARY_CHUNK_SAMPLES / SUMMARY_BASE_SAMPLES) * 2;
+	const chunk = SUMMARY_CHUNK_SAMPLES;
+	const pairsByte = chunk * 8;
+	const entryCount = chunk / SUMMARY_BASE_SAMPLES;
+	const input16Byte = pairsByte + entryCount * 8;
+	const chunkLevelBytes: number[] = [];
+	const chunkLevelEntries: number[] = [];
+	let levelByte = input16Byte + chunk * 2;
+	for (
+		let entries = entryCount / SUMMARY_LEVEL_FACTOR;
+		entries >= 1;
+		entries /= SUMMARY_LEVEL_FACTOR
+	) {
+		chunkLevelBytes.push(levelByte);
+		chunkLevelEntries.push(entries);
+		levelByte += entries * 8;
+	}
 	const pageBytes = 65536;
 	exports.memory.grow(
-		Math.ceil(((SUMMARY_CHUNK_SAMPLES * 2 + pairCount) * 4) / pageBytes) -
+		Math.ceil(levelByte / pageBytes) -
 			exports.memory.buffer.byteLength / pageBytes,
 	);
-	exports.setup(SUMMARY_CHUNK_SAMPLES);
+	exports.setup(chunk);
 	const memory = exports.memory.buffer;
 	kernel = {
 		clear: exports.clear,
 		accumulate: exports.accumulate,
+		accumulate16: exports.accumulate16,
 		reduce: exports.reduce,
-		accumulator: new Float32Array(memory, 0, SUMMARY_CHUNK_SAMPLES),
-		input: new Float32Array(
-			memory,
-			SUMMARY_CHUNK_SAMPLES * 4,
-			SUMMARY_CHUNK_SAMPLES,
+		compact: exports.compact,
+		coarsen: exports.coarsen,
+		accumulator: new Float32Array(memory, 0, chunk),
+		input: new Float32Array(memory, chunk * 4, chunk),
+		pairs: new Float32Array(memory, pairsByte, entryCount * 2),
+		pairsByte,
+		input16: new Int16Array(memory, input16Byte, chunk),
+		chunkLevels: chunkLevelBytes.map(
+			(byte, index) =>
+				new Float32Array(memory, byte, chunkLevelEntries[index] * 2),
 		),
-		pairs: new Float32Array(memory, SUMMARY_CHUNK_SAMPLES * 8, pairCount),
+		chunkLevelBytes,
 	};
 	return kernel;
+}
+
+/** Where a contribution's samples come from. */
+interface WaveformSource {
+	/**
+	 * Adds `gain` times `count` samples from sample `start` on to the kernel's
+	 * accumulator from sample `offset` on.
+	 */
+	addTo(
+		waveformKernel: WaveformKernel,
+		start: number,
+		offset: number,
+		count: number,
+		gain: number,
+	): void;
+}
+
+/**
+ * One channel of a decoded buffer, fetched on every read: starting playback
+ * acquires a buffer's contents, which detaches the arrays `getChannelData`
+ * handed out before.
+ */
+class BufferChannelSource implements WaveformSource {
+	constructor(
+		private readonly buffer: AudioBuffer,
+		private readonly channel: number,
+	) {}
+
+	addTo(
+		waveformKernel: WaveformKernel,
+		start: number,
+		offset: number,
+		count: number,
+		gain: number,
+	): void {
+		const channel = this.buffer.getChannelData(this.channel);
+		waveformKernel.input.set(channel.subarray(start, start + count));
+		waveformKernel.accumulate(offset, count, gain);
+	}
+}
+
+/**
+ * A channel kept at 16 bits — half the samples' size, which is what mixes
+ * read, so rebuilding one reads half as much. Each chunk of
+ * `SUMMARY_CHUNK_SAMPLES` is scaled to its own loudest sample, which keeps
+ * quiet passages as precise as loud ones.
+ */
+interface CompactChannel {
+	data: Int16Array;
+	/** The factor that takes a chunk's 16-bit samples back to their values. */
+	scales: Float32Array;
+}
+
+class CompactSource implements WaveformSource {
+	constructor(private readonly channel: CompactChannel) {}
+
+	addTo(
+		waveformKernel: WaveformKernel,
+		start: number,
+		offset: number,
+		count: number,
+		gain: number,
+	): void {
+		for (let done = 0; done < count; ) {
+			const sample = start + done;
+			const chunk = Math.floor(sample / SUMMARY_CHUNK_SAMPLES);
+			const length = Math.min(
+				count - done,
+				(chunk + 1) * SUMMARY_CHUNK_SAMPLES - sample,
+			);
+			waveformKernel.input16.set(
+				this.channel.data.subarray(sample, sample + length),
+			);
+			waveformKernel.accumulate16(
+				offset + done,
+				length,
+				gain * this.channel.scales[chunk],
+			);
+			done += length;
+		}
+	}
+}
+
+/**
+ * One source's share of a signal: signal sample `i` receives
+ * `gain * source[i + offset]` wherever `i + offset` lies within
+ * [`start`, `end`), and nothing elsewhere.
+ */
+interface WaveformContribution {
+	source: WaveformSource;
+	gain: number;
+	offset: number;
+	start: number;
+	end: number;
 }
 
 /**
@@ -122,12 +253,15 @@ function mixChunk(
 		const base = start + contribution.offset;
 		const from = Math.max(0, contribution.start - base);
 		const to = Math.min(count, contribution.end - base);
-		if (to <= from) {
-			continue;
+		if (to > from) {
+			contribution.source.addTo(
+				waveformKernel,
+				base + from,
+				from,
+				to - from,
+				contribution.gain,
+			);
 		}
-		const channel = contribution.buffer.getChannelData(contribution.channel);
-		waveformKernel.input.set(channel.subarray(base + from, base + to));
-		waveformKernel.accumulate(from, to - from, contribution.gain);
 	}
 }
 
@@ -146,11 +280,52 @@ function readContributions(
 	}
 }
 
-function coarsenSummaryLevel(level: Float32Array): Float32Array {
+function createCompactChannel(length: number): CompactChannel {
+	return {
+		data: new Int16Array(length),
+		scales: new Float32Array(Math.ceil(length / SUMMARY_CHUNK_SAMPLES)),
+	};
+}
+
+/** Stores the accumulator's first `count` samples as the chunk at `start`. */
+function storeCompactChunk(
+	waveformKernel: WaveformKernel,
+	compact: CompactChannel,
+	start: number,
+	count: number,
+): void {
+	compact.scales[start / SUMMARY_CHUNK_SAMPLES] =
+		waveformKernel.compact(count) / 32767;
+	compact.data.set(waveformKernel.input16.subarray(0, count), start);
+}
+
+/** A compact copy of one channel of `buffer`. */
+function compactBufferChannel(
+	buffer: AudioBuffer,
+	channel: number,
+): CompactChannel {
+	const waveformKernel = getKernel();
+	const compact = createCompactChannel(buffer.length);
+	const contributions: WaveformContribution[] = [
+		{
+			source: new BufferChannelSource(buffer, channel),
+			gain: 1,
+			offset: 0,
+			start: 0,
+			end: buffer.length,
+		},
+	];
+	for (let start = 0; start < buffer.length; start += SUMMARY_CHUNK_SAMPLES) {
+		const count = Math.min(SUMMARY_CHUNK_SAMPLES, buffer.length - start);
+		mixChunk(waveformKernel, contributions, start, count);
+		storeCompactChunk(waveformKernel, compact, start, count);
+	}
+	return compact;
+}
+
+/** Writes one entry of `coarse` for every `SUMMARY_LEVEL_FACTOR` of `level`. */
+function coarsenSummaryLevel(level: Float32Array, coarse: Float32Array): void {
 	const entryCount = level.length / 2;
-	const coarse = new Float32Array(
-		Math.ceil(entryCount / SUMMARY_LEVEL_FACTOR) * 2,
-	);
 	for (let entry = 0; entry < entryCount; entry += SUMMARY_LEVEL_FACTOR) {
 		const end = Math.min(entryCount, entry + SUMMARY_LEVEL_FACTOR);
 		let min = level[entry * 2];
@@ -167,39 +342,67 @@ function coarsenSummaryLevel(level: Float32Array): Float32Array {
 		coarse[target] = min;
 		coarse[target + 1] = max;
 	}
-	return coarse;
 }
 
 /**
  * Summarizes `sampleCount` samples of a signal, yielding after every chunk so
- * a caller can spread the work over several turns of the event loop.
+ * a caller can spread the work over several turns of the event loop. Given
+ * `compact`, it also keeps the signal there.
  */
 function* summarize(
 	sampleRate: number,
 	sampleCount: number,
 	contributions: WaveformContribution[],
+	compact?: CompactChannel,
 ): Generator<void, WaveformSummary, void> {
-	const base = new Float32Array(
-		Math.ceil(sampleCount / SUMMARY_BASE_SAMPLES) * 2,
-	);
+	const levels: Float32Array[] = [];
+	for (
+		let entries = Math.ceil(sampleCount / SUMMARY_BASE_SAMPLES);
+		;
+		entries = Math.ceil(entries / SUMMARY_LEVEL_FACTOR)
+	) {
+		levels.push(new Float32Array(entries * 2));
+		if (entries <= 1) {
+			break;
+		}
+	}
 	const waveformKernel = getKernel();
+	// A chunk spans whole entries of every level the kernel coarsens it to;
+	// only the levels above those are left for the end.
+	const chunkLevelCount = Math.min(
+		levels.length - 1,
+		waveformKernel.chunkLevels.length,
+	);
 	for (let start = 0; start < sampleCount; start += SUMMARY_CHUNK_SAMPLES) {
 		const count = Math.min(SUMMARY_CHUNK_SAMPLES, sampleCount - start);
 		mixChunk(waveformKernel, contributions, start, count);
 		waveformKernel.reduce(count);
-		base.set(
-			waveformKernel.pairs.subarray(
-				0,
-				Math.ceil(count / SUMMARY_BASE_SAMPLES) * 2,
-			),
-			(start / SUMMARY_BASE_SAMPLES) * 2,
+		let entries = Math.ceil(count / SUMMARY_BASE_SAMPLES);
+		let firstEntry = start / SUMMARY_BASE_SAMPLES;
+		levels[0].set(
+			waveformKernel.pairs.subarray(0, entries * 2),
+			firstEntry * 2,
 		);
+		let source = waveformKernel.pairsByte;
+		for (let level = 1; level <= chunkLevelCount; level += 1) {
+			const target = waveformKernel.chunkLevelBytes[level - 1];
+			waveformKernel.coarsen(entries, source, target);
+			entries = Math.ceil(entries / SUMMARY_LEVEL_FACTOR);
+			firstEntry /= SUMMARY_LEVEL_FACTOR;
+			levels[level].set(
+				waveformKernel.chunkLevels[level - 1].subarray(0, entries * 2),
+				firstEntry * 2,
+			);
+			source = target;
+		}
+		if (compact) {
+			storeCompactChunk(waveformKernel, compact, start, count);
+		}
 		yield;
 	}
 
-	const levels: Float32Array[] = [base];
-	while (levels[levels.length - 1].length > 2) {
-		levels.push(coarsenSummaryLevel(levels[levels.length - 1]));
+	for (let level = chunkLevelCount + 1; level < levels.length; level += 1) {
+		coarsenSummaryLevel(levels[level - 1], levels[level]);
 	}
 	const top = levels[levels.length - 1];
 	return {
@@ -266,17 +469,32 @@ function querySummary(
 	return true;
 }
 
-/**
- * A mono signal on a timeline, sampled at `sampleRate`: one track's channels
- * averaged, or a mix of several tracks at their gains. A view reads its
- * envelope from the summary when one screen pixel spans many samples, and the
- * samples themselves when it spans few.
- */
-export class WaveformSignal {
-	private static nextId = 0;
-
+/** A mono signal on a timeline, sampled at `sampleRate`. */
+export interface WaveformSignal {
 	/** Tells signals apart in a view's redraw bookkeeping. */
-	readonly id = WaveformSignal.nextId++;
+	readonly id: number;
+	readonly sampleRate: number;
+	/** The largest absolute sample value. */
+	readonly peak: number;
+	/**
+	 * Writes the range samples [`start`, `end`) cover to `out`. False when none
+	 * of them holds audio.
+	 */
+	envelope(start: number, end: number, out: WaveformRange): boolean;
+	/** Fills `out[0, count)` with the samples from `start` on. */
+	read(start: number, out: Float32Array, count: number): void;
+}
+
+let nextSignalId = 0;
+
+/**
+ * A signal with its summary: one track's channels averaged, or a mix of
+ * several tracks' channels at their gains. A view reads its envelope from the
+ * summary when one screen pixel spans many samples, and the samples
+ * themselves when it spans few.
+ */
+class SummarySignal implements WaveformSignal {
+	readonly id = nextSignalId++;
 
 	constructor(
 		readonly key: string,
@@ -284,7 +502,6 @@ export class WaveformSignal {
 		/** The signal samples that hold audio; everything outside is silent. */
 		readonly start: number,
 		readonly end: number,
-		/** The largest absolute sample value. */
 		readonly peak: number,
 		private readonly summary: WaveformSummary,
 		/** The summary sample signal sample 0 corresponds to. */
@@ -307,7 +524,6 @@ export class WaveformSignal {
 		);
 	}
 
-	/** Fills `out[0, count)` with the samples from `start` on. */
 	read(start: number, out: Float32Array, count: number): void {
 		readContributions(this.contributions, start, out, count);
 	}
@@ -317,8 +533,24 @@ interface MixJob {
 	key: string;
 	build: Generator<void, WaveformSummary, void>;
 	finish(summary: WaveformSummary): WaveformSignal;
-	/** The views waiting for this mix, each with what to call once it is built. */
-	subscribers: Map<object, () => void>;
+	/** Whether any of the mix has been summarized yet. */
+	started: boolean;
+	/** The requesters this mix is handed to once built. */
+	subscribers: Set<object>;
+}
+
+/** What one requester waits for. */
+interface MixRequest {
+	/** The mix it asked for last. */
+	wanted: MixJob | null;
+	/**
+	 * A mix it asked for before, kept building once begun. It stands in until
+	 * `wanted` is built, so a stream of changes too quick for the builds — a
+	 * dragged volume slider over many long tracks — still shows its steps
+	 * instead of restarting the build on every one.
+	 */
+	standIn: MixJob | null;
+	onReady: () => void;
 }
 
 /** Tells summaries apart in mix keys. */
@@ -333,22 +565,6 @@ function getSummaryId(summary: WaveformSummary): number {
 		summaryIds.set(summary, id);
 	}
 	return id;
-}
-
-/** One contribution per channel of `buffer`, which together average them. */
-function getBufferContributions(
-	buffer: AudioBuffer,
-	gain: number,
-	span: { offset: number; start: number; end: number },
-): WaveformContribution[] {
-	return Array.from({ length: buffer.numberOfChannels }, (_value, channel) => ({
-		buffer,
-		channel,
-		gain: gain / buffer.numberOfChannels,
-		offset: span.offset,
-		start: span.start,
-		end: span.end,
-	}));
 }
 
 /**
@@ -372,41 +588,149 @@ function resolveTrackSampleSpan(
 	};
 }
 
+/**
+ * How much of each of a stereo track's two channels reaches the left and the
+ * right output, the way its panning graph routes them; see
+ * `AudioEngine.configurePanningGraph`. A stereo waveform only ever shows
+ * two-channel audio.
+ */
+function resolvePanMatrix(runtime: TrackRuntime): {
+	left: number[];
+	right: number[];
+} {
+	const pan = clampPan(runtime.state.pan);
+	if (runtime.panAlgorithm === "balance") {
+		const { gainL, gainR } = computeBalanceGains(pan);
+		return { left: [gainL, 0], right: [0, gainR] };
+	}
+
+	// StereoPannerNode's equal-power law.
+	if (pan <= 0) {
+		const angle = (pan + 1) * (Math.PI / 2);
+		return { left: [1, Math.cos(angle)], right: [0, Math.sin(angle)] };
+	}
+	const angle = pan * (Math.PI / 2);
+	return { left: [Math.cos(angle), 0], right: [Math.sin(angle), 1] };
+}
+
+/** A mix a lane shows, described before it is built. */
+interface MixDescription {
+	key: string;
+	sampleRate: number;
+	sampleCount: number;
+	contributions: WaveformContribution[];
+}
+
 export class WaveformEngine {
-	private readonly trackSignals = new WeakMap<
-		WaveformSummary,
-		WaveformSignal
+	private readonly trackSignals = new WeakMap<WaveformSummary, SummarySignal>();
+	/** The average of each buffer's channels, compacted. */
+	private readonly compactAverages = new WeakMap<AudioBuffer, CompactChannel>();
+	/** Each buffer's channels, compacted once a stereo lane needs them. */
+	private readonly compactChannels = new WeakMap<
+		AudioBuffer,
+		CompactChannel[]
 	>();
 	/** Built mixes by key, least recently used first. */
 	private readonly mixes = new Map<string, WaveformSignal>();
+	/** Mixes being built, oldest first, which is the order they are built in. */
 	private readonly mixJobs = new Map<string, MixJob>();
-	private readonly mixSubscriptions = new WeakMap<object, MixJob>();
+	private readonly mixRequests = new WeakMap<object, MixRequest>();
 	/** The signal each requester was last handed. */
 	private readonly deliveredSignals = new WeakMap<object, WaveformSignal>();
-	private mixJobTimer: ReturnType<typeof setTimeout> | null = null;
+	/** Yields between build slices without the delay nested timeouts get. */
+	private readonly mixJobChannel = new MessageChannel();
+	private mixJobScheduled = false;
 
-	/** Summarizes the average of a buffer's channels. */
+	constructor() {
+		this.mixJobChannel.port1.onmessage = () => {
+			this.mixJobScheduled = false;
+			this.runMixJobs(MIX_BUILD_SLICE_MS);
+		};
+	}
+
+	/**
+	 * Summarizes the average of a buffer's channels, and keeps it compacted for
+	 * the mixes it will be part of.
+	 */
 	createSummary(buffer: AudioBuffer): WaveformSummary {
+		const compact = createCompactChannel(buffer.length);
+		const gain = 1 / buffer.numberOfChannels;
 		const build = summarize(
 			buffer.sampleRate,
 			buffer.length,
-			getBufferContributions(buffer, 1, {
+			Array.from({ length: buffer.numberOfChannels }, (_value, channel) => ({
+				source: new BufferChannelSource(buffer, channel),
+				gain,
 				offset: 0,
 				start: 0,
 				end: buffer.length,
-			}),
+			})),
+			compact,
 		);
 		for (;;) {
 			const step = build.next();
 			if (step.done) {
+				this.compactAverages.set(buffer, compact);
 				return step.value;
 			}
 		}
 	}
 
 	/**
-	 * One track's signal on its own timeline, which starts `padStart` before
-	 * the audio does.
+	 * Summarizes the audio of every track some waveform among `views` can
+	 * show, and drops what was kept for the rest: a summary and the compact
+	 * copy beside it take a fair share of the decoded audio's memory again.
+	 */
+	summarizeShownTracks(
+		runtimes: TrackRuntime[],
+		views: TrackSwitchViewConfig[],
+	): void {
+		const shownIds = new Set<TrackId>();
+		let showsAll = false;
+		views.forEach((view) => {
+			if (view.type !== "waveform") {
+				return;
+			}
+			if (view.tracks === undefined || view.tracks === "audible") {
+				showsAll = true;
+			} else {
+				view.tracks.forEach((id) => {
+					shownIds.add(id);
+				});
+			}
+		});
+
+		runtimes.forEach((runtime) => {
+			const shown = showsAll || shownIds.has(runtime.definition.id);
+			const sources: Array<TrackLoadedSource | null> = [
+				runtime.baseSource,
+				runtime.syncedSource,
+			];
+			sources.forEach((source) => {
+				if (!source?.buffer) {
+					return;
+				}
+				if (shown) {
+					if (!source.waveformSummary) {
+						source.waveformSummary = this.createSummary(source.buffer);
+					}
+				} else {
+					source.waveformSummary = null;
+					this.compactAverages.delete(source.buffer);
+					this.compactChannels.delete(source.buffer);
+				}
+			});
+			const activeSource =
+				runtime.activeVariant === "synced"
+					? runtime.syncedSource
+					: runtime.baseSource;
+			runtime.waveformSummary = activeSource?.waveformSummary ?? null;
+		});
+	}
+
+	/**
+	 * One track's channels averaged, on its own timeline, which starts
+	 * `padStart` before the audio does.
 	 */
 	getTrackSignal(runtime: TrackRuntime): WaveformSignal | null {
 		const { buffer, timing, waveformSummary: summary } = runtime;
@@ -427,7 +751,8 @@ export class WaveformEngine {
 		const peak = querySummary(summary, span.start, span.end, range)
 			? Math.max(-range.min, range.max)
 			: 0;
-		const signal = new WaveformSignal(
+		const gain = 1 / buffer.numberOfChannels;
+		const signal = new SummarySignal(
 			key,
 			buffer.sampleRate,
 			span.start - span.offset,
@@ -435,32 +760,47 @@ export class WaveformEngine {
 			peak,
 			summary,
 			span.offset,
-			getBufferContributions(buffer, 1, span),
+			Array.from({ length: buffer.numberOfChannels }, (_value, channel) => ({
+				source: new BufferChannelSource(buffer, channel),
+				gain,
+				offset: span.offset,
+				start: span.start,
+				end: span.end,
+			})),
 		);
 		this.trackSignals.set(summary, signal);
 		return signal;
 	}
 
 	/**
-	 * What `runtimes` sound like together on a shared timeline of `duration`
-	 * seconds: one track's own signal, or the sample-exact mix of several at
-	 * their volumes — null with nothing to show. A mix is summarized in the
-	 * background: until it is built, the requester keeps the signal it was last
-	 * handed, and `onReady` fires once the mix is in. Each `requester` waits for
-	 * one mix at a time, and a mix nobody waits for any more is abandoned.
+	 * What `runtimes` sound like together in `lane`, on a shared timeline of
+	 * `duration` seconds: one track's own channels averaged, or the exact mix
+	 * of several, or of a track's panned channels, at their volumes — null with
+	 * nothing to show. A mix is built right away as far as `MIX_BUILD_SYNC_MS`
+	 * allows and in the background after that; until it is built, the
+	 * requester keeps the signal it was last handed, and `onReady` fires
+	 * whenever it is handed a newer one — see `MixRequest`. A mix nobody waits
+	 * for any more is abandoned.
 	 */
 	getSignal(
 		requester: object,
 		runtimes: TrackRuntime[],
 		duration: number,
+		lane: WaveformLane,
 		onReady: () => void,
 	): WaveformSignal | null {
-		const signal = this.resolveSignal(requester, runtimes, duration, onReady);
+		const signal = this.resolveSignal(
+			requester,
+			runtimes,
+			duration,
+			lane,
+			onReady,
+		);
 		if (signal) {
 			this.deliveredSignals.set(requester, signal);
 			return signal;
 		}
-		return this.mixSubscriptions.has(requester)
+		return this.mixRequests.get(requester)?.wanted
 			? (this.deliveredSignals.get(requester) ?? null)
 			: null;
 	}
@@ -469,121 +809,207 @@ export class WaveformEngine {
 		requester: object,
 		runtimes: TrackRuntime[],
 		duration: number,
+		lane: WaveformLane,
 		onReady: () => void,
 	): WaveformSignal | null {
 		const sources = runtimes.filter(
 			(runtime) => runtime.buffer && runtime.timing && runtime.waveformSummary,
 		);
-		if (sources.length <= 1) {
-			this.unsubscribeMix(requester);
+		if (sources.length === 0 || (lane === "mono" && sources.length === 1)) {
+			this.cancelMixRequest(requester);
 			return sources.length === 1 ? this.getTrackSignal(sources[0]) : null;
 		}
 
-		const rate = (sources[0].buffer as AudioBuffer).sampleRate;
-		const sampleCount = Math.ceil(duration * rate);
-		// A view scales the mix to its own peak, so only relative gains matter.
-		const gains = sources.map(
-			(runtime) => runtime.state.volume * runtime.loudnessGain,
-		);
-		const loudest = Math.max(...gains);
-		const parts = sources.map((runtime, index) => {
+		const mix = this.describeMix(sources, duration, lane);
+		const cached = this.mixes.get(mix.key);
+		if (cached) {
+			this.cancelMixRequest(requester);
+			this.mixes.delete(mix.key);
+			this.mixes.set(mix.key, cached);
+			return cached;
+		}
+
+		let request = this.mixRequests.get(requester);
+		if (!request) {
+			request = { wanted: null, standIn: null, onReady };
+			this.mixRequests.set(requester, request);
+		}
+		request.onReady = onReady;
+		if (request.wanted?.key !== mix.key) {
+			if (request.wanted?.started) {
+				this.leaveMixJob(request.standIn, requester);
+				request.standIn = request.wanted;
+			} else {
+				this.leaveMixJob(request.wanted, requester);
+			}
+
+			let job = this.mixJobs.get(mix.key);
+			if (!job) {
+				job = {
+					key: mix.key,
+					build: summarize(mix.sampleRate, mix.sampleCount, mix.contributions),
+					finish: (summary) =>
+						new SummarySignal(
+							mix.key,
+							mix.sampleRate,
+							0,
+							mix.sampleCount,
+							summary.peak,
+							summary,
+							0,
+							mix.contributions,
+						),
+					started: false,
+					subscribers: new Set(),
+				};
+				this.mixJobs.set(mix.key, job);
+			}
+			if (request.standIn === job) {
+				request.standIn = null;
+			}
+			job.subscribers.add(requester);
+			request.wanted = job;
+		}
+
+		this.runMixJobs(MIX_BUILD_SYNC_MS);
+		return this.mixes.get(mix.key) ?? null;
+	}
+
+	/**
+	 * The contributions of every track's channels to `lane`. Every buffer is
+	 * decoded at the AudioContext's rate, so a sample of the shared timeline
+	 * is a sample of each track. A lane is scaled to its own peak, so only the
+	 * gains relative to the loudest matter, and they are rounded so a mix is
+	 * rebuilt only for a change that shows.
+	 */
+	private describeMix(
+		sources: TrackRuntime[],
+		duration: number,
+		lane: WaveformLane,
+	): MixDescription {
+		const sampleRate = (sources[0].buffer as AudioBuffer).sampleRate;
+		const sampleCount = Math.ceil(duration * sampleRate);
+		const parts = sources.map((runtime) => {
 			const buffer = runtime.buffer as AudioBuffer;
+			const volume = runtime.state.volume * runtime.loudnessGain;
+			let channels: Array<{ compact: CompactChannel; gain: number }>;
+			if (lane === "mono") {
+				channels = [{ compact: this.getCompactAverage(buffer), gain: volume }];
+			} else {
+				const compacts = this.getCompactChannels(buffer);
+				const matrix = resolvePanMatrix(runtime);
+				const row = lane === "left" ? matrix.left : matrix.right;
+				channels = row.map((coefficient, channel) => ({
+					compact: compacts[channel],
+					gain: volume * coefficient,
+				}));
+			}
 			return {
-				buffer,
-				span: resolveTrackSampleSpan(buffer, runtime.timing as TrackTiming),
-				gain: Math.round((gains[index] / loudest) * 1000) / 1000,
 				summaryId: getSummaryId(runtime.waveformSummary as WaveformSummary),
+				span: resolveTrackSampleSpan(buffer, runtime.timing as TrackTiming),
+				channels,
 			};
 		});
-		const key = [
-			sampleCount,
-			...parts.map((part) =>
+
+		let loudest = 0;
+		parts.forEach((part) => {
+			part.channels.forEach((channel) => {
+				loudest = Math.max(loudest, Math.abs(channel.gain));
+			});
+		});
+		const contributions: WaveformContribution[] = [];
+		const keys: string[] = [lane, String(sampleCount)];
+		parts.forEach((part) => {
+			const gains = part.channels.map(
+				(channel) =>
+					Math.round((channel.gain / (loudest > 0 ? loudest : 1)) * 1000) /
+					1000,
+			);
+			keys.push(
 				[
 					part.summaryId,
 					part.span.offset,
 					part.span.start,
 					part.span.end,
-					part.gain,
+					...gains,
 				].join(":"),
-			),
-		].join("|");
-
-		const cached = this.mixes.get(key);
-		if (cached) {
-			this.unsubscribeMix(requester);
-			this.mixes.delete(key);
-			this.mixes.set(key, cached);
-			return cached;
-		}
-
-		const subscribed = this.mixSubscriptions.get(requester);
-		if (subscribed?.key === key) {
-			subscribed.subscribers.set(requester, onReady);
-			return null;
-		}
-		this.unsubscribeMix(requester);
-
-		let job = this.mixJobs.get(key);
-		if (!job) {
-			// Every buffer is decoded at the AudioContext's rate, so a sample of
-			// the shared timeline is a sample of each track.
-			const contributions: WaveformContribution[] = [];
-			parts.forEach((part) => {
-				contributions.push(
-					...getBufferContributions(part.buffer, part.gain, part.span),
-				);
+			);
+			part.channels.forEach((channel, index) => {
+				if (gains[index] !== 0) {
+					contributions.push({
+						source: new CompactSource(channel.compact),
+						gain: gains[index],
+						offset: part.span.offset,
+						start: part.span.start,
+						end: part.span.end,
+					});
+				}
 			});
-			job = {
-				key,
-				build: summarize(rate, sampleCount, contributions),
-				finish: (summary) =>
-					new WaveformSignal(
-						key,
-						rate,
-						0,
-						sampleCount,
-						summary.peak,
-						summary,
-						0,
-						contributions,
-					),
-				subscribers: new Map(),
-			};
-			this.mixJobs.set(key, job);
-		}
-		job.subscribers.set(requester, onReady);
-		this.mixSubscriptions.set(requester, job);
-		this.scheduleMixJobs();
-		return null;
+		});
+		return {
+			key: keys.join("|"),
+			sampleRate,
+			sampleCount,
+			contributions,
+		};
 	}
 
-	private unsubscribeMix(requester: object): void {
-		const job = this.mixSubscriptions.get(requester);
+	private getCompactAverage(buffer: AudioBuffer): CompactChannel {
+		let compact = this.compactAverages.get(buffer);
+		if (!compact) {
+			// Summarizing a buffer compacts its average along the way.
+			this.createSummary(buffer);
+			compact = this.compactAverages.get(buffer) as CompactChannel;
+		}
+		return compact;
+	}
+
+	/** A two-channel buffer's channels, compacted. */
+	private getCompactChannels(buffer: AudioBuffer): CompactChannel[] {
+		let compacts = this.compactChannels.get(buffer);
+		if (!compacts) {
+			compacts = [0, 1].map((channel) => compactBufferChannel(buffer, channel));
+			this.compactChannels.set(buffer, compacts);
+		}
+		return compacts;
+	}
+
+	private leaveMixJob(job: MixJob | null, requester: object): void {
 		if (!job) {
 			return;
 		}
 
-		this.mixSubscriptions.delete(requester);
 		job.subscribers.delete(requester);
 		if (job.subscribers.size === 0) {
 			this.mixJobs.delete(job.key);
 		}
 	}
 
-	private scheduleMixJobs(): void {
-		if (this.mixJobTimer !== null) {
+	private cancelMixRequest(requester: object): void {
+		const request = this.mixRequests.get(requester);
+		if (!request) {
 			return;
 		}
 
-		this.mixJobTimer = setTimeout(() => {
-			this.mixJobTimer = null;
-			this.runMixJobs();
-		}, 0);
+		this.mixRequests.delete(requester);
+		this.leaveMixJob(request.wanted, requester);
+		this.leaveMixJob(request.standIn, requester);
 	}
 
-	private runMixJobs(): void {
-		const sliceEnd = performance.now() + MIX_BUILD_SLICE_MS;
+	private scheduleMixJobs(): void {
+		if (this.mixJobScheduled || this.mixJobs.size === 0) {
+			return;
+		}
+
+		this.mixJobScheduled = true;
+		this.mixJobChannel.port2.postMessage(null);
+	}
+
+	/** Builds mixes, oldest first, for up to `budgetMs`. */
+	private runMixJobs(budgetMs: number): void {
+		const sliceEnd = performance.now() + budgetMs;
 		for (const job of this.mixJobs.values()) {
+			job.started = true;
 			let step = job.build.next();
 			while (!step.done && performance.now() < sliceEnd) {
 				step = job.build.next();
@@ -593,22 +1019,32 @@ export class WaveformEngine {
 			}
 
 			this.mixJobs.delete(job.key);
-			this.mixes.set(job.key, job.finish(step.value));
+			const signal = job.finish(step.value);
+			this.mixes.set(job.key, signal);
 			while (this.mixes.size > MIX_CACHE_LIMIT) {
 				this.mixes.delete(this.mixes.keys().next().value as string);
 			}
-			job.subscribers.forEach((onReady, requester) => {
-				this.mixSubscriptions.delete(requester);
-				onReady();
+			job.subscribers.forEach((requester) => {
+				const request = this.mixRequests.get(requester);
+				if (!request) {
+					return;
+				}
+				if (request.wanted === job) {
+					// What a stand-in would show is older still.
+					this.leaveMixJob(request.standIn, requester);
+					this.mixRequests.delete(requester);
+				} else {
+					request.standIn = null;
+				}
+				this.deliveredSignals.set(requester, signal);
+				request.onReady();
 			});
 			if (performance.now() >= sliceEnd) {
 				break;
 			}
 		}
 
-		if (this.mixJobs.size > 0) {
-			this.scheduleMixJobs();
-		}
+		this.scheduleMixJobs();
 	}
 }
 

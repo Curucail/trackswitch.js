@@ -72,6 +72,7 @@
 	width: 100%;
 	background-color: var(--ts-color-surface-base);
 	--waveform-color: var(--ts-color-accent);
+	--waveform-lane-divider-color: var(--ts-color-border-mid-45);
 }
 
 /* Spans the medium rather than the whole surface: `width` is written by the
@@ -127,6 +128,29 @@
 	color: var(--ts-color-text-inverse);
 	background: var(--ts-color-surface-panel-dark);
 	user-select: none;
+}
+
+/* Names the lanes of a stereo waveform, each centred on its own lane. */
+.trackswitch .waveform-wrap .waveform-channel-label {
+	position: absolute;
+	left: 8px;
+	transform: translateY(-50%);
+	padding: 2px 5px;
+	border-radius: 4px;
+	font-family: monospace;
+	font-size: 11px;
+	color: var(--ts-color-text-inverse);
+	background: var(--ts-color-surface-panel-dark-50);
+	pointer-events: none;
+	user-select: none;
+}
+
+.trackswitch .waveform-wrap .waveform-channel-label-left {
+	top: 25%;
+}
+
+.trackswitch .waveform-wrap .waveform-channel-label-right {
+	top: 75%;
 }
 
 .trackswitch .waveform-wrap .waveform-timing {

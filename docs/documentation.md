@@ -947,6 +947,8 @@ A `waveform` view shows an interactive waveform. In a standard multitrack player
 
 With several tracks selected, the waveform shows their mix at the current volumes. Zoomed out, each pixel shows the range the signal covers in its time span. Zoomed in far enough, the view traces the individual samples.
 
+With `stereo`, the view shows the left and the right channel of the mix in two lanes, labelled "L" and "R", and follows each track's pan. Both lanes share one scale, so their levels compare directly. Every track a stereo waveform shows must have two-channel audio; the player reports an error otherwise.
+
 In an aligned player, a fixed-track waveform uses the local timeline of that track.
 
 ```json
@@ -954,6 +956,7 @@ In an aligned player, a fixed-track waveform uses the local timeline of that tra
   "type": "waveform",
   "tracks": ["takeA"],
   "height": 120,
+  "stereo": false,
   "maxZoom": 0,
   "defaultZoom": 30,
   "playbackFollowMode": "center",
@@ -968,6 +971,7 @@ In an aligned player, a fixed-track waveform uses the local timeline of that tra
 | --- | --- | --- | --- |
 | `tracks?` | `"audible" \| string[]` | `"audible"` | Selects the audio tracks for the waveform. |
 | `height?` | `number` | `150` | Specifies the waveform height in pixels. |
+| `stereo?` | `boolean` | `false` | Shows the left and right channels in two lanes instead of one lane of their average. Requires two-channel audio. |
 | `maxZoom?` | `number` | `0` | Specifies the smallest visible interval. A smaller value permits more zoom, and `0` lets the view zoom in until individual samples show. |
 | `defaultZoom?` | `number` | none | Specifies the visible interval the view opens on. Unset shows the whole timeline. |
 | `playbackFollowMode?` | `"off" \| "center" \| "jump"` | `"center"` | Controls how the view moves with playback. |

@@ -109,6 +109,7 @@ const FIELD_DEFAULTS: Record<string, unknown> = {
 	seekMarginRight: 0,
 	solo: false,
 	startOffsetMs: 0,
+	stereo: false,
 	tabView: false,
 	tempoSmoothingSeconds: 5,
 	thickness: 2,

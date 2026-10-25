@@ -208,6 +208,12 @@ export interface TrackSwitchWaveformViewConfig {
 	type: "waveform";
 	tracks?: TrackId[] | "audible";
 	height?: number;
+	/**
+	 * Shows the left and the right channel of the mix in two lanes, after
+	 * each track's pan, instead of one lane of their average. Every track it
+	 * shows must have two-channel audio.
+	 */
+	stereo?: boolean;
 	maxZoom?: number;
 	defaultZoom?: number;
 	playbackFollowMode?: WaveformPlaybackFollowMode;

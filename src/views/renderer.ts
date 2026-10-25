@@ -895,6 +895,15 @@ export class ViewRenderer {
 		viewRendererMarkers.trapMarkerNavigationDialogFocus(this.root, shiftKey);
 	}
 
+	public findStereoWaveformChannelMismatch(
+		runtimes: TrackRuntime[],
+	): { runtime: TrackRuntime; channels: number } | null {
+		return viewRendererWaveform.findStereoWaveformChannelMismatch(
+			this,
+			runtimes,
+		);
+	}
+
 	public wrapWaveformCanvases(): void {
 		viewRendererWaveform.wrapWaveformCanvases(this);
 	}

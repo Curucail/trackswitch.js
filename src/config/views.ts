@@ -64,6 +64,7 @@ const uiWaveformAllowedKeys = keysOf<TrackSwitchWaveformViewConfig>()([
 	"type",
 	"tracks",
 	"height",
+	"stereo",
 	"maxZoom",
 	"defaultZoom",
 	"playbackFollowMode",
@@ -500,6 +501,7 @@ function normalizeWaveformConfig(
 	const normalized: TrackSwitchWaveformViewConfig = {
 		...waveform,
 		height: toCanvasSize(waveform.height, 150, "waveform.height"),
+		stereo: normalizeOptionalBoolean(waveform.stereo, "waveform.stereo"),
 		// A waveform zooms down to its samples unless told otherwise.
 		maxZoom: normalizeWaveformMaxZoom(waveform.maxZoom, "waveform", 0),
 		defaultZoom: normalizeDefaultZoom(waveform.defaultZoom, "waveform"),
