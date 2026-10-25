@@ -522,12 +522,14 @@ function drawWaveform(
 	});
 }
 
+/** Draws a stand-in pattern into each of `laneCount` lanes stacked in the canvas. */
 function renderPlaceholderCanvas(
 	canvas: HTMLCanvasElement,
 	width: number,
 	height: number,
 	color: string,
 	alpha: number,
+	laneCount: number,
 ): void {
 	const context = resizeCanvasForCssSize(canvas, width, height);
 	if (!context || width <= 0 || height <= 0) {
@@ -543,8 +545,16 @@ function renderPlaceholderCanvas(
 		const waveA = Math.sin(x * 0.21);
 		const waveB = Math.sin(x * 0.051 + 0.8);
 		const amplitude = 0.25 + 0.75 * (Math.abs(waveA + waveB) / 2);
-		const barHeight = Math.max(1, Math.round(amplitude * height * 0.7));
-		context.fillRect(x, Math.round((height - barHeight) / 2), 1, barHeight);
+		const laneHeight = height / laneCount;
+		const barHeight = Math.max(1, Math.round(amplitude * laneHeight * 0.7));
+		for (let lane = 0; lane < laneCount; lane += 1) {
+			context.fillRect(
+				x,
+				Math.round(lane * laneHeight + (laneHeight - barHeight) / 2),
+				1,
+				barHeight,
+			);
+		}
 	}
 
 	context.restore();
@@ -754,7 +764,9 @@ export function wrapWaveformCanvases(ctx: ViewRenderer): void {
 		const originalHeight = canvasElement.height;
 
 		const wrapper = document.createElement("div");
-		wrapper.className = "waveform-wrap ts-stack-section";
+		wrapper.className = config.stereo
+			? "waveform-wrap waveform-stereo ts-stack-section"
+			: "waveform-wrap ts-stack-section";
 		applyCssOverrides(wrapper, config.css);
 		const scrollContainer = document.createElement("div");
 		scrollContainer.className = "waveform-scroll";
@@ -1036,7 +1048,14 @@ function renderWaveformMinimap(
 	surfaceMetadata.zoomCanvasLastDrawKey = drawKey;
 
 	if (!lanes || fullDuration <= 0) {
-		renderPlaceholderCanvas(canvas, cssWidth, cssHeight, colors.waveform, 0.2);
+		renderPlaceholderCanvas(
+			canvas,
+			cssWidth,
+			cssHeight,
+			colors.waveform,
+			0.2,
+			surfaceMetadata.lanes.length,
+		);
 		return;
 	}
 
@@ -1187,6 +1206,7 @@ export function drawDummyWaveforms(ctx: ViewRenderer): void {
 				tile.tileCssHeight,
 				resolveWaveformColors(tile.canvas).waveform,
 				0.3,
+				surfaceMetadata.lanes.length,
 			);
 		});
 		renderWaveformMinimap(surfaceMetadata, null, "placeholder", 0, 1);
@@ -1419,6 +1439,7 @@ export function renderWaveformsInternal(
 					cssHeight,
 					colors.waveform,
 					0.3,
+					surfaceMetadata.lanes.length,
 				);
 				return;
 			}
@@ -1465,6 +1486,7 @@ export function renderWaveformsInternal(
 					tile.tileCssHeight,
 					colors.waveform,
 					0.3,
+					surfaceMetadata.lanes.length,
 				);
 				return;
 			}
