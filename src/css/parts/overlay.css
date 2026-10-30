@@ -216,7 +216,7 @@
 	visibility: visible;
 }
 
-@container ts-player (max-width: 500px) {
+@container ts-player (max-width: 600px) {
 	.trackswitch .marker-navigation-dialog {
 		padding: 15px;
 	}
