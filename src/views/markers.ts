@@ -17,7 +17,7 @@ export type {
 	MarkerNavigationSetOption,
 } from "../player/markers";
 
-export interface MarkerPlacement {
+interface MarkerPlacement {
 	playerTime: number;
 	surfaceTime: number;
 	duration: number;
@@ -85,7 +85,7 @@ function resolvePlacement(
 	return { playerTime, surfaceTime, duration: timeline.duration };
 }
 
-export function createMarkerAriaLabel(
+function createMarkerAriaLabel(
 	marker: Marker,
 	placement: MarkerPlacement,
 	formatSurfaceValue: (surfaceTime: number) => string,
