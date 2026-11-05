@@ -70,7 +70,6 @@ const FIELD_DEFAULTS: Record<string, unknown> = {
 	axisLabels: "hz",
 	autoload: false,
 	bold: false,
-	channelColorIcons: true,
 	colorPerChannel: true,
 	comparisonGroup: 0,
 	customizablePanelOrder: false,
