@@ -245,6 +245,7 @@ export class BuilderApp {
 	private previewLoaded = false;
 	private statusTimer = 0;
 	private sampleLoading = false;
+	private cancelCompute: (() => void) | null = null;
 	private csvIntakeTarget: "alignment" | "marker" | null = null;
 	private pendingViewId: string | null = null;
 
@@ -276,16 +277,16 @@ export class BuilderApp {
 								<div class="ts-builder-preview"><button type="button" class="ts-builder-drop-prompt" data-action="empty-choose-files"><strong>Drop files here or click to add</strong><span class="ts-builder-drop-prompt__formats"><span>Audio (.wav, .mp3, .flac, .ogg, .m4a, …)</span><span>MIDI (.mid/.midi)</span><span>MusicXML (.xml/.musicxml)</span><span>Images (.png, .jpg, .webp, …)</span><span>CSV files</span></span></button></div>
 								<div class="ts-builder-panel-rail" aria-label="Panel order"></div>
 								<div class="ts-builder-samples">
+									<div class="ts-builder-sample" role="button" tabindex="0" draggable="true" data-sample="stems" aria-label="Start with the Default Multitrack preset. Drag it into the drop area or press Enter.">
+										<span class="ts-builder-sample__icon" aria-hidden="true"></span>
+										<span class="ts-builder-sample__kicker">Preset</span>
+										<strong>Default Multitrack</strong>
+										<span class="ts-builder-sample__hint">Drag me in ›</span>
+									</div>
 									<div class="ts-builder-sample" role="button" tabindex="0" draggable="true" data-sample="winterreise" aria-label="Start with the Schubert Winterreise preset. Drag it into the drop area or press Enter.">
 										<span class="ts-builder-sample__icon" aria-hidden="true"></span>
 										<span class="ts-builder-sample__kicker">Preset</span>
 										<strong>Schubert Winterreise</strong>
-										<span class="ts-builder-sample__hint">Drag me in ›</span>
-									</div>
-									<div class="ts-builder-sample" role="button" tabindex="0" draggable="true" data-sample="stems" aria-label="Start with the Multitrack Stems preset. Drag it into the drop area or press Enter.">
-										<span class="ts-builder-sample__icon" aria-hidden="true"></span>
-										<span class="ts-builder-sample__kicker">Preset</span>
-										<strong>Multitrack Stems</strong>
 										<span class="ts-builder-sample__hint">Drag me in ›</span>
 									</div>
 								</div>
@@ -354,6 +355,17 @@ export class BuilderApp {
 		this.required<HTMLButtonElement>(
 			'[data-action="empty-choose-files"]',
 		).addEventListener("click", () => this.fileInput.click());
+		this.root.addEventListener("dragover", (event) => {
+			if (!this.draggedViewId) return;
+			event.preventDefault();
+			if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+			this.showViewDropIndicator(this.viewSlotAt(event.clientY));
+		});
+		this.root.addEventListener("drop", (event) => {
+			if (!this.draggedViewId) return;
+			event.preventDefault();
+			this.dropViewAt(this.viewSlotAt(event.clientY));
+		});
 		for (const eventName of ["dragenter", "dragover"] as const) {
 			dropzone.addEventListener(eventName, (event) => {
 				if (!isFileDrag(event)) return;
@@ -406,6 +418,8 @@ export class BuilderApp {
 		this.dialogCancel.addEventListener("click", () => this.dialog.close());
 		this.dialogOk.addEventListener("click", () => this.confirmDialog());
 		this.dialog.addEventListener("close", () => {
+			// Closing while an alignment is computing (Cancel or Escape) stops it.
+			this.cancelCompute?.();
 			this.finishDialogTransaction();
 			this.activeTarget = null;
 			this.pendingDraft = null;
@@ -634,7 +648,6 @@ export class BuilderApp {
 							"looping",
 							"timer",
 							"seekBar",
-							"fullscreen-control",
 						],
 					},
 				},
@@ -1011,11 +1024,31 @@ export class BuilderApp {
 		this.render();
 	}
 
-	private showViewDropIndicator(row: HTMLElement, before: boolean): void {
+	private clearViewDropIndicator(): void {
 		for (const item of this.panelRail.children) {
 			item.classList.remove("is-drop-before", "is-drop-after");
 		}
-		row.classList.add(before ? "is-drop-before" : "is-drop-after");
+	}
+
+	/**
+	 * Insertion slot (0..views.length) for a pointer height: the number of panel
+	 * controls whose middle lies above it. Anywhere on the page counts, so
+	 * dragging past the last panel still means "at the end".
+	 */
+	private viewSlotAt(clientY: number): number {
+		let slot = 0;
+		for (const item of this.panelRail.children) {
+			const rect = item.getBoundingClientRect();
+			if (clientY > rect.top + rect.height / 2) slot += 1;
+		}
+		return slot;
+	}
+
+	private showViewDropIndicator(slot: number): void {
+		this.clearViewDropIndicator();
+		const rows = this.panelRail.children;
+		if (slot < rows.length) rows[slot]?.classList.add("is-drop-before");
+		else rows[rows.length - 1]?.classList.add("is-drop-after");
 	}
 
 	/** `slot` is the gap to drop into: 0 is above the first panel. */
@@ -1384,8 +1417,29 @@ export class BuilderApp {
 			progress: ComputeProgressElements;
 		},
 	): Promise<void> {
+		const settings = Array.from(
+			this.dialogBody.querySelectorAll<
+				HTMLInputElement | HTMLSelectElement | HTMLButtonElement
+			>("input, select, button"),
+		);
+		// The run uses the settings it started with, so they stay fixed meanwhile.
+		const setSettingsDisabled = (disabled: boolean) => {
+			for (const element of settings) element.disabled = disabled;
+		};
+		setSettingsDisabled(true);
 		controls.compute.disabled = true;
-		controls.cancel.disabled = true;
+		let aborted = false;
+		const cancelled = new Promise<never>((_, reject) => {
+			this.cancelCompute = () => {
+				aborted = true;
+				this.cancelCompute = null;
+				// A terminated worker never answers, so the run is dropped here.
+				this.alignmentWorkerBridge.destroy();
+				reject(new Error("Alignment cancelled."));
+			};
+		});
+		const guard = <T>(work: Promise<T>): Promise<T> =>
+			Promise.race([work, cancelled]);
 		this.updateComputeProgress(controls.progress, "Preparing files…");
 		this.alignmentWorkerBridge.setProgressCallback((message) => {
 			this.updateComputeProgress(controls.progress, message);
@@ -1395,20 +1449,24 @@ export class BuilderApp {
 			for (const id of mediaIds) {
 				const media = this.project.media[id];
 				const resource = this.project.resources[media.resourceId];
-				const interactiveFile = await processFile(resource.file);
+				const interactiveFile = await guard(processFile(resource.file));
 				files.push({ ...interactiveFile, id });
 			}
 			this.updateComputeProgress(controls.progress, "Initializing Pyodide…");
-			await this.alignmentWorkerBridge.initialize();
+			await guard(this.alignmentWorkerBridge.initialize());
 			this.updateComputeProgress(controls.progress, "Computing alignment…");
-			const result = await this.alignmentWorkerBridge.computeAlignment(
-				files,
-				referenceId,
-				featureSet,
-				algorithm,
-				generateSyncedAudio,
-				pitchShiftEnabled,
+			const result = await guard(
+				this.alignmentWorkerBridge.computeAlignment(
+					files,
+					referenceId,
+					featureSet,
+					algorithm,
+					generateSyncedAudio,
+					pitchShiftEnabled,
+				),
 			);
+			// The result is in; closing the dialog from here on is not a cancel.
+			this.cancelCompute = null;
 			const csvFile = new File([result.csv], "alignment.csv", {
 				type: "text/csv",
 			});
@@ -1423,10 +1481,12 @@ export class BuilderApp {
 				result.syncReferenceTimeColumn,
 			);
 		} catch (error) {
+			if (aborted) return;
 			this.updateComputeProgress(controls.progress, describeError(error), true);
+			setSettingsDisabled(false);
 			controls.compute.disabled = false;
-			controls.cancel.disabled = false;
 		} finally {
+			this.cancelCompute = null;
 			this.alignmentWorkerBridge.setProgressCallback(null);
 		}
 	}
@@ -1639,7 +1699,7 @@ export class BuilderApp {
 		if (target.kind === "media" && target.id) {
 			const binding = this.project.media[target.id];
 			if (!binding) return;
-			title = `${target.id} media`;
+			title = "Media settings";
 			value = binding.config as unknown as Record<string, unknown>;
 			schema = getDiscriminatedSchema(
 				this.rootSchema,
@@ -1710,7 +1770,7 @@ export class BuilderApp {
 		} else if (target.kind === "marker" && target.id) {
 			const marker = this.project.markers[target.id];
 			if (!marker) return;
-			title = `${target.id} marker settings`;
+			title = "Marker settings";
 			value = marker.config as unknown as Record<string, unknown>;
 			schema = getDefinition(this.rootSchema, "MarkerSequenceSourceConfig");
 			this.dialogBody.append(
@@ -1723,7 +1783,7 @@ export class BuilderApp {
 		} else if (target.kind === "preset" && target.id) {
 			const preset = this.project.presets[target.id];
 			if (!preset) return;
-			title = `${target.id} preset`;
+			title = "Preset settings";
 			value = preset as unknown as Record<string, unknown>;
 			schema = getDefinition(this.rootSchema, "PresetConfig");
 			this.dialogBody.append(
@@ -2231,29 +2291,7 @@ export class BuilderApp {
 			row.addEventListener("dragend", () => {
 				this.draggedViewId = null;
 				row.classList.remove("is-dragging");
-				for (const item of this.panelRail.children) {
-					item.classList.remove("is-drop-before", "is-drop-after");
-				}
-			});
-			// Insertion slot (0..views.length): before this panel when the pointer
-			// is in its upper half, after it otherwise.
-			const slotFor = (event: DragEvent) => {
-				const rect = row.getBoundingClientRect();
-				return event.clientY < rect.top + rect.height / 2 ? index : index + 1;
-			};
-			row.addEventListener("dragover", (event) => {
-				if (!this.draggedViewId) return;
-				event.preventDefault();
-				if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
-				this.showViewDropIndicator(row, slotFor(event) === index);
-			});
-			row.addEventListener("dragleave", () =>
-				row.classList.remove("is-drop-before", "is-drop-after"),
-			);
-			row.addEventListener("drop", (event) => {
-				if (!this.draggedViewId) return;
-				event.preventDefault();
-				this.dropViewAt(slotFor(event));
+				this.clearViewDropIndicator();
 			});
 			this.panelRail.append(row);
 		});

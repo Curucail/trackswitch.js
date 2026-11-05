@@ -45,6 +45,15 @@
 	);
 }
 
+/* In fullscreen the seekbar sits beside the timer and keeps the reserve
+   itself, so the timer needs none: it would only widen the gap between them. */
+.trackswitch.ts-fullscreen
+	.main-control
+	ul.control:has(> li.fullscreen-toggle)
+	> li.timing:has(~ li.seekwrap) {
+	margin-inline-end: 0;
+}
+
 .trackswitch .main-control ul.control > li {
 	box-sizing: border-box;
 	min-height: var(--ts-main-control-row-height);

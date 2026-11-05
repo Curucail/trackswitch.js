@@ -199,6 +199,94 @@ kbd {
 	white-space: nowrap;
 }
 
+.ts-hero__builder-link {
+	position: relative;
+}
+
+/* A hand-drawn ring that keeps redrawing itself around the Builder link. */
+.ts-builder-circle {
+	position: absolute;
+	inset: -6px -10px;
+	width: calc(100% + 20px);
+	height: calc(100% + 12px);
+	overflow: visible;
+	fill: none;
+	stroke: var(--ts-doc-color-accent);
+	stroke-width: 2.5px;
+	stroke-linecap: round;
+	pointer-events: none;
+}
+
+.ts-builder-circle path {
+	stroke-dasharray: 1;
+	animation: ts-builder-circle-draw 4s ease-in-out infinite;
+}
+
+@keyframes ts-builder-circle-draw {
+	0% {
+		stroke-dashoffset: 1;
+		opacity: 1;
+	}
+
+	35%,
+	85% {
+		stroke-dashoffset: 0;
+		opacity: 1;
+	}
+
+	100% {
+		stroke-dashoffset: 0;
+		opacity: 0;
+	}
+}
+
+/* Points at the Builder link and bobs toward it to invite a click. */
+.ts-builder-hint {
+	position: absolute;
+	top: calc(100% + 0.35rem);
+	left: 50%;
+	display: grid;
+	justify-items: center;
+	transform: translateX(-50%);
+	color: var(--ts-doc-color-accent);
+	font-size: 0.78rem;
+	font-weight: 700;
+	white-space: nowrap;
+	pointer-events: none;
+}
+
+.ts-builder-hint__arrow {
+	font-size: 1.1rem;
+	line-height: 1;
+	animation: ts-builder-hint-bob 1.2s ease-in-out infinite;
+}
+
+@keyframes ts-builder-hint-bob {
+	0%,
+	100% {
+		transform: translateY(0);
+	}
+
+	50% {
+		transform: translateY(-5px);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.ts-builder-hint__arrow,
+	.ts-builder-circle path {
+		animation: none;
+		stroke-dashoffset: 0;
+	}
+}
+
+@media (max-width: 720px) {
+	.ts-builder-hint,
+	.ts-builder-circle {
+		display: none;
+	}
+}
+
 .ts-hero h1 {
 	margin: 0;
 	font-family: var(--ts-doc-font-brand);
@@ -299,7 +387,7 @@ kbd {
 		var(--ts-showcase-side-width)
 		minmax(0, var(--ts-showcase-stage-width))
 		var(--ts-showcase-side-width);
-	grid-template-areas: "copy player controls";
+	grid-template-areas: "mode player controls";
 	gap: var(--ts-showcase-gap);
 	align-items: center;
 	justify-content: center;
@@ -573,6 +661,11 @@ kbd {
 }
 
 .ts-mode-panel {
+	grid-area: mode;
+	align-self: center;
+	justify-self: end;
+	width: 260px;
+	box-sizing: border-box;
 	margin: 0;
 	padding: 0.85rem;
 }
@@ -580,7 +673,7 @@ kbd {
 .ts-showcase__sidebar {
 	grid-area: controls;
 	display: grid;
-	grid-template-rows: auto minmax(0, 1fr);
+	grid-template-rows: minmax(0, 1fr);
 	gap: 0.85rem;
 	margin-left: 0.65rem;
 	align-self: start;
@@ -634,6 +727,7 @@ kbd {
 }
 
 .ts-mode-panel .ts-control-mode-tabs {
+	grid-template-columns: 1fr;
 	margin: 0.7rem 0 0;
 }
 
@@ -1063,9 +1157,14 @@ kbd {
 	.ts-showcase__layout {
 		grid-template-columns: minmax(0, 1fr);
 		grid-template-areas:
+			"mode"
 			"player"
-			"copy"
 			"controls";
+	}
+
+	.ts-mode-panel {
+		justify-self: center;
+		width: min(var(--ts-showcase-stage-width), 100%);
 	}
 
 	.ts-showcase__layout {
