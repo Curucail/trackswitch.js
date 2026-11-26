@@ -36,6 +36,7 @@ import type {
 	WarpingMatrixRenderContext,
 	WaveformTimelineContext,
 } from "./renderer";
+import { disposeSpectrogramColumns } from "./spectrogram";
 import { buildSeekWrap, updateTimelineZoomIndicators } from "./surface";
 
 const TRACKSWITCH_ROOT_CLASSES = [
@@ -1985,6 +1986,12 @@ export function destroy(ctx: ViewRenderer): void {
 	}
 
 	ctx.latestWaveformRenderInput = null;
+	ctx.waveformSeekSurfaces.forEach(({ spectrogram }) => {
+		if (spectrogram) {
+			disposeSpectrogramColumns(spectrogram.tileCaches);
+			disposeSpectrogramColumns(spectrogram.minimapCaches);
+		}
+	});
 	ctx.waveformSeekSurfaces.length = 0;
 	ctx.pianoRollSeekSurfaces.length = 0;
 	ctx.imageSeekSurfaces.length = 0;

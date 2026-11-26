@@ -25,6 +25,7 @@ import type {
 import type { ViewRenderer, WaveformTimelineContext } from "./renderer";
 import {
 	createSpectrogramSurfaceState,
+	disposeSpectrogramColumns,
 	drawSpectrogram,
 	getSpectrogramDeadline,
 	getSpectrogramSettingsKey,
@@ -33,6 +34,7 @@ import {
 	type SpectrogramSurfaceState,
 	updateSpectrogramAxis,
 } from "./spectrogram";
+import type { SpectrogramColumnCache } from "./spectrogram-gl";
 import type { SeekSurfaceRangeRenderer } from "./surface";
 import {
 	applyTimelineFollowScrollLeft,
@@ -1467,6 +1469,7 @@ function renderSpectrogramSurface(
 			return;
 		}
 		const secondsPerColumn = (fullDuration * widthRatio) / cssWidth;
+		const caches: SpectrogramColumnCache[] = [];
 		drawSpectrogram(
 			canvas,
 			cssWidth,
@@ -1481,10 +1484,11 @@ function renderSpectrogramSurface(
 				priorityEnd: cssWidth,
 			},
 			state,
-			[],
+			caches,
 			colors,
 			Number.POSITIVE_INFINITY,
 		);
+		disposeSpectrogramColumns(caches);
 	};
 
 	ctx.forEachVisibleWaveformTile(surfaceMetadata, (tile) => {

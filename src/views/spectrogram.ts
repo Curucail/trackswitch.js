@@ -8,14 +8,21 @@ import {
 import type { WaveformMixReader } from "../media/waveform-engine";
 import { formatMidiNoteName } from "../shared/midi-notes";
 import type { TrackSwitchSpectrogramViewConfig } from "../types";
+import {
+	getSpectrogramRenderer,
+	type Rgb,
+	type SpectrogramColumnCache,
+	type SpectrogramLanePlacement,
+	type SpectrogramRenderer,
+} from "./spectrogram-gl";
 import { resizeCanvasForCssSize } from "./surface";
 
 /**
- * Main-thread time one redraw spends analysing frames. Whatever is left is
- * analysed over the next frames, so scrolling and playback stay smooth while
+ * Main-thread time one redraw spends composing columns. Whatever is left is
+ * composed over the next frames, so scrolling and playback stay smooth while
  * a zoomed-out view fills in.
  */
-const ANALYSIS_BUDGET_MS = 12;
+const COMPOSE_BUDGET_MS = 12;
 /** Closest two axis labels may sit, in CSS pixels. */
 const MIN_TICK_SPACING = 16;
 /**
@@ -25,19 +32,6 @@ const MIN_TICK_SPACING = 16;
 const TICK_TOP_CLEARANCE = 30;
 /** Height kept free of labels at the bottom of every lane, in CSS pixels. */
 const TICK_BOTTOM_CLEARANCE = 6;
-
-/**
- * Columns of one lane already analysed, by their index on the surface.
- * `stale` holds the columns of the mix shown before, at the same geometry,
- * which stand in while the current one is analysed — so a dragged volume
- * slider does not blank the view on every step.
- */
-interface SpectrogramColumnCache {
-	key: string;
-	geometryKey: string;
-	columns: Map<number, Uint8Array>;
-	stale: Map<number, Uint8Array>;
-}
 
 export interface SpectrogramSurfaceState {
 	settings: SpectrogramSettings;
@@ -115,8 +109,14 @@ export function resolveSpectrogramColors(
 
 let colorProbe: CanvasRenderingContext2D | null = null;
 
+const parsedColors = new Map<string, Rgb>();
+
 /** A CSS colour as its sRGB channels, read back from a canvas pixel. */
-function parseCssColor(color: string): [number, number, number] {
+function parseCssColor(color: string): Rgb {
+	let parsed = parsedColors.get(color);
+	if (parsed) {
+		return parsed;
+	}
 	if (!colorProbe) {
 		const canvas = document.createElement("canvas");
 		canvas.width = 1;
@@ -128,56 +128,39 @@ function parseCssColor(color: string): [number, number, number] {
 	context.fillStyle = color;
 	context.fillRect(0, 0, 1, 1);
 	const [red, green, blue] = context.getImageData(0, 0, 1, 1).data;
-	return [red, green, blue];
-}
-
-const colorMaps = new Map<string, Uint8Array>();
-
-/** RGB per intensity from 0 to 255, from the background to the colour. */
-function getColorMap(colors: SpectrogramColors): Uint8Array {
-	const key = `${colors.background}|${colors.color}`;
-	let map = colorMaps.get(key);
-	if (!map) {
-		const low = parseCssColor(colors.background);
-		const high = parseCssColor(colors.color);
-		map = new Uint8Array(256 * 3);
-		for (let level = 0; level < 256; level += 1) {
-			for (let channel = 0; channel < 3; channel += 1) {
-				map[level * 3 + channel] = Math.round(
-					low[channel] + ((high[channel] - low[channel]) * level) / 255,
-				);
-			}
-		}
-		colorMaps.set(key, map);
-	}
-	return map;
+	parsed = [red, green, blue];
+	parsedColors.set(color, parsed);
+	return parsed;
 }
 
 function getColumnCache(
+	renderer: SpectrogramRenderer,
 	caches: SpectrogramColumnCache[],
 	lane: number,
 	key: string,
 	geometryKey: string,
+	rows: number,
 ): SpectrogramColumnCache {
 	let cache = caches[lane];
-	if (!cache) {
-		cache = { key, geometryKey, columns: new Map(), stale: new Map() };
+	if (cache?.renderer !== renderer || cache.geometryKey !== geometryKey) {
+		cache?.renderer.deleteCache(cache);
+		cache = renderer.createCache(key, geometryKey, rows);
 		caches[lane] = cache;
-		return cache;
-	}
-	if (cache.geometryKey !== geometryKey) {
-		cache.key = key;
-		cache.geometryKey = geometryKey;
-		cache.columns.clear();
-		cache.stale.clear();
 	} else if (cache.key !== key) {
 		cache.key = key;
-		cache.columns.forEach((column, index) => {
-			cache.stale.set(index, column);
-		});
-		cache.columns.clear();
+		renderer.expireColumns(cache);
 	}
 	return cache;
+}
+
+/** Frees what the columns in `caches` hold on the GPU. */
+export function disposeSpectrogramColumns(
+	caches: SpectrogramColumnCache[],
+): void {
+	caches.forEach((cache) => {
+		cache.renderer.deleteCache(cache);
+	});
+	caches.length = 0;
 }
 
 /** The frames of `reader` for one lane, kept for as long as it reads the same. */
@@ -234,19 +217,16 @@ function getIntensityMap(settings: SpectrogramSettings): Uint8Array {
 /**
  * Writes the column of the surface that spans samples [`from`, `to`) to `out`:
  * the mean power of the frames centred within it, or the frame nearest its
- * middle when it is narrower than a hop. With frames still unanalysed by
- * `deadline`, it takes the mean of those that are, and returns false; it
- * returns null when none is.
+ * middle when it is narrower than a hop.
  */
 function composeColumn(
 	frames: SpectrogramFrames,
 	from: number,
 	to: number,
-	deadline: number,
 	settings: SpectrogramSettings,
 	sums: Float64Array,
 	out: Uint8Array,
-): boolean | null {
+): void {
 	const hop = frames.hopSize;
 	let first = Math.ceil(from / hop);
 	let last = Math.ceil(to / hop) - 1;
@@ -257,51 +237,24 @@ function composeColumn(
 
 	const rows = out.length;
 	if (first === last) {
-		const levels = frames.frameRows(first, rows, deadline);
-		if (!levels) {
-			return null;
-		}
+		const levels = frames.frameRows(first, rows);
 		const intensities = getIntensityMap(settings);
 		for (let row = 0; row < rows; row += 1) {
 			out[row] = intensities[levels[row]];
 		}
-		return true;
+		return;
 	}
 
 	sums.fill(0, 0, rows);
-	let counted = 0;
 	for (let frame = first; frame <= last; frame += 1) {
-		const levels = frames.frameRows(frame, rows, deadline);
-		if (!levels) {
-			continue;
-		}
-		counted += 1;
+		const levels = frames.frameRows(frame, rows);
 		for (let row = 0; row < rows; row += 1) {
 			sums[row] += levelPowers[levels[row]];
 		}
 	}
-	if (counted === 0) {
-		return null;
-	}
 	for (let row = 0; row < rows; row += 1) {
-		out[row] = powerToIntensity(sums[row] / counted, settings);
+		out[row] = powerToIntensity(sums[row] / (last - first + 1), settings);
 	}
-	return counted === last - first + 1;
-}
-
-/** Drops the columns outside [`start`, `end`), so a long scroll does not pile them up. */
-function pruneColumnCache(
-	cache: SpectrogramColumnCache,
-	start: number,
-	end: number,
-): void {
-	[cache.columns, cache.stale].forEach((columns) => {
-		columns.forEach((_column, index) => {
-			if (index < start || index >= end) {
-				columns.delete(index);
-			}
-		});
-	});
 }
 
 /** A stretch of the surface a spectrogram canvas shows. */
@@ -320,7 +273,7 @@ export interface SpectrogramDrawRange {
 /**
  * Draws one lane per reader stacked top to bottom, one column per CSS pixel
  * and one row per device pixel. Columns are taken from `caches` where they
- * were analysed before; the rest are analysed until `deadline`, after which
+ * were composed before; the rest are composed until `deadline`, after which
  * the ones still missing show what the mix before showed there, or nothing.
  * Returns whether every column was drawn from the current mix.
  */
@@ -353,20 +306,36 @@ export function drawSpectrogram(
 		Math.max(0, Math.round(range.drawColumns)),
 	);
 	const rows = canvas.height;
-	const image = new ImageData(columns, rows);
-	const pixels = image.data;
-	const colorMap = getColorMap(colors);
-	const sums = new Float64Array(rows);
+	const renderer = getSpectrogramRenderer();
 	const settingsKey = getSpectrogramSettingsKey(state);
-	let complete = true;
 
-	// Background first, so columns left unanalysed read as empty.
-	for (let index = 0; index < pixels.length; index += 4) {
-		pixels[index] = colorMap[0];
-		pixels[index + 1] = colorMap[1];
-		pixels[index + 2] = colorMap[2];
-		pixels[index + 3] = 255;
-	}
+	const lanes = readers.map((reader, lane) => {
+		const top = Math.round((rows * lane) / readers.length);
+		const laneRows = Math.round((rows * (lane + 1)) / readers.length) - top;
+		const frames = getLaneFrames(state, lane, reader);
+		const cache = getColumnCache(
+			renderer,
+			caches,
+			lane,
+			frames.key,
+			[settingsKey, reader.sampleRate, range.secondsPerColumn, laneRows].join(
+				"#",
+			),
+			laneRows,
+		);
+		renderer.pruneColumns(
+			cache,
+			range.firstColumn - columns,
+			range.firstColumn + 2 * columns,
+		);
+		return {
+			top,
+			cache,
+			frames,
+			samplesPerColumn: range.secondsPerColumn * reader.sampleRate,
+			values: new Uint8Array(laneRows),
+		} satisfies SpectrogramLanePlacement & Record<string, unknown>;
+	});
 
 	const order: number[] = [];
 	const priorityStart = Math.max(0, Math.floor(range.priorityStart));
@@ -380,81 +349,41 @@ export function drawSpectrogram(
 		}
 	}
 
-	readers.forEach((reader, lane) => {
-		const laneTop = Math.round((rows * lane) / readers.length);
-		const laneRows = Math.round((rows * (lane + 1)) / readers.length) - laneTop;
-		const samplesPerColumn = range.secondsPerColumn * reader.sampleRate;
-		const frames = getLaneFrames(state, lane, reader);
-		const cache = getColumnCache(
-			caches,
-			lane,
-			frames.key,
-			[settingsKey, reader.sampleRate, range.secondsPerColumn, laneRows].join(
-				"#",
-			),
-		);
-		pruneColumnCache(
-			cache,
-			range.firstColumn - columns,
-			range.firstColumn + 2 * columns,
-		);
-
-		for (const column of order) {
-			const index = range.firstColumn + column;
-			let values = cache.columns.get(index);
-			if (!values) {
-				const composed = new Uint8Array(laneRows);
-				const result = composeColumn(
-					frames,
-					index * samplesPerColumn,
-					(index + 1) * samplesPerColumn,
-					deadline,
-					state.settings,
-					sums,
-					composed,
-				);
-				if (result === true) {
-					values = composed;
-					cache.columns.set(index, values);
-					cache.stale.delete(index);
-				} else {
-					// Part of the frames shows better than what the mix before
-					// showed here, which shows better than nothing.
-					complete = false;
-					values = result === false ? composed : cache.stale.get(index);
-					if (!values) {
-						continue;
-					}
-				}
+	const sums = new Float64Array(rows);
+	let complete = true;
+	for (const column of order) {
+		const index = range.firstColumn + column;
+		for (const lane of lanes) {
+			if (renderer.hasColumn(lane.cache, index)) {
+				continue;
 			}
-			for (let row = 0; row < laneRows; row += 1) {
-				const level = values[row] * 3;
-				const pixel = ((laneTop + row) * columns + column) * 4;
-				pixels[pixel] = colorMap[level];
-				pixels[pixel + 1] = colorMap[level + 1];
-				pixels[pixel + 2] = colorMap[level + 2];
+			if (performance.now() >= deadline) {
+				complete = false;
+				continue;
 			}
+			composeColumn(
+				lane.frames,
+				index * lane.samplesPerColumn,
+				(index + 1) * lane.samplesPerColumn,
+				state.settings,
+				sums,
+				lane.values,
+			);
+			renderer.setColumn(lane.cache, index, lane.values);
 		}
-	});
-
-	const columnCanvas = getScratchCanvas(columns, rows);
-	const scratchContext = columnCanvas.getContext("2d");
-	if (!scratchContext) {
-		return complete;
 	}
-	scratchContext.putImageData(image, 0, 0);
-	context.imageSmoothingEnabled = false;
-	context.drawImage(
-		columnCanvas,
-		0,
-		0,
+
+	const drawing = renderer.draw(
 		columns,
 		rows,
-		0,
-		0,
-		canvas.width,
-		rows,
+		lanes,
+		range.firstColumn,
+		drawColumns,
+		parseCssColor(colors.background),
+		parseCssColor(colors.color),
 	);
+	context.imageSmoothingEnabled = false;
+	context.drawImage(drawing, 0, 0, columns, rows, 0, 0, canvas.width, rows);
 
 	context.fillStyle = colors.divider;
 	const pixelRatio = Math.max(1, window.devicePixelRatio || 1);
@@ -469,25 +398,9 @@ export function drawSpectrogram(
 	return complete;
 }
 
-let scratchCanvas: HTMLCanvasElement | null = null;
-
-/** One canvas every spectrogram assembles its columns in before scaling them. */
-function getScratchCanvas(width: number, height: number): HTMLCanvasElement {
-	if (!scratchCanvas) {
-		scratchCanvas = document.createElement("canvas");
-	}
-	if (scratchCanvas.width < width) {
-		scratchCanvas.width = width;
-	}
-	if (scratchCanvas.height < height) {
-		scratchCanvas.height = height;
-	}
-	return scratchCanvas;
-}
-
-/** The deadline of one redraw's analysis, from now. */
+/** The deadline of one redraw's columns, from now. */
 export function getSpectrogramDeadline(): number {
-	return performance.now() + ANALYSIS_BUDGET_MS;
+	return performance.now() + COMPOSE_BUDGET_MS;
 }
 
 /** A spectrogram with nothing to show yet: its background. */

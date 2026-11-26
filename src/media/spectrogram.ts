@@ -372,11 +372,8 @@ export class SpectrogramFrames {
 		return this.reader.sampleRate;
 	}
 
-	/**
-	 * The levels of frame `frame` on `rows` rows, top row first. Null when the
-	 * frame is not analysed yet and `deadline` has passed.
-	 */
-	frameRows(frame: number, rows: number, deadline: number): Uint8Array | null {
+	/** The levels of frame `frame` on `rows` rows, top row first. */
+	frameRows(frame: number, rows: number): Uint8Array {
 		let rowSet = this.rowSets.get(rows);
 		if (rowSet) {
 			this.rowSets.delete(rows);
@@ -402,9 +399,6 @@ export class SpectrogramFrames {
 		}
 		let spectrum = this.spectra.get(frame);
 		if (!spectrum) {
-			if (performance.now() >= deadline) {
-				return null;
-			}
 			spectrum = this.kernel
 				.analyse(
 					this.reader,
